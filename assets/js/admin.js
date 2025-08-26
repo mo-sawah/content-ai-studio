@@ -45,12 +45,20 @@ function updateEditorContent(title, markdownContent) {
  * @returns {string} The content from either the Block or Classic editor.
  */
 function getEditorContent() {
-    if (typeof wp !== 'undefined' && wp.data && wp.data.select('core/editor')) {
+    const isBlockEditor = document.body.classList.contains('block-editor-page');
+
+    if (isBlockEditor) {
         return wp.data.select('core/editor').getEditedPostContent();
-    } else if (typeof tinymce !== 'undefined' && tinymce.get('content')) {
+    } 
+
+    // For Classic Editor
+    if (typeof tinymce !== 'undefined' && tinymce.get('content') && !tinymce.get('content').isHidden()) {
+        // If the Visual tab is active, get content directly from it
         return tinymce.get('content').getContent();
+    } else {
+        // If the Text tab is active or TinyMCE isn't ready, get from the textarea
+        return $('#content').val();
     }
-    return $('#content').val();
 }
 
 function checkAndGenerateImage(button, postId) {
@@ -660,38 +668,45 @@ function escapeHtml(text) {
     }
 
     function generateImage(button, postId) {
-        isGenerating = true;
-        button.prop("disabled", true).html('<div class="atm-spinner"></div> Generating Image...');
+    isGenerating = true;
+    button.prop("disabled", true).html('<div class="atm-spinner"></div> Generating Image...');
 
-        const prompt = $('#atm-image-prompt').val();
+    $.ajax({
+        url: atm_ajax.ajax_url,
+        type: "POST",
+        data: {
+            action: "generate_featured_image",
+            post_id: postId,
+            prompt: $('#atm-image-prompt').val(),
+            nonce: atm_ajax.nonce
+        },
+        success: function(response) {
+            if (response.success) {
+                // Update the featured image UI in both editors
+                const isBlockEditor = document.body.classList.contains('block-editor-page');
 
-        $.ajax({
-            url: atm_ajax.ajax_url,
-            type: "POST",
-            data: {
-                action: "generate_featured_image",
-                post_id: postId,
-                prompt: prompt,
-                nonce: atm_ajax.nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    button.html("✅ Image Set! Refreshing...");
-                    setTimeout(() => window.location.reload(), 2000);
+                if (isBlockEditor) {
+                    wp.data.dispatch('core/editor').editPost({ featured_media: response.data.attachment_id });
                 } else {
-                    alert("Error: " + response.data);
-                    resetButton(button, 'Generate & Set Featured Image');
+                    // For the Classic Editor
+                    $('#postimagediv .inside').html(response.data.html);
                 }
-            },
-            error: function() {
-                alert("An error occurred during image generation.");
+                button.html("✅ Image Set!");
+                setTimeout(() => resetButton(button, 'Generate & Set Featured Image'), 2000);
+            } else {
+                alert("Error: " + response.data);
                 resetButton(button, 'Generate & Set Featured Image');
-            },
-            complete: function() {
-                isGenerating = false;
             }
-        });
-    }
+        },
+        error: function() {
+            alert("An error occurred during image generation.");
+            resetButton(button, 'Generate & Set Featured Image');
+        },
+        complete: function() {
+            isGenerating = false;
+        }
+    });
+}
 
     function generatePodcast(button, postId) {
         isGenerating = true;

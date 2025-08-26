@@ -484,48 +484,48 @@ Source material to transform into breaking news:';
     }
 
     public function generate_featured_image() {
-        // --- LICENSE CHECK ---
-        if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
-        }
-        // --- END CHECK ---
-
-        check_ajax_referer('atm_nonce', 'nonce');
-        try {
-            $post_id = intval($_POST['post_id']);
-            $prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : '';
-
-            if (empty($prompt)) {
-                $post = get_post($post_id);
-                if (!$post) {
-                    throw new Exception("Post not found for generating a default image prompt.");
-                }
-                $title = $post->post_title;
-                $excerpt = wp_strip_all_tags($post->post_content);
-                $excerpt = mb_substr($excerpt, 0, 300) . '...';
-
-                $prompt = "A high-resolution, photorealistic featured image for a blog post titled \"{$title}\". The article discusses: \"{$excerpt}\". The image should be professional, visually compelling, and directly relevant to the main subject of the article. Use cinematic lighting and a 16:9 aspect ratio.";
-            } else {
-                $post = get_post($post_id);
-                $prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
-            }
-
-            $image_url = ATM_API::generate_image_with_openai($prompt);
-            
-            $attachment_id = $this->set_image_from_url($image_url, $post_id);
-
-            if (is_wp_error($attachment_id)) {
-                throw new Exception($attachment_id->get_error_message());
-            }
-
-            set_post_thumbnail($post_id, $attachment_id);
-
-            wp_send_json_success(['image_url' => wp_get_attachment_url($attachment_id)]);
-
-        } catch (Exception $e) {
-            wp_send_json_error($e->getMessage());
-        }
+    if (!ATM_Licensing::is_license_active()) {
+        wp_send_json_error('Please activate your license key to use this feature.');
     }
+
+    check_ajax_referer('atm_nonce', 'nonce');
+    try {
+        $post_id = intval($_POST['post_id']);
+        $prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : '';
+
+        if (empty($prompt)) {
+            $post = get_post($post_id);
+            if (!$post) throw new Exception("Post not found.");
+            $title = $post->post_title;
+            $excerpt = wp_strip_all_tags(mb_substr($post->post_content, 0, 300) . '...');
+            $prompt = "A high-resolution, photorealistic featured image for a blog post titled \"{$title}\". The article discusses: \"{$excerpt}\". The image should be professional, visually compelling, and directly relevant to the main subject of the article. Use cinematic lighting and a 16:9 aspect ratio.";
+        } else {
+            $post = get_post($post_id);
+            $prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
+        }
+
+        $image_url = ATM_API::generate_image_with_openai($prompt);
+        $attachment_id = $this->set_image_from_url($image_url, $post_id);
+
+        if (is_wp_error($attachment_id)) {
+            throw new Exception($attachment_id->get_error_message());
+        }
+
+        // Set the featured image
+        set_post_thumbnail($post_id, $attachment_id);
+
+        // Get the HTML for the featured image box content
+        $thumbnail_html = _wp_post_thumbnail_html($attachment_id, $post_id);
+
+        wp_send_json_success([
+            'attachment_id' => $attachment_id,
+            'html' => $thumbnail_html
+        ]);
+
+    } catch (Exception $e) {
+        wp_send_json_error($e->getMessage());
+    }
+}
 
     public function generate_inline_image() {
         // --- LICENSE CHECK ---

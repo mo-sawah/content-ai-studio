@@ -1,5 +1,5 @@
 /* General Post Meta Box Styles */
-.atm-meta-box { padding: 1px 12px; }
+.atm-meta-box { padding: 0; }
 #article-to-media .inside { padding: 0; margin: 5px 15px; }
 .postbox#article-to-media .hndle { font-size: 18px; padding: 10px 20px; }
 .atm-section { margin-bottom: 20px; padding: 20px; background: #2d3748; border-radius: 8px; border: 1px solid #4a5568; color: #e2e8f0; }
