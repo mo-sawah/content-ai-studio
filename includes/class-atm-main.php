@@ -50,7 +50,12 @@ class ATM_Main {
 
         set_post_thumbnail($post_id, $attachment_id);
 
-        return new WP_REST_Response(['success' => true], 200);
+        $image_url = get_the_post_thumbnail_url($post_id, 'medium');
+            return new WP_REST_Response([
+                'success' => true,
+                'featured_media_id' => $attachment_id,
+                'featured_media_url' => $image_url
+            ], 200);
 
     } catch (Exception $e) {
         return new WP_Error('generation_failed', $e->getMessage(), array('status' => 500));

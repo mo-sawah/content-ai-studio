@@ -1,6 +1,6 @@
 import { registerPlugin } from '@wordpress/plugins';
 import { PluginSidebar, PluginSidebarMoreMenuItem } from '@wordpress/edit-post';
-import { PanelBody, TextareaControl, Button, Spinner } from '@wordpress/components';
+import { PanelBody, TextareaControl, Button } from '@wordpress/components';
 import { useState, createElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
@@ -36,12 +36,12 @@ const AtmSidebar = () => {
 
     const { insertBlocks } = useDispatch(blockEditorStore);
     const { createSuccessNotice, createErrorNotice } = useDispatch(noticesStore);
+    const { editPost } = useDispatch('core/editor'); // Get the editPost dispatcher
     
     const postId = useSelect( ( select ) => {
         return select('core/editor').getCurrentPostId();
     }, [] );
 
-    // --- NEW: Function to generate the FEATURED image ---
     const generateFeaturedImage = () => {
         if (!featuredPrompt) {
             alert('Please enter a prompt for the featured image.');
@@ -50,19 +50,19 @@ const AtmSidebar = () => {
         setIsFeaturedLoading(true);
 
         apiFetch({
-            path: '/atm/v1/generate-featured-image', // New REST API endpoint
+            path: '/atm/v1/generate-featured-image',
             method: 'POST',
             data: { 
                 prompt: featuredPrompt,
                 post_id: postId,
              },
-        }).then(() => {
-            createSuccessNotice('Featured image generated and set successfully! The page will now refresh to show the new image.', { type: 'snackbar' });
+        }).then((response) => {
+            // Update the editor state directly with the new featured media ID
+            editPost({ featured_media: response.featured_media_id });
+            
+            createSuccessNotice('Featured image has been set!', { type: 'snackbar' });
             setIsFeaturedLoading(false);
-            // Refresh the editor to show the new featured image
-            setTimeout(() => {
-                window.location.reload();
-            }, 3000);
+            setFeaturedPrompt(''); // Clear the prompt after success
         }).catch((error) => {
             createErrorNotice(`Error: ${error.message}`, { type: 'snackbar' });
             setIsFeaturedLoading(false);
@@ -107,7 +107,6 @@ const AtmSidebar = () => {
                 name="atm-sidebar"
                 title={__('Content AI Studio', 'article-to-media')}
             >
-                {/* --- NEW: Featured Image Panel --- */}
                 <PanelBody title={__('Generate Featured Image', 'article-to-media')} initialOpen={true}>
                     <p className="atm-sidebar-desc">
                         Generate and set the post's main featured image. You can use shortcodes like <code>[article_title]</code>.
