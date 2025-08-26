@@ -162,12 +162,15 @@ class ATM_Main {
                 $script_asset['version'],
                 true
             );
-            wp_enqueue_style(
-                'atm-gutenberg-sidebar-style',
-                ATM_PLUGIN_URL . 'build/index.css',
-                array(),
-                $script_asset['version']
-            );
+            $style_path = ATM_PLUGIN_PATH . 'build/index.css';
+if (file_exists($style_path)) {
+    wp_enqueue_style(
+        'atm-gutenberg-sidebar-style',
+        ATM_PLUGIN_URL . 'build/index.css',
+        array(),
+        $script_asset['version']
+    );
+}
         }
 
         // The admin script for the meta box, with the corrected dependencies

@@ -6,7 +6,7 @@ jQuery(document).ready(function($) {
  */
 function updateEditorContent(title, markdownContent) {
     // Check if the block editor is active by looking for its data store.
-    const isBlockEditor = typeof wp !== 'undefined' && wp.data && wp.data.select('core/block-editor');
+    const isBlockEditor = document.body.classList.contains('block-editor-page');
 
     // --- Update Post Title ---
     if (isBlockEditor) {
@@ -51,6 +51,45 @@ function getEditorContent() {
         return tinymce.get('content').getContent();
     }
     return $('#content').val();
+}
+
+function checkAndGenerateImage(button, postId) {
+    if ($('#atm-generate-image-with-article').is(':checked')) {
+        button.html('<div class="atm-spinner"></div> Generating Image...');
+        // A small delay to ensure the post might save, especially in Gutenberg
+        setTimeout(function() { 
+            $.ajax({
+                url: atm_ajax.ajax_url, 
+                type: "POST",
+                data: { 
+                    action: "generate_featured_image", 
+                    post_id: postId, 
+                    prompt: '', // Send empty prompt to use automatic prompt on the backend
+                    nonce: atm_ajax.nonce 
+                },
+                success: function(imgResponse) {
+                    if (imgResponse.success) {
+                        button.html("✅ All Done! Refreshing...");
+                        setTimeout(() => window.location.reload(), 2000);
+                    } else {
+                        alert("Article created, but image failed: " + imgResponse.data);
+                        resetButton(button, 'Generate Article');
+                    }
+                },
+                error: function() {
+                    alert("Article created, but an error occurred during image generation.");
+                    resetButton(button, 'Generate Article');
+                },
+                complete: function() { 
+                    isGenerating = false; 
+                }
+            });
+        }, 1500);
+    } else {
+        button.html("✅ Article Inserted!");
+        setTimeout(() => resetButton(button, 'Generate Article'), 2000);
+        isGenerating = false;
+    }
 }
     let isGenerating = false;
 
