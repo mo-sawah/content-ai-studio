@@ -1,68 +1,87 @@
 import { registerPlugin } from '@wordpress/plugins';
 import { PluginSidebar, PluginSidebarMoreMenuItem } from '@wordpress/edit-post';
-import { PanelBody, TextareaControl, Button } from '@wordpress/components';
+import { PanelBody, TextareaControl, Button, Spinner } from '@wordpress/components';
 import { useState, createElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { store as blockEditorStore } from '@wordpress/block-editor';
+import { store as noticesStore } from '@wordpress/notices';
 import { createBlock } from '@wordpress/blocks';
 
 import './style.scss';
 
-// --- NEW: Custom SVG Icon ---
-const AtmIcon = createElement(
-    'svg',
-    { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', xmlns: 'http://www.w3.org/2000/svg' },
-    createElement('path', {
-        d: 'M12 4C5.373 4 0 9.373 0 16H2C2 10.477 6.477 6 12 6C17.523 6 22 10.477 22 16H24C24 9.373 18.627 4 12 4Z',
-        fill: 'url(#paint0_linear_1_2)'
-    }),
-    createElement('path', {
-        d: 'M12 10C8.686 10 6 12.686 6 16H8C8 13.791 9.791 12 12 12C14.209 12 16 13.791 16 16H18C18 12.686 15.314 10 12 10Z',
-        fill: 'url(#paint1_linear_1_2)'
-    }),
-    createElement('circle', { cx: 12, cy: 16, r: 2, fill: 'url(#paint2_linear_1_2)' }),
+// Custom SVG Icon
+const AtmIcon = createElement('svg', { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', xmlns: 'http://www.w3.org/2000/svg' },
     createElement('defs', null,
-        createElement('linearGradient', { id: 'paint0_linear_1_2', x1: 12, y1: 4, x2: 12, y2: 16, gradientUnits: 'userSpaceOnUse' },
-            createElement('stop', { stopColor: '#8E2DE2' }),
-            createElement('stop', { offset: 1, stopColor: '#4A00E0' })
-        ),
-        createElement('linearGradient', { id: 'paint1_linear_1_2', x1: 12, y1: 10, x2: 12, y2: 16, gradientUnits: 'userSpaceOnUse' },
-            createElement('stop', { stopColor: '#8E2DE2' }),
-            createElement('stop', { offset: 1, stopColor: '#4A00E0' })
-        ),
-        createElement('linearGradient', { id: 'paint2_linear_1_2', x1: 12, y1: 14, x2: 12, y2: 18, gradientUnits: 'userSpaceOnUse' },
+        createElement('linearGradient', { id: 'atm-grad', x1: '0', y1: '0', x2: '24', y2: '24', gradientUnits: 'userSpaceOnUse' },
             createElement('stop', { stopColor: '#8E2DE2' }),
             createElement('stop', { offset: 1, stopColor: '#4A00E0' })
         )
-    )
+    ),
+    createElement('rect', { x: 2, y: 13, width: 20, height: 9, rx: 2, fill: 'url(#atm-grad)', opacity: 0.6 }),
+    createElement('path', { d: 'M6 16H18 M6 18H15', stroke: 'white', strokeWidth: 1.2, strokeLinecap: 'round' }),
+    createElement('rect', { x: 2, y: 8, width: 20, height: 9, rx: 2, fill: 'url(#atm-grad)', opacity: 0.8 }),
+    createElement('path', { d: 'M6 12.5H8L10 11L12 14L14 11L16 12.5H18', stroke: 'white', strokeWidth: 1.2, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+    createElement('rect', { x: 2, y: 3, width: 20, height: 9, rx: 2, fill: 'url(#atm-grad)' }),
+    createElement('circle', { cx: 8, cy: 7, r: 1, fill: 'white' }),
+    createElement('path', { d: 'M6 10L9 8L13 9.5L18 7', stroke: 'white', strokeWidth: 1.2, strokeLinecap: 'round', strokeLinejoin: 'round' })
 );
 
-
 const AtmSidebar = () => {
-    const [prompt, setPrompt] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [inlinePrompt, setInlinePrompt] = useState('');
+    const [featuredPrompt, setFeaturedPrompt] = useState('');
+    const [isInlineLoading, setIsInlineLoading] = useState(false);
+    const [isFeaturedLoading, setIsFeaturedLoading] = useState(false);
+
     const { insertBlocks } = useDispatch(blockEditorStore);
+    const { createSuccessNotice, createErrorNotice } = useDispatch(noticesStore);
     
-    // --- FIX: Use useSelect to correctly get the post ID ---
     const postId = useSelect( ( select ) => {
         return select('core/editor').getCurrentPostId();
     }, [] );
 
-    const generateImage = () => {
-        if (!prompt) {
-            alert('Please enter a prompt.');
+    // --- NEW: Function to generate the FEATURED image ---
+    const generateFeaturedImage = () => {
+        if (!featuredPrompt) {
+            alert('Please enter a prompt for the featured image.');
             return;
         }
-        setIsLoading(true);
+        setIsFeaturedLoading(true);
+
+        apiFetch({
+            path: '/atm/v1/generate-featured-image', // New REST API endpoint
+            method: 'POST',
+            data: { 
+                prompt: featuredPrompt,
+                post_id: postId,
+             },
+        }).then(() => {
+            createSuccessNotice('Featured image generated and set successfully! The page will now refresh to show the new image.', { type: 'snackbar' });
+            setIsFeaturedLoading(false);
+            // Refresh the editor to show the new featured image
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+        }).catch((error) => {
+            createErrorNotice(`Error: ${error.message}`, { type: 'snackbar' });
+            setIsFeaturedLoading(false);
+        });
+    };
+
+    const generateInlineImage = () => {
+        if (!inlinePrompt) {
+            alert('Please enter a prompt for the inline image.');
+            return;
+        }
+        setIsInlineLoading(true);
 
         apiFetch({
             path: '/atm/v1/generate-inline-image',
             method: 'POST',
             data: { 
-                prompt: prompt,
-                post_id: postId, // Use the correctly fetched post ID
+                prompt: inlinePrompt,
+                post_id: postId,
              },
         }).then((response) => {
             const imageBlock = createBlock('core/image', {
@@ -70,40 +89,63 @@ const AtmSidebar = () => {
                 alt: response.alt,
             });
             insertBlocks(imageBlock);
-            setPrompt(''); 
-            setIsLoading(false);
+            setInlinePrompt(''); 
+            setIsInlineLoading(false);
+            createSuccessNotice('Inline image generated and inserted!', { type: 'snackbar' });
         }).catch((error) => {
-            alert(`Error: ${error.message}`);
-            setIsLoading(false);
+            createErrorNotice(`Error: ${error.message}`, { type: 'snackbar' });
+            setIsInlineLoading(false);
         });
     };
 
     return (
         <>
             <PluginSidebarMoreMenuItem target="atm-sidebar">
-                {__('Article To Media', 'article-to-media')}
+                {__('Content AI Studio', 'article-to-media')}
             </PluginSidebarMoreMenuItem>
             <PluginSidebar
                 name="atm-sidebar"
-                title={__('Article To Media', 'article-to-media')}
+                title={__('Content AI Studio', 'article-to-media')}
             >
-                <PanelBody title={__('Generate Inline Image', 'article-to-media')}>
+                {/* --- NEW: Featured Image Panel --- */}
+                <PanelBody title={__('Generate Featured Image', 'article-to-media')} initialOpen={true}>
                     <p className="atm-sidebar-desc">
-                        Generate an image and insert it directly into your content. You can use shortcodes like <code>[article_title]</code>.
+                        Generate and set the post's main featured image. You can use shortcodes like <code>[article_title]</code>.
                     </p>
                     <TextareaControl
                         label={__('Image Prompt', 'article-to-media')}
-                        value={prompt}
-                        onChange={(value) => setPrompt(value)}
-                        disabled={isLoading}
+                        value={featuredPrompt}
+                        onChange={(value) => setFeaturedPrompt(value)}
+                        disabled={isFeaturedLoading}
+                        placeholder="A photorealistic image of..."
                     />
                     <Button
                         isPrimary
-                        isBusy={isLoading}
-                        onClick={generateImage}
-                        disabled={isLoading || !prompt}
+                        isBusy={isFeaturedLoading}
+                        onClick={generateFeaturedImage}
+                        disabled={isFeaturedLoading || !featuredPrompt}
                     >
-                        {isLoading ? __('Generating...', 'article-to-media') : __('Generate & Insert Image', 'article-to-media')}
+                        {isFeaturedLoading ? __('Generating...', 'article-to-media') : __('Generate & Set Image', 'article-to-media')}
+                    </Button>
+                </PanelBody>
+
+                <PanelBody title={__('Generate Inline Image', 'article-to-media')} initialOpen={false}>
+                    <p className="atm-sidebar-desc">
+                        Generate an image and insert it directly into your content.
+                    </p>
+                    <TextareaControl
+                        label={__('Image Prompt', 'article-to-media')}
+                        value={inlinePrompt}
+                        onChange={(value) => setInlinePrompt(value)}
+                        disabled={isInlineLoading}
+                    />
+                    <Button
+                        isPrimary
+                        isBusy={isInlineLoading}
+                        onClick={generateInlineImage}
+                        disabled={isInlineLoading || !inlinePrompt}
+                    >
+                        {isInlineLoading ? __('Generating...', 'article-to-media') : __('Generate & Insert Image', 'article-to-media')}
                     </Button>
                 </PanelBody>
             </PluginSidebar>
@@ -111,7 +153,7 @@ const AtmSidebar = () => {
     );
 };
 
-registerPlugin('article-to-media-sidebar', {
-    icon: AtmIcon, // Use our new custom color icon
+registerPlugin('content-ai-studio-sidebar', {
+    icon: AtmIcon,
     render: AtmSidebar,
 });

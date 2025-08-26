@@ -15,7 +15,47 @@ class ATM_Main {
                 return current_user_can('edit_posts');
             }
         ));
+        // --- ADD THIS NEW ROUTE ---
+        register_rest_route('atm/v1', '/generate-featured-image', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'handle_featured_image_rest'),
+            'permission_callback' => function () {
+                return current_user_can('edit_posts');
+            }
+    ));
+
     }
+
+    public function handle_featured_image_rest($request) {
+    $prompt = sanitize_textarea_field($request['prompt']);
+    $post_id = intval($request['post_id']);
+
+    if (empty($prompt) || empty($post_id)) {
+        return new WP_Error('bad_request', 'Missing prompt or post ID.', array('status' => 400));
+    }
+
+    try {
+        $ajax_handler = new ATM_Ajax();
+        $post = get_post($post_id);
+        $processed_prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
+
+        // This reuses your existing OpenAI image generation logic
+        $image_url = ATM_API::generate_image_with_openai($processed_prompt);
+
+        // This reuses your existing logic for saving the image and setting it as featured
+        $attachment_id = $ajax_handler->set_image_from_url($image_url, $post_id);
+        if(is_wp_error($attachment_id)) {
+            return new WP_Error('generation_failed', $attachment_id->get_error_message(), array('status' => 500));
+        }
+
+        set_post_thumbnail($post_id, $attachment_id);
+
+        return new WP_REST_Response(['success' => true], 200);
+
+    } catch (Exception $e) {
+        return new WP_Error('generation_failed', $e->getMessage(), array('status' => 500));
+    }
+}
 
     public function handle_inline_image_rest($request) {
         $prompt = sanitize_textarea_field($request['prompt']);
