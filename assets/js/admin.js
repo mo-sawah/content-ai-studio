@@ -1,4 +1,57 @@
 jQuery(document).ready(function($) {
+    /**
+ * Helper function to update the editor content in either the Block or Classic editor.
+ * @param {string} title - The new post title.
+ * @param {string} markdownContent - The new post content in Markdown format.
+ */
+function updateEditorContent(title, markdownContent) {
+    // Check if the block editor is active by looking for its data store.
+    const isBlockEditor = typeof wp !== 'undefined' && wp.data && wp.data.select('core/block-editor');
+
+    // --- Update Post Title ---
+    if (isBlockEditor) {
+        wp.data.dispatch('core/editor').editPost({ title: title });
+    } else {
+        // Fallback for Classic Editor
+        $('#title').val(title);
+        $('#title-prompt-text').text('Finished'); // This updates the "slug" preview
+    }
+
+    // --- Update Post Content ---
+    const htmlContent = marked.parse(markdownContent);
+    if (isBlockEditor) {
+        const blocks = wp.blocks.parse(htmlContent);
+        // Clear existing content before inserting new blocks
+        const currentBlocks = wp.data.select('core/block-editor').getBlocks();
+        if (currentBlocks.length > 0 && !(currentBlocks.length === 1 && currentBlocks[0].name === 'core/paragraph' && currentBlocks[0].attributes.content === '')) {
+             const clientIds = currentBlocks.map(block => block.clientId);
+             wp.data.dispatch('core/block-editor').removeBlocks(clientIds);
+        }
+        wp.data.dispatch('core/block-editor').insertBlocks(blocks);
+    } else {
+        // Fallback for Classic Editor
+        if (typeof tinymce !== 'undefined' && tinymce.get('content')) {
+            // Set content in the Visual (TinyMCE) editor
+            tinymce.get('content').setContent(htmlContent);
+        } else {
+            // Fallback for the plain Text editor
+            $('#content').val(htmlContent);
+        }
+    }
+}
+
+/**
+ * Helper function to get content from the active editor.
+ * @returns {string} The content from either the Block or Classic editor.
+ */
+function getEditorContent() {
+    if (typeof wp !== 'undefined' && wp.data && wp.data.select('core/editor')) {
+        return wp.data.select('core/editor').getEditedPostContent();
+    } else if (typeof tinymce !== 'undefined' && tinymce.get('content')) {
+        return tinymce.get('content').getContent();
+    }
+    return $('#content').val();
+}
     let isGenerating = false;
 
     // Handle the new "Generate Script" button
@@ -7,8 +60,8 @@ $('#atm-generate-script-btn').on('click', function() {
     const textSpan = button.find('.atm-btn-text');
     const spinner = button.find('.atm-spinner');
     const originalText = textSpan.text();
-    const editorContent = wp.data.select('core/editor').getEditedPostContent();
-    const postId = wp.data.select('core/editor').getCurrentPostId();
+    const editorContent = getEditorContent();
+    const postId = $('#post_ID').val();
     const language = $('#atm-language-select').val();
 
     if (!editorContent.trim()) {
@@ -237,26 +290,17 @@ $('#atm-rss-results').on('click', '.generate-from-rss-btn', function() {
             nonce: atm_ajax.nonce
         },
         success: function(response) {
-            if (response.success) {
-                // Update the post editor
-                wp.data.dispatch('core/editor').editPost({ title: response.data.article_title });
-                const htmlContent = marked.parse(response.data.article_content);
-                const blocks = wp.blocks.parse(htmlContent);
-                const currentBlocks = wp.data.select('core/block-editor').getBlocks();
-                wp.data.dispatch('core/block-editor').removeBlocks(currentBlocks.map(b => b.clientId));
-                wp.data.dispatch('core/block-editor').insertBlocks(blocks);
-
-                button.html('✅ Article Generated').css('background', '#2f855a');
-                
-                // Optionally hide the item after successful generation
-                setTimeout(() => {
-                    button.closest('li').fadeOut(1000);
-                }, 2000);
-            } else {
-                alert('Error: ' + response.data);
-                button.prop('disabled', false).html(originalText);
-            }
-        },
+    if (response.success) {
+        updateEditorContent(response.data.article_title, response.data.article_content);
+        button.html('✅ Article Generated').css('background', '#2f855a');
+        setTimeout(() => {
+            button.closest('li').fadeOut(1000);
+        }, 2000);
+    } else {
+        alert('Error: ' + response.data);
+        button.prop('disabled', false).html(originalText);
+    }
+},
         error: function(xhr, status, error) {
             let errorMsg = 'An error occurred during article generation.';
             if (xhr.responseJSON && xhr.responseJSON.data) {
@@ -360,24 +404,14 @@ function escapeHtml(text) {
                 nonce: atm_ajax.nonce
             },
             success: function(response) {
-                if (response.success) {
-                    const markdownContent = response.data.article_content;
-                    const htmlContent = marked.parse(markdownContent);
-                    let blocks = wp.blocks.parse(htmlContent);
-
-                    wp.data.dispatch('core/editor').editPost({ title: response.data.article_title });
-
-                    const currentBlocks = wp.data.select('core/block-editor').getBlocks();
-                    const clientIds = currentBlocks.map(block => block.clientId);
-                    wp.data.dispatch('core/block-editor').removeBlocks(clientIds);
-                    wp.data.dispatch('core/block-editor').insertBlocks(blocks);
-                    
-                    button.html('✅ Inserted').css('background', '#2f855a');
-                } else {
-                     alert('Error: ' + response.data);
-                     button.prop('disabled', false).html('Generate Article');
-                }
-            },
+    if (response.success) {
+        updateEditorContent(response.data.article_title, response.data.article_content);
+        button.html('✅ Inserted').css('background', '#2f855a');
+    } else {
+         alert('Error: ' + response.data);
+         button.prop('disabled', false).html('Generate Article');
+    }
+},
             error: function() {
                 alert('An unknown error occurred during article generation.');
                 button.prop('disabled', false).html('Generate Article');
@@ -489,28 +523,16 @@ function escapeHtml(text) {
                     nonce: atm_ajax.nonce
                 },
                 success: function(response) {
-                    if (response.success) {
-                        // ... (rest of the success function is the same)
-                        button.html('<div class="atm-spinner"></div> Writing article...');
-                        const finalTitle = response.data.article_title;
-                        const markdownContent = response.data.article_content;
-                        const htmlContent = marked.parse(markdownContent);
-                        let blocks = wp.blocks.parse(htmlContent);
-
-                        wp.data.dispatch('core/editor').editPost({ title: finalTitle });
-
-                        const currentBlocks = wp.data.select('core/block-editor').getBlocks();
-                        const clientIds = currentBlocks.map(block => block.clientId);
-                        wp.data.dispatch('core/block-editor').removeBlocks(clientIds);
-                        wp.data.dispatch('core/block-editor').insertBlocks(blocks);
-
-                        button.html("✅ News Article Inserted!");
-                        setTimeout(() => resetButton(button, 'Generate Article'), 2000);
-                    } else {
-                        alert("Error: " + response.data);
-                        resetButton(button, 'Generate Article');
-                    }
-                },
+    if (response.success) {
+        button.html('<div class="atm-spinner"></div> Writing article...');
+        updateEditorContent(response.data.article_title, response.data.article_content);
+        checkAndGenerateImage(button, $('#post_ID').val()); // This calls your image logic
+    } else {
+        alert("Error: " + response.data);
+        resetButton(button, 'Generate Article');
+        isGenerating = false;
+    }
+},
                 error: function() {
                     alert("An error occurred during news generation.");
                     resetButton(button, 'Generate Article');
@@ -580,64 +602,14 @@ function escapeHtml(text) {
                 nonce: atm_ajax.nonce
             },
             success: function(contentResponse) {
-                if (contentResponse.success) {
-                    const markdownContent = contentResponse.data.article_content;
-                    const htmlContent = marked.parse(markdownContent);
-                    let blocks = wp.blocks.parse(htmlContent);
-
-                    wp.data.dispatch('core/editor').editPost({ title: finalTitle });
-
-                    const currentBlocks = wp.data.select('core/block-editor').getBlocks();
-                    const clientIds = currentBlocks.map(block => block.clientId);
-                    wp.data.dispatch('core/block-editor').removeBlocks(clientIds);
-                    wp.data.dispatch('core/block-editor').insertBlocks(blocks);
-
-                    // --- NEW LOGIC FOR COMBINED GENERATION ---
-                    const generateImageAfter = $('#atm-generate-image-with-article').is(':checked');
-
-                    if (generateImageAfter) {
-                        button.html('<div class="atm-spinner"></div> Saving & Generating Image...');
-                        
-                        // Save the post so the backend can read the new title/content
-                        wp.data.dispatch('core/editor').savePost();
-
-                        // Wait a moment for the save to complete before firing the image request
-                        setTimeout(function() {
-                            $.ajax({
-                                url: atm_ajax.ajax_url,
-                                type: "POST",
-                                data: {
-                                    action: "generate_featured_image",
-                                    post_id: postId,
-                                    prompt: '', // Send an empty prompt to trigger the default logic
-                                    nonce: atm_ajax.nonce
-                                },
-                                success: function(imgResponse) {
-                                    if (imgResponse.success) {
-                                        button.html("✅ All Done! Refreshing...");
-                                        setTimeout(() => window.location.reload(), 2000);
-                                    } else {
-                                        alert("Article was created, but image generation failed: " + imgResponse.data);
-                                        resetButton(button, 'Generate Article');
-                                    }
-                                },
-                                error: function() {
-                                    alert("Article was created, but an error occurred during image generation.");
-                                    resetButton(button, 'Generate Article');
-                                }
-                            });
-                        }, 2500); // 2.5 second delay
-
-                    } else {
-                        // Original success logic if checkbox is not checked
-                        button.html("✅ Content Inserted!");
-                        setTimeout(() => resetButton(button, 'Generate Article'), 2000);
-                    }
-                } else {
-                    alert("Error generating content: " + contentResponse.data);
-                    resetButton(button, 'Generate Article');
-                }
-            },
+    if (contentResponse.success) {
+        updateEditorContent(finalTitle, contentResponse.data.article_content);
+        checkAndGenerateImage(button, postId); // This calls your image logic
+    } else {
+        alert("Error generating content: " + contentResponse.data);
+        resetButton(button, 'Generate Article');
+    }
+},
             error: function() {
                 alert("An error occurred during content generation.");
                 resetButton(button, 'Generate Article');
