@@ -1,0 +1,38 @@
+.atm-wrapper { margin-bottom: 2em; }
+.atm-modern-player { background: linear-gradient(135deg, #1e293b, #334155); border: 1px solid #475569; border-radius: 16px; padding: 20px 24px; margin: 0; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); max-width: 100%; color: white; }
+.atm-player-container { display: flex; align-items: center; gap: 24px; }
+.atm-player-cover { position: relative; flex-shrink: 0; }
+.atm-cover-image { width: 140px; height: 140px; border-radius: 12px; object-fit: cover; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); }
+.atm-play-button { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 56px; height: 56px; background: #131a29; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; opacity: 1 !important; backdrop-filter: blur(10px); }
+.atm-play-button:hover { background: #131a29; transform: translate(-50%, -50%) scale(1.1); }
+.atm-play-button.playing { background: #131a29; }
+.atm-play-svg-icon { width: 22px; height: 22px; filter: brightness(0) invert(1); }
+.atm-play-icon { display: block; } .atm-pause-icon { display: none; }
+.atm-play-button.playing .atm-play-icon { display: none; }
+.atm-play-button.playing .atm-pause-icon { display: block; }
+.atm-player-info { flex: 1; min-width: 0; }
+.atm-episode-title { margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: #f8fafc !important; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atm-podcast-name { margin: 0 0 24px 0; color: #94a3b8; font-size: 14px; font-weight: 500; }
+.atm-progress-bar { width: 100%; height: 8px; background: #475569; border-radius: 4px; cursor: pointer; overflow: hidden; position: relative; }
+.atm-progress-bar:hover { height: 10px; }
+.atm-progress-fill { height: 100%; background: #131a29; border-radius: 4px; width: 0%; transition: width 0.1s ease; position: relative; }
+.atm-progress-fill::after { content: ""; position: absolute; right: -2px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: #131a29; border-radius: 50%; opacity: 0; transition: opacity 0.2s ease; }
+.atm-progress-bar:hover .atm-progress-fill::after { opacity: 1; }
+.atm-time-display { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px; color: #94a3b8; font-weight: 500; font-family: "SF Mono", Monaco, monospace; }
+.atm-control-buttons { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
+.atm-speed-btn, .atm-volume-btn, .atm-download-btn { background: rgba(71, 85, 105, 0.8); border: 1px solid #64748b; border-radius: 50px; padding: 1px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: #f8fafc; display: flex; align-items: center; gap: 6px; }
+.atm-speed-btn:hover, .atm-volume-btn:hover { background: rgba(19, 26, 41, 0.2); border-color: #131a29; transform: translateY(-1px); }
+.atm-download-btn { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+.atm-download-btn:hover { background: rgba(59, 130, 246, 0.3); border-color: #2563eb; }
+.atm-volume-icon { font-size: 14px; line-height: 1; }
+.atm-btn-icon { width: 14px; height: 14px; filter: brightness(0) invert(1); }
+@media (max-width: 700px) {
+    .atm-modern-player { padding: 20px; }
+    .atm-player-container { flex-direction: column; text-align: center; gap: 16px; }
+    .atm-cover-image { width: 180px; height: 180px; }
+    .atm-play-button { width: 64px; height: 64px; }
+    .atm-episode-title { font-size: 18px; white-space: normal; margin-top: 5px !important; }
+    .atm-control-buttons { justify-content: center; }
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.atm-loading { animation: pulse 1.5s ease-in-out infinite; }

@@ -1,0 +1,24 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs / env
+*.log
+.env
+
+# Node / build
+node_modules/
+dist/
+build/
+
+# Composer (if you vendor)
+vendor/
+composer.lock
+
+# Zips / releases
+*.zip
+
+# WordPress caches
+wp-content/cache/

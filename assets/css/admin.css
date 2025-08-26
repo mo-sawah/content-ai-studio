@@ -1,0 +1,329 @@
+/* General Post Meta Box Styles */
+.atm-meta-box { padding: 1px 12px; }
+#article-to-media .inside { padding: 0; margin: 5px 15px; }
+.postbox#article-to-media .hndle { font-size: 18px; padding: 10px 20px; }
+.atm-section { margin-bottom: 20px; padding: 20px; background: #2d3748; border-radius: 8px; border: 1px solid #4a5568; color: #e2e8f0; }
+.atm-section h4 { margin: 0 0 15px 0; font-size: 16px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #4a5568; padding-bottom: 10px; }
+.atm-button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; width: 100%; justify-content: center; text-transform: uppercase; letter-spacing: 0.5px; }
+.atm-button.atm-primary { background: linear-gradient(135deg, #4A00E0 0%, #8E2DE2 100%); color: white; }
+.atm-button.atm-primary:hover { transform: scale(1.02); box-shadow: 0 7px 20px rgba(74, 0, 224, 0.3); }
+.atm-button.atm-regenerate { background: #c9356e; color: white; margin-top: 15px; }
+.atm-button.atm-regenerate:hover { background: #b02d5f; }
+.atm-button-small { padding: 6px 12px; font-size: 12px; }
+.atm-button.atm-disabled { background: #4a5568; color: #a0aec0; cursor: not-allowed; }
+.atm-success { background: #2c5282; color: #bee3f8; padding: 12px 16px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; border-left: 4px solid #63b3ed; }
+.atm-error { background: #9b2c2c; color: #fed7d7; padding: 12px 16px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; border-left: 4px solid #f56565; }
+.atm-error a { color: #fff; font-weight: 700; text-decoration: underline; }
+.atm-generating { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #2c5282; color: #bee3f8; border-radius: 6px; font-size: 13px; border-left: 4px solid #63b3ed; }
+.atm-spinner { width: 18px; height: 18px; border: 3px solid #4a5568; border-top: 3px solid #63b3ed; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.atm-coming-soon { opacity: 0.6; }
+.atm-note { font-size: 12px; color: #a0aec0; margin: 10px 0 0 0; font-style: italic; }
+.atm-image-section { margin: 15px 0; }
+.atm-form-group { margin-bottom: 15px; }
+.atm-form-group label { font-weight: 600; display: block; margin-bottom: 5px; color: #cbd5e1; }
+.atm-select-wrapper { position: relative; }
+.atm-select-wrapper select { width: 100%; padding: 10px 12px !important; -webkit-appearance: none; appearance: none; border: 1px solid #4a5568; border-radius: 6px; background-color: #1a202c; color: #e2e8f0; }
+.atm-select-wrapper::after { display: none; content: "▾"; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #a0aec0; font-size: 16px; }
+.postbox .atm-select-wrapper::after { display: none; }
+.postbox .atm-select-wrapper select:hover { color: #e3e3e3 !important; }
+.postbox .atm-select-wrapper select:active { color: #ffffff !important; }
+.postbox .atm-select-wrapper select:focus { color: #ffffff !important; }
+
+/* Styles for dark input fields */
+.atm-section .atm-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #4a5568;
+    border-radius: 6px;
+    background-color: #1a202c;
+    color: #e2e8f0;
+    box-sizing: border-box; /* Ensures padding doesn't affect width */
+}
+.atm-section .atm-input:focus {
+    outline: none;
+    border-color: #63b3ed;
+    box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.3);
+}
+
+.atm-section .atm-textarea { width: 100%; padding: 10px 12px; border: 1px solid #4a5568; border-radius: 6px; background-color: #1a202c; color: #e2e8f0; font-family: monospace; font-size: 13px; line-height: 1.6; box-sizing: border-box; }
+.atm-section .atm-textarea:focus { outline: none; border-color: #63b3ed; box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.3); }
+.atm-section .description { font-size: 12px; color: #a0aec0; margin-top: 8px; font-style: italic; }
+.atm-section .description code { background: #4a5568; padding: 2px 5px; border-radius: 4px; color: #e2e8f0; }
+
+/* Styles for the Generated Article Editor */
+#atm-generated-article-editor {
+    border-top: 2px solid #4a5568;
+    padding-top: 20px;
+}
+#wp-atm-generated-content-wrap {
+    border: 1px solid #4a5568;
+    border-radius: 6px;
+}
+#wp-atm-generated-content-editor-tools {
+    background: #1a202c !important;
+    border-bottom: 1px solid #4a5568;
+}
+#wp-atm-generated-content-editor-container iframe {
+    background-color: #1a202c;
+}
+#article-to-media .wp-editor-tabs button {
+    background-color: #2d3748 !important;
+    color: #e2e8f0 !important;
+    border: 1px solid #4a5568 !important;
+}
+#article-to-media .wp-editor-tabs button.active {
+    background-color: #1a202c !important;
+    border-bottom-color: #1a202c !important;
+}
+
+/* Main Settings Page Styles */
+.atm-settings { max-width: 1250px; }
+.atm-settings .notice, .atm-settings .notice-success, .atm-settings div.updated, .atm-settings div.error { background-color: #1a202c !important; border-left: 4px solid transparent !important; color: #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
+.atm-settings .notice p { color: #e2e8f0 !important; }
+.atm-header { text-align: center; margin-bottom: 30px; padding: 25px; background: linear-gradient(135deg, #4A00E0 0%, #8E2DE2 100%); color: white; border-radius: 12px; }
+.atm-header h1 { margin: 0; font-size: 26px; }
+.atm-header .atm-subtitle { margin: 10px 0 0 0; opacity: 0.8; font-size: 15px; }
+.atm-header .atm-subtitle a { color: white; text-decoration: underline; }
+.atm-settings-card { background: #ffffff; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 25px; }
+.atm-settings-card h2 { color: #1a202c; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin: -2.5rem -2.5rem 2rem -2.5rem; font-size: 18px; font-weight: 600; padding-left: 2.5rem; padding-top: 1.5rem; }
+.atm-settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+.atm-settings .form-table { border-collapse: collapse; width: 100%; }
+.atm-settings .form-table th, .atm-settings .form-table td { padding: 0; text-align: left; }
+.atm-settings .form-table tr { margin-bottom: 1.5rem; display: block; }
+.atm-settings .form-table td { display: block; }
+.atm-settings .form-table th { padding-bottom: 8px; font-size: 14px; font-weight: 600; color: #2d3748; }
+.atm-settings input[type="password"], .atm-settings input[type="text"], .atm-settings input[type="url"], .atm-settings select, .atm-settings textarea { width: 100%; padding: 10px 12px; margin-bottom: 5px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; background: #fdfdff; transition: all 0.2s ease; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); box-sizing: border-box; }
+.atm-settings textarea { min-height: 150px; font-family: monospace; line-height: 1.6; }
+.atm-settings .atm-select-wrapper select { -webkit-appearance: none !important; appearance: none !important; padding-right: 30px !important; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 8px auto; }
+.atm-settings-card .atm-select-wrapper select { color: #4e4e4e; }
+.atm-settings input:focus, .atm-settings select:focus, .atm-settings textarea:focus { border-color: #4A00E0; outline: none; box-shadow: 0 0 0 3px rgba(74, 0, 224, 0.1); }
+.atm-settings .description { font-size: 13px; color: #718096; margin-top: 8px; }
+.atm-prompt-guide { margin-top: 15px; padding: 15px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #475569; }
+.atm-prompt-guide p { margin: 0 0 10px 0; }
+.atm-prompt-guide strong { color: #1e293b; }
+.atm-prompt-guide ul { margin: 0; padding-left: 20px; }
+.atm-prompt-guide code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: #2d3748; font-size: 12px; }
+.atm-save-button { background: linear-gradient(135deg, #4A00E0 0%, #8E2DE2 100%) !important; border: none !important; padding: 12px 28px !important; border-radius: 8px !important; font-size: 14px !important; text-transform: uppercase !important; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(74, 0, 224, 0.2) !important; transition: all 0.3s ease !important; height: auto !important; }
+.atm-save-button:hover { transform: translateY(-2px) !important; box-shadow: 0 7px 20px rgba(74, 0, 224, 0.3) !important; }
+.atm-voice-preview-btn { margin-left: 10px; vertical-align: middle; }
+@media (max-width: 768px) { .atm-settings-grid { grid-template-columns: 1fr; } .atm-settings-card { padding: 1.5rem; } .atm-settings-card h2 { padding-left: 1.5rem; margin: -1.5rem -1.5rem 1.5rem -1.5rem; } }
+
+/* --- Gutenberg Editor Sidebar Fixes --- */
+.edit-post-sidebar .atm-section { background: transparent; border: none; padding: 10px 0 0 0; margin: 0; }
+.edit-post-sidebar .atm-select-wrapper select { -webkit-appearance: none !important; appearance: none !important; width: 100%; padding: 6px 24px 6px 8px !important; margin: 0; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2350575e%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 8px top 50%; background-size: 8px auto; }
+.edit-post-sidebar .atm-button { width: 100%; box-sizing: border-box; }
+
+/* FIX: Scope inputs and textareas to the plugin's meta box only */
+#article-to-media input[type="text"], 
+#article-to-media input[type="url"], 
+#article-to-media textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Grid Layout for Compact Desktop View */
+.atm-grid-2,
+.atm-grid-3 {
+    /* On mobile, they will stack by default */
+    margin-bottom: 15px;
+}
+
+/* Apply grid only on larger screens */
+@media (min-width: 960px) {
+    .atm-grid-2,
+    .atm-grid-3 {
+        display: grid;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    .atm-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .atm-grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .atm-grid-2 .atm-form-group,
+    .atm-grid-3 .atm-form-group {
+        margin-bottom: 0; /* Remove bottom margin when in a grid */
+    }
+}
+
+/* Enhanced RSS Results Styling */
+.atm-rss-results-header {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #4a5568;
+}
+
+.atm-rss-item {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.atm-rss-item:hover {
+    border-color: #63b3ed !important;
+    box-shadow: 0 4px 12px rgba(99, 179, 237, 0.15);
+}
+
+.atm-high-relevance {
+    border-color: #f6ad55 !important;
+    background: linear-gradient(135deg, #2d3748 0%, #3d4852 100%) !important;
+}
+
+.atm-relevance-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #f6ad55;
+    color: #1a202c;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.atm-article-title {
+    color: #f8fafc !important;
+}
+
+.atm-article-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.atm-article-excerpt {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.atm-article-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.atm-article-actions .atm-button {
+    width: auto !important;
+    min-width: 120px;
+}
+
+/* Test RSS Feed Section */
+.atm-rss-test-section {
+    background: rgba(74, 85, 105, 0.1);
+    border: 1px solid #4a5568;
+    border-radius: 6px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.atm-rss-test-section h5 {
+    margin: 0 0 15px 0;
+    color: #cbd5e1;
+    font-size: 14px;
+}
+
+#atm-rss-test-results .atm-success {
+    background: #2c5282;
+    color: #bee3f8;
+    padding: 10px;
+    border-radius: 4px;
+    border-left: 3px solid #63b3ed;
+}
+
+#atm-rss-test-results .atm-error {
+    background: #9b2c2c;
+    color: #fed7d7;
+    padding: 10px;
+    border-radius: 4px;
+    border-left: 3px solid #f56565;
+}
+
+/* Enhanced checkboxes */
+.atm-section input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #4A00E0;
+    margin-right: 8px;
+}
+
+.atm-section label:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* Progress indicator for deep search */
+.atm-deep-search-progress {
+    margin-top: 10px;
+    padding: 10px;
+    background: #2c5282;
+    border-radius: 4px;
+    color: #bee3f8;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.atm-deep-search-progress .atm-spinner {
+    width: 16px;
+    height: 16px;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .atm-article-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .atm-article-actions .atm-button {
+        width: 100% !important;
+        min-width: auto;
+    }
+    
+    .atm-grid-2 {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+}
+
+#atm-rss-feed-wrapper input[type="checkbox"], #atm-rss-feed-wrapper input[type="radio"] {
+    margin: 0 0.25rem 0 0 !important;
+}
+
+/* Styles for About and Support Pages */
+.atm-about-content p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #475569;
+}
+.atm-about-links {
+    margin-top: 30px;
+    display: flex;
+    gap: 15px;
+}
+.atm-about-links .atm-button {
+    width: auto;
+    text-decoration: none;
+}
+.atm-about-links .atm-button:not(.atm-primary) {
+    background: #f1f5f9;
+    color: #475569;
+}
+.atm-about-links .atm-button:not(.atm-primary):hover {
+    background: #e2e8f0;
+}
+
+body.post-php #wpfooter,
+body.post-new-php #wpfooter {
+    position: relative;
+}
