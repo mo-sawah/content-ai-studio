@@ -13,8 +13,9 @@ function updateEditorContent(title, markdownContent) {
         wp.data.dispatch('core/editor').editPost({ title: title });
     } else {
         // Fallback for Classic Editor
-        $('#title').val(title);
-        $('#title').trigger('blur'); // This tells WordPress to update the slug preview
+$('#title').val(title);
+$('#title-prompt-text').hide(); // Manually hide the "Add title" label
+$('#title').trigger('blur');    // This tells WordPress to update the slug preview
     }
 
     // --- Update Post Content ---
