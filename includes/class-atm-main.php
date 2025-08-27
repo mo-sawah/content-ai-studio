@@ -128,96 +128,108 @@ class ATM_Main {
     }
     
     public function enqueue_admin_scripts($hook) {
-        $screen = get_current_screen();
-        $is_plugin_page = false;
-        if ($screen) {
-            if ($screen->id === 'toplevel_page_content-ai-studio' || strpos($screen->id, 'ai-studio_page_') === 0) {
-                 $is_plugin_page = true;
-            }
+    $screen = get_current_screen();
+    $is_plugin_page = false;
+    if ($screen) {
+        if ($screen->id === 'toplevel_page_content-ai-studio' || strpos($screen->id, 'ai-studio_page_') === 0) {
+             $is_plugin_page = true;
         }
-        
-        if ($hook !== 'post.php' && $hook !== 'post-new.php' && !$is_plugin_page) {
-            return;
-        }
-        
-        wp_enqueue_media();
+    }
 
-        // Register the 'marked' library from a CDN
-        wp_register_script(
-            'marked-library',
-            'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
-            array(),
-            '4.0.12',
-            true
-        );
+    if ($hook !== 'post.php' && $hook !== 'post-new.php' && !$is_plugin_page) {
+        return;
+    }
 
-        // Enqueue the new Gutenberg sidebar script
-        $script_asset_path = ATM_PLUGIN_PATH . 'build/index.asset.php';
-        if (file_exists($script_asset_path)) {
-            $script_asset = require($script_asset_path);
-            wp_enqueue_script(
-                'atm-gutenberg-sidebar',
-                ATM_PLUGIN_URL . 'build/index.js',
-                $script_asset['dependencies'],
-                $script_asset['version'],
-                true
-            );
-            $style_path = ATM_PLUGIN_PATH . 'build/index.css';
-if (file_exists($style_path)) {
-    wp_enqueue_style(
-        'atm-gutenberg-sidebar-style',
-        ATM_PLUGIN_URL . 'build/index.css',
+    wp_enqueue_media();
+
+    // Register the 'marked' library from a CDN
+    wp_register_script(
+        'marked-library',
+        'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
         array(),
-        $script_asset['version']
-    );
-}
-        }
-
-        // Enqueue the new Studio App for the meta box
-$studio_asset_path = ATM_PLUGIN_PATH . 'build/studio.asset.php';
-if (file_exists($studio_asset_path)) {
-    $studio_asset = require($studio_asset_path);
-    wp_enqueue_script(
-        'atm-studio-app',
-        ATM_PLUGIN_URL . 'build/studio.js',
-        $studio_asset['dependencies'],
-        $studio_asset['version'],
+        '4.0.12',
         true
     );
-    // Also enqueue the corresponding stylesheet
-    $studio_style_path = ATM_PLUGIN_PATH . 'build/studio.css';
-    if (file_exists($studio_style_path)) {
-         wp_enqueue_style(
-            'atm-studio-style',
-            ATM_PLUGIN_URL . 'build/studio.css',
-            array(),
-            $studio_asset['version']
-        );
-    }
-}
 
-        // The admin script for the meta box, with the corrected dependencies
-        $dependencies = array('jquery', 'wp-blocks', 'wp-data', 'wp-element', 'wp-editor', 'wp-components', 'marked-library');
+    // Enqueue the Gutenberg sidebar script
+    $script_asset_path = ATM_PLUGIN_PATH . 'build/index.asset.php';
+    if (file_exists($script_asset_path)) {
+        $script_asset = require($script_asset_path);
         wp_enqueue_script(
-            'atm-admin-script',
-            ATM_PLUGIN_URL . 'assets/js/admin.js',
-            $dependencies,
-            ATM_VERSION,
+            'atm-gutenberg-sidebar',
+            ATM_PLUGIN_URL . 'build/index.js',
+            $script_asset['dependencies'],
+            $script_asset['version'],
             true
         );
-        
-        wp_enqueue_style(
-            'atm-admin-style',
-            ATM_PLUGIN_URL . 'assets/css/admin.css',
-            array(),
-            ATM_VERSION
-        );
-        
-        wp_localize_script('atm-admin-script', 'atm_ajax', array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('atm_nonce')
-        ));
+        $style_path = ATM_PLUGIN_PATH . 'build/index.css';
+        if (file_exists($style_path)) {
+            wp_enqueue_style(
+                'atm-gutenberg-sidebar-style',
+                ATM_PLUGIN_URL . 'build/index.css',
+                array(),
+                $script_asset['version']
+            );
+        }
     }
+
+    // Enqueue the new Studio App for the meta box
+    $studio_asset_path = ATM_PLUGIN_PATH . 'build/studio.asset.php';
+    if (file_exists($studio_asset_path)) {
+        $studio_asset = require($studio_asset_path);
+        wp_enqueue_script(
+            'atm-studio-app',
+            ATM_PLUGIN_URL . 'build/studio.js',
+            $studio_asset['dependencies'],
+            $studio_asset['version'],
+            true
+        );
+        // Also enqueue the corresponding stylesheet
+        $studio_style_path = ATM_PLUGIN_PATH . 'build/studio.css';
+        if (file_exists($studio_style_path)) {
+            wp_enqueue_style(
+                'atm-studio-style',
+                ATM_PLUGIN_URL . 'build/studio.css',
+                array(),
+                $studio_asset['version']
+            );
+        }
+    }
+
+    // The old admin script (can be removed later, but keep for now)
+    $dependencies = array('jquery', 'wp-blocks', 'wp-data', 'wp-element', 'wp-editor', 'wp-components', 'marked-library');
+    wp_enqueue_script(
+        'atm-admin-script',
+        ATM_PLUGIN_URL . 'assets/js/admin.js',
+        $dependencies,
+        ATM_VERSION,
+        true
+    );
+
+    wp_enqueue_style(
+        'atm-admin-style',
+        ATM_PLUGIN_URL . 'assets/css/admin.css',
+        array(),
+        ATM_VERSION
+    );
+
+    // --- THIS IS THE NEW PART ---
+    // Pass data to both the old admin.js and the new studio.js
+    $settings_class = new ATM_Settings();
+    $settings = $settings_class->get_settings();
+    $api_class = new ATM_API();
+    $writing_styles = $api_class->get_writing_styles();
+
+    $localized_data = array(
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('atm_nonce'),
+        'article_models' => $settings['article_models'],
+        'writing_styles' => $writing_styles,
+    );
+
+    wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
+    wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data); // Pass data to our React app
+}
 
     public function register_tinymce_button() {
         // Check if the user can edit posts and is using the rich text editor

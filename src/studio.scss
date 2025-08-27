@@ -96,3 +96,20 @@
         background: #4f46e5;
     }
 }
+
+/* Grid Layouts for Forms */
+.atm-grid-2,
+.atm-grid-3 {
+    display: grid;
+    gap: 1rem;
+}
+
+// This makes the grid active on wider screens
+@media (min-width: 782px) {
+    .atm-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .atm-grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

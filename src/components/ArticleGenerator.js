@@ -1,22 +1,20 @@
-// src/components/ArticleGenerator.js
-
-import { useState, useEffect } from '@wordpress/element';
+import { useState } from '@wordpress/element';
 import { Button, SelectControl, TextControl, TextareaControl, CheckboxControl, Spinner } from '@wordpress/components';
 
-// Helper function to call our existing AJAX endpoints
+// This makes our AJAX calls to the backend
 const callAjax = (action, data) => {
     return jQuery.ajax({
-        url: atm_ajax.ajax_url,
+        url: atm_studio_data.ajax_url,
         type: 'POST',
         data: {
-            action: `atm_${action}`, // Prefixes the action for security
-            nonce: atm_ajax.nonce,
+            action: action, // The action is now passed in full
+            nonce: atm_studio_data.nonce,
             ...data,
         },
     });
 };
 
-// Helper to update the editor (re-implemented for React)
+// This function updates the editor content (Classic or Gutenberg)
 const updateEditorContent = (title, markdownContent) => {
     const isBlockEditor = document.body.classList.contains('block-editor-page');
     const htmlContent = window.marked ? window.marked.parse(markdownContent) : markdownContent;
@@ -25,7 +23,7 @@ const updateEditorContent = (title, markdownContent) => {
         wp.data.dispatch('core/editor').editPost({ title });
         const blocks = wp.blocks.parse(htmlContent);
         const currentBlocks = wp.data.select('core/block-editor').getBlocks();
-        if (currentBlocks.length) {
+        if (currentBlocks.length > 0 && !(currentBlocks.length === 1 && currentBlocks[0].name === 'core/paragraph' && currentBlocks[0].attributes.content === '')) {
             const clientIds = currentBlocks.map(block => block.clientId);
             wp.data.dispatch('core/block-editor').removeBlocks(clientIds);
         }
@@ -42,56 +40,94 @@ const updateEditorContent = (title, markdownContent) => {
     }
 };
 
+
 function ArticleGenerator({ setActiveView }) {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
 
-    // Form state
+    // Form state for all our fields
     const [articleType, setArticleType] = useState('creative');
     const [keyword, setKeyword] = useState('');
     const [title, setTitle] = useState('');
+    const [writingStyle, setWritingStyle] = useState('default_seo');
+    const [articleModel, setArticleModel] = useState(''); // Empty means use default from settings
+    const [wordCount, setWordCount] = useState('');
+    const [customPrompt, setCustomPrompt] = useState('');
     const [generateImage, setGenerateImage] = useState(false);
+
+    // Prepare options for our Select controls from the data we passed from PHP
+    const modelOptions = [
+        { label: 'Use Default Model', value: '' },
+        ...Object.entries(atm_studio_data.article_models).map(([value, label]) => ({ label, value }))
+    ];
+    const styleOptions = Object.entries(atm_studio_data.writing_styles).map(([value, { label }]) => ({ label, value }));
 
     const handleGenerate = async () => {
         setIsLoading(true);
-        setStatusMessage('Generating...');
 
         const postId = document.getElementById('atm-studio-root').getAttribute('data-post-id');
-        const articleData = {
-            post_id: postId,
-            keyword: keyword,
-            title: title,
-            // We will add more fields like writing style, etc. later
-        };
+        const topic = title || keyword;
+
+        if (!topic) {
+            alert('Please provide a keyword or an article title.');
+            setIsLoading(false);
+            return;
+        }
 
         try {
-            // This is a simplified example. We'll expand this for news/rss later.
-            const response = await callAjax('generate_article_content', { article_title: title || keyword });
+            let finalTitle = title;
 
-            if (response.success) {
-                setStatusMessage('Article generated successfully!');
-                updateEditorContent(title || keyword, response.data.article_content);
-
-                if (generateImage) {
-                    setStatusMessage('Generating featured image...');
-                    await callAjax('generate_featured_image', { post_id: postId, prompt: '' });
-                    setStatusMessage('All done! Reloading page to show image...');
-                    setTimeout(() => window.location.reload(), 2000);
-                } else {
-                   setTimeout(() => {
-                       setIsLoading(false);
-                       setStatusMessage('');
-                   }, 2000);
-                }
-            } else {
-                throw new Error(response.data || 'An unknown error occurred.');
+            // Step 1: Generate title from keyword if no title is provided
+            if (!finalTitle && keyword) {
+                setStatusMessage('Generating compelling title...');
+                const titleResponse = await callAjax('generate_article_title', { keyword, model: articleModel });
+                if (!titleResponse.success) throw new Error(titleResponse.data);
+                finalTitle = titleResponse.data.article_title;
             }
+
+            // Step 2: Generate the article content
+            setStatusMessage('Writing article content...');
+            const contentResponse = await callAjax('generate_article_content', {
+                post_id: postId,
+                article_title: finalTitle,
+                model: articleModel,
+                writing_style: writingStyle,
+                custom_prompt: customPrompt,
+                word_count: wordCount
+            });
+
+            if (!contentResponse.success) throw new Error(contentResponse.data);
+
+            updateEditorContent(finalTitle, contentResponse.data.article_content);
+            setStatusMessage('✅ Article content inserted!');
+
+            // Step 3 (Optional): Generate the featured image
+            if (generateImage) {
+                setStatusMessage('Generating featured image...');
+                const imageResponse = await callAjax('generate_featured_image', { post_id: postId, prompt: '' });
+
+                if (!imageResponse.success) {
+                    alert('Article was generated, but the image failed: ' + imageResponse.data);
+                } else {
+                    setStatusMessage('✅ All done! Reloading to show image...');
+                    setTimeout(() => window.location.reload(), 2000);
+                    return; // Stop execution here
+                }
+            }
+
+            // If we reach here, we're done (and not reloading)
+            setIsLoading(false);
+            setTimeout(() => setStatusMessage(''), 3000);
+
         } catch (error) {
-            setStatusMessage(`Error: ${error.message}`);
+            // Catch any error from the process
+            const errorMessage = error.message || 'An unknown error occurred.';
+            setStatusMessage(`Error: ${errorMessage}`);
             setIsLoading(false);
         }
     };
 
+    // For now, we only show the 'creative' fields. We'll add logic for news/rss later.
     return (
         <div className="atm-generator-view">
             <div className="atm-view-header">
@@ -105,32 +141,66 @@ function ArticleGenerator({ setActiveView }) {
                 <SelectControl
                     label="Article Type"
                     value={articleType}
-                    options={[
-                        { label: 'Creative Article', value: 'creative' },
-                        { label: 'Latest News Article', value: 'news' },
-                        { label: 'Article from RSS Feed', value: 'rss_feed' },
-                    ]}
+                    options={[ { label: 'Creative Article', value: 'creative' } ]}
                     onChange={(value) => setArticleType(value)}
                     disabled={isLoading}
                 />
 
-                <TextControl
-                    label="Keyword"
-                    value={keyword}
-                    onChange={(value) => setKeyword(value)}
-                    placeholder="e.g., AI in digital marketing"
+                <div className="atm-grid-2">
+                    <TextControl
+                        label="Keyword"
+                        value={keyword}
+                        onChange={(value) => setKeyword(value)}
+                        placeholder="e.g., AI in digital marketing"
+                        disabled={isLoading}
+                    />
+                    <TextControl
+                        label="or Article Title"
+                        value={title}
+                        onChange={(value) => setTitle(value)}
+                        placeholder="e.g., 5 Ways AI is Revolutionizing Marketing"
+                        disabled={isLoading}
+                    />
+                </div>
+
+                <div className="atm-grid-3">
+                    <SelectControl
+                        label="Article Model"
+                        value={articleModel}
+                        options={modelOptions}
+                        onChange={(value) => setArticleModel(value)}
+                        disabled={isLoading}
+                    />
+                    <SelectControl
+                        label="Writing Style"
+                        value={writingStyle}
+                        options={styleOptions}
+                        onChange={(value) => setWritingStyle(value)}
+                        disabled={isLoading}
+                    />
+                    <SelectControl
+                        label="Article Length"
+                        value={wordCount}
+                        options={[
+                            { label: 'Default', value: '' },
+                            { label: 'Short (~500 words)', value: '500' },
+                            { label: 'Standard (~800 words)', value: '800' },
+                            { label: 'Medium (~1200 words)', value: '1200' },
+                            { label: 'Long (~2000 words)', value: '2000' },
+                        ]}
+                        onChange={(value) => setWordCount(value)}
+                        disabled={isLoading}
+                    />
+                </div>
+
+                <TextareaControl
+                    label="Custom Prompt (Optional)"
+                    value={customPrompt}
+                    onChange={(value) => setCustomPrompt(value)}
+                    placeholder="Leave empty to use the selected Writing Style. If you write a prompt here, it will be used instead."
+                    rows="6"
                     disabled={isLoading}
                 />
-
-                <TextControl
-                    label="or Article Title"
-                    value={title}
-                    onChange={(value) => setTitle(value)}
-                    placeholder="e.g., 5 Ways AI is Revolutionizing Marketing"
-                    disabled={isLoading}
-                />
-
-                {/* We will add the other controls (writing style, etc.) in a future step */}
 
                 <CheckboxControl
                     label="Also generate a featured image"
