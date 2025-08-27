@@ -1,37 +1,20 @@
 // src/components/ImageGenerator.js
 
 import { useState } from '@wordpress/element';
-import { Button, TextareaControl, Spinner } from '@wordpress/components';
+import { useDispatch } from '@wordpress/data';
+import { Button, TextareaControl, Spinner, SelectControl } from '@wordpress/components';
 
-// Helper to call our existing AJAX endpoints
-const callAjax = (action, data) => {
-    return jQuery.ajax({
-        url: atm_studio_data.ajax_url,
-        type: 'POST',
-        data: {
-            action: action,
-            nonce: atm_studio_data.nonce,
-            ...data,
-        },
-    });
-};
-
-// Helper to update the Featured Image UI in both editors
-const updateFeaturedImageUI = (attachmentId, html) => {
-    const isBlockEditor = document.body.classList.contains('block-editor-page');
-    if (isBlockEditor) {
-        wp.data.dispatch('core/editor').editPost({ featured_media: attachmentId });
-    } else {
-        // For the Classic Editor, WordPress provides a function to do this
-        // but for simplicity and reliability, we can directly replace the HTML.
-        jQuery('#postimagediv .inside').html(html);
-    }
-};
+const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
 
 function ImageGenerator({ setActiveView }) {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
     const [prompt, setPrompt] = useState('');
+    // New state for our settings
+    const [imageSize, setImageSize] = useState(''); // Empty means use default
+    const [imageQuality, setImageQuality] = useState(''); // Empty means use default
+
+    const { editPost } = useDispatch('core/editor');
 
     const handleGenerate = async () => {
         setIsLoading(true);
@@ -42,11 +25,20 @@ function ImageGenerator({ setActiveView }) {
             const response = await callAjax('generate_featured_image', {
                 post_id: postId,
                 prompt: prompt,
+                size: imageSize, // Send the override value
+                quality: imageQuality, // Send the override value
             });
 
             if (response.success) {
                 setStatusMessage('✅ Image generated and set!');
-                updateFeaturedImageUI(response.data.attachment_id, response.data.html);
+                const { attachment_id, html } = response.data;
+                const isBlockEditor = document.body.classList.contains('block-editor-page');
+
+                if (isBlockEditor) {
+                    editPost({ featured_media: attachment_id });
+                } else {
+                    jQuery('#postimagediv .inside').html(html);
+                }
             } else {
                 throw new Error(response.data);
             }
@@ -56,7 +48,6 @@ function ImageGenerator({ setActiveView }) {
             setStatusMessage(`Error: ${errorMessage}`);
         } finally {
             setIsLoading(false);
-            // Clear the status message after a few seconds
             setTimeout(() => setStatusMessage(''), 5000);
         }
     };
@@ -73,13 +64,41 @@ function ImageGenerator({ setActiveView }) {
             <div className="atm-form-container">
                 <TextareaControl
                     label="Image Prompt"
-                    help="Leave empty to automatically generate a prompt based on the article's title and content. You can use shortcodes like [article_title]."
+                    help="Leave empty for an automatic prompt. You can use shortcodes like [article_title]."
                     value={prompt}
                     onChange={setPrompt}
                     placeholder="A photorealistic image of..."
                     rows="5"
                     disabled={isLoading}
                 />
+
+                {/* --- NEW CONTROLS --- */}
+                <div className="atm-grid-2">
+                     <SelectControl
+                        label="Image Size (Override)"
+                        value={imageSize}
+                        onChange={setImageSize}
+                        options={[
+                            { label: 'Use Default', value: '' },
+                            { label: '16:9 Landscape', value: '1792x1024' },
+                            { label: '1:1 Square', value: '1024x1024' },
+                            { label: '9:16 Portrait', value: '1024x1792' },
+                        ]}
+                        disabled={isLoading}
+                    />
+                    <SelectControl
+                        label="Quality (Override)"
+                        value={imageQuality}
+                        onChange={setImageQuality}
+                        options={[
+                            { label: 'Use Default', value: '' },
+                            { label: 'Standard', value: 'standard' },
+                            { label: 'HD', value: 'hd' },
+                        ]}
+                        disabled={isLoading}
+                    />
+                </div>
+                {/* --- END NEW CONTROLS --- */}
 
                 <Button isPrimary onClick={handleGenerate} disabled={isLoading}>
                     {isLoading ? <Spinner /> : 'Generate & Set Featured Image'}

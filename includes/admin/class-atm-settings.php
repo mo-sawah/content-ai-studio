@@ -215,6 +215,36 @@ class ATM_Settings {
                                 </td>
                             </tr>
                         </table>
+                        </div>
+
+<div class="atm-settings-card">
+    <h2>🖼️ Image Generation Defaults</h2>
+    <table class="form-table">
+        <tr>
+            <th scope="row">Default Image Quality</th>
+            <td>
+                <select name="atm_image_quality">
+                    <option value="standard" <?php selected($options['image_quality'], 'standard'); ?>>Standard</option>
+                    <option value="hd" <?php selected($options['image_quality'], 'hd'); ?>>HD</option>
+                </select>
+                <p class="description">"HD" creates images with finer details and greater consistency, but may have a higher cost.</p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row">Default Image Size</th>
+            <td>
+                <select name="atm_image_size">
+                    <option value="1792x1024" <?php selected($options['image_size'], '1792x1024'); ?>>16:9 Landscape</option>
+                    <option value="1024x1024" <?php selected($options['image_size'], '1024x1024'); ?>>1:1 Square</option>
+                    <option value="1024x1792" <?php selected($options['image_size'], '1024x1792'); ?>>9:16 Portrait</option>
+                </select>
+                <p class="description">Select the default aspect ratio for generated images.</p>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="atm-settings-card">
                     </div>
                 </div>
 
@@ -275,6 +305,8 @@ class ATM_Settings {
         update_option('atm_guardian_api_key', sanitize_text_field($_POST['atm_guardian_api_key']));
         update_option('atm_rss_feeds', sanitize_textarea_field($_POST['atm_rss_feeds']));
         update_option('atm_scrapingant_api_key', sanitize_text_field($_POST['atm_scrapingant_api_key']));
+        update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
+        update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
         echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
     }
 
@@ -292,6 +324,8 @@ class ATM_Settings {
             'article_prompt' => get_option('atm_article_prompt', ATM_API::get_default_article_prompt()),
             'image_prompt'   => get_option('atm_image_prompt', ATM_API::get_default_image_prompt()),
             'podcast_prompt' => get_option('atm_podcast_prompt', ATM_API::get_default_master_prompt()),
+            'image_quality'  => get_option('atm_image_quality', 'hd'),
+            'image_size'     => get_option('atm_image_size', '1792x1024'),
             'article_models' => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
                 'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',

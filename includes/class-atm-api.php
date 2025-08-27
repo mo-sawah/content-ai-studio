@@ -755,55 +755,58 @@ class ATM_API {
         return $upload_dir['baseurl'] . '/podcasts/' . $filename;
     }
     
-    public static function generate_image_with_openai($prompt) {
-        $api_key = get_option('atm_openai_api_key');
-        
-        if (empty($api_key)) {
-            throw new Exception('OpenAI API key not configured in settings.');
-        }
-
-        $post_data = json_encode([
-            'model'   => 'dall-e-3',
-            'prompt'  => $prompt,
-            'n'       => 1,
-            'size'    => '1024x1024',
-            'quality' => 'hd', // Use high definition for better quality
-            'style'   => 'natural' // Aim for a more natural, photorealistic look
-        ]);
-
-        $response = wp_remote_post('https://api.openai.com/v1/images/generations', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type'  => 'application/json',
-            ],
-            'body'    => $post_data,
-            'timeout' => 120
-        ]);
-
-        if (is_wp_error($response)) {
-            throw new Exception('Image generation failed: ' . $response->get_error_message());
-        }
-        
-        $body = wp_remote_retrieve_body($response);
-        $result = json_decode($body, true);
-        $response_code = wp_remote_retrieve_response_code($response);
-
-        if ($response_code !== 200) {
-            $error_message = 'Invalid response from OpenAI API (Code: ' . $response_code . ')';
-            if (isset($result['error']['message'])) {
-                $error_message = 'API Error: ' . $result['error']['message'];
-            }
-            error_log('OpenAI Image API Error: ' . $body);
-            throw new Exception($error_message);
-        }
-
-        if (!isset($result['data'][0]['url'])) {
-            error_log('OpenAI Image API Error: Malformed success response. ' . $body);
-            throw new Exception('Image generation succeeded but the response was invalid.');
-        }
-
-        return $result['data'][0]['url'];
+    public static function generate_image_with_openai($prompt, $size_override = '', $quality_override = '') {
+    $api_key = get_option('atm_openai_api_key');
+    if (empty($api_key)) {
+        throw new Exception('OpenAI API key not configured in settings.');
     }
+
+    // Use override if provided, otherwise fall back to saved option, then hardcoded default.
+    $image_size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1792x1024');
+    $image_quality = !empty($quality_override) ? $quality_override : get_option('atm_image_quality', 'hd');
+
+    $post_data = json_encode([
+        'model'   => 'dall-e-3',
+        'prompt'  => $prompt,
+        'n'       => 1,
+        'size'    => $image_size,
+        'quality' => $image_quality,
+        'style'   => 'natural'
+    ]);
+
+    $response = wp_remote_post('https://api.openai.com/v1/images/generations', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type'  => 'application/json',
+        ],
+        'body'    => $post_data,
+        'timeout' => 120
+    ]);
+
+    if (is_wp_error($response)) {
+        throw new Exception('Image generation failed: ' . $response->get_error_message());
+    }
+
+    $body = wp_remote_retrieve_body($response);
+    $result = json_decode($body, true);
+    $response_code = wp_remote_retrieve_response_code($response);
+
+    if ($response_code !== 200) {
+        $error_message = 'Invalid response from OpenAI API (Code: ' . $response_code . ')';
+        if (isset($result['error']['message'])) {
+            $error_message = 'API Error: ' . $result['error']['message'];
+        }
+        error_log('OpenAI Image API Error: ' . $body);
+        throw new Exception($error_message);
+    }
+
+    if (!isset($result['data'][0]['url'])) {
+        error_log('OpenAI Image API Error: Malformed success response. ' . $body);
+        throw new Exception('Image generation succeeded but the response was invalid.');
+    }
+
+    return $result['data'][0]['url'];
+}
 
     public static function get_translated_prompt($language, $master_prompt) {
         if (strtolower($language) === 'english') return $master_prompt;

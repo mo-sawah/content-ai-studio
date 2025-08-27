@@ -456,6 +456,10 @@ Your entire output MUST be a single, valid JSON object with three keys:
         $post_id = intval($_POST['post_id']);
         $prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : '';
 
+        // Get override values from the AJAX request
+        $size_override = isset($_POST['size']) ? sanitize_text_field($_POST['size']) : '';
+        $quality_override = isset($_POST['quality']) ? sanitize_text_field($_POST['quality']) : '';
+
         if (empty($prompt)) {
             $post = get_post($post_id);
             if (!$post) throw new Exception("Post not found.");
@@ -467,17 +471,15 @@ Your entire output MUST be a single, valid JSON object with three keys:
             $prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
         }
 
-        $image_url = ATM_API::generate_image_with_openai($prompt);
+        // Pass the overrides to the API function
+        $image_url = ATM_API::generate_image_with_openai($prompt, $size_override, $quality_override);
         $attachment_id = $this->set_image_from_url($image_url, $post_id);
 
         if (is_wp_error($attachment_id)) {
             throw new Exception($attachment_id->get_error_message());
         }
 
-        // Set the featured image
         set_post_thumbnail($post_id, $attachment_id);
-
-        // Get the HTML for the featured image box content
         $thumbnail_html = _wp_post_thumbnail_html($attachment_id, $post_id);
 
         wp_send_json_success([
