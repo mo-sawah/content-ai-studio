@@ -221,11 +221,14 @@ class ATM_Main {
     $writing_styles = $api_class->get_writing_styles();
 
     $localized_data = array(
-        'ajax_url' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('atm_nonce'),
-        'article_models' => $settings['article_models'],
-        'writing_styles' => $writing_styles,
-    );
+    'ajax_url' => admin_url('admin-ajax.php'),
+    'nonce' => wp_create_nonce('atm_nonce'),
+    'article_models' => $settings['article_models'],
+    'writing_styles' => $writing_styles,
+    'image_provider' => $settings['image_provider'],
+    'openrouter_image_models' => $settings['openrouter_image_models'],
+    'fal_image_models' => $settings['fal_image_models'],
+);
 
     wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
     wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data); // Pass data to our React app

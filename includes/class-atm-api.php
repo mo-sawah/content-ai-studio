@@ -343,11 +343,14 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
-    public static function generate_image_with_fal($prompt, $size_override = '') {
+    public static function generate_image_with_fal($prompt, $size_override = '', $model_override = '') {
     $api_key = get_option('atm_fal_api_key');
     if (empty($api_key)) throw new Exception('Fal.ai API key not configured.');
 
-    // Fal.ai uses named presets for image sizes
+    $model = !empty($model_override) ? $model_override : get_option('atm_fal_image_model', 'fal-ai/stable-diffusion-v3-medium');
+    $endpoint_url = 'https://queue.fal.run/' . $model;
+
+    // ... (the rest of the function remains the same as before) ...
     $size_map = [
         '1024x1024' => 'square',
         '1792x1024' => 'landscape_16_9',
@@ -357,8 +360,7 @@ class ATM_API {
     $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
     $image_size_preset = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
 
-    // Step 1: Submit the initial request to the queue
-    $initial_response = wp_remote_post('https://queue.fal.run/fal-ai/flux/dev', [
+    $initial_response = wp_remote_post($endpoint_url, [
         'headers' => [
             'Authorization' => 'Key ' . $api_key,
             'Content-Type' => 'application/json'
@@ -374,21 +376,19 @@ class ATM_API {
 
     if (empty($status_url)) throw new Exception('Fal.ai did not return a valid status URL.');
 
-    // Step 2: Poll the status URL until the image is ready
-    $max_retries = 20; // 20 retries * 3 seconds = 60 seconds total timeout
+    $max_retries = 20;
     for ($i = 0; $i < $max_retries; $i++) {
-        sleep(3); // Wait 3 seconds between checks
+        sleep(3);
         $status_response = wp_remote_get($status_url, ['headers' => ['Authorization' => 'Key ' . $api_key]]);
         $status_body = json_decode(wp_remote_retrieve_body($status_response), true);
 
         if (isset($status_body['status']) && $status_body['status'] === 'COMPLETED') {
             if (isset($status_body['output']['images'][0]['url'])) {
-                return $status_body['output']['images'][0]['url']; // Success! Return the image URL.
+                return $status_body['output']['images'][0]['url'];
             }
         } elseif (isset($status_body['status']) && ($status_body['status'] === 'ERROR' || $status_body['status'] === 'FAILED')) {
             throw new Exception('Fal.ai image generation failed.');
         }
-        // If still "IN_PROGRESS" or "IN_QUEUE", the loop continues
     }
 
     throw new Exception('Fal.ai image generation timed out.');

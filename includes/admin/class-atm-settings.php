@@ -262,6 +262,17 @@ class ATM_Settings {
                 <p class="description">Required to use the Fal.ai image generator. Get a key from <a href="https://fal.ai/" target="_blank">fal.ai</a>. The key is usually in a `key_id:key_secret` format.</p>
             </td>
         </tr>
+        <tr>
+    <th scope="row">Default Fal.ai Image Model</th>
+    <td>
+        <select name="atm_fal_image_model">
+            <?php foreach ($options['fal_image_models'] as $model_id => $model_name): ?>
+                <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['fal_image_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <p class="description">Select the default model to use when "Fal.ai" is the provider.</p>
+    </td>
+</tr>
     </table>
 </div>
 
@@ -360,6 +371,7 @@ class ATM_Settings {
         update_option('atm_stability_api_key', sanitize_text_field($_POST['atm_stability_api_key']));
         update_option('atm_flux_api_key', sanitize_text_field($_POST['atm_flux_api_key']));
         update_option('atm_fal_api_key', sanitize_text_field($_POST['atm_fal_api_key']));
+        update_option('atm_fal_image_model', sanitize_text_field($_POST['atm_fal_image_model']));
         echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
     }
 
@@ -384,6 +396,12 @@ class ATM_Settings {
             'stability_key'  => get_option('atm_stability_api_key', ''),
             'flux_key'  => get_option('atm_flux_api_key', ''),
             'fal_key' => get_option('atm_fal_api_key', ''),
+            'fal_image_model' => get_option('atm_fal_image_model', 'fal-ai/stable-diffusion-v3-medium'), // New
+            'fal_image_models' => [ // New
+                'fal-ai/stable-diffusion-v3-medium' => 'Stable Diffusion 3 Medium',
+                'fal-ai/flux-schnell' => 'Flux Schnell (Fast)',
+                'fal-ai/photorealistic-lcm' => 'Photorealistic LCM',
+                'fal-ai/surrealist-style' => 'Surrealist Style',
             'article_models' => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
                 'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',

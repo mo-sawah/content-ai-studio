@@ -10,11 +10,15 @@ function ImageGenerator({ setActiveView }) {
     const [prompt, setPrompt] = useState('');
     const [imageSize, setImageSize] = useState('');
     const [imageQuality, setImageQuality] = useState('');
-    // New state for the provider override
     const [provider, setProvider] = useState('');
+    const [imageModel, setImageModel] = useState('');
 
     const { editPost } = useDispatch('core/editor');
-    const { image_provider: defaultProvider } = atm_studio_data;
+    const { image_provider: defaultProvider, openrouter_image_models, fal_image_models } = atm_studio_data;
+
+    const openRouterModelOptions = [ { label: 'Use Default Model', value: '' }, ...Object.entries(openrouter_image_models).map(([value, label]) => ({ label, value })) ];
+    const falModelOptions = [ { label: 'Use Default Model', value: '' }, ...Object.entries(fal_image_models).map(([value, label]) => ({ label, value })) ];
+    const currentProvider = provider || defaultProvider;
 
     const handleGenerate = async () => {
         setIsLoading(true);
@@ -27,7 +31,8 @@ function ImageGenerator({ setActiveView }) {
                 prompt: prompt,
                 size: imageSize,
                 quality: imageQuality,
-                provider: provider, // Send the selected provider
+                provider: provider,
+                model: imageModel,
             });
 
             if (response.success) {
@@ -68,11 +73,10 @@ function ImageGenerator({ setActiveView }) {
                     value={provider}
                     onChange={setProvider}
                     options={[
-                        { label: `Default`, value: '' }, // Simplified label
+                        { label: `Use Default (${defaultProvider})`, value: '' },
                         { label: 'OpenAI (DALL-E 3)', value: 'openai' },
                         { label: 'Stability AI (Stable Diffusion)', value: 'stabilityai' },
-                        { label: 'Flux.1 (BFL Pro)', value: 'flux' },
-                        { label: 'Fal.ai (Various Models)', value: 'fal' },
+                        { label: 'Fal.ai (Multiple Models)', value: 'fal' },
                     ]}
                     disabled={isLoading}
                 />
@@ -86,6 +90,26 @@ function ImageGenerator({ setActiveView }) {
                     rows="5"
                     disabled={isLoading}
                 />
+
+                {currentProvider === 'fal' && (
+                    <SelectControl
+                        label="Fal.ai Model (Override)"
+                        value={imageModel}
+                        onChange={setImageModel}
+                        options={falModelOptions}
+                        disabled={isLoading}
+                    />
+                )}
+
+                {currentProvider === 'openrouter' && (
+                    <SelectControl
+                        label="OpenRouter Model (Override)"
+                        value={imageModel}
+                        onChange={setImageModel}
+                        options={openRouterModelOptions}
+                        disabled={isLoading}
+                    />
+                )}
 
                 <div className="atm-grid-2">
                      <SelectControl
@@ -101,7 +125,7 @@ function ImageGenerator({ setActiveView }) {
                         onChange={setImageQuality}
                         options={[ { label: 'Use Default', value: '' }, { label: 'Standard', value: 'standard' }, { label: 'HD', value: 'hd' } ]}
                         disabled={isLoading}
-                        help={(provider || defaultProvider) !== 'openai' ? 'Note: Quality setting is only for OpenAI/DALL-E 3.' : ''}
+                        help={currentProvider !== 'openai' ? 'Note: Quality setting is only for OpenAI/DALL-E 3.' : ''}
                     />
                 </div>
 

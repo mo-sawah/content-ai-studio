@@ -481,7 +481,7 @@ Your entire output MUST be a single, valid JSON object with three keys:
                 $is_url = false; // Flux.1 on BFL also returns raw data
                 break;
             case 'fal':
-                $image_data = ATM_API::generate_image_with_fal($prompt, $size_override);
+                $image_data = ATM_API::generate_image_with_fal($prompt, $size_override, $model_override); // Pass model_override
                 $is_url = true; // Fal.ai returns a URL
                 break;
             case 'openai':
