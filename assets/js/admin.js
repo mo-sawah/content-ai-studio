@@ -14,7 +14,7 @@ function updateEditorContent(title, markdownContent) {
     } else {
         // Fallback for Classic Editor
         $('#title').val(title);
-        $('#title-prompt-text').text('Finished'); // This updates the "slug" preview
+        $('#title').trigger('blur'); // This tells WordPress to update the slug preview
     }
 
     // --- Update Post Content ---

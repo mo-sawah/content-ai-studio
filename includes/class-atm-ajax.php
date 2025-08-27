@@ -451,6 +451,11 @@ Source material to transform into breaking news:';
             $headline = trim($result['headline']);
             $final_content = trim($result['content']);
 
+            // *** NEW: Clean the content to ensure the title is not duplicated ***
+        if (strpos(strtolower(substr($final_content, 0, 150)), strtolower($headline)) !== false) {
+            $final_content = preg_replace('/^#+\s*' . preg_quote($headline, '/') . '\s*/i', '', $final_content, 1);
+        }
+
             if (empty($headline) || $headline === 'Title:' || strlen($headline) < 5) {
                 $domain = parse_url($url, PHP_URL_HOST);
                 $headline = 'Breaking News from ' . ucfirst(str_replace('www.', '', $domain));
