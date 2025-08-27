@@ -8,86 +8,46 @@ if (!defined('ABSPATH')) {
 class ATM_Settings {
 
     private function render_license_section() {
-    $license_data = ATM_Licensing::get_license_data();
-    $is_active = ATM_Licensing::is_license_active();
-    ?>
-    <div class="atm-settings-card">
-        <h2>🛡️ License Key</h2>
-        <table class="form-table">
-            <tr>
-                <th scope="row">License Key</th>
-                <td>
-                    <input type="text" name="atm_license_key" value="<?php echo esc_attr($license_data['key']); ?>" class="regular-text" <?php echo $is_active ? 'disabled' : ''; ?> />
-                    <?php if ($is_active): ?>
-                        <p class="description" style="color: #2f855a;">✅ Your license is active.</p>
-                    <?php else: ?>
-                        <p class="description">Enter your license key to activate the plugin.</p>
-                    <?php endif; ?>
-                </td>
-            </tr>
-        </table>
-        <?php if ($is_active): ?>
-            <?php submit_button('Deactivate License', 'secondary', 'submit_deactivate_license', false); ?>
-        <?php else: ?>
-            <?php submit_button('Activate License', 'primary', 'submit_activate_license', false); ?>
-        <?php endif; ?>
-    </div>
-    <?php
-}
+        $license_data = ATM_Licensing::get_license_data();
+        $is_active = ATM_Licensing::is_license_active();
+        ?>
+        <div class="atm-settings-card">
+            <h2>🛡️ License Key</h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">License Key</th>
+                    <td>
+                        <input type="text" name="atm_license_key" value="<?php echo esc_attr($license_data['key']); ?>" class="regular-text" <?php echo $is_active ? 'disabled' : ''; ?> />
+                        <?php if ($is_active): ?>
+                            <p class="description" style="color: #2f855a;">✅ Your license is active.</p>
+                        <?php else: ?>
+                            <p class="description">Enter your license key to activate the plugin.</p>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            </table>
+            <?php if ($is_active): ?>
+                <?php submit_button('Deactivate License', 'secondary', 'submit_deactivate_license', false); ?>
+            <?php else: ?>
+                <?php submit_button('Activate License', 'primary', 'submit_activate_license', false); ?>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
 
     public function add_admin_menu() {
-        // The SVG icon for our menu, colorized with the branding gradient
         $icon_svg = 'data:image/svg+xml;base64,' . base64_encode('<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="atm-grad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop stop-color="#8E2DE2" /><stop offset="1" stop-color="#4A00E0" /></linearGradient></defs><rect x="2" y="13" width="20" height="9" rx="2" fill="url(#atm-grad)" opacity="0.6" /><path d="M6 16H18 M6 18H15" stroke="white" stroke-width="1.2" stroke-linecap="round" /><rect x="2" y="8" width="20" height="9" rx="2" fill="url(#atm-grad)" opacity="0.8" /><path d="M6 12.5H8L10 11L12 14L14 11L16 12.5H18" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" /><rect x="2" y="3" width="20" height="9" rx="2" fill="url(#atm-grad)" /><circle cx="8" cy="7" r="1" fill="white" /><path d="M6 10L9 8L13 9.5L18 7" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" /></svg>');
 
-        // Add the main menu page
-        add_menu_page(
-            'Content AI Studio',
-            'AI Studio',
-            'manage_options',
-            'content-ai-studio', // This is the main slug
-            array($this, 'render_settings_page'),
-            $icon_svg,
-            25 // Position in the menu
-        );
-
-        // Add the "Settings" submenu page
-        add_submenu_page(
-            'content-ai-studio', // Parent slug
-            'Settings',
-            'Settings',
-            'manage_options',
-            'content-ai-studio', // This makes it the default page for the menu
-            array($this, 'render_settings_page')
-        );
-
-        // Add the "About" submenu page
-        add_submenu_page(
-            'content-ai-studio', // Parent slug
-            'About Content AI Studio',
-            'About',
-            'manage_options',
-            'content-ai-studio-about', // Page slug
-            array($this, 'render_about_page')
-        );
-
-        // Add the "Support" submenu page
-        add_submenu_page(
-            'content-ai-studio', // Parent slug
-            'Support',
-            'Support',
-            'manage_options',
-            'content-ai-studio-support', // Page slug
-            array($this, 'render_support_page')
-        );
+        add_menu_page('Content AI Studio', 'AI Studio', 'manage_options', 'content-ai-studio', array($this, 'render_settings_page'), $icon_svg, 25);
+        add_submenu_page('content-ai-studio', 'Settings', 'Settings', 'manage_options', 'content-ai-studio', array($this, 'render_settings_page'));
+        add_submenu_page('content-ai-studio', 'About Content AI Studio', 'About', 'manage_options', 'content-ai-studio-about', array($this, 'render_about_page'));
+        add_submenu_page('content-ai-studio', 'Support', 'Support', 'manage_options', 'content-ai-studio-support', array($this, 'render_support_page'));
     }
 
     public function render_about_page() {
         ?>
         <div class="wrap atm-settings atm-about-page">
-            <div class="atm-header">
-                <h1>👋 About Content AI Studio</h1>
-                <p class="atm-subtitle">Your all-in-one AI toolkit for content creation</p>
-            </div>
+            <div class="atm-header"><h1>👋 About Content AI Studio</h1><p class="atm-subtitle">Your all-in-one AI toolkit for content creation</p></div>
             <div class="atm-settings-card">
                 <h2>Brought to You by Sawah Solutions</h2>
                 <div class="atm-about-content">
@@ -106,10 +66,7 @@ class ATM_Settings {
     public function render_support_page() {
         ?>
         <div class="wrap atm-settings atm-support-page">
-             <div class="atm-header">
-                <h1>🚀 Support & Documentation</h1>
-                <p class="atm-subtitle">We're here to help you get the most out of Content AI Studio</p>
-            </div>
+             <div class="atm-header"><h1>🚀 Support & Documentation</h1><p class="atm-subtitle">We're here to help you get the most out of Content AI Studio</p></div>
             <div class="atm-settings-card">
                 <h2>Get Help</h2>
                 <p>For detailed guides, tutorials, and frequently asked questions, please visit our official plugin support page. You'll find everything you need to get started and master the advanced features of the plugin.</p>
@@ -133,214 +90,61 @@ class ATM_Settings {
         $options = $this->get_settings();
         ?>
         <div class="wrap atm-settings">
-            <div class="atm-header">
-                <h1>🎙️ Content AI Studio Settings</h1>
-                <p class="atm-subtitle">by Sawah Solutions | <a href="https://sawahsolutions.com/content-ai-studio" target="_blank">Plugin Website</a></p>
-            </div>
-            
+            <div class="atm-header"><h1>🎙️ Content AI Studio Settings</h1><p class="atm-subtitle">by Sawah Solutions | <a href="https://sawahsolutions.com/content-ai-studio" target="_blank">Plugin Website</a></p></div>
             <form method="post" action="">
                 <?php wp_nonce_field('atm_settings_update'); ?>
-                
-                <?php $this->render_license_section(); // THIS IS THE NEW LINE YOU ADD ?>
+                <?php $this->render_license_section(); ?>
+                <div class="atm-settings-card">
+                    <h2>🔑 API Configuration</h2>
+                    <table class="form-table">
+                        <tr><th scope="row">OpenRouter API Key</th><td><input type="password" name="atm_openrouter_api_key" value="<?php echo esc_attr($options['openrouter_key']); ?>" class="regular-text" required /></td></tr>
+                        <tr><th scope="row">OpenAI API Key</th><td><input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" /><p class="description">Used for podcast and image generation.</p></td></tr>
+                        <tr><th scope="row">News API Key</th><td><input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a> for the "Latest News" feature.</p></td></tr>
+                        <tr><th scope="row">GNews API Key</th><td><input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p></td></tr>
+                        <tr><th scope="row">The Guardian API Key</th><td><input type="password" name="atm_guardian_api_key" value="<?php echo esc_attr($options['guardian_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://open-platform.theguardian.com/" target="_blank">The Guardian</a>.</p></td></tr>
+                        <tr><th scope="row">ScrapingAnt API Key</th><td><input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" /><p class="description">Required for the RSS scraping feature. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p></td></tr>
+                    </table>
+                </div>
+
+                <div class="atm-settings-card">
+                    <h2>🎨 Image Generation Provider</h2>
+                    <table class="form-table">
+                        <tr><th scope="row">Image Provider</th><td><select name="atm_image_provider"><option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option><option value="stabilityai" <?php selected($options['image_provider'], 'stabilityai'); ?>>Stability AI (Stable Diffusion)</option><option value="flux" <?php selected($options['image_provider'], 'flux'); ?>>Flux.1 (BFL Pro)</option><option value="fal" <?php selected($options['image_provider'], 'fal'); ?>>Fal.ai (Multiple Models)</option></select><p class="description">Choose your default service for generating images.</p></td></tr>
+                        <tr><th scope="row">Stability AI API Key</th><td><input type="password" name="atm_stability_api_key" value="<?php echo esc_attr($options['stability_key']); ?>" class="regular-text" /><p class="description">Required to use the Stable Diffusion image generator. Get a key from <a href="https://platform.stability.ai/" target="_blank">Stability AI</a>.</p></td></tr>
+                        <tr><th scope="row">Flux API Key</th><td><input type="password" name="atm_flux_api_key" value="<?php echo esc_attr($options['flux_key']); ?>" class="regular-text" /><p class="description">Required to use the Flux.1 image generator. Get a key from <a href="https://bfl.ai/" target="_blank">Black Forest Labs</a>.</p></td></tr>
+                        <tr><th scope="row">Fal.ai API Key</th><td><input type="password" name="atm_fal_api_key" value="<?php echo esc_attr($options['fal_key']); ?>" class="regular-text" /><p class="description">Required to use the Fal.ai image generator. Get a key from <a href="https://fal.ai/" target="_blank">fal.ai</a>. The key is usually in a `key_id:key_secret` format.</p></td></tr>
+                        <tr><th scope="row">Default Fal.ai Image Model</th><td><select name="atm_fal_image_model"><?php foreach ($options['fal_image_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['fal_image_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default model to use when "Fal.ai" is the provider.</p></td></tr>
+                    </table>
+                </div>
 
                 <div class="atm-settings-grid">
                     <div class="atm-settings-card">
-                        <h2>🔑 API Configuration</h2>
-                        <table class="form-table">
-                            <tr>
-                                <th scope="row">OpenRouter API Key</th>
-                                <td>
-                                    <input type="password" name="atm_openrouter_api_key" value="<?php echo esc_attr($options['openrouter_key']); ?>" class="regular-text" required />
-                                </td>
-                            </tr>
-                            <tr>
-                                <th scope="row">OpenAI API Key</th>
-                                <td>
-                                    <input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" />
-                                    <p class="description">Used for podcast generation.</p>
-                                </td>
-                            </tr>
-                            <table class="form-table">
-    <tr>
-        <th scope="row">Stability AI API Key</th>
-        <td>
-            <input type="password" name="atm_stability_api_key" value="<?php echo esc_attr($options['stability_key']); ?>" class="regular-text" />
-            <p class="description">Required to use the Stable Diffusion image generator. Get a key from <a href="https://platform.stability.ai/" target="_blank">Stability AI</a>.</p>
-        </td>
-    </tr>
-</table>
-                            <tr>
-    <th scope="row">News API Key</th>
-    <td>
-        <input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" />
-        <p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a> for the "Latest News" feature.</p>
-    </td>
-</tr>
-                            <tr>
-        <th scope="row">GNews API Key</th>
-        <td>
-            <input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" />
-            <p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p>
-        </td>
-    </tr>
-    <tr>
-        <th scope="row">The Guardian API Key</th>
-        <td>
-            <input type="password" name="atm_guardian_api_key" value="<?php echo esc_attr($options['guardian_api_key']); ?>" class="regular-text" />
-            <p class="description">Get a free key from <a href="https://open-platform.theguardian.com/" target="_blank">The Guardian</a>.</p>
-        </td>
-    </tr>
-    <tr>
-    <th scope="row">ScrapingAnt API Key</th>
-    <td>
-        <input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" />
-        <p class="description">Required for the RSS scraping feature. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p>
-    </td>
-</tr>
-                        </table>
-                    </div>
-                    
-                    <div class="atm-settings-card">
                         <h2>🎯 AI Model Defaults</h2>
                         <table class="form-table">
-                            <tr>
-                                <th scope="row">Default Article Model</th>
-                                <td>
-                                    <select name="atm_article_model">
-                                        <?php foreach ($options['article_models'] as $model_id => $model_name): ?>
-                                            <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['article_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th scope="row">Default Podcast Model</th>
-                                <td>
-                                    <select name="atm_content_model">
-                                        <?php foreach ($options['content_models'] as $model_id => $model_name): ?>
-                                            <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </td>
-                            </tr>
+                            <tr><th scope="row">Default Article Model</th><td><select name="atm_article_model"><?php foreach ($options['article_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['article_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
+                            <tr><th scope="row">Default Podcast Model</th><td><select name="atm_content_model"><?php foreach ($options['content_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
                         </table>
-                        </div>
-
-                        </div> <div class="atm-settings-card">
-    <h2>🎨 Image Generation Provider</h2>
-    <table class="form-table">
-        <tr>
-            <th scope="row">Image Provider</th>
-            <td>
-                <select name="atm_image_provider">
-                    <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
-                    <option value="stabilityai" <?php selected($options['image_provider'], 'stabilityai'); ?>>Stability AI (Stable Diffusion)</option>
-                    <option value="flux" <?php selected($options['image_provider'], 'flux'); ?>>Flux.1 (BFL Pro)</option>
-                    <option value="fal" <?php selected($options['image_provider'], 'fal'); ?>>Fal.ai (Multiple Models)</option>
-                </select>
-                <p class="description">Choose your default service for generating images.</p>
-            </td>
-        </tr>
-        <tr>
-            <th scope="row">Stability AI API Key</th>
-            <td>
-                <input type="password" name="atm_stability_api_key" value="<?php echo esc_attr($options['stability_key']); ?>" class="regular-text" />
-                <p class="description">Required to use the Stable Diffusion image generator. Get a key from <a href="https://platform.stability.ai/" target="_blank">Stability AI</a>.</p>
-            </td>
-        </tr>
-         <tr>
-            <th scope="row">Flux API Key</th>
-            <td>
-                <input type="password" name="atm_flux_api_key" value="<?php echo esc_attr($options['flux_key']); ?>" class="regular-text" />
-                <p class="description">Required to use the Flux.1 image generator. Get a key from <a href="https://bfl.ai/" target="_blank">Black Forest Labs</a>.</p>
-            </td>
-        </tr>
-        <tr>
-            <th scope="row">Fal.ai API Key</th>
-            <td>
-                <input type="password" name="atm_fal_api_key" value="<?php echo esc_attr($options['fal_key']); ?>" class="regular-text" />
-                <p class="description">Required to use the Fal.ai image generator. Get a key from <a href="https://fal.ai/" target="_blank">fal.ai</a>. The key is usually in a `key_id:key_secret` format.</p>
-            </td>
-        </tr>
-        <tr>
-    <th scope="row">Default Fal.ai Image Model</th>
-    <td>
-        <select name="atm_fal_image_model">
-            <?php foreach ($options['fal_image_models'] as $model_id => $model_name): ?>
-                <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['fal_image_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
-            <?php endforeach; ?>
-        </select>
-        <p class="description">Select the default model to use when "Fal.ai" is the provider.</p>
-    </td>
-</tr>
-    </table>
-</div>
-
-<div class="atm-settings-card">
-    <h2>🖼️ Image Generation Defaults</h2>
-    <table class="form-table">
-        <tr>
-            <th scope="row">Default Image Quality</th>
-            <td>
-                <select name="atm_image_quality">
-                    <option value="standard" <?php selected($options['image_quality'], 'standard'); ?>>Standard</option>
-                    <option value="hd" <?php selected($options['image_quality'], 'hd'); ?>>HD</option>
-                </select>
-                <p class="description">"HD" creates images with finer details and greater consistency, but may have a higher cost.</p>
-            </td>
-        </tr>
-        <tr>
-            <th scope="row">Default Image Size</th>
-            <td>
-                <select name="atm_image_size">
-                    <option value="1792x1024" <?php selected($options['image_size'], '1792x1024'); ?>>16:9 Landscape</option>
-                    <option value="1024x1024" <?php selected($options['image_size'], '1024x1024'); ?>>1:1 Square</option>
-                    <option value="1024x1792" <?php selected($options['image_size'], '1024x1792'); ?>>9:16 Portrait</option>
-                </select>
-                <p class="description">Select the default aspect ratio for generated images.</p>
-            </td>
-        </tr>
-    </table>
-</div>
-
-<div class="atm-settings-card">
+                    </div>
+                    <div class="atm-settings-card">
+                        <h2>🖼️ Image Generation Defaults</h2>
+                        <table class="form-table">
+                            <tr><th scope="row">Default Image Quality</th><td><select name="atm_image_quality"><option value="standard" <?php selected($options['image_quality'], 'standard'); ?>>Standard</option><option value="hd" <?php selected($options['image_quality'], 'hd'); ?>>HD</option></select><p class="description">"HD" creates images with finer details and greater consistency, but may have a higher cost.</p></td></tr>
+                            <tr><th scope="row">Default Image Size</th><td><select name="atm_image_size"><option value="1792x1024" <?php selected($options['image_size'], '1792x1024'); ?>>16:9 Landscape</option><option value="1024x1024" <?php selected($options['image_size'], '1024x1024'); ?>>1:1 Square</option><option value="1024x1792" <?php selected($options['image_size'], '1024x1792'); ?>>9:16 Portrait</option></select><p class="description">Select the default aspect ratio for generated images.</p></td></tr>
+                        </table>
                     </div>
                 </div>
 
                 <div class="atm-settings-card">
                     <h2>RSS Feeds</h2>
-                    <table class="form-table">
-                         <tr>
-    <th scope="row">RSS Feed URLs</th>
-    <td>
-        <textarea name="atm_rss_feeds" rows="8" style="width:100%;"><?php echo esc_textarea($options['rss_feeds']); ?></textarea>
-        <p class="description">Add one RSS feed URL per line. These will be used for the "Generate from RSS" feature.</p>
-    </td>
-</tr>
-                    </table>
+                    <table class="form-table"><tr><th scope="row">RSS Feed URLs</th><td><textarea name="atm_rss_feeds" rows="8" style="width:100%;"><?php echo esc_textarea($options['rss_feeds']); ?></textarea><p class="description">Add one RSS feed URL per line. These will be used for the "Generate from RSS" feature.</p></td></tr></table>
                 </div>
 
                 <div class="atm-settings-card">
                     <h2>🤖 Default Prompt Templates</h2>
                     <table class="form-table">
-                         <tr>
-                            <th scope="row">Article Prompt</th>
-                            <td>
-                                <textarea name="atm_article_prompt" rows="10"><?php echo esc_textarea($options['article_prompt']); ?></textarea>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">Image Prompt</th>
-                            <td>
-                                <textarea name="atm_image_prompt" rows="5"><?php echo esc_textarea($options['image_prompt']); ?></textarea>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">Podcast Prompt</th>
-                            <td>
-                                <textarea name="atm_podcast_prompt" rows="15"><?php echo esc_textarea($options['podcast_prompt']); ?></textarea>
-                            </td>
-                        </tr>
+                        <tr><th scope="row">Article Prompt</th><td><textarea name="atm_article_prompt" rows="10"><?php echo esc_textarea($options['article_prompt']); ?></textarea></td></tr>
+                        <tr><th scope="row">Image Prompt</th><td><textarea name="atm_image_prompt" rows="5"><?php echo esc_textarea($options['image_prompt']); ?></textarea></td></tr>
+                        <tr><th scope="row">Podcast Prompt</th><td><textarea name="atm_podcast_prompt" rows="15"><?php echo esc_textarea($options['podcast_prompt']); ?></textarea></td></tr>
                     </table>
                 </div>
                 
@@ -366,7 +170,6 @@ class ATM_Settings {
         update_option('atm_scrapingant_api_key', sanitize_text_field($_POST['atm_scrapingant_api_key']));
         update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
         update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
-        update_option('atm_stability_api_key', sanitize_text_field($_POST['atm_stability_api_key']));
         update_option('atm_image_provider', sanitize_text_field($_POST['atm_image_provider']));
         update_option('atm_stability_api_key', sanitize_text_field($_POST['atm_stability_api_key']));
         update_option('atm_flux_api_key', sanitize_text_field($_POST['atm_flux_api_key']));
@@ -386,22 +189,16 @@ class ATM_Settings {
             'guardian_api_key' => get_option('atm_guardian_api_key', ''),
             'article_model'  => get_option('atm_article_model', 'openai/gpt-4o'),
             'content_model'  => get_option('atm_content_model', 'anthropic/claude-3-haiku'),
-            'article_prompt' => get_option('atm_article_prompt', ATM_API::get_default_article_prompt()),
-            'image_prompt'   => get_option('atm_image_prompt', ATM_API::get_default_image_prompt()),
-            'podcast_prompt' => get_option('atm_podcast_prompt', ATM_API::get_default_master_prompt()),
+            'article_prompt' => get_option('atm_article_prompt', self::get_default_article_prompt()),
+            'image_prompt'   => get_option('atm_image_prompt', self::get_default_image_prompt()),
+            'podcast_prompt' => get_option('atm_podcast_prompt', self::get_default_podcast_prompt()),
             'image_quality'  => get_option('atm_image_quality', 'hd'),
             'image_size'     => get_option('atm_image_size', '1792x1024'),
-            'stability_key'  => get_option('atm_stability_api_key', ''),
             'image_provider' => get_option('atm_image_provider', 'openai'),
             'stability_key'  => get_option('atm_stability_api_key', ''),
             'flux_key'  => get_option('atm_flux_api_key', ''),
             'fal_key' => get_option('atm_fal_api_key', ''),
-            'fal_image_model' => get_option('atm_fal_image_model', 'fal-ai/stable-diffusion-v3-medium'), // New
-            'fal_image_models' => [ // New
-                'fal-ai/stable-diffusion-v3-medium' => 'Stable Diffusion 3 Medium',
-                'fal-ai/flux-schnell' => 'Flux Schnell (Fast)',
-                'fal-ai/photorealistic-lcm' => 'Photorealistic LCM',
-                'fal-ai/surrealist-style' => 'Surrealist Style',
+            'fal_image_model' => get_option('atm_fal_image_model', 'fal-ai/stable-diffusion-v3-medium'),
             'article_models' => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
                 'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
@@ -417,7 +214,53 @@ class ATM_Settings {
                 'anthropic/claude-3-haiku' => 'Claude 3 Haiku (Fast & Cheap)',
                 'openai/gpt-4o' => 'GPT-4o (Highest Quality)',
                 'google/gemini-flash-1.5' => 'Google Gemini 1.5 Flash',
-            ]
+            ],
+            'openrouter_image_models' => [
+                'stabilityai/stable-diffusion-3' => 'Stable Diffusion 3 (Newest & Best)',
+                'playgroundai/playground-v2.5' => 'Playground v2.5 (Aesthetic)',
+                'google/imagen-2' => 'Google Imagen 2 (Photorealistic)',
+                'ideogram/ideogram-v1' => 'Ideogram v1 (Good with Text)',
+            ],
+            'fal_image_models' => [
+                'fal-ai/stable-diffusion-v3-medium' => 'Stable Diffusion 3 Medium',
+                'fal-ai/flux-schnell' => 'Flux Schnell (Fast)',
+                'fal-ai/photorealistic-lcm' => 'Photorealistic LCM',
+                'fal-ai/surrealist-style' => 'Surrealist Style',
+            ],
         ];
+    }
+
+    // Default Prompts
+    public static function get_default_article_prompt() {
+        return "Please write a high-quality, engaging, and unique article based on the provided details.
+        **Article Title:** [article_title]
+        **Primary Keyword:** [primary_keyword]
+        **Approximate Word Count:** [word_count]
+        **Writing Style:** [writing_style]
+        **Instructions & Context:**
+        [custom_prompt]
+        ---
+        **Output Guidelines:**
+        - The article must be well-structured with clear headings (H2, H3) and paragraphs.
+        - Ensure the content is original, informative, and provides value to the reader.
+        - Naturally incorporate the primary keyword throughout the article.
+        - Maintain a consistent tone and style as specified.
+        - The output should only be the article content itself, without any introductory or concluding remarks about the writing process.";
+    }
+
+    public static function get_default_image_prompt() {
+        return "Create a photorealistic and visually stunning featured image for an article titled '[article_title]'.
+        The image should be high-resolution, captivating, and directly relevant to the article's main themes.
+        Consider the following context from the article: [article_excerpt]
+        Style: [image_style]
+        Avoid text and watermarks.";
+    }
+
+    public static function get_default_podcast_prompt() {
+        return "Please generate a podcast script from the following article content.
+        The script should be engaging, conversational, and suitable for an audio format.
+        It should be approximately [duration] minutes long.
+        --- ARTICLE CONTENT ---
+        [article_content]";
     }
 }
