@@ -1,7 +1,9 @@
+// src/components/App.js
+
 import { useState, useEffect } from '@wordpress/element';
 import Hub from './Hub';
-// We will import and build these generator components in our next steps
-// import ArticleGenerator from './ArticleGenerator';
+import ArticleGenerator from './ArticleGenerator'; 
+// import ImageGenerator from './ImageGenerator';
 
 function App() {
     // This state holds the currently active view. We read from sessionStorage
@@ -20,14 +22,10 @@ function App() {
     const renderContent = () => {
         switch (activeView) {
             case 'articles':
-                // For now, this is a placeholder. We will build the real component next.
-                return (
-                    <div>
-                        <h4><button className="atm-back-btn" onClick={() => setActiveView('hub')}>←</button> Generate Article</h4>
-                        <p>The Article Generator UI will be built here.</p>
-                    </div>
-                );
-            // Add cases for 'images', 'podcast', etc. later
+                return <ArticleGenerator setActiveView={setActiveView} />;
+            case 'images':
+                return <div>Image Generator UI will go here. <button onClick={() => setActiveView('hub')}>← Back</button></div>;
+            // Add other cases for podcast, etc.
 
             default: // The 'hub' view
                 return <Hub setActiveView={setActiveView} />;

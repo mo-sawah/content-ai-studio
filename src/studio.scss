@@ -1,0 +1,98 @@
+// src/studio.scss
+
+.atm-studio-container {
+    padding: 1rem;
+}
+
+/* Hub View */
+.atm-hub {
+    text-align: center;
+    padding: 2rem 1rem;
+
+    h2 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0 0 8px;
+    }
+
+    .atm-hub-subtitle,
+    .atm-hub-footer {
+        font-size: 14px;
+        color: #64748b;
+        margin: 0;
+    }
+
+    .atm-hub-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+}
+
+/* Generator View */
+.atm-generator-view {
+    .atm-view-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+
+        h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+    }
+
+    .atm-back-btn {
+        background: none;
+        border: 1px solid #cbd5e0;
+        border-radius: 50%;
+        cursor: pointer;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #475569;
+        padding: 0;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+
+        &:hover {
+            background-color: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    .atm-form-container {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .atm-status-message {
+        margin-top: 1rem;
+        color: #475569;
+        font-style: italic;
+    }
+}
+
+// WordPress Component Overrides
+.atm-studio-container .components-button.is-primary {
+    background: #6366f1;
+    &:hover {
+        background: #4f46e5;
+    }
+}
