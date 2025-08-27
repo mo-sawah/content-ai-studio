@@ -447,6 +447,8 @@ Your entire output MUST be a single, valid JSON object with three keys:
 }
 
     public function generate_featured_image() {
+    @ini_set('max_execution_time', 300); // Give this script up to 5 minutes to run
+
     if (!ATM_Licensing::is_license_active()) {
         wp_send_json_error('Please activate your license key to use this feature.');
     }
@@ -458,6 +460,7 @@ Your entire output MUST be a single, valid JSON object with three keys:
         $size_override = isset($_POST['size']) ? sanitize_text_field($_POST['size']) : '';
         $quality_override = isset($_POST['quality']) ? sanitize_text_field($_POST['quality']) : '';
         $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
+        $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
 
         if (empty($prompt)) {
             $post = get_post($post_id);
@@ -478,11 +481,11 @@ Your entire output MUST be a single, valid JSON object with three keys:
                 break;
             case 'flux':
                 $image_data = ATM_API::generate_image_with_flux($prompt, $size_override);
-                $is_url = false; // Flux.1 on BFL also returns raw data
+                $is_url = false;
                 break;
             case 'fal':
-                $image_data = ATM_API::generate_image_with_fal($prompt, $size_override, $model_override); // Pass model_override
-                $is_url = true; // Fal.ai returns a URL
+                $image_data = ATM_API::generate_image_with_fal($prompt, $size_override, $model_override);
+                $is_url = true;
                 break;
             case 'openai':
             default:
