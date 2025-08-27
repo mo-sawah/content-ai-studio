@@ -9,6 +9,22 @@ if (!defined('ABSPATH')) {
  * Enhanced RSS Parser Class
  */
 class ATM_RSS_Parser {
+
+    /**
+ * Summarizes a large block of text using a fast AI model.
+ * @param string $content The long content to summarize.
+ * @return string The summarized content.
+ */
+public static function summarize_content_for_rewrite($content) {
+    $summary_prompt = 'You are a text summarization expert. Your task is to read the following article content and create a concise but comprehensive summary. The summary should capture all the main points, key facts, and the overall conclusion of the article. Output only the summary text. The article is below:';
+
+    // Use a fast and cost-effective model specifically for this summarization task.
+    return self::enhance_content_with_openrouter(
+        ['content' => $content],
+        $summary_prompt,
+        'anthropic/claude-3-haiku' 
+    );
+}
     
     /**
      * Parse RSS feeds with advanced content extraction and keyword matching
