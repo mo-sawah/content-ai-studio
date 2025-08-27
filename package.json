@@ -3,8 +3,8 @@
   "version": "1.2.2",
   "private": true,
   "scripts": {
-    "build": "wp-scripts build",
-    "start": "wp-scripts start",
+    "build": "wp-scripts build src/index.js src/studio.js",
+    "start": "wp-scripts start src/index.js src/studio.js",
     "zip": "wp-scripts plugin-zip"
   },
   "devDependencies": {

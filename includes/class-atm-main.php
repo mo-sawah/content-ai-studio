@@ -173,6 +173,29 @@ if (file_exists($style_path)) {
 }
         }
 
+        // Enqueue the new Studio App for the meta box
+$studio_asset_path = ATM_PLUGIN_PATH . 'build/studio.asset.php';
+if (file_exists($studio_asset_path)) {
+    $studio_asset = require($studio_asset_path);
+    wp_enqueue_script(
+        'atm-studio-app',
+        ATM_PLUGIN_URL . 'build/studio.js',
+        $studio_asset['dependencies'],
+        $studio_asset['version'],
+        true
+    );
+    // Also enqueue the corresponding stylesheet
+    $studio_style_path = ATM_PLUGIN_PATH . 'build/studio.css';
+    if (file_exists($studio_style_path)) {
+         wp_enqueue_style(
+            'atm-studio-style',
+            ATM_PLUGIN_URL . 'build/studio.css',
+            array(),
+            $studio_asset['version']
+        );
+    }
+}
+
         // The admin script for the meta box, with the corrected dependencies
         $dependencies = array('jquery', 'wp-blocks', 'wp-data', 'wp-element', 'wp-editor', 'wp-components', 'marked-library');
         wp_enqueue_script(
