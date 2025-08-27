@@ -113,3 +113,39 @@
         grid-template-columns: repeat(3, 1fr);
     }
 }
+
+/* Form Divider */
+.atm-form-divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 1rem 0;
+}
+
+/* RSS Results List */
+.atm-rss-results-list {
+    margin-top: 1rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.atm-rss-item {
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+    border-radius: 4px;
+
+    .atm-rss-item-title {
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    .atm-rss-item-meta {
+        display: block;
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 0.5rem;
+    }
+    .atm-rss-item-desc {
+        font-size: 13px;
+        margin-bottom: 1rem;
+        color: #475569;
+    }
+}

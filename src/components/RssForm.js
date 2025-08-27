@@ -1,0 +1,151 @@
+// src/components/RssForm.js
+import { useState } from '@wordpress/element';
+import { Button, TextControl, CheckboxControl, Spinner } from '@wordpress/components';
+
+// We can move these helpers to a shared file later
+const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
+const updateEditorContent = (title, markdownContent) => {
+    const isBlockEditor = document.body.classList.contains('block-editor-page');
+    const htmlContent = window.marked ? window.marked.parse(markdownContent) : markdownContent;
+
+    if (isBlockEditor) {
+        wp.data.dispatch('core/editor').editPost({ title });
+        const blocks = wp.blocks.parse(htmlContent);
+        const currentBlocks = wp.data.select('core/block-editor').getBlocks();
+        if (currentBlocks.length > 0 && !(currentBlocks.length === 1 && currentBlocks[0].name === 'core/paragraph' && currentBlocks[0].attributes.content === '')) {
+             const clientIds = currentBlocks.map(block => block.clientId);
+             wp.data.dispatch('core/block-editor').removeBlocks(clientIds);
+        }
+        wp.data.dispatch('core/block-editor').insertBlocks(blocks);
+    } else {
+        jQuery('#title').val(title);
+        jQuery('#title-prompt-text').hide();
+        jQuery('#title').trigger('blur');
+        if (window.tinymce && window.tinymce.get('content')) {
+            window.tinymce.get('content').setContent(htmlContent);
+        } else {
+            jQuery('#content').val(htmlContent);
+        }
+    }
+};
+
+function RssForm() {
+    const [isLoading, setIsLoading] = useState(false);
+    const [statusMessage, setStatusMessage] = useState('');
+    const [keyword, setKeyword] = useState('');
+    const [deepSearch, setDeepSearch] = useState(false);
+    const [useFullContent, setUseFullContent] = useState(true);
+    const [results, setResults] = useState([]);
+
+    const handleFetch = async (searchKeyword = '', useScraping = false) => {
+        setIsLoading(true);
+        setStatusMessage(searchKeyword ? 'Searching feeds...' : 'Fetching latest...');
+        setResults([]);
+        const postId = document.getElementById('atm-studio-root').getAttribute('data-post-id');
+
+        try {
+            const response = await callAjax('fetch_rss_articles', {
+                post_id: postId,
+                keyword: searchKeyword,
+                use_scraping: useScraping,
+            });
+            if (!response.success) throw new Error(response.data);
+            setResults(response.data);
+            setStatusMessage(response.data.length > 0 ? `Found ${response.data.length} articles.` : 'No articles found.');
+        } catch (error) {
+            setStatusMessage(`Error: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleGenerateFromRss = async (article, index) => {
+        setStatusMessage(`Generating from "${article.title}"...`);
+        setIsLoading(true);
+
+        // Disable just this one button
+        const newResults = [...results];
+        newResults[index].isGenerating = true;
+        setResults(newResults);
+
+        const postId = document.getElementById('atm-studio-root').getAttribute('data-post-id');
+
+        try {
+            const response = await callAjax('generate_article_from_rss', {
+                post_id: postId,
+                article_url: article.link,
+                article_guid: article.guid,
+                rss_content: article.content,
+                use_full_content: useFullContent,
+            });
+
+            if (!response.success) throw new Error(response.data);
+            updateEditorContent(response.data.article_title, response.data.article_content);
+            setStatusMessage(`✅ Article generated from "${article.title}"!`);
+
+            // Remove the item from the list
+            setResults(results.filter((_, i) => i !== index));
+
+        } catch (error) {
+             setStatusMessage(`Error: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+             // In case of error, re-enable the button
+            const finalResults = [...results];
+            finalResults[index].isGenerating = false;
+            setResults(finalResults);
+        }
+    };
+
+    return (
+        <div className="atm-form-container">
+            <TextControl
+                label="Search by Keyword (Optional)"
+                value={keyword}
+                onChange={setKeyword}
+                placeholder="e.g., Trump, AI, Healthcare"
+                disabled={isLoading}
+            />
+            <CheckboxControl
+                label="Deep Content Search"
+                help="Scrapes full article content for more accurate keyword matching (slower but more precise)."
+                checked={deepSearch}
+                onChange={setDeepSearch}
+                disabled={isLoading}
+            />
+            <CheckboxControl
+                label="Use Full Article Content for Generation"
+                help="Scrapes the complete article for better AI rewriting (recommended)."
+                checked={useFullContent}
+                onChange={setUseFullContent}
+                disabled={isLoading}
+            />
+            <div className="atm-grid-2">
+                <Button isSecondary onClick={() => handleFetch(keyword, deepSearch)} disabled={isLoading || !keyword}>
+                    {isLoading ? <Spinner /> : 'Search Feeds'}
+                </Button>
+                <Button isPrimary onClick={() => handleFetch()} disabled={isLoading}>
+                    {isLoading ? <Spinner /> : 'Fetch Latest Articles'}
+                </Button>
+            </div>
+            {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
+
+            {results.length > 0 && (
+                <div className="atm-rss-results-list">
+                    {results.map((article, index) => (
+                        <div key={article.guid} className="atm-rss-item">
+                            <strong className="atm-rss-item-title">{article.title}</strong>
+                            <small className="atm-rss-item-meta">{article.source} | {article.date}</small>
+                            <p className="atm-rss-item-desc">{article.description.substring(0, 120)}...</p>
+                            <Button isPrimary onClick={() => handleGenerateFromRss(article, index)} disabled={isLoading || article.isGenerating}>
+                                {article.isGenerating ? <Spinner/> : 'Generate Article'}
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default RssForm;
