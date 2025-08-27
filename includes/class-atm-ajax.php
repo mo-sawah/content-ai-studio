@@ -216,29 +216,28 @@ class ATM_Ajax {
      * Handles the "Latest News Article" generation.
      */
     public function generate_news_article() {
-        // --- LICENSE CHECK ---
-        if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
+    if (!ATM_Licensing::is_license_active()) {
+        wp_send_json_error('Please activate your license key to use this feature.');
+    }
+
+    check_ajax_referer('atm_nonce', 'nonce');
+    try {
+        $topic = sanitize_text_field($_POST['topic']);
+        $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : get_option('atm_article_model');
+        $force_fresh = isset($_POST['force_fresh']) && $_POST['force_fresh'] === 'true';
+        $news_source = isset($_POST['news_source']) ? sanitize_key($_POST['news_source']) : 'newsapi';
+
+        if (empty($topic)) {
+            throw new Exception("Please provide a topic for the news article.");
         }
-        // --- END CHECK ---
 
-        check_ajax_referer('atm_nonce', 'nonce');
-        try {
-            $topic = sanitize_text_field($_POST['topic']);
-            $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : get_option('atm_article_model');
-            $force_fresh = isset($_POST['force_fresh']) && $_POST['force_fresh'] === 'true';
-            $news_source = isset($_POST['news_source']) ? sanitize_key($_POST['news_source']) : 'newsapi';
+        $news_context = ATM_API::fetch_news($topic, $news_source, $force_fresh);
+        if (empty($news_context)) {
+            throw new Exception("No recent news found for the topic: '" . esc_html($topic) . "'. Please try a different keyword or source.");
+        }
 
-            if (empty($topic)) {
-                throw new Exception("Please provide a topic for the news article.");
-            }
-
-            $news_context = ATM_API::fetch_news($topic, $news_source, $force_fresh);
-            if (empty($news_context)) {
-                throw new Exception("No recent news found for the topic: '" . $topic . "'. Please try a different keyword or source.");
-            }
-
-            $system_prompt = 'You are a professional news reporter and editor. Using the following raw content from news snippets, write a clear, engaging, and well-structured news article in English.
+        // *** USING YOUR PROVIDED PROMPT ***
+        $system_prompt = 'You are a professional news reporter and editor. Using the following raw content from news snippets, write a clear, engaging, and well-structured news article in English.
 
 Follow these strict guidelines:
 - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human. Your style should be similar to major news outlets like Reuters, Associated Press, or CBS News.
@@ -255,43 +254,40 @@ Your entire output MUST be a single, valid JSON object with three keys:
 2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
 3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
 
-            $json_response = ATM_API::enhance_content_with_openrouter(
-                ['content' => $news_context], 
-                $system_prompt, 
-                $model_override, 
-                true
-            );
+        $raw_response = ATM_API::enhance_content_with_openrouter(
+            ['content' => $news_context], 
+            $system_prompt, 
+            $model_override, 
+            true
+        );
 
-            $json_start = strpos($json_response, '{');
-            $json_end = strrpos($json_response, '}');
-            
-            if ($json_start === false || $json_end === false) {
-                error_log('ATM Plugin - AI response did not contain a valid JSON object: ' . $json_response);
-                throw new Exception('The AI returned a non-JSON response. Please try again.');
-            }
-
-            $json_only_string = substr($json_response, $json_start, ($json_end - $json_start + 1));
-            $result = json_decode($json_only_string, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
-                error_log('ATM Plugin - Invalid JSON from AI: ' . $json_only_string);
-                throw new Exception('The AI returned an invalid response structure. Please try again.');
-            }
-
-            $final_content = $result['content'];
-            if (!empty($result['subheadline'])) {
-                $final_content = '### ' . trim($result['subheadline']) . "\n\n" . $final_content;
-            }
-
-            wp_send_json_success([
-                'article_title' => $result['headline'],
-                'article_content' => $final_content
-            ]);
-
-        } catch (Exception $e) {
-            wp_send_json_error($e->getMessage());
+        $json_string = '';
+        if (preg_match('/\{.*?\}/s', $raw_response, $matches)) {
+            $json_string = $matches[0];
+        } else {
+            throw new Exception('The AI returned a non-JSON response. Please try again.');
         }
+
+        $result = json_decode($json_string, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
+            error_log('ATM Plugin - Invalid JSON from AI: ' . $json_string);
+            throw new Exception('The AI returned an invalid response structure. Please try again.');
+        }
+
+        $final_content = $result['content'];
+        if (!empty($result['subheadline'])) {
+            $final_content = '### ' . trim($result['subheadline']) . "\n\n" . $final_content;
+        }
+
+        wp_send_json_success([
+            'article_title' => $result['headline'],
+            'article_content' => $final_content
+        ]);
+
+    } catch (Exception $e) {
+        wp_send_json_error($e->getMessage());
     }
+}
 
     public function fetch_rss_articles() {
         check_ajax_referer('atm_nonce', 'nonce');
@@ -347,146 +343,108 @@ Your entire output MUST be a single, valid JSON object with three keys:
     }
 
     public function generate_article_from_rss() {
-        // --- LICENSE CHECK ---
-        if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
+    if (!ATM_Licensing::is_license_active()) {
+        wp_send_json_error('Please activate your license key to use this feature.');
+    }
+
+    check_ajax_referer('atm_nonce', 'nonce');
+    try {
+        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+        $url = esc_url_raw($_POST['article_url']);
+        $guid = sanitize_text_field($_POST['article_guid']);
+        $use_full_content = isset($_POST['use_full_content']) && $_POST['use_full_content'] === 'true';
+
+        $final_url = ATM_API::resolve_redirect_url($url);
+        
+        $source_content = '';
+        
+        if ($use_full_content) {
+            try {
+                $source_content = ATM_API::fetch_full_article_content($final_url);
+            } catch (Exception $e) {
+                error_log('ATM RSS: Scraping failed, falling back to RSS content: ' . $e->getMessage());
+            }
         }
-        // --- END CHECK ---
+        
+        if (empty($source_content) && isset($_POST['rss_content'])) {
+            $source_content = wp_kses_post(stripslashes($_POST['rss_content']));
+        }
+        
+        if (empty($source_content)) {
+            throw new Exception('Could not extract sufficient content from the source article.');
+        }
 
-        check_ajax_referer('atm_nonce', 'nonce');
-        try {
-            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-            $url = esc_url_raw($_POST['article_url']);
-            $guid = sanitize_text_field($_POST['article_guid']);
-            $use_full_content = isset($_POST['use_full_content']) && $_POST['use_full_content'] === 'true';
+        if (strlen($source_content) > 4000) {
+            $source_content = ATM_API::summarize_content_for_rewrite($source_content);
+        }
 
-            $final_url = ATM_API::resolve_redirect_url($url);
-            
-            $source_content = '';
-            
-            if ($use_full_content) {
-                try {
-                    $source_content = ATM_API::fetch_full_article_content($final_url);
-                } catch (Exception $e) {
-                    error_log('ATM RSS: Scraping failed, using RSS content: ' . $e->getMessage());
-                }
-            }
-            
-            if (empty($source_content) && isset($_POST['rss_content'])) {
-                $source_content = wp_kses_post(stripslashes($_POST['rss_content']));
-            }
-            
-            if (empty($source_content)) {
-                throw new Exception('Could not extract sufficient content from the source article. Try enabling "Use Full Content" option.');
-            }
+        // *** USING YOUR PROMPT, ADAPTED SLIGHTLY FOR A SINGLE SOURCE ARTICLE ***
+        $system_prompt = 'You are a professional news reporter and editor. Using the following source article content, write a clear, engaging, and well-structured new article in English.
 
-            $system_prompt = 'You are a seasoned news reporter and journalist working for a major news organization. Transform the following source material into a professional breaking news article.
+Follow these strict guidelines:
+- **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human. Your style should be similar to major news outlets like Reuters, Associated Press, or CBS News.
+- **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
+- **Objectivity**: Avoid speculation or personal opinions unless they are explicitly cited in the provided data.
+- **Length**: Aim for 800–1200 words. If the source material is very limited, write as much as is naturally possible without adding filler or redundant information.
+- **SEO**: Naturally integrate relevant keywords from the source material. Avoid keyword stuffing.
+- **Readability**: Use short paragraphs, the active voice, and ensure a clear, logical flow.
 
-CRITICAL INSTRUCTIONS FOR NEWS ARTICLE:
-- Write in AP Style with inverted pyramid structure (most important info first)
-- Use active voice and short, punchy sentences
-- Include proper news lede in first paragraph (who, what, when, where, why)
-- Use objective, fact-based reporting tone - no opinions or editorializing
-- Include quotes or attributed statements when possible
-- Use present tense for ongoing situations, past tense for completed events
-- Write compelling but factual headline that could appear on CNN, Reuters, or AP News
-- Structure: Lede → Key details → Background → Additional context
-- Word count: 400-800 words for breaking news format
+**Final Output Format:**
+Your entire output MUST be a single, valid JSON object with three keys:
+1. "headline": A concise, factual, and compelling headline for the new article.
+2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
+3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
+        
+        $raw_response = ATM_API::enhance_content_with_openrouter(
+            ['content' => $source_content], 
+            $system_prompt, 
+            get_option('atm_article_model', 'openai/gpt-4o'),
+            true
+        );
 
-JSON FORMAT REQUIRED:
-{"headline":"Breaking: [Professional News Headline]","subheadline":"[Optional brief context - can be empty]","content":"[Full news article in markdown]"}
+        $json_string = '';
+        if (preg_match('/\{.*?\}/s', $raw_response, $matches)) {
+            $json_string = $matches[0];
+        } else {
+            throw new Exception('The AI returned a non-JSON response. Please try again.');
+        }
 
-Source material to transform into breaking news:';
-            
-            $json_response = ATM_API::enhance_content_with_openrouter(
-                ['content' => $source_content], 
-                $system_prompt, 
-                '',
-                true
-            );
+        $result = json_decode($json_string, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
+            error_log('ATM Plugin - Invalid JSON from AI: ' . $json_string);
+            throw new Exception('The AI returned an invalid response structure. Please try again.');
+        }
 
-            $result = null;
-            $json_only_string = '';
-            
-            $result = json_decode($json_response, true);
-            if (json_last_error() === JSON_ERROR_NONE && isset($result['headline']) && isset($result['content'])) {
-            } else {
-                $json_start = strpos($json_response, '{');
-                $json_end = strrpos($json_response, '}');
-                
-                if ($json_start !== false && $json_end !== false) {
-                    $json_only_string = substr($json_response, $json_start, ($json_end - $json_start + 1));
-                    $result = json_decode($json_only_string, true);
-                }
-                
-                if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
-                    $cleaned_response = $json_only_string ?: $json_response;
-                    $cleaned_response = preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $cleaned_response);
-                    $cleaned_response = str_replace(['\n', '\r', '\t'], ['\\n', '\\r', '\\t'], $cleaned_response);
-                    $cleaned_response = preg_replace('/,\s*}/', '}', $cleaned_response);
-                    $result = json_decode($cleaned_response, true);
-                }
-            }
+        $headline = trim($result['headline']);
+        $final_content = trim($result['content']);
 
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
-                error_log('ATM Plugin - JSON parsing failed. Original response: ' . substr($json_response, 0, 500));
-                error_log('ATM Plugin - JSON error: ' . json_last_error_msg());
-                
-                $simple_content = ATM_API::enhance_content_with_openrouter(
-                    ['content' => $source_content], 
-                    'Rewrite the following content into a clear, engaging article. Provide only the article text, no JSON formatting. Use markdown headings and formatting.', 
-                    '',
-                    false
-                );
-                
-                $simple_title = 'Article: ' . parse_url($url, PHP_URL_HOST);
-                
-                wp_send_json_success([
-                    'article_title'   => $simple_title,
-                    'article_content' => $simple_content
-                ]);
-                return;
-            }
+        if (!empty($result['subheadline'])) {
+            $final_content = '### ' . trim($result['subheadline']) . "\n\n" . $final_content;
+        }
 
-            $headline = trim($result['headline']);
-            $final_content = trim($result['content']);
-
-            // *** NEW: Clean the content to ensure the title is not duplicated ***
         if (strpos(strtolower(substr($final_content, 0, 150)), strtolower($headline)) !== false) {
             $final_content = preg_replace('/^#+\s*' . preg_quote($headline, '/') . '\s*/i', '', $final_content, 1);
         }
 
-            if (empty($headline) || $headline === 'Title:' || strlen($headline) < 5) {
-                $domain = parse_url($url, PHP_URL_HOST);
-                $headline = 'Breaking News from ' . ucfirst(str_replace('www.', '', $domain));
-            }
-
-            if (empty($final_content) || strlen($final_content) < 50) {
-                throw new Exception('Generated content is too short or empty. Please try again.');
-            }
-
-            $final_content = preg_replace('/\*\*(.*?)\*\*/s', '**$1**', $final_content);
-            $final_content = preg_replace('/^[\s\*\#]+/', '', $final_content);
-
-            if (!empty($result['subheadline'])) {
-                $final_content = '### ' . trim($result['subheadline']) . "\n\n" . $final_content;
-            }
-
-            if ($post_id > 0) {
-                $used_guids = get_post_meta($post_id, '_atm_used_rss_guids', true) ?: [];
-                $used_guids[] = $guid;
-                update_post_meta($post_id, '_atm_used_rss_guids', array_unique($used_guids));
-            }
-
-            wp_send_json_success([
-                'article_title'   => $headline,
-                'article_content' => $final_content
-            ]);
-
-        } catch (Exception $e) {
-            wp_send_json_error($e->getMessage());
+        if (empty($headline) || empty($final_content)) {
+            throw new Exception('Generated title or content is empty.');
         }
+
+        if ($post_id > 0) {
+            $used_guids = get_post_meta($post_id, '_atm_used_rss_guids', true) ?: [];
+            $used_guids[] = $guid;
+            update_post_meta($post_id, '_atm_used_rss_guids', array_unique($used_guids));
+        }
+
+        wp_send_json_success([
+            'article_title'   => $headline,
+            'article_content' => $final_content
+        ]);
+
+    } catch (Exception $e) {
+        wp_send_json_error($e->getMessage());
     }
+}
 
     public function generate_featured_image() {
     if (!ATM_Licensing::is_license_active()) {
