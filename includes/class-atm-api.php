@@ -343,6 +343,57 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
+    public static function generate_image_with_fal($prompt, $size_override = '') {
+    $api_key = get_option('atm_fal_api_key');
+    if (empty($api_key)) throw new Exception('Fal.ai API key not configured.');
+
+    // Fal.ai uses named presets for image sizes
+    $size_map = [
+        '1024x1024' => 'square',
+        '1792x1024' => 'landscape_16_9',
+        '1024x1792' => 'portrait_16_9',
+    ];
+    $default_size = '1792x1024';
+    $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
+    $image_size_preset = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
+
+    // Step 1: Submit the initial request to the queue
+    $initial_response = wp_remote_post('https://queue.fal.run/fal-ai/flux/dev', [
+        'headers' => [
+            'Authorization' => 'Key ' . $api_key,
+            'Content-Type' => 'application/json'
+        ],
+        'body' => json_encode(['prompt' => $prompt, 'image_size' => $image_size_preset]),
+        'timeout' => 30
+    ]);
+
+    if (is_wp_error($initial_response)) throw new Exception('Fal.ai API call failed: ' . $initial_response->get_error_message());
+
+    $initial_body = json_decode(wp_remote_retrieve_body($initial_response), true);
+    $status_url = isset($initial_body['status_url']) ? $initial_body['status_url'] : '';
+
+    if (empty($status_url)) throw new Exception('Fal.ai did not return a valid status URL.');
+
+    // Step 2: Poll the status URL until the image is ready
+    $max_retries = 20; // 20 retries * 3 seconds = 60 seconds total timeout
+    for ($i = 0; $i < $max_retries; $i++) {
+        sleep(3); // Wait 3 seconds between checks
+        $status_response = wp_remote_get($status_url, ['headers' => ['Authorization' => 'Key ' . $api_key]]);
+        $status_body = json_decode(wp_remote_retrieve_body($status_response), true);
+
+        if (isset($status_body['status']) && $status_body['status'] === 'COMPLETED') {
+            if (isset($status_body['output']['images'][0]['url'])) {
+                return $status_body['output']['images'][0]['url']; // Success! Return the image URL.
+            }
+        } elseif (isset($status_body['status']) && ($status_body['status'] === 'ERROR' || $status_body['status'] === 'FAILED')) {
+            throw new Exception('Fal.ai image generation failed.');
+        }
+        // If still "IN_PROGRESS" or "IN_QUEUE", the loop continues
+    }
+
+    throw new Exception('Fal.ai image generation timed out.');
+}
+
     public static function generate_image_with_stability($prompt, $size_override = '') {
     $api_key = get_option('atm_stability_api_key');
     if (empty($api_key)) throw new Exception('Stability AI API key not configured.');

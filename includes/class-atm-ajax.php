@@ -460,7 +460,6 @@ Your entire output MUST be a single, valid JSON object with three keys:
         $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
 
         if (empty($prompt)) {
-            // Auto-prompt logic... (remains the same)
             $post = get_post($post_id);
             if (!$post) throw new Exception("Post not found.");
             $title = $post->post_title;
@@ -472,13 +471,24 @@ Your entire output MUST be a single, valid JSON object with three keys:
         $image_data = null;
         $is_url = false;
 
-        if ($provider === 'stabilityai') {
-            $image_data = ATM_API::generate_image_with_stability($prompt, $size_override);
-            $is_url = false; // Stability API returns raw image data
-        } else {
-            // Default to OpenAI
-            $image_data = ATM_API::generate_image_with_openai($prompt, $size_override, $quality_override);
-            $is_url = true; // OpenAI returns a URL
+        switch ($provider) {
+            case 'stabilityai':
+                $image_data = ATM_API::generate_image_with_stability($prompt, $size_override);
+                $is_url = false;
+                break;
+            case 'flux':
+                $image_data = ATM_API::generate_image_with_flux($prompt, $size_override);
+                $is_url = false; // Flux.1 on BFL also returns raw data
+                break;
+            case 'fal':
+                $image_data = ATM_API::generate_image_with_fal($prompt, $size_override);
+                $is_url = true; // Fal.ai returns a URL
+                break;
+            case 'openai':
+            default:
+                $image_data = ATM_API::generate_image_with_openai($prompt, $size_override, $quality_override);
+                $is_url = true;
+                break;
         }
 
         if ($is_url) {

@@ -68,9 +68,11 @@ function ImageGenerator({ setActiveView }) {
                     value={provider}
                     onChange={setProvider}
                     options={[
-                        { label: `Default (${defaultProvider === 'openai' ? 'OpenAI' : 'Stability AI'})`, value: '' },
+                        { label: `Default`, value: '' }, // Simplified label
                         { label: 'OpenAI (DALL-E 3)', value: 'openai' },
                         { label: 'Stability AI (Stable Diffusion)', value: 'stabilityai' },
+                        { label: 'Flux.1 (BFL Pro)', value: 'flux' },
+                        { label: 'Fal.ai (Various Models)', value: 'fal' },
                     ]}
                     disabled={isLoading}
                 />

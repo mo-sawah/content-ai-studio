@@ -226,6 +226,45 @@ class ATM_Settings {
                         </table>
                         </div>
 
+                        </div> <div class="atm-settings-card">
+    <h2>🎨 Image Generation Provider</h2>
+    <table class="form-table">
+        <tr>
+            <th scope="row">Image Provider</th>
+            <td>
+                <select name="atm_image_provider">
+                    <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
+                    <option value="stabilityai" <?php selected($options['image_provider'], 'stabilityai'); ?>>Stability AI (Stable Diffusion)</option>
+                    <option value="flux" <?php selected($options['image_provider'], 'flux'); ?>>Flux.1 (BFL Pro)</option>
+                    <option value="fal" <?php selected($options['image_provider'], 'fal'); ?>>Fal.ai (Multiple Models)</option>
+                </select>
+                <p class="description">Choose your default service for generating images.</p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row">Stability AI API Key</th>
+            <td>
+                <input type="password" name="atm_stability_api_key" value="<?php echo esc_attr($options['stability_key']); ?>" class="regular-text" />
+                <p class="description">Required to use the Stable Diffusion image generator. Get a key from <a href="https://platform.stability.ai/" target="_blank">Stability AI</a>.</p>
+            </td>
+        </tr>
+         <tr>
+            <th scope="row">Flux API Key</th>
+            <td>
+                <input type="password" name="atm_flux_api_key" value="<?php echo esc_attr($options['flux_key']); ?>" class="regular-text" />
+                <p class="description">Required to use the Flux.1 image generator. Get a key from <a href="https://bfl.ai/" target="_blank">Black Forest Labs</a>.</p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row">Fal.ai API Key</th>
+            <td>
+                <input type="password" name="atm_fal_api_key" value="<?php echo esc_attr($options['fal_key']); ?>" class="regular-text" />
+                <p class="description">Required to use the Fal.ai image generator. Get a key from <a href="https://fal.ai/" target="_blank">fal.ai</a>. The key is usually in a `key_id:key_secret` format.</p>
+            </td>
+        </tr>
+    </table>
+</div>
+
 <div class="atm-settings-card">
     <h2>🖼️ Image Generation Defaults</h2>
     <table class="form-table">
@@ -317,6 +356,10 @@ class ATM_Settings {
         update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
         update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
         update_option('atm_stability_api_key', sanitize_text_field($_POST['atm_stability_api_key']));
+        update_option('atm_image_provider', sanitize_text_field($_POST['atm_image_provider']));
+        update_option('atm_stability_api_key', sanitize_text_field($_POST['atm_stability_api_key']));
+        update_option('atm_flux_api_key', sanitize_text_field($_POST['atm_flux_api_key']));
+        update_option('atm_fal_api_key', sanitize_text_field($_POST['atm_fal_api_key']));
         echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
     }
 
@@ -337,6 +380,10 @@ class ATM_Settings {
             'image_quality'  => get_option('atm_image_quality', 'hd'),
             'image_size'     => get_option('atm_image_size', '1792x1024'),
             'stability_key'  => get_option('atm_stability_api_key', ''),
+            'image_provider' => get_option('atm_image_provider', 'openai'),
+            'stability_key'  => get_option('atm_stability_api_key', ''),
+            'flux_key'  => get_option('atm_flux_api_key', ''),
+            'fal_key' => get_option('atm_fal_api_key', ''),
             'article_models' => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
                 'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
