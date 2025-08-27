@@ -455,25 +455,37 @@ Your entire output MUST be a single, valid JSON object with three keys:
     try {
         $post_id = intval($_POST['post_id']);
         $prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : '';
-
-        // Get override values from the AJAX request
         $size_override = isset($_POST['size']) ? sanitize_text_field($_POST['size']) : '';
         $quality_override = isset($_POST['quality']) ? sanitize_text_field($_POST['quality']) : '';
+        $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
 
         if (empty($prompt)) {
+            // Auto-prompt logic... (remains the same)
             $post = get_post($post_id);
             if (!$post) throw new Exception("Post not found.");
             $title = $post->post_title;
             $excerpt = wp_strip_all_tags(mb_substr($post->post_content, 0, 300) . '...');
             $prompt = "A high-resolution, photorealistic featured image for a blog post titled \"{$title}\". The article discusses: \"{$excerpt}\". The image should be professional, visually compelling, and directly relevant to the main subject of the article. Use cinematic lighting and a 16:9 aspect ratio.";
-        } else {
-            $post = get_post($post_id);
-            $prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
         }
 
-        // Pass the overrides to the API function
-        $image_url = ATM_API::generate_image_with_openai($prompt, $size_override, $quality_override);
-        $attachment_id = $this->set_image_from_url($image_url, $post_id);
+        $provider = !empty($provider_override) ? $provider_override : get_option('atm_image_provider', 'openai');
+        $image_data = null;
+        $is_url = false;
+
+        if ($provider === 'stabilityai') {
+            $image_data = ATM_API::generate_image_with_stability($prompt, $size_override);
+            $is_url = false; // Stability API returns raw image data
+        } else {
+            // Default to OpenAI
+            $image_data = ATM_API::generate_image_with_openai($prompt, $size_override, $quality_override);
+            $is_url = true; // OpenAI returns a URL
+        }
+
+        if ($is_url) {
+            $attachment_id = $this->set_image_from_url($image_data, $post_id);
+        } else {
+            $attachment_id = $this->set_image_from_data($image_data, $post_id, $prompt);
+        }
 
         if (is_wp_error($attachment_id)) {
             throw new Exception($attachment_id->get_error_message());
@@ -623,4 +635,31 @@ Your entire output MUST be a single, valid JSON object with three keys:
 
         return $id;
     }
+
+    public function set_image_from_data($image_data, $post_id, $prompt) {
+    require_once(ABSPATH . 'wp-admin/includes/media.php');
+    require_once(ABSPATH . 'wp-admin/includes/file.php');
+    require_once(ABSPATH . 'wp-admin/includes/image.php');
+
+    $upload_dir = wp_upload_dir();
+    $filename = 'ai-image-' . $post_id . '-' . time() . '.png';
+    $filepath = $upload_dir['path'] . '/' . $filename;
+
+    file_put_contents($filepath, $image_data);
+
+    $filetype = wp_check_filetype($filename, null);
+    $attachment = array(
+        'guid'           => $upload_dir['url'] . '/' . basename($filepath),
+        'post_mime_type' => $filetype['type'],
+        'post_title'     => sanitize_text_field($prompt),
+        'post_content'   => '',
+        'post_status'    => 'inherit'
+    );
+
+    $attach_id = wp_insert_attachment($attachment, $filepath, $post_id);
+    $attach_data = wp_generate_attachment_metadata($attach_id, $filepath);
+    wp_update_attachment_metadata($attach_id, $attach_data);
+
+    return $attach_id;
+}
 }

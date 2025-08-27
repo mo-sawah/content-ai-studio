@@ -1,5 +1,3 @@
-// src/components/ImageGenerator.js
-
 import { useState } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { Button, TextareaControl, Spinner, SelectControl } from '@wordpress/components';
@@ -10,11 +8,13 @@ function ImageGenerator({ setActiveView }) {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
     const [prompt, setPrompt] = useState('');
-    // New state for our settings
-    const [imageSize, setImageSize] = useState(''); // Empty means use default
-    const [imageQuality, setImageQuality] = useState(''); // Empty means use default
+    const [imageSize, setImageSize] = useState('');
+    const [imageQuality, setImageQuality] = useState('');
+    // New state for the provider override
+    const [provider, setProvider] = useState('');
 
     const { editPost } = useDispatch('core/editor');
+    const { image_provider: defaultProvider } = atm_studio_data;
 
     const handleGenerate = async () => {
         setIsLoading(true);
@@ -25,8 +25,9 @@ function ImageGenerator({ setActiveView }) {
             const response = await callAjax('generate_featured_image', {
                 post_id: postId,
                 prompt: prompt,
-                size: imageSize, // Send the override value
-                quality: imageQuality, // Send the override value
+                size: imageSize,
+                quality: imageQuality,
+                provider: provider, // Send the selected provider
             });
 
             if (response.success) {
@@ -62,6 +63,18 @@ function ImageGenerator({ setActiveView }) {
             </div>
 
             <div className="atm-form-container">
+                <SelectControl
+                    label="Image Provider"
+                    value={provider}
+                    onChange={setProvider}
+                    options={[
+                        { label: `Default (${defaultProvider === 'openai' ? 'OpenAI' : 'Stability AI'})`, value: '' },
+                        { label: 'OpenAI (DALL-E 3)', value: 'openai' },
+                        { label: 'Stability AI (Stable Diffusion)', value: 'stabilityai' },
+                    ]}
+                    disabled={isLoading}
+                />
+
                 <TextareaControl
                     label="Image Prompt"
                     help="Leave empty for an automatic prompt. You can use shortcodes like [article_title]."
@@ -72,33 +85,23 @@ function ImageGenerator({ setActiveView }) {
                     disabled={isLoading}
                 />
 
-                {/* --- NEW CONTROLS --- */}
                 <div className="atm-grid-2">
                      <SelectControl
                         label="Image Size (Override)"
                         value={imageSize}
                         onChange={setImageSize}
-                        options={[
-                            { label: 'Use Default', value: '' },
-                            { label: '16:9 Landscape', value: '1792x1024' },
-                            { label: '1:1 Square', value: '1024x1024' },
-                            { label: '9:16 Portrait', value: '1024x1792' },
-                        ]}
+                        options={[ { label: 'Use Default', value: '' }, { label: '16:9 Landscape', value: '1792x1024' }, { label: '1:1 Square', value: '1024x1024' }, { label: '9:16 Portrait', value: '1024x1792' } ]}
                         disabled={isLoading}
                     />
                     <SelectControl
                         label="Quality (Override)"
                         value={imageQuality}
                         onChange={setImageQuality}
-                        options={[
-                            { label: 'Use Default', value: '' },
-                            { label: 'Standard', value: 'standard' },
-                            { label: 'HD', value: 'hd' },
-                        ]}
+                        options={[ { label: 'Use Default', value: '' }, { label: 'Standard', value: 'standard' }, { label: 'HD', value: 'hd' } ]}
                         disabled={isLoading}
+                        help={(provider || defaultProvider) !== 'openai' ? 'Note: Quality setting is only for OpenAI/DALL-E 3.' : ''}
                     />
                 </div>
-                {/* --- END NEW CONTROLS --- */}
 
                 <Button isPrimary onClick={handleGenerate} disabled={isLoading}>
                     {isLoading ? <Spinner /> : 'Generate & Set Featured Image'}

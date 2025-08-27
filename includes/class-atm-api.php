@@ -342,6 +342,59 @@ class ATM_API {
      * @param string $url The initial URL to check.
      * @return string The final destination URL, or the original URL if not a redirect.
      */
+
+    public static function generate_image_with_stability($prompt, $size_override = '') {
+    $api_key = get_option('atm_stability_api_key');
+    if (empty($api_key)) throw new Exception('Stability AI API key not configured.');
+
+    $size_map = [
+        '1024x1024' => ['width' => 1024, 'height' => 1024],
+        '1792x1024' => ['width' => 1152, 'height' => 896], // Closest SD 3 aspect ratio
+        '1024x1792' => ['width' => 896, 'height' => 1152], // Closest SD 3 aspect ratio
+    ];
+
+    $default_size = '1792x1024';
+    $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
+    $dimensions = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
+
+    // The Stability AI API uses multipart/form-data, not JSON
+    $boundary = wp_generate_password(24);
+    $body = '';
+    $body .= '--' . $boundary . "\r\n";
+    $body .= 'Content-Disposition: form-data; name="prompt"' . "\r\n\r\n";
+    $body .= $prompt . "\r\n";
+    $body .= '--' . $boundary . "\r\n";
+    $body .= 'Content-Disposition: form-data; name="model"' . "\r\n\r\n";
+    $body .= 'sd3' . "\r\n";
+    $body .= '--' . $boundary . "\r\n";
+    $body .= 'Content-Disposition: form-data; name="aspect_ratio"' . "\r\n\r\n";
+    $body .= '16:9' . "\r\n"; // Hardcoding to 16:9 for now as it's the most common request
+    $body .= '--' . $boundary . '--';
+
+    $response = wp_remote_post('https://api.stability.ai/v2beta/stable-image/generate/core', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type' => 'multipart/form-data; boundary=' . $boundary,
+            'Accept' => 'image/*'
+        ],
+        'body'    => $body,
+        'timeout' => 120
+    ]);
+
+    if (is_wp_error($response)) throw new Exception('Stability AI API call failed: ' . $response->get_error_message());
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    if ($response_code !== 200) {
+        $error_body = wp_remote_retrieve_body($response);
+        $error_data = json_decode($error_body, true);
+        $error_message = isset($error_data['errors'][0]) ? $error_data['errors'][0] : 'Unknown API error.';
+        throw new Exception('Stability AI Error: ' . $error_message);
+    }
+
+    // The response body is the raw image data, not a URL
+    return wp_remote_retrieve_body($response);
+}
+
     public static function resolve_redirect_url($url) {
         // Use wp_remote_head for efficiency as we only need headers.
         // 'redirection' => 0 prevents WordPress from following the redirect automatically.

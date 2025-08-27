@@ -160,6 +160,15 @@ class ATM_Settings {
                                     <p class="description">Used for podcast generation.</p>
                                 </td>
                             </tr>
+                            <table class="form-table">
+    <tr>
+        <th scope="row">Stability AI API Key</th>
+        <td>
+            <input type="password" name="atm_stability_api_key" value="<?php echo esc_attr($options['stability_key']); ?>" class="regular-text" />
+            <p class="description">Required to use the Stable Diffusion image generator. Get a key from <a href="https://platform.stability.ai/" target="_blank">Stability AI</a>.</p>
+        </td>
+    </tr>
+</table>
                             <tr>
     <th scope="row">News API Key</th>
     <td>
@@ -307,6 +316,7 @@ class ATM_Settings {
         update_option('atm_scrapingant_api_key', sanitize_text_field($_POST['atm_scrapingant_api_key']));
         update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
         update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
+        update_option('atm_stability_api_key', sanitize_text_field($_POST['atm_stability_api_key']));
         echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
     }
 
@@ -326,6 +336,7 @@ class ATM_Settings {
             'podcast_prompt' => get_option('atm_podcast_prompt', ATM_API::get_default_master_prompt()),
             'image_quality'  => get_option('atm_image_quality', 'hd'),
             'image_size'     => get_option('atm_image_size', '1792x1024'),
+            'stability_key'  => get_option('atm_stability_api_key', ''),
             'article_models' => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
                 'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
