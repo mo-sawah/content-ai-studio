@@ -416,19 +416,23 @@ class ATM_API {
 
     public static function generate_image_with_stability($prompt, $size_override = '') {
     $api_key = get_option('atm_stability_api_key');
-    if (empty($api_key)) throw new Exception('Stability AI API key not configured.');
+    if (empty($api_key)) {
+        throw new Exception('Stability AI API key not configured.');
+    }
 
-    $size_map = [
-        '1024x1024' => ['width' => 1024, 'height' => 1024],
-        '1792x1024' => ['width' => 1152, 'height' => 896], // Closest SD 3 aspect ratio
-        '1024x1792' => ['width' => 896, 'height' => 1152], // Closest SD 3 aspect ratio
+    // --- FIX: Map WordPress sizes to Stability AI aspect ratios ---
+    $aspect_ratio_map = [
+        '1024x1024' => '1:1',
+        '1792x1024' => '16:9',
+        '1024x1792' => '9:16',
     ];
-
     $default_size = '1792x1024';
     $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
-    $dimensions = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
+    $aspect_ratio = isset($aspect_ratio_map[$selected_size]) ? $aspect_ratio_map[$selected_size] : $aspect_ratio_map[$default_size];
 
-    // The Stability AI API uses multipart/form-data, not JSON
+    // Using a more common default model that should work on most plans
+    $model = 'stable-diffusion-xl-1024-v1-0'; 
+
     $boundary = wp_generate_password(24);
     $body = '';
     $body .= '--' . $boundary . "\r\n";
@@ -436,10 +440,10 @@ class ATM_API {
     $body .= $prompt . "\r\n";
     $body .= '--' . $boundary . "\r\n";
     $body .= 'Content-Disposition: form-data; name="model"' . "\r\n\r\n";
-    $body .= 'sd3' . "\r\n";
+    $body .= $model . "\r\n";
     $body .= '--' . $boundary . "\r\n";
     $body .= 'Content-Disposition: form-data; name="aspect_ratio"' . "\r\n\r\n";
-    $body .= '16:9' . "\r\n"; // Hardcoding to 16:9 for now as it's the most common request
+    $body .= $aspect_ratio . "\r\n"; // Use the selected aspect ratio
     $body .= '--' . $boundary . '--';
 
     $response = wp_remote_post('https://api.stability.ai/v2beta/stable-image/generate/core', [
@@ -452,17 +456,18 @@ class ATM_API {
         'timeout' => 120
     ]);
 
-    if (is_wp_error($response)) throw new Exception('Stability AI API call failed: ' . $response->get_error_message());
+    if (is_wp_error($response)) {
+        throw new Exception('Stability AI API call failed: ' . $response->get_error_message());
+    }
 
     $response_code = wp_remote_retrieve_response_code($response);
     if ($response_code !== 200) {
         $error_body = wp_remote_retrieve_body($response);
         $error_data = json_decode($error_body, true);
-        $error_message = isset($error_data['errors'][0]) ? $error_data['errors'][0] : 'Unknown API error.';
+        $error_message = isset($error_data['errors'][0]) ? $error_data['errors'][0] : 'Unknown API error. Check your Stability AI account for credits/plan details.';
         throw new Exception('Stability AI Error: ' . $error_message);
     }
 
-    // The response body is the raw image data, not a URL
     return wp_remote_retrieve_body($response);
 }
 

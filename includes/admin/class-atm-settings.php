@@ -198,7 +198,7 @@ class ATM_Settings {
             'stability_key'  => get_option('atm_stability_api_key', ''),
             'flux_key'  => get_option('atm_flux_api_key', ''),
             'fal_key' => get_option('atm_fal_api_key', ''),
-            'fal_image_model' => get_option('atm_fal_image_model', 'fal-ai/stable-diffusion-v3-medium'),
+            'fal_image_model' => get_option('atm_fal_image_model', 'fal-ai/flux-krea-lora'),
             'article_models' => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
                 'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
@@ -222,10 +222,9 @@ class ATM_Settings {
                 'ideogram/ideogram-v1' => 'Ideogram v1 (Good with Text)',
             ],
             'fal_image_models' => [
-                'fal-ai/stable-diffusion-v3-medium' => 'Stable Diffusion 3 Medium',
-                'fal-ai/flux-schnell' => 'Flux Schnell (Fast)',
-                'fal-ai/photorealistic-lcm' => 'Photorealistic LCM',
-                'fal-ai/surrealist-style' => 'Surrealist Style',
+                'fal-ai/flux-krea-lora'           => 'Flux Krea LoRA',
+                'fal-ai/imagen4/preview'          => 'Imagen 4 (Preview)',
+                'fal-ai/recraft/v3/text-to-image' => 'Recraft v3',
             ],
         ];
     }
