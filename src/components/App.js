@@ -4,6 +4,7 @@ import { useState, useEffect } from '@wordpress/element';
 import Hub from './Hub';
 import ArticleGenerator from './ArticleGenerator'; 
 import ImageGenerator from './ImageGenerator'; // Import the new component
+import PodcastGenerator from './PodcastGenerator'; 
 
 function App() {
     const [activeView, setActiveView] = useState(
@@ -22,7 +23,10 @@ function App() {
             case 'images': // Add this case
                 return <ImageGenerator setActiveView={setActiveView} />;
 
-            // Add other cases for podcast, etc. later
+            case 'podcast':
+                return <PodcastGenerator setActiveView={setActiveView} />;
+            
+                // Add other cases for podcast, etc. later
 
             default: // The 'hub' view
                 return <Hub setActiveView={setActiveView} />;

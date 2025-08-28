@@ -226,6 +226,7 @@ class ATM_Main {
     'article_models' => $settings['article_models'],
     'writing_styles' => $writing_styles,
     'image_provider' => $settings['image_provider'],
+    'tts_voices' => ['alloy' => 'Alloy', 'echo' => 'Echo', 'fable' => 'Fable', 'onyx' => 'Onyx', 'nova' => 'Nova', 'shimmer' => 'Shimmer'],
 );
 
     wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
