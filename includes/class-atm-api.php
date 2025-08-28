@@ -357,62 +357,79 @@ public static function enhance_image_prompt($simple_prompt) {
     );
 }
     
-    public static function generate_image_with_imagen4($prompt, $size_override = '') {
-    $api_key = get_option('atm_fal_api_key');
+    public static function generate_image_with_google_imagen($prompt, $size_override = '') {
+    $api_key = get_option('atm_google_api_key');
     if (empty($api_key)) {
-        throw new Exception('Fal.ai API key is not configured for Imagen 4.');
+        throw new Exception('Google AI API key is not configured.');
     }
 
-    $model = 'fal-ai/imagen4/preview';
-    $endpoint_url = 'https://queue.fal.run/' . $model;
-
-    // Imagen 4 uses width and height parameters
+    // Gemini uses width and height. We map our named sizes to pixel values.
     $size_map = [
         '1024x1024' => ['width' => 1024, 'height' => 1024],
-        '1792x1024' => ['width' => 1536, 'height' => 864], // Common 16:9
-        '1024x1792' => ['width' => 864, 'height' => 1536], // Common 9:16
+        '1792x1024' => ['width' => 1536, 'height' => 864], // 16:9
+        '1024x1792' => ['width' => 864, 'height' => 1536], // 9:16
     ];
     $default_size = '1792x1024';
     $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
     $dimensions = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
 
-    $request_body = array_merge(['prompt' => $prompt], $dimensions);
+    // We use gemini-1.5-flash as it's fast and optimized for this.
+    $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $api_key;
 
-    $initial_response = wp_remote_post($endpoint_url, [
-        'headers' => [
-            'Authorization' => 'Key ' . $api_key,
-            'Content-Type'  => 'application/json',
-            'Accept'        => 'application/json'
+    $request_body = [
+        'contents' => [
+            'parts' => [
+                ['text' => $prompt]
+            ]
         ],
+        'tools' => [
+            [
+                'functionDeclarations' => [
+                    [
+                        'name' => 'image_generator',
+                        'description' => 'Generates an image based on a textual prompt.',
+                        'parameters' => [
+                            'type' => 'OBJECT',
+                            'properties' => [
+                                'prompt' => ['type' => 'STRING', 'description' => 'The descriptive prompt for image generation.'],
+                                'width' => ['type' => 'NUMBER', 'description' => 'The width of the image.'],
+                                'height' => ['type' => 'NUMBER', 'description' => 'The height of the image.'],
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ],
+        'toolConfig' => [
+            'functionCallingConfig' => [
+                'mode' => 'ONE',
+                'allowedFunctionNames' => ['image_generator']
+            ]
+        ]
+    ];
+
+    $response = wp_remote_post($endpoint_url, [
+        'headers' => ['Content-Type' => 'application/json'],
         'body'    => json_encode($request_body),
-        'timeout' => 30
+        'timeout' => 120
     ]);
 
-    // ... (The rest of the robust polling logic from the previous step)
-    if (is_wp_error($initial_response)) throw new Exception('Fal.ai API call failed: ' . $initial_response->get_error_message());
-    $initial_body = json_decode(wp_remote_retrieve_body($initial_response), true);
-    $response_code = wp_remote_retrieve_response_code($initial_response);
-    if ($response_code !== 200 || empty($initial_body['request_id'])) {
-        $error_detail = isset($initial_body['detail']) ? $initial_body['detail'] : 'Invalid response. Check your API key format.';
-        error_log('Fal.ai Initial Error: ' . wp_remote_retrieve_body($initial_response));
-        throw new Exception('Fal.ai API Error: ' . $error_detail);
+    if (is_wp_error($response)) {
+        throw new Exception('Google Imagen API call failed: ' . $response->get_error_message());
     }
-    $request_id = $initial_body['request_id'];
-    $status_url = 'https://fal.ai/api/v1/requests/' . $request_id . '/status';
-    $max_retries = 40;
-    for ($i = 0; $i < $max_retries; $i++) {
-        sleep(3);
-        $status_response = wp_remote_get($status_url, ['headers' => ['Authorization' => 'Key ' . $api_key]]);
-        if (is_wp_error($status_response)) throw new Exception('Fal.ai polling failed: ' . $status_response->get_error_message());
-        $status_body = json_decode(wp_remote_retrieve_body($status_response), true);
-        if (isset($status_body['status']) && $status_body['status'] === 'COMPLETED') {
-            if (isset($status_body['response']['images'][0]['url'])) return $status_body['response']['images'][0]['url'];
-        } elseif (isset($status_body['status']) && in_array($status_body['status'], ['ERROR', 'FAILED'])) {
-            $error_logs = isset($status_body['logs']) ? implode("\n", array_column($status_body['logs'], 'message')) : 'No details provided.';
-            throw new Exception('Fal.ai image generation failed. Details: ' . $error_logs);
-        }
+
+    $body = wp_remote_retrieve_body($response);
+    $result = json_decode($body, true);
+
+    if (wp_remote_retrieve_response_code($response) !== 200) {
+        $error_message = isset($result['error']['message']) ? $result['error']['message'] : 'Unknown API error.';
+        throw new Exception('Google Imagen Error: ' . $error_message);
     }
-    throw new Exception('Fal.ai image generation timed out after 2 minutes.');
+
+    // The API returns the image as a base64 encoded string, which we must decode.
+    $base64_image_data = $result['candidates'][0]['content']['parts'][0]['fileData']['data'];
+
+    return base64_decode($base64_image_data);
 }
 
     public static function resolve_redirect_url($url) {

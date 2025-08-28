@@ -99,6 +99,7 @@ class ATM_Settings {
                     <table class="form-table">
                         <tr><th scope="row">OpenRouter API Key</th><td><input type="password" name="atm_openrouter_api_key" value="<?php echo esc_attr($options['openrouter_key']); ?>" class="regular-text" required /></td></tr>
                         <tr><th scope="row">OpenAI API Key</th><td><input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" /><p class="description">Used for podcast and image generation.</p></td></tr>
+                        <tr><th scope="row">Google AI API Key</th><td><input type="password" name="atm_google_api_key" value="<?php echo esc_attr($options['google_key']); ?>" class="regular-text" /><p class="description">Used for Imagen 4 image generation. Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p></td></tr>
                         <tr><th scope="row">News API Key</th><td><input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a> for the "Latest News" feature.</p></td></tr>
                         <tr><th scope="row">GNews API Key</th><td><input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p></td></tr>
                         <tr><th scope="row">The Guardian API Key</th><td><input type="password" name="atm_guardian_api_key" value="<?php echo esc_attr($options['guardian_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://open-platform.theguardian.com/" target="_blank">The Guardian</a>.</p></td></tr>
@@ -107,12 +108,20 @@ class ATM_Settings {
                 </div>
 
                 <div class="atm-settings-card">
-                    <h2>🎨 Image Generation Provider</h2>
-                    <table class="form-table">
-                        <tr><th scope="row">Image Provider</th><td><select name="atm_image_provider"><option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option><option value="stabilityai" <?php selected($options['image_provider'], 'stabilityai'); ?>>Stability AI (Stable Diffusion)</option><option value="flux" <?php selected($options['image_provider'], 'flux'); ?>>Flux.1 (BFL Pro)</option><option value="fal" <?php selected($options['image_provider'], 'fal'); ?>>Fal.ai (Multiple Models)</option></select><p class="description">Choose your default service for generating images.</p></td></tr>
-                        <tr><th scope="row">Fal.ai API Key</th><td><input type="password" name="atm_fal_api_key" value="<?php echo esc_attr($options['fal_key']); ?>" class="regular-text" /><p class="description">Required to use the Fal.ai image generator. Get a key from <a href="https://fal.ai/" target="_blank">fal.ai</a>. The key is usually in a `key_id:key_secret` format.</p></td></tr>
-                    </table>
-                </div>
+    <h2>🎨 Image Generation Provider</h2>
+    <table class="form-table">
+        <tr>
+            <th scope="row">Default Image Provider</th>
+            <td>
+                <select name="atm_image_provider">
+                    <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
+                    <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
+                </select>
+                <p class="description">Choose your default service for generating images.</p>
+            </td>
+        </tr>
+    </table>
+</div>
 
                 <div class="atm-settings-grid">
                     <div class="atm-settings-card">
@@ -152,54 +161,51 @@ class ATM_Settings {
     }
 
     private function save_settings() {
-        check_admin_referer('atm_settings_update');
-        update_option('atm_openrouter_api_key', sanitize_text_field($_POST['atm_openrouter_api_key']));
-        update_option('atm_openai_api_key', sanitize_text_field($_POST['atm_openai_api_key']));
-        update_option('atm_article_model', sanitize_text_field($_POST['atm_article_model']));
-        update_option('atm_content_model', sanitize_text_field($_POST['atm_content_model']));
-        update_option('atm_article_prompt', wp_kses_post($_POST['atm_article_prompt']));
-        update_option('atm_image_prompt', wp_kses_post($_POST['atm_image_prompt']));
-        update_option('atm_podcast_prompt', wp_kses_post($_POST['atm_podcast_prompt']));
-        update_option('atm_news_api_key', sanitize_text_field($_POST['atm_news_api_key']));
-        update_option('atm_gnews_api_key', sanitize_text_field($_POST['atm_gnews_api_key']));
-        update_option('atm_guardian_api_key', sanitize_text_field($_POST['atm_guardian_api_key']));
-        update_option('atm_rss_feeds', sanitize_textarea_field($_POST['atm_rss_feeds']));
-        update_option('atm_scrapingant_api_key', sanitize_text_field($_POST['atm_scrapingant_api_key']));
-        update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
-        update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
-        update_option('atm_image_provider', sanitize_text_field($_POST['atm_image_provider']));
-        update_option('atm_stability_api_key', sanitize_text_field($_POST['atm_stability_api_key']));
-        update_option('atm_flux_api_key', sanitize_text_field($_POST['atm_flux_api_key']));
-        update_option('atm_fal_api_key', sanitize_text_field($_POST['atm_fal_api_key']));
-        update_option('atm_fal_image_model', sanitize_text_field($_POST['atm_fal_image_model']));
-        echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
-    }
+    check_admin_referer('atm_settings_update');
+    update_option('atm_openrouter_api_key', sanitize_text_field($_POST['atm_openrouter_api_key']));
+    update_option('atm_openai_api_key', sanitize_text_field($_POST['atm_openai_api_key']));
+    update_option('atm_google_api_key', sanitize_text_field($_POST['atm_google_api_key'])); // Added Google key
+    update_option('atm_article_model', sanitize_text_field($_POST['atm_article_model']));
+    update_option('atm_content_model', sanitize_text_field($_POST['atm_content_model']));
+    update_option('atm_article_prompt', wp_kses_post($_POST['atm_article_prompt']));
+    update_option('atm_image_prompt', wp_kses_post($_POST['atm_image_prompt']));
+    update_option('atm_podcast_prompt', wp_kses_post($_POST['atm_podcast_prompt']));
+    update_option('atm_news_api_key', sanitize_text_field($_POST['atm_news_api_key']));
+    update_option('atm_gnews_api_key', sanitize_text_field($_POST['atm_gnews_api_key']));
+    update_option('atm_guardian_api_key', sanitize_text_field($_POST['atm_guardian_api_key']));
+    update_option('atm_rss_feeds', sanitize_textarea_field($_POST['atm_rss_feeds']));
+    update_option('atm_scrapingant_api_key', sanitize_text_field($_POST['atm_scrapingant_api_key']));
+    update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
+    update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
+    update_option('atm_image_provider', sanitize_text_field($_POST['atm_image_provider']));
+    echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
+}
 
     public function get_settings() {
     return [
-        'openrouter_key' => get_option('atm_openrouter_api_key', ''),
-        'openai_key'     => get_option('atm_openai_api_key', ''),
-        'news_api_key' => get_option('atm_news_api_key', ''),
-        'gnews_api_key' => get_option('atm_gnews_api_key', ''),
-        'rss_feeds' => get_option('atm_rss_feeds', ''),
-        'scrapingant_key' => get_option('atm_scrapingant_api_key', ''),
+        'openrouter_key'   => get_option('atm_openrouter_api_key', ''),
+        'openai_key'       => get_option('atm_openai_api_key', ''),
+        'google_key'       => get_option('atm_google_api_key', ''), // Added Google key
+        'news_api_key'     => get_option('atm_news_api_key', ''),
+        'gnews_api_key'    => get_option('atm_gnews_api_key', ''),
+        'rss_feeds'        => get_option('atm_rss_feeds', ''),
+        'scrapingant_key'  => get_option('atm_scrapingant_api_key', ''),
         'guardian_api_key' => get_option('atm_guardian_api_key', ''),
-        'fal_key' => get_option('atm_fal_api_key', ''), // Keep this for Imagen 4
-        'article_model'  => get_option('atm_article_model', 'openai/gpt-4o'),
-        'content_model'  => get_option('atm_content_model', 'anthropic/claude-3-haiku'),
-        'article_prompt' => get_option('atm_article_prompt', ATM_API::get_default_article_prompt()),
-        'image_prompt'   => get_option('atm_image_prompt', ATM_API::get_default_image_prompt()),
-        'podcast_prompt' => get_option('atm_podcast_prompt', ATM_API::get_default_master_prompt()),
-        'image_quality'  => get_option('atm_image_quality', 'hd'),
-        'image_size'     => get_option('atm_image_size', '1792x1024'),
-        'image_provider' => get_option('atm_image_provider', 'openai'), // Default provider
-        'article_models' => [
+        'article_model'    => get_option('atm_article_model', 'openai/gpt-4o'),
+        'content_model'    => get_option('atm_content_model', 'anthropic/claude-3-haiku'),
+        'article_prompt'   => get_option('atm_article_prompt', ATM_API::get_default_article_prompt()),
+        'image_prompt'     => get_option('atm_image_prompt', ATM_API::get_default_image_prompt()),
+        'podcast_prompt'   => get_option('atm_podcast_prompt', ATM_API::get_default_master_prompt()),
+        'image_quality'    => get_option('atm_image_quality', 'hd'),
+        'image_size'       => get_option('atm_image_size', '1792x1024'),
+        'image_provider'   => get_option('atm_image_provider', 'openai'),
+        'article_models'   => [
             'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
             'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
             'google/gemini-flash-1.5' => 'Google: Gemini 1.5 Flash (Fast & Capable)',
             'meta-llama/llama-3-70b-instruct' => 'Meta: Llama 3 70B (Great Open Source)',
         ],
-        'content_models' => [
+        'content_models'   => [
             'anthropic/claude-3-haiku' => 'Claude 3 Haiku (Fast & Cheap)',
             'openai/gpt-4o' => 'GPT-4o (Highest Quality)',
             'google/gemini-flash-1.5' => 'Google Gemini 1.5 Flash',

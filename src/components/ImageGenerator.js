@@ -76,7 +76,7 @@ function ImageGenerator({ setActiveView }) {
                     options={[
                         { label: `Use Default (${defaultProvider})`, value: '' },
                         { label: 'OpenAI (DALL-E 3)', value: 'openai' },
-                        { label: 'Fal.ai (Imagen 4)', value: 'imagen4' },
+                        { label: 'Google (Imagen 4)', value: 'google' },
                     ]}
                     disabled={isLoading}
                 />

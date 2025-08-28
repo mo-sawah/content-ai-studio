@@ -467,9 +467,9 @@ Your entire output MUST be a single, valid JSON object with three keys:
         $is_url = false;
 
         switch ($provider) {
-    case 'imagen4':
-        $image_data = ATM_API::generate_image_with_imagen4($prompt, $size_override);
-        $is_url = true;
+    case 'google':
+        $image_data = ATM_API::generate_image_with_google_imagen($prompt, $size_override);
+        $is_url = false; // Google returns raw data, not a URL
         break;
     case 'openai':
     default:
