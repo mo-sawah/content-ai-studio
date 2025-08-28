@@ -226,8 +226,6 @@ class ATM_Main {
     'article_models' => $settings['article_models'],
     'writing_styles' => $writing_styles,
     'image_provider' => $settings['image_provider'],
-    'openrouter_image_models' => $settings['openrouter_image_models'],
-    'fal_image_models' => $settings['fal_image_models'],
 );
 
     wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
