@@ -346,24 +346,12 @@ class ATM_API {
     /**
  * Enhances a simple image prompt into a detailed one, like ChatGPT.
  */
-public static function enhance_image_prompt($simple_prompt) {
-    $system_prompt = "You are an expert prompt engineer for a text-to-image AI model (like DALL-E 3). Your task is to take a user's simple prompt and rewrite it into a detailed, descriptive, and visually rich paragraph. The new prompt should include details about the subject, environment, lighting, colors, style, and composition. Do not add any conversational text or explanations. Return ONLY the enhanced prompt text.";
-
-    // We use a fast and capable model for this rewriting task.
-    return self::enhance_content_with_openrouter(
-        ['content' => $simple_prompt], 
-        $system_prompt, 
-        'google/gemini-flash-1.5'
-    );
-}
-    
-    public static function generate_image_with_google_imagen($prompt, $size_override = '') {
+public static function generate_image_with_google_imagen($prompt, $size_override = '') {
     $api_key = get_option('atm_google_api_key');
     if (empty($api_key)) {
         throw new Exception('Google AI API key is not configured.');
     }
 
-    // Gemini uses width and height. We map our named sizes to pixel values.
     $size_map = [
         '1024x1024' => ['width' => 1024, 'height' => 1024],
         '1792x1024' => ['width' => 1536, 'height' => 864], // 16:9
@@ -373,7 +361,6 @@ public static function enhance_image_prompt($simple_prompt) {
     $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
     $dimensions = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
 
-    // We use gemini-1.5-flash as it's fast and optimized for this.
     $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $api_key;
 
     $request_body = [
@@ -402,7 +389,7 @@ public static function enhance_image_prompt($simple_prompt) {
         ],
         'toolConfig' => [
             'functionCallingConfig' => [
-                'mode' => 'ONE',
+                'mode' => 'ANY', // <-- THE FIX IS HERE
                 'allowedFunctionNames' => ['image_generator']
             ]
         ]
@@ -425,8 +412,18 @@ public static function enhance_image_prompt($simple_prompt) {
         $error_message = isset($result['error']['message']) ? $result['error']['message'] : 'Unknown API error.';
         throw new Exception('Google Imagen Error: ' . $error_message);
     }
+    
+    // Check for the base64 data in the response
+    if (!isset($result['candidates'][0]['content']['parts'][0]['fileData']['data'])) {
+        // If image data is not there, it's possible the prompt was unsafe or refused.
+        $finish_reason = $result['candidates'][0]['finishReason'] ?? 'UNKNOWN';
+        $error_text = 'Google API did not return an image. Reason: ' . $finish_reason . '.';
+        if($finish_reason === 'SAFETY') {
+            $error_text .= ' The prompt was likely blocked for safety reasons.';
+        }
+        throw new Exception($error_text);
+    }
 
-    // The API returns the image as a base64 encoded string, which we must decode.
     $base64_image_data = $result['candidates'][0]['content']['parts'][0]['fileData']['data'];
 
     return base64_decode($base64_image_data);
