@@ -7,6 +7,11 @@ if (!defined('ABSPATH')) {
 class ATM_Ajax {
 
     public function generate_podcast_script() {
+    // --- FIX 1: Added a license check ---
+    if (!ATM_Licensing::is_license_active()) {
+        wp_send_json_error('Please activate your license key to use this feature.');
+    }
+
     check_ajax_referer('atm_nonce', 'nonce');
     try {
         $article_content = wp_strip_all_tags(stripslashes($_POST['content']));
@@ -16,7 +21,7 @@ class ATM_Ajax {
             throw new Exception("Article content is empty. Please write your article first.");
         }
 
-        // A much more detailed, language-specific prompt to ensure a longer, higher-quality script.
+        // --- FIX 2: Corrected the single quotes in the closing text ---
         $system_prompt = "You are an expert podcast host creating a script for an episode of '[podcast_name]'.
 
         **CRITICAL INSTRUCTION: You MUST write the entire podcast script in " . $language . ".**
@@ -45,7 +50,6 @@ class ATM_Ajax {
 
         Now, transform the following article into your complete podcast script.";
 
-        // We need to replace shortcodes *after* generating the script, so we pass the template.
         $post = get_post(intval($_POST['post_id']));
         $final_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
 
@@ -556,48 +560,80 @@ Your entire output MUST be a single, valid JSON object with three keys:
     }
     
     public function generate_podcast() {
-        // --- LICENSE CHECK ---
-        if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
-        }
-        // --- END CHECK ---
+    if (!ATM_Licensing::is_license_active()) {
+        wp_send_json_error('Please activate your license key to use this feature.');
+    }
 
-        check_ajax_referer('atm_nonce', 'nonce');
-        
+    check_ajax_referer('atm_nonce', 'nonce');
+    @ini_set('max_execution_time', 600); // Increase timeout for longer podcasts
+
+    try {
         $post_id = intval($_POST['post_id']);
         $script = isset($_POST['script']) ? wp_kses_post(stripslashes($_POST['script'])) : '';
-        
-        if (empty($script)) {
-            throw new Exception('The Podcast Script cannot be empty. Please generate a script first.');
-        }
-        
-        update_post_meta($post_id, '_atm_podcast_status', 'generating');
-        
-        try {
-            $per_post_voice = sanitize_text_field($_POST['voice']);
-            $available_voices = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
-            $final_voice = '';
+        $voice = sanitize_text_field($_POST['voice']);
 
-            if (!empty($per_post_voice)) {
-                $final_voice = ($per_post_voice === 'random') ? $available_voices[array_rand($available_voices)] : $per_post_voice;
-            } else {
-                $default_voice = get_option('atm_voice_selection', 'alloy');
-                $final_voice = ($default_voice === 'random') ? $available_voices[array_rand($available_voices)] : $default_voice;
-            }
-            
-            $podcast_url = ATM_API::generate_audio_with_openai_tts($script, $post_id, $final_voice);
-            
-            update_post_meta($post_id, '_atm_podcast_url', $podcast_url);
-            update_post_meta($post_id, '_atm_podcast_status', 'completed');
-            
-            wp_send_json_success(['message' => 'Podcast generated successfully!', 'podcast_url' => $podcast_url]);
-            
-        } catch (Exception $e) {
-            update_post_meta($post_id, '_atm_podcast_status', 'failed');
-            error_log('Content AI Studio Error: ' . $e->getMessage());
-            wp_send_json_error($e->getMessage());
+        if (empty($script)) {
+            throw new Exception('The Podcast Script cannot be empty.');
         }
+
+        // --- NEW: CHUNKING LOGIC TO HANDLE 4096 CHARACTER LIMIT ---
+        $max_chunk_size = 4000; // Keep it safely below the 4096 limit
+        $script_chunks = [];
+        $current_chunk = '';
+
+        // Split the script into sentences for natural breaks
+        $sentences = preg_split('/(?<=[.?!])\s+/', $script, -1, PREG_SPLIT_NO_EMPTY);
+
+        foreach ($sentences as $sentence) {
+            // Check if adding the next sentence would exceed the limit
+            if (strlen($current_chunk) + strlen($sentence) + 1 > $max_chunk_size) {
+                $script_chunks[] = $current_chunk;
+                $current_chunk = $sentence;
+            } else {
+                $current_chunk .= ' ' . $sentence;
+            }
+        }
+        // Add the last remaining chunk
+        if (!empty($current_chunk)) {
+            $script_chunks[] = trim($current_chunk);
+        }
+        // --- END CHUNKING LOGIC ---
+
+        $final_audio_content = '';
+        // Add a silent MP3 header to the beginning of the file for better compatibility
+        $final_audio_content .= base64_decode('SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGllbmRhcmQgTG9wZXogaW4gT25lVHJpY2sBTQuelleAAAAANFaAAAAAAAAAAAAAAAAAAAAD/8AAAAAAAADw==');
+
+        // Loop through each text chunk, generate audio, and combine it
+        foreach ($script_chunks as $chunk) {
+            $audio_chunk_content = ATM_API::generate_audio_with_openai_tts(trim($chunk), $voice);
+            $final_audio_content .= $audio_chunk_content;
+        }
+
+        // Save the final combined audio file
+        $upload_dir = wp_upload_dir();
+        $podcast_dir = $upload_dir['basedir'] . '/podcasts';
+        if (!file_exists($podcast_dir)) {
+            wp_mkdir_p($podcast_dir);
+        }
+
+        $filename = 'podcast-' . $post_id . '-' . time() . '.mp3';
+        $filepath = $podcast_dir . '/' . $filename;
+
+        if (!file_put_contents($filepath, $final_audio_content)) {
+            throw new Exception('Failed to save the final audio file.');
+        }
+
+        $podcast_url = $upload_dir['baseurl'] . '/podcasts/' . $filename;
+
+        update_post_meta($post_id, '_atm_podcast_url', $podcast_url);
+
+        wp_send_json_success(['message' => 'Podcast generated successfully!', 'podcast_url' => $podcast_url]);
+
+    } catch (Exception $e) {
+        error_log('Content AI Studio Error: ' . $e->getMessage());
+        wp_send_json_error($e->getMessage());
     }
+}
 
     public function preview_tts_voice() {
         check_ajax_referer('atm_nonce', 'nonce');

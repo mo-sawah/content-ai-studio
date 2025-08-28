@@ -848,9 +848,11 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         return $cleaned_text;
     }
     
-    public static function generate_audio_with_openai_tts($script, $post_id, $voice, $is_preview = false) {
+    public static function generate_audio_with_openai_tts($script_chunk, $voice) {
     $api_key = get_option('atm_openai_api_key');
-    if (empty($api_key)) throw new Exception('OpenAI API key not configured');
+    if (empty($api_key)) {
+        throw new Exception('OpenAI API key not configured');
+    }
 
     $response = wp_remote_post('https://api.openai.com/v1/audio/speech', [
         'headers' => [
@@ -859,7 +861,7 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         ],
         'body' => json_encode([
             'model' => 'tts-1',
-            'input' => $script,
+            'input' => $script_chunk,
             'voice' => $voice,
             'response_format' => 'mp3'
         ]),
@@ -872,7 +874,6 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
 
     $audio_content = wp_remote_retrieve_body($response);
 
-    // --- IMPROVED ERROR HANDLING ---
     if (wp_remote_retrieve_response_code($response) !== 200) {
         $error_body = json_decode($audio_content, true);
         $error_message = 'An unknown API error occurred.';
@@ -882,13 +883,9 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         error_log('OpenAI TTS Error: ' . $audio_content);
         throw new Exception('OpenAI TTS API Error: ' . $error_message);
     }
-    // --- END IMPROVEMENT ---
 
-    if ($is_preview) {
-        return $audio_content;
-    }
-
-    return self::save_audio_file($audio_content, $post_id, 'mp3');
+    // Return the raw audio data for this chunk
+    return $audio_content;
 }
     
     private static function save_audio_file($audio_content, $post_id, $extension) {
