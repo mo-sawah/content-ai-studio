@@ -55,7 +55,6 @@
     border-radius: 8px;
     padding: 12px 20px;
     height: auto;
-    text-align: center;   // Center the text
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     cursor: pointer;      // Ensures the pointer cursor appears on hover
 
@@ -77,57 +76,30 @@
     .components-text-control__input,
     .components-textarea-control__input,
     .components-select-control__input {
-        background-color: #2d3748 !important;
-        color: #e2e8f0 !important;
-        border: 1px solid #4a5569 !important;
-        border-radius: 6px !important;
-        padding: 10px 12px !important;
+        background-color: #2d3748;
+        color: #e2e8f0;
+        border: 1px solid #4a5569;
+        border-radius: 6px;
+        padding: 10px 12px;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
         &:focus {
-            border-color: #8E2DE2 !important;
-            box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3) !important;
-            outline: none !important;
-        }
-    }
-
-    // Additional specific targeting for select controls
-    .components-select-control__input,
-    select {
-        background-color: #2d3748 !important;
-        color: #e2e8f0 !important;
-        border: 1px solid #4a5569 !important;
-        border-radius: 6px !important;
-        padding: 10px 12px !important;
-        appearance: none;
-        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0aec0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: right 12px center;
-        background-size: 16px;
-        padding-right: 40px !important;
-
-        &:focus {
-            border-color: #8E2DE2 !important;
-            box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3) !important;
-            outline: none !important;
-        }
-
-        option {
-            background-color: #2d3748;
-            color: #e2e8f0;
+            border-color: #8E2DE2;
+            box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3);
+            outline: none;
         }
     }
 
     // Style the labels for the form controls
     .components-base-control__label {
-        color: #a0aec0 !important;
+        color: #a0aec0;
         font-weight: 500;
         margin-bottom: 8px !important;
     }
 
     // Style the help text
     .components-base-control__help {
-        color: #718096 !important;
+        color: #718096;
     }
 }
 
