@@ -352,15 +352,18 @@ public static function generate_image_with_google_imagen($prompt, $size_override
         throw new Exception('Google AI API key is not configured.');
     }
 
-    // Use the actual working endpoint structure from the docs
+    // CORRECT: Use the :predict endpoint
     $model = 'imagen-4.0-generate-001';
-    $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generate?key=' . $api_key;
+    $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':predict';
 
     $request_body = [
-        'model' => $model,
-        'prompt' => $prompt,
-        'config' => [
-            'numberOfImages' => 1
+        'instances' => [
+            [
+                'prompt' => $prompt
+            ]
+        ],
+        'parameters' => [
+            'sampleCount' => 1
         ]
     ];
 
@@ -368,22 +371,25 @@ public static function generate_image_with_google_imagen($prompt, $size_override
     if (!empty($size_override)) {
         switch ($size_override) {
             case '1024x1024':
-                $request_body['config']['aspectRatio'] = '1:1';
+                $request_body['parameters']['aspectRatio'] = '1:1';
                 break;
             case '1792x1024':
-                $request_body['config']['aspectRatio'] = '16:9';
+                $request_body['parameters']['aspectRatio'] = '16:9';
                 break;
             case '1024x1792':
-                $request_body['config']['aspectRatio'] = '9:16';
+                $request_body['parameters']['aspectRatio'] = '9:16';
                 break;
             default:
-                $request_body['config']['aspectRatio'] = '1:1';
+                $request_body['parameters']['aspectRatio'] = '1:1';
         }
     }
 
     $response = wp_remote_post($endpoint_url, [
-        'headers' => ['Content-Type' => 'application/json'],
-        'body'    => json_encode($request_body),
+        'headers' => [
+            'x-goog-api-key' => $api_key,  // Changed from 'key' parameter to header
+            'Content-Type' => 'application/json'
+        ],
+        'body' => json_encode($request_body),
         'timeout' => 120
     ]);
 
@@ -394,7 +400,7 @@ public static function generate_image_with_google_imagen($prompt, $size_override
     $body = wp_remote_retrieve_body($response);
     $response_code = wp_remote_retrieve_response_code($response);
 
-    // IMPORTANT: Add detailed logging to see what's actually happening
+    // Debug logging
     error_log('Google Imagen Response Code: ' . $response_code);
     error_log('Google Imagen Response Body: ' . $body);
 
@@ -404,16 +410,14 @@ public static function generate_image_with_google_imagen($prompt, $size_override
         if (isset($result['error']['message'])) {
             $error_message .= ': ' . $result['error']['message'];
         }
-        throw new Exception('Google Imagen Error: ' . $error_message . '. Full response: ' . $body);
+        throw new Exception('Google Imagen Error: ' . $error_message);
     }
 
     $result = json_decode($body, true);
 
-    // Try multiple possible response structures
-    if (isset($result['generatedImages'][0]['image']['imageBytes'])) {
-        return base64_decode($result['generatedImages'][0]['image']['imageBytes']);
-    } elseif (isset($result['candidates'][0]['content']['parts'][0]['inlineData']['data'])) {
-        return base64_decode($result['candidates'][0]['content']['parts'][0]['inlineData']['data']);
+    // Correct response structure for :predict endpoint
+    if (isset($result['predictions'][0]['bytesBase64Encoded'])) {
+        return base64_decode($result['predictions'][0]['bytesBase64Encoded']);
     }
 
     throw new Exception('Unexpected response structure: ' . $body);
