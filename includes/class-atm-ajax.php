@@ -447,7 +447,7 @@ Your entire output MUST be a single, valid JSON object with three keys:
 }
 
     public function generate_featured_image() {
-    @ini_set('max_execution_time', 300); // Give this script up to 5 minutes to run
+    @ini_set('max_execution_time', 300);
 
     if (!ATM_Licensing::is_license_active()) {
         wp_send_json_error('Please activate your license key to use this feature.');
@@ -462,6 +462,8 @@ Your entire output MUST be a single, valid JSON object with three keys:
         $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
         $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
 
+        // --- FIX FOR STABILITY AI ---
+        // If the prompt is empty, generate one automatically.
         if (empty($prompt)) {
             $post = get_post($post_id);
             if (!$post) throw new Exception("Post not found.");
@@ -469,6 +471,7 @@ Your entire output MUST be a single, valid JSON object with three keys:
             $excerpt = wp_strip_all_tags(mb_substr($post->post_content, 0, 300) . '...');
             $prompt = "A high-resolution, photorealistic featured image for a blog post titled \"{$title}\". The article discusses: \"{$excerpt}\". The image should be professional, visually compelling, and directly relevant to the main subject of the article. Use cinematic lighting and a 16:9 aspect ratio.";
         }
+        // --- END FIX ---
 
         $provider = !empty($provider_override) ? $provider_override : get_option('atm_image_provider', 'openai');
         $image_data = null;
@@ -477,10 +480,6 @@ Your entire output MUST be a single, valid JSON object with three keys:
         switch ($provider) {
             case 'stabilityai':
                 $image_data = ATM_API::generate_image_with_stability($prompt, $size_override);
-                $is_url = false;
-                break;
-            case 'flux':
-                $image_data = ATM_API::generate_image_with_flux($prompt, $size_override);
                 $is_url = false;
                 break;
             case 'fal':

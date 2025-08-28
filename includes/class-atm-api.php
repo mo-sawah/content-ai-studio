@@ -351,7 +351,8 @@ class ATM_API {
 
     $model = !empty($model_override) ? $model_override : get_option('atm_fal_image_model', 'fal-ai/flux-krea-lora');
 
-    $endpoint_url = 'https://queue.fal.run/' . $model;
+    // Use a different endpoint based on the model ID for better compatibility
+    $endpoint_url = 'https://fal.ai/models/' . $model;
 
     $size_map = [
         '1024x1024' => 'square_1_1',
@@ -362,13 +363,14 @@ class ATM_API {
     $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
     $image_size_preset = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
 
+    // Initial POST request to start the job
     $initial_response = wp_remote_post($endpoint_url, [
         'headers' => [
-            'Authorization' => 'Key ' . $api_key, // Sends the full key now
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json'
+            'Authorization' => 'Key ' . $api_key,
+            'Content-Type'  => 'application/json',
+            'Accept'        => 'application/json'
         ],
-        'body' => json_encode(['prompt' => $prompt, 'image_size' => $image_size_preset]),
+        'body'    => json_encode(['prompt' => $prompt, 'image_size' => $image_size_preset]),
         'timeout' => 30
     ]);
 
@@ -377,32 +379,46 @@ class ATM_API {
     }
 
     $initial_body = json_decode(wp_remote_retrieve_body($initial_response), true);
+    $response_code = wp_remote_retrieve_response_code($initial_response);
 
-    if (wp_remote_retrieve_response_code($initial_response) >= 400 || empty($initial_body['request_id'])) {
-        $error_detail = isset($initial_body['detail']) ? $initial_body['detail'] : 'Invalid response from Fal.ai. Check your API key format (key_id:key_secret).';
+    if ($response_code >= 400 || empty($initial_body['request_id'])) {
+        $error_detail = isset($initial_body['detail']) ? $initial_body['detail'] : 'Invalid response. Check your API key and that the model is correct.';
+        error_log('Fal.ai Initial Error: ' . wp_remote_retrieve_body($initial_response));
         throw new Exception('Fal.ai API Error: ' . $error_detail);
     }
 
     $request_id = $initial_body['request_id'];
-    $status_url = 'https://queue.fal.run/' . $model . '/requests/' . $request_id . '/status';
+    $status_url = $endpoint_url . '/requests/' . $request_id . '/status';
 
-    $max_retries = 30;
+    // Poll for the result, waiting up to 2 minutes
+    $max_retries = 40;
     for ($i = 0; $i < $max_retries; $i++) {
         sleep(3);
         $status_response = wp_remote_get($status_url, ['headers' => ['Authorization' => 'Key ' . $api_key]]);
+
+        if (is_wp_error($status_response)) {
+            // If polling fails, stop trying
+            throw new Exception('Fal.ai polling failed: ' . $status_response->get_error_message());
+        }
+
         $status_body = json_decode(wp_remote_retrieve_body($status_response), true);
 
         if (isset($status_body['status']) && $status_body['status'] === 'COMPLETED') {
+            // Check for multiple possible success formats
             if (isset($status_body['response']['images'][0]['url'])) {
                 return $status_body['response']['images'][0]['url'];
             }
-        } elseif (isset($status_body['status']) && ($status_body['status'] === 'ERROR' || $status_body['status'] === 'FAILED')) {
+            if (isset($status_body['response']['image_url'])) {
+                return $status_body['response']['image_url'];
+            }
+        } elseif (isset($status_body['status']) && in_array($status_body['status'], ['ERROR', 'FAILED'])) {
             $error_logs = isset($status_body['logs']) ? implode("\n", array_column($status_body['logs'], 'message')) : 'No details provided.';
-            throw new Exception('Fal.ai image generation failed. Logs: ' . $error_logs);
+            throw new Exception('Fal.ai image generation failed. Details: ' . $error_logs);
         }
+        // If status is 'IN_PROGRESS' or 'PENDING', the loop continues...
     }
 
-    throw new Exception('Fal.ai image generation timed out.');
+    throw new Exception('Fal.ai image generation timed out after 2 minutes.');
 }
 
     public static function generate_image_with_stability($prompt, $size_override = '') {
