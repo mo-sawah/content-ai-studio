@@ -99,9 +99,6 @@ function checkAndGenerateImage(button, postId) {
         setTimeout(() => resetButton(button, 'Generate Article'), 2000);
         isGenerating = false;
     }
-}
-    let isGenerating = false;
-
     // Handle the new "Generate Script" button
 $('#atm-generate-script-btn').on('click', function() {
     const button = $(this);
@@ -117,6 +114,7 @@ $('#atm-generate-script-btn').on('click', function() {
         return;
     }
 
+    if (button.prop('disabled')) return;
     button.prop('disabled', true);
     textSpan.text('Generating...');
     spinner.show();
@@ -153,21 +151,18 @@ $('#atm-generate-script-btn').on('click', function() {
 // --- Update the main "Generate Podcast" button handler ---
 // Remove the old one and replace it with this:
 $('#atm-generate-podcast-btn').on('click', function() {
-    if (isGenerating) return;
     const button = $(this);
+    if (button.prop('disabled')) return;
+
     const postId = button.data("post-id");
     const script = $("#atm-podcast-script").val();
-
     if (!script.trim()) {
         alert("Please generate a script before creating the podcast.");
         return;
     }
 
-    isGenerating = true;
     button.prop("disabled", true).html('<div class="atm-spinner"></div> Creating podcast...');
-
     const voice = $("#atm-voice-select").val();
-
     $.ajax({
         url: atm_ajax.ajax_url, type: "POST",
         data: {
@@ -189,9 +184,6 @@ $('#atm-generate-podcast-btn').on('click', function() {
         error: function() {
             alert("An error occurred.");
             resetButton(button, 'Generate Podcast');
-        },
-        complete: function() {
-            isGenerating = false;
         }
     });
 });
@@ -469,43 +461,44 @@ function escapeHtml(text) {
 
     // --- Generate Article Button ---
     $('#atm-generate-article-btn').on('click', function() {
-        if (isGenerating) return;
         const button = $(this);
+        if (button.prop('disabled')) return;
         const postId = button.data("post-id");
         generateArticle(button, postId);
     });
 
     // Show/hide the News options based on the Article Type
-    $('#atm-article-type-select').on('change', function() {
-        if ($(this).val() === 'news') {
-            $('#atm-news-source-wrapper').slideDown();
-            $('#atm-force-fresh-wrapper').slideDown();
-        } else {
-            $('#atm-news-source-wrapper').slideUp();
-            $('#atm-force-fresh-wrapper').slideUp();
-        }
-    }).trigger('change'); // Trigger on page load
+    // This handler seems duplicated, the one at the top of the file handles all cases.
+    // $('#atm-article-type-select').on('change', function() {
+    //     if ($(this).val() === 'news') {
+    //         $('#atm-news-source-wrapper').slideDown();
+    //         $('#atm-force-fresh-wrapper').slideDown();
+    //     } else {
+    //         $('#atm-news-source-wrapper').slideUp();
+    //         $('#atm-force-fresh-wrapper').slideUp();
+    //     }
+    // }).trigger('change'); // Trigger on page load
 
     // --- Generate Image Button ---
     $('#atm-generate-image-btn').on('click', function() {
-        if (isGenerating) return;
         const button = $(this);
+        if (button.prop('disabled')) return;
         const postId = button.data("post-id");
         generateImage(button, postId);
     });
 
     // --- Generate Podcast Button ---
     $('#atm-generate-podcast-btn').on('click', function() {
-        if (isGenerating) return;
         const button = $(this);
+        if (button.prop('disabled')) return;
         const postId = button.data("post-id");
         generatePodcast(button, postId);
     });
 
     // Regenerate button
     $('.atm-regenerate').on('click', function() {
-        if (isGenerating) return;
         const button = $(this);
+        if (button.prop('disabled')) return;
         const postId = button.data("post-id");
         generatePodcast(button, postId);
     });
@@ -535,7 +528,6 @@ function escapeHtml(text) {
      * Article Generation with conditional logic for user-provided titles and article types.
      */
     function generateArticle(button, postId) {
-        isGenerating = true;
         button.prop("disabled", true);
 
         const articleType = $('#atm-article-type-select').val();
@@ -552,7 +544,6 @@ function escapeHtml(text) {
         if (!topic) {
             alert('Please provide a keyword or an article title.');
             resetButton(button, 'Generate Article');
-            isGenerating = false;
             return;
         }
 
@@ -578,15 +569,11 @@ function escapeHtml(text) {
     } else {
         alert("Error: " + response.data);
         resetButton(button, 'Generate Article');
-        isGenerating = false;
     }
 },
                 error: function() {
                     alert("An error occurred during news generation.");
                     resetButton(button, 'Generate Article');
-                },
-                complete: function() {
-                    isGenerating = false;
                 }
             });
 
@@ -623,13 +610,11 @@ function escapeHtml(text) {
                 } else {
                     alert("Error generating title: " + response.data);
                     resetButton(button, 'Generate Article');
-                    isGenerating = false;
                 }
             },
             error: function() {
                 alert("An error occurred during title generation.");
                 resetButton(button, 'Generate Article');
-                isGenerating = false;
             }
         });
     }
@@ -661,17 +646,12 @@ function escapeHtml(text) {
             error: function() {
                 alert("An error occurred during content generation.");
                 resetButton(button, 'Generate Article');
-            },
-            complete: function() {
-                isGenerating = false;
             }
         });
     }
 
     function generateImage(button, postId) {
-    isGenerating = true;
     button.prop("disabled", true).html('<div class="atm-spinner"></div> Generating Image...');
-
     $.ajax({
         url: atm_ajax.ajax_url,
         type: "POST",
@@ -702,15 +682,11 @@ function escapeHtml(text) {
         error: function() {
             alert("An error occurred during image generation.");
             resetButton(button, 'Generate & Set Featured Image');
-        },
-        complete: function() {
-            isGenerating = false;
         }
     });
 }
 
     function generatePodcast(button, postId) {
-        isGenerating = true;
         button.prop("disabled", true).html('<div class="atm-spinner"></div> Creating podcast...');
         const section = button.closest(".atm-section");
         if (!section.find(".atm-progress-bar").length) {
@@ -745,9 +721,6 @@ function escapeHtml(text) {
             error: function() {
                 alert("An error occurred.");
                 resetButton(button, 'Generate Podcast');
-            },
-            complete: function() {
-                isGenerating = false;
             }
         });
     }
@@ -756,7 +729,6 @@ function escapeHtml(text) {
         button.prop("disabled", false).html(text);
         button.closest(".atm-section").find(".atm-progress-bar").remove();
     }
-
 });
 
 // Make testRSSFeed globally available
