@@ -149,3 +149,22 @@
         color: #475569;
     }
 }
+
+.atm-speech-to-text-container {
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.atm-record-button {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    font-size: 16px;
+
+    &.is-recording {
+        background-color: #dc2626; // Red color when recording
+        &:hover {
+            background-color: #b91c1c;
+        }
+    }
+}

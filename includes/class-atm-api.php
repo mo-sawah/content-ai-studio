@@ -343,6 +343,58 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
+    /**
+ * Transcribes an audio file using the OpenAI Whisper API.
+ * @param string $audio_file_path The temporary path to the uploaded audio file.
+ * @return string The transcribed text.
+ * @throws Exception On API error.
+ */
+    public static function transcribe_audio_with_whisper($audio_file_path) {
+        $api_key = get_option('atm_openai_api_key');
+        if (empty($api_key)) {
+            throw new Exception('OpenAI API key not configured.');
+        }
+
+        $boundary = wp_generate_password(24);
+        $body = '';
+
+        // Add the model field
+        $body .= '--' . $boundary . "\r\n";
+        $body .= 'Content-Disposition: form-data; name="model"' . "\r\n\r\n";
+        $body .= 'whisper-1' . "\r\n";
+
+        // Add the file field
+        $body .= '--' . $boundary . "\r\n";
+        $body .= 'Content-Disposition: form-data; name="file"; filename="audio.webm"' . "\r\n";
+        $body .= 'Content-Type: audio/webm' . "\r\n\r\n";
+        $body .= file_get_contents($audio_file_path) . "\r\n";
+
+        $body .= '--' . $boundary . '--';
+
+        $response = wp_remote_post('https://api.openai.com/v1/audio/transcriptions', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type'  => 'multipart/form-data; boundary=' . $boundary,
+            ],
+            'body'    => $body,
+            'timeout' => 120
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Whisper API call failed: ' . $response->get_error_message());
+        }
+
+        $response_body = wp_remote_retrieve_body($response);
+        $result = json_decode($response_body, true);
+
+        if (wp_remote_retrieve_response_code($response) !== 200) {
+            $error_message = isset($result['error']['message']) ? $result['error']['message'] : 'Unknown API error.';
+            throw new Exception('Whisper API Error: ' . $error_message);
+        }
+
+        return $result['text'];
+    }
+    
     public static function get_elevenlabs_voices() {
     $api_key = get_option('atm_elevenlabs_api_key');
     if (empty($api_key)) {

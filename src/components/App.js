@@ -5,6 +5,7 @@ import Hub from './Hub';
 import ArticleGenerator from './ArticleGenerator'; 
 import ImageGenerator from './ImageGenerator'; // Import the new component
 import PodcastGenerator from './PodcastGenerator'; 
+import SpeechToText from './SpeechToText';
 
 function App() {
     const [activeView, setActiveView] = useState(
@@ -25,6 +26,9 @@ function App() {
 
             case 'podcast':
                 return <PodcastGenerator setActiveView={setActiveView} />;
+            
+            case 'speech_to_text':
+                return <SpeechToText setActiveView={setActiveView} />;
             
                 // Add other cases for podcast, etc. later
 

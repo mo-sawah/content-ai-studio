@@ -6,6 +6,32 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    public function transcribe_audio() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+
+        check_ajax_referer('atm_nonce', 'nonce');
+
+        try {
+            if (!isset($_FILES['audio_chunk'])) {
+                throw new Exception('No audio file was received.');
+            }
+
+            $file = $_FILES['audio_chunk'];
+
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                throw new Exception('File upload error: ' . $file['error']);
+            }
+
+            $transcript = ATM_API::transcribe_audio_with_whisper($file['tmp_name']);
+            wp_send_json_success(['transcript' => $transcript]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
     public function upload_podcast_image() {
         check_ajax_referer('atm_nonce', 'nonce');
         $post_id = intval($_POST['post_id']);
@@ -29,6 +55,7 @@ class ATM_Ajax {
         add_action('wp_ajax_generate_podcast_script', array($this, 'generate_podcast_script'));
         add_action('wp_ajax_generate_podcast', array($this, 'generate_podcast'));
         add_action('wp_ajax_upload_podcast_image', array($this, 'upload_podcast_image'));
+        add_action('wp_ajax_transcribe_audio', array($this, 'transcribe_audio'));
         
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));
