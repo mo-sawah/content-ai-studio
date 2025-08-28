@@ -461,10 +461,19 @@ Your entire output MUST be a single, valid JSON object with three keys:
         $quality_override = isset($_POST['quality']) ? sanitize_text_field($_POST['quality']) : '';
         $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
 
-        // Validate prompt
+        // --- FIX IS HERE: Re-add automatic prompt generation as a fallback ---
         if (empty(trim($prompt))) {
-            throw new Exception('Image prompt cannot be empty.');
+            $post = get_post($post_id);
+            if (!$post) throw new Exception("Post not found for automatic prompt generation.");
+
+            $post_title = $post->post_title;
+            // Use the enhanced prompt we created before
+            $final_prompt = "A cinematic, photorealistic, high-resolution featured image for a blog post titled \"{$post_title}\". The image should be professional, visually compelling, and directly relevant to the main subject of the article. Use dramatic lighting and a 16:9 aspect ratio. Do not include any text in the image.";
+        } else {
+            // If a prompt was provided, use it
+            $final_prompt = $prompt;
         }
+        // --- END FIX ---
 
         $provider = !empty($provider_override) ? $provider_override : get_option('atm_image_provider', 'openai');
         $image_data = null;
@@ -472,33 +481,20 @@ Your entire output MUST be a single, valid JSON object with three keys:
 
         switch ($provider) {
             case 'google':
-                try {
-                    $image_data = ATM_API::generate_image_with_google_imagen($prompt, $size_override);
-                    $is_url = false; // Google returns raw data
-                } catch (Exception $e) {
-                    // Log the specific Google error for debugging
-                    error_log('Google Imagen Error: ' . $e->getMessage());
-                    throw new Exception('Google image generation failed: ' . $e->getMessage());
-                }
+                $image_data = ATM_API::generate_image_with_google_imagen($final_prompt, $size_override);
+                $is_url = false; // Google returns raw data
                 break;
-                
             case 'openai':
             default:
-                try {
-                    $image_data = ATM_API::generate_image_with_openai($prompt, $size_override, $quality_override);
-                    $is_url = true; // OpenAI returns URL
-                } catch (Exception $e) {
-                    error_log('OpenAI Image Error: ' . $e->getMessage());
-                    throw new Exception('OpenAI image generation failed: ' . $e->getMessage());
-                }
+                $image_data = ATM_API::generate_image_with_openai($final_prompt, $size_override, $quality_override);
+                $is_url = true; // OpenAI returns a URL
                 break;
         }
 
-        // Handle the response based on data type
         if ($is_url) {
             $attachment_id = $this->set_image_from_url($image_data, $post_id);
         } else {
-            $attachment_id = $this->set_image_from_data($image_data, $post_id, $prompt);
+            $attachment_id = $this->set_image_from_data($image_data, $post_id, $final_prompt);
         }
 
         if (is_wp_error($attachment_id)) {
