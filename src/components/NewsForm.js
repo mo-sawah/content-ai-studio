@@ -1,8 +1,8 @@
 // src/components/NewsForm.js
 import { useState } from '@wordpress/element';
+import { useDispatch, useSelect } from '@wordpress/data'; // --- NEW: Import useSelect ---
 import { Button, TextControl, CheckboxControl, Spinner, SelectControl } from '@wordpress/components';
 
-// We can move these helpers to a shared file later
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
 const updateEditorContent = (title, markdownContent) => {
     const isBlockEditor = document.body.classList.contains('block-editor-page');
@@ -37,6 +37,11 @@ function NewsForm() {
     const [forceFresh, setForceFresh] = useState(false);
     const [generateImage, setGenerateImage] = useState(false);
 
+    // --- NEW: Get the savePost function and check if the post is saving ---
+    const { savePost } = useDispatch('core/editor');
+    const isSaving = useSelect(select => select('core/editor').isSavingPost());
+    // --- END NEW ---
+
     const handleGenerate = async () => {
         if (!topic) {
             alert('Please enter a topic for the news article.');
@@ -60,13 +65,18 @@ function NewsForm() {
             setStatusMessage('✅ News article inserted!');
 
             if (generateImage) {
+                // --- NEW: Save the post before generating the image ---
+                setStatusMessage('Saving post...');
+                await savePost();
+                // --- END NEW ---
+
                 setStatusMessage('Generating featured image...');
                 const imageResponse = await callAjax('generate_featured_image', { post_id: postId, prompt: '' });
                 if (!imageResponse.success) {
-                    alert('Article was generated, but the image failed: ' + imageResponse.data);
+                    alert('Article was generated and saved, but the image failed: ' + imageResponse.data);
                 } else {
                     setStatusMessage('✅ All done! Reloading to show image...');
-                    setTimeout(() => window.location.reload(), 2000);
+                    setTimeout(() => window.location.reload(), 1500);
                     return;
                 }
             }
@@ -86,7 +96,7 @@ function NewsForm() {
                 value={topic}
                 onChange={setTopic}
                 placeholder="e.g., recent AI developments"
-                disabled={isLoading}
+                disabled={isLoading || isSaving}
             />
             <SelectControl
                 label="News Source"
@@ -97,22 +107,22 @@ function NewsForm() {
                     { label: 'The Guardian', value: 'guardian' },
                 ]}
                 onChange={setNewsSource}
-                disabled={isLoading}
+                disabled={isLoading || isSaving}
             />
             <CheckboxControl
                 label="Force fresh search (bypasses cache)"
                 checked={forceFresh}
                 onChange={setForceFresh}
-                disabled={isLoading}
+                disabled={isLoading || isSaving}
             />
             <CheckboxControl
                 label="Also generate a featured image"
                 checked={generateImage}
                 onChange={setGenerateImage}
-                disabled={isLoading}
+                disabled={isLoading || isSaving}
             />
-            <Button isPrimary onClick={handleGenerate} disabled={isLoading || !topic}>
-                {isLoading ? <Spinner /> : 'Generate News Article'}
+            <Button isPrimary onClick={handleGenerate} disabled={isLoading || isSaving || !topic}>
+                {isLoading || isSaving ? <Spinner /> : 'Generate News Article'}
             </Button>
             {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
         </div>
