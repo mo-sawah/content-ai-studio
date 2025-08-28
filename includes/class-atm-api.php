@@ -985,8 +985,8 @@ Do not include any text, explanations, or markdown code fences outside of the JS
     }
 
     public static function get_default_image_prompt() {
-        return 'A photorealistic, high-resolution image of [topic], suitable for a featured blog post image. Cinematic lighting, professional quality, 16:9 aspect ratio.';
-    }
+    return 'Create a highly realistic, professional-quality photograph to be used as a featured image for a news/blog article titled "[article_title]". The image should be directly relevant to the subject of the title, visually meaningful, and look like authentic editorial photography. Use cinematic lighting, sharp focus, and a natural color palette. Avoid text, watermarks, or artificial-looking elements. Maintain a serious and credible journalistic style suitable for a news website.';
+}
 }
 
 /**

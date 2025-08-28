@@ -461,18 +461,21 @@ Your entire output MUST be a single, valid JSON object with three keys:
         $quality_override = isset($_POST['quality']) ? sanitize_text_field($_POST['quality']) : '';
         $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
 
-        // --- FIX IS HERE: Re-add automatic prompt generation as a fallback ---
-        if (empty(trim($prompt))) {
-            $post = get_post($post_id);
-            if (!$post) throw new Exception("Post not found for automatic prompt generation.");
-
-            $post_title = $post->post_title;
-            // Use the enhanced prompt we created before
-            $final_prompt = "A cinematic, photorealistic, high-resolution featured image for a blog post titled \"{$post_title}\". The image should be professional, visually compelling, and directly relevant to the main subject of the article. Use dramatic lighting and a 16:9 aspect ratio. Do not include any text in the image.";
-        } else {
-            // If a prompt was provided, use it
-            $final_prompt = $prompt;
+        $post = get_post($post_id);
+        if (!$post) {
+            throw new Exception("Post not found.");
         }
+
+        // --- THE FIX IS HERE ---
+        // If the incoming prompt is empty, fetch the default prompt from our central function.
+        if (empty(trim($prompt))) {
+            $prompt_template = ATM_API::get_default_image_prompt();
+        } else {
+            $prompt_template = $prompt;
+        }
+
+        // Now, replace any shortcodes (like [article_title]) in the chosen prompt.
+        $final_prompt = ATM_API::replace_prompt_shortcodes($prompt_template, $post);
         // --- END FIX ---
 
         $provider = !empty($provider_override) ? $provider_override : get_option('atm_image_provider', 'openai');

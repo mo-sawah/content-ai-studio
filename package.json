@@ -1,6 +1,6 @@
 {
   "name": "article-to-media",
-  "version": "1.5.6",
+  "version": "1.5.7",
   "private": true,
   "scripts": {
     "build": "wp-scripts build src/index.js src/studio.js",
