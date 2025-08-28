@@ -352,7 +352,7 @@ public static function generate_image_with_google_imagen($prompt, $size_override
         throw new Exception('Google AI API key is not configured.');
     }
 
-    // CORRECT: Use the :predict endpoint
+    // CORRECT: Use the :predict endpoint for the specific Imagen model
     $model = 'imagen-4.0-generate-001';
     $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':predict';
 
@@ -379,14 +379,12 @@ public static function generate_image_with_google_imagen($prompt, $size_override
             case '1024x1792':
                 $request_body['parameters']['aspectRatio'] = '9:16';
                 break;
-            default:
-                $request_body['parameters']['aspectRatio'] = '1:1';
         }
     }
 
     $response = wp_remote_post($endpoint_url, [
         'headers' => [
-            'x-goog-api-key' => $api_key,  // Changed from 'key' parameter to header
+            'x-goog-api-key' => $api_key, // Use the correct header for this endpoint
             'Content-Type' => 'application/json'
         ],
         'body' => json_encode($request_body),
@@ -400,10 +398,6 @@ public static function generate_image_with_google_imagen($prompt, $size_override
     $body = wp_remote_retrieve_body($response);
     $response_code = wp_remote_retrieve_response_code($response);
 
-    // Debug logging
-    error_log('Google Imagen Response Code: ' . $response_code);
-    error_log('Google Imagen Response Body: ' . $body);
-
     if ($response_code !== 200) {
         $result = json_decode($body, true);
         $error_message = 'HTTP ' . $response_code;
@@ -415,12 +409,13 @@ public static function generate_image_with_google_imagen($prompt, $size_override
 
     $result = json_decode($body, true);
 
-    // Correct response structure for :predict endpoint
     if (isset($result['predictions'][0]['bytesBase64Encoded'])) {
         return base64_decode($result['predictions'][0]['bytesBase64Encoded']);
     }
 
-    throw new Exception('Unexpected response structure: ' . $body);
+    // Add a fallback for unexpected responses
+    $error_details = isset($result['error']['message']) ? $result['error']['message'] : 'The API response did not contain image data.';
+    throw new Exception('Google Imagen Error: ' . $error_details);
 }
 
 // STEP 2: Add this helper function for prompt enhancement (optional but recommended)
