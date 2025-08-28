@@ -1,15 +1,21 @@
 /* --- Main Meta Box & Container --- */
+// This overrides the default WordPress padding for a cleaner look.
 #article-to-media .inside {
     margin: 0 !important;
     padding: 0 !important;
 }
 
 .atm-studio-container {
-    background-color: #121619;
+    background-color: #121619; // Your new dark background color
     color: #e2e8f0;
     padding: 2rem;
     border-radius: 8px;
-    margin: 15px; // Your preferred margin
+    margin: 15px;
+}
+
+.atm-studio-container h2 {
+    font-size: 35px !important;
+    font-weight: 600 !important;
 }
 
 /* --- Hub View --- */
@@ -18,8 +24,8 @@
     padding: 2rem 1rem;
 
     h2 {
-        font-size: 35px !important; // Your preferred size
-        font-weight: 600 !important; // Your preferred weight
+        font-size: 35px;   // Updated size
+        font-weight: 600;  // Updated weight
         color: #ffffff;
         margin: 0 0 8px;
     }
@@ -40,21 +46,19 @@
 }
 
 /* --- Button Styles --- */
-.atm-studio-container .components-button {
-    cursor: pointer; // Ensures pointer cursor on all buttons
-    height: auto;
-    padding: 12px 20px;
-    font-size: 15px;
+.atm-studio-container .components-button.is-primary {
+    background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%);
+    color: #ffffff;      // Updated text color to white
+    font-size: 16px;      // Updated font size
     font-weight: 600;
+    border: none;
     border-radius: 8px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    padding: 12px 20px;
+    height: auto;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;      // Ensures the pointer cursor appears on hover
 
-    // --- FIX: Make main action buttons full-width ---
-    &.is-primary {
-        grid-column: 1 / -1; // Makes the button span the full width of the form grid
-    }
-
-    &:hover:not(:disabled) {
+    &:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
@@ -66,41 +70,18 @@
     }
 }
 
-// Primary Button (Purple Gradient)
-.atm-studio-container .components-button.is-primary {
-    background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%);
-    color: #ffffff;
-    border: none;
-}
-
-// --- FIX: Style for Secondary Buttons (like "Generate Script") ---
-.atm-studio-container .components-button.is-secondary {
-    background-color: #2d3748;
-    color: #e2e8f0;
-    border: 1px solid #4a5569;
-    width: 100%; // Make it full-width as well
-
-    &:hover:not(:disabled) {
-        background-color: #4a5569;
-        border-color: #718096;
-    }
-}
-
 /* --- Modern Form Controls --- */
 .atm-studio-container {
+    // Target all text inputs, textareas, and select dropdowns
     .components-text-control__input,
     .components-textarea-control__input,
     .components-select-control__input {
-        background-color: #2d3748 !important; // FIX: Force dark background
-        color: #e2e8f0 !important;           // FIX: Force light text color
+        background-color: #2d3748;
+        color: #e2e8f0;
         border: 1px solid #4a5569;
         border-radius: 6px;
         padding: 10px 12px;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
-
-        &::placeholder {
-            color: #718096; // Style placeholder text
-        }
 
         &:focus {
             border-color: #8E2DE2;
@@ -109,12 +90,14 @@
         }
     }
 
+    // Style the labels for the form controls
     .components-base-control__label {
-        color: #a0aec0; // FIX: Ensure labels are light
+        color: #a0aec0;
         font-weight: 500;
         margin-bottom: 8px !important;
     }
 
+    // Style the help text
     .components-base-control__help {
         color: #718096;
     }
@@ -151,11 +134,9 @@
         padding: 0;
         transition: background-color 0.2s ease, border-color 0.2s ease;
 
-        &:hover:not(:disabled) {
-            // Reversed and darkened gradient for the hover effect
-            background: linear-gradient(135deg, #3A00B3 0%, #7A27C1 100%);
-            transform: translateY(-2px); // We can keep the lift effect
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); // Slightly stronger shadow
+        &:hover {
+            background-color: #4a5569;
+            border-color: #a0aec0;
         }
     }
 
@@ -170,9 +151,4 @@
         text-align: center;
         margin-top: 1rem;
     }
-}
-
-.atm-studio-container h2 {
-    font-size: 35px !important;
-    font-weight: 600 !important;
 }
