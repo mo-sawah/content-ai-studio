@@ -352,29 +352,18 @@ public static function generate_image_with_google_imagen($prompt, $size_override
         throw new Exception('Google AI API key is not configured.');
     }
 
-    // Gemini uses width and height. We map our named sizes to pixel values.
-    $size_map = [
-        '1024x1024' => ['width' => 1024, 'height' => 1024],
-        '1792x1024' => ['width' => 1536, 'height' => 864], // 16:9
-        '1024x1792' => ['width' => 864, 'height' => 1536], // 9:16
-    ];
-    $default_size = '1792x1024';
-    $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
-    $dimensions = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
-
-    // We use gemini-1.5-flash as it's fast and optimized for this.
     $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $api_key;
 
-    // --- THE FIX IS HERE: Wrap the user's prompt in a direct command ---
-    $instructed_prompt = 'Generate an image with the following description: ' . $prompt;
+    // --- FINAL FIX: Create an explicit command to use the image_generator tool ---
+    $instructed_prompt = "You are a helpful assistant with access to a tool called 'image_generator'. A user wants an image. Your task is to call this tool. Use the following user-provided text as the 'prompt' argument for the tool: \"{$prompt}\"";
 
     $request_body = [
         'contents' => [
             'parts' => [
-                // Use the new instructed prompt
                 ['text' => $instructed_prompt]
             ]
         ],
+        // We still declare the tool so the model knows what "image_generator" is
         'tools' => [
             [
                 'functionDeclarations' => [
@@ -384,19 +373,11 @@ public static function generate_image_with_google_imagen($prompt, $size_override
                         'parameters' => [
                             'type' => 'OBJECT',
                             'properties' => [
-                                'prompt' => ['type' => 'STRING', 'description' => 'The descriptive prompt for image generation.'],
-                                'width' => ['type' => 'NUMBER', 'description' => 'The width of the image.'],
-                                'height' => ['type' => 'NUMBER', 'description' => 'The height of the image.'],
+                                'prompt' => ['type' => 'STRING']
                             ]
                         ]
                     ]
                 ]
-            ]
-        ],
-        'toolConfig' => [
-            'functionCallingConfig' => [
-                'mode' => 'ANY',
-                'allowedFunctionNames' => ['image_generator']
             ]
         ]
     ];
@@ -419,12 +400,16 @@ public static function generate_image_with_google_imagen($prompt, $size_override
         throw new Exception('Google Imagen Error: ' . $error_message);
     }
 
+    // With the correct prompt, we expect the image data directly in the response
     if (!isset($result['candidates'][0]['content']['parts'][0]['fileData']['data'])) {
         $finish_reason = $result['candidates'][0]['finishReason'] ?? 'UNKNOWN';
         $error_text = 'Google API did not return an image. Reason: ' . $finish_reason . '.';
         if($finish_reason === 'SAFETY') {
             $error_text .= ' The prompt was likely blocked for safety reasons.';
+        } else if ($finish_reason === 'STOP') {
+            $error_text .= ' The model did not call the image tool. The prompt might need adjustment.';
         }
+        error_log('Google Imagen Response Body: ' . $body); // Add logging for debugging
         throw new Exception($error_text);
     }
 
