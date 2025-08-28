@@ -17,14 +17,20 @@ function ImageGenerator({ setActiveView }) {
     const currentProvider = provider || defaultProvider;
 
     const handleGenerate = async () => {
+        // --- NEW: Check if the prompt is empty ---
+        if (!prompt.trim()) {
+            alert('Please enter a prompt for the image.');
+            return;
+        }
+
         setIsLoading(true);
-        setStatusMessage('Generating your image...');
+        setStatusMessage('Enhancing prompt & generating image...');
         const postId = document.getElementById('atm-studio-root').getAttribute('data-post-id');
 
         try {
             const response = await callAjax('generate_featured_image', {
                 post_id: postId,
-                prompt: prompt,
+                prompt: prompt, // Send the user's direct prompt
                 size: imageSize,
                 quality: imageQuality,
                 provider: currentProvider,
@@ -77,10 +83,10 @@ function ImageGenerator({ setActiveView }) {
 
                 <TextareaControl
                     label="Image Prompt"
-                    help="Leave empty for an automatic prompt based on your article's content."
+                    help="A descriptive prompt is required for image generation." // --- CHANGED HELP TEXT ---
                     value={prompt}
                     onChange={setPrompt}
-                    placeholder="A photorealistic image of..."
+                    placeholder="A cinematic, photorealistic image of..."
                     rows="5"
                     disabled={isLoading}
                 />

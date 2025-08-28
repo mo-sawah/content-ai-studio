@@ -343,6 +343,20 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
+    /**
+ * Enhances a simple image prompt into a detailed one, like ChatGPT.
+ */
+public static function enhance_image_prompt($simple_prompt) {
+    $system_prompt = "You are an expert prompt engineer for a text-to-image AI model (like DALL-E 3). Your task is to take a user's simple prompt and rewrite it into a detailed, descriptive, and visually rich paragraph. The new prompt should include details about the subject, environment, lighting, colors, style, and composition. Do not add any conversational text or explanations. Return ONLY the enhanced prompt text.";
+
+    // We use a fast and capable model for this rewriting task.
+    return self::enhance_content_with_openrouter(
+        ['content' => $simple_prompt], 
+        $system_prompt, 
+        'google/gemini-flash-1.5'
+    );
+}
+    
     public static function generate_image_with_imagen4($prompt, $size_override = '') {
     $api_key = get_option('atm_fal_api_key');
     if (empty($api_key)) {
@@ -820,17 +834,22 @@ class ATM_API {
         throw new Exception('OpenAI API key not configured in settings.');
     }
 
-    // Use override if provided, otherwise fall back to saved option, then hardcoded default.
+    // --- NEW: Automatically enhance the user's prompt ---
+    $enhanced_prompt = self::enhance_image_prompt($prompt);
+    // Log the enhanced prompt for debugging if needed
+    error_log("Enhanced DALL-E Prompt: " . $enhanced_prompt);
+    // --- END NEW ---
+
     $image_size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1792x1024');
     $image_quality = !empty($quality_override) ? $quality_override : get_option('atm_image_quality', 'hd');
 
     $post_data = json_encode([
         'model'   => 'dall-e-3',
-        'prompt'  => $prompt,
+        'prompt'  => $enhanced_prompt, // Use the enhanced prompt
         'n'       => 1,
         'size'    => $image_size,
         'quality' => $image_quality,
-        'style'   => 'natural'
+        'style'   => 'vivid' // --- CHANGED from 'natural' to 'vivid' ---
     ]);
 
     $response = wp_remote_post('https://api.openai.com/v1/images/generations', [
