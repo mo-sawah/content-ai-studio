@@ -849,37 +849,47 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
     }
     
     public static function generate_audio_with_openai_tts($script, $post_id, $voice, $is_preview = false) {
-        $api_key = get_option('atm_openai_api_key');
-        if (empty($api_key)) throw new Exception('OpenAI API key not configured');
-        
-        $response = wp_remote_post('https://api.openai.com/v1/audio/speech', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type' => 'application/json'
-            ],
-            'body' => json_encode([
-                'model' => 'tts-1',
-                'input' => $script,
-                'voice' => $voice,
-                'response_format' => 'mp3'
-            ]),
-            'timeout' => 300
-        ]);
-        
-        if (is_wp_error($response)) throw new Exception('Audio generation failed: ' . $response->get_error_message());
+    $api_key = get_option('atm_openai_api_key');
+    if (empty($api_key)) throw new Exception('OpenAI API key not configured');
 
-        $audio_content = wp_remote_retrieve_body($response);
-        if (wp_remote_retrieve_response_code($response) !== 200 || empty($audio_content)) {
-            error_log('OpenAI TTS Error: ' . $audio_content);
-            throw new Exception('Audio generation API error');
-        }
-        
-        if ($is_preview) {
-            return $audio_content;
-        }
-        
-        return self::save_audio_file($audio_content, $post_id, 'mp3');
+    $response = wp_remote_post('https://api.openai.com/v1/audio/speech', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type' => 'application/json'
+        ],
+        'body' => json_encode([
+            'model' => 'tts-1',
+            'input' => $script,
+            'voice' => $voice,
+            'response_format' => 'mp3'
+        ]),
+        'timeout' => 300
+    ]);
+
+    if (is_wp_error($response)) {
+        throw new Exception('Audio generation failed: ' . $response->get_error_message());
     }
+
+    $audio_content = wp_remote_retrieve_body($response);
+
+    // --- IMPROVED ERROR HANDLING ---
+    if (wp_remote_retrieve_response_code($response) !== 200) {
+        $error_body = json_decode($audio_content, true);
+        $error_message = 'An unknown API error occurred.';
+        if (isset($error_body['error']['message'])) {
+            $error_message = $error_body['error']['message'];
+        }
+        error_log('OpenAI TTS Error: ' . $audio_content);
+        throw new Exception('OpenAI TTS API Error: ' . $error_message);
+    }
+    // --- END IMPROVEMENT ---
+
+    if ($is_preview) {
+        return $audio_content;
+    }
+
+    return self::save_audio_file($audio_content, $post_id, 'mp3');
+}
     
     private static function save_audio_file($audio_content, $post_id, $extension) {
         $silent_intro_base64 = 'SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGllbmRhcmQgTG9wZXogaW4gT25lVHJpY2sBTQuelleAAAAANFaAAAAAAAAAAAAAAAAAAAAD/8AAAAAAAADw==';
