@@ -887,63 +887,6 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         return $upload_dir['baseurl'] . '/podcasts/' . $filename;
     }
     
-    public static function generate_image_with_openai($prompt, $size_override = '', $quality_override = '') {
-    $api_key = get_option('atm_openai_api_key');
-    if (empty($api_key)) {
-        throw new Exception('OpenAI API key not configured in settings.');
-    }
-
-    // --- NEW: Automatically enhance the user's prompt ---
-    $enhanced_prompt = self::enhance_image_prompt($prompt);
-    // Log the enhanced prompt for debugging if needed
-    error_log("Enhanced DALL-E Prompt: " . $enhanced_prompt);
-    // --- END NEW ---
-
-    $image_size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1792x1024');
-    $image_quality = !empty($quality_override) ? $quality_override : get_option('atm_image_quality', 'hd');
-
-    $post_data = json_encode([
-        'model'   => 'dall-e-3',
-        'prompt'  => $enhanced_prompt, // Use the enhanced prompt
-        'n'       => 1,
-        'size'    => $image_size,
-        'quality' => $image_quality,
-        'style'   => 'vivid' // --- CHANGED from 'natural' to 'vivid' ---
-    ]);
-
-    $response = wp_remote_post('https://api.openai.com/v1/images/generations', [
-        'headers' => [
-            'Authorization' => 'Bearer ' . $api_key,
-            'Content-Type'  => 'application/json',
-        ],
-        'body'    => $post_data,
-        'timeout' => 120
-    ]);
-
-    if (is_wp_error($response)) {
-        throw new Exception('Image generation failed: ' . $response->get_error_message());
-    }
-
-    $body = wp_remote_retrieve_body($response);
-    $result = json_decode($body, true);
-    $response_code = wp_remote_retrieve_response_code($response);
-
-    if ($response_code !== 200) {
-        $error_message = 'Invalid response from OpenAI API (Code: ' . $response_code . ')';
-        if (isset($result['error']['message'])) {
-            $error_message = 'API Error: ' . $result['error']['message'];
-        }
-        error_log('OpenAI Image API Error: ' . $body);
-        throw new Exception($error_message);
-    }
-
-    if (!isset($result['data'][0]['url'])) {
-        error_log('OpenAI Image API Error: Malformed success response. ' . $body);
-        throw new Exception('Image generation succeeded but the response was invalid.');
-    }
-
-    return $result['data'][0]['url'];
-}
 
     public static function get_translated_prompt($language, $master_prompt) {
         if (strtolower($language) === 'english') return $master_prompt;
