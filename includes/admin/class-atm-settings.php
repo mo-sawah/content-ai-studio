@@ -110,10 +110,7 @@ class ATM_Settings {
                     <h2>🎨 Image Generation Provider</h2>
                     <table class="form-table">
                         <tr><th scope="row">Image Provider</th><td><select name="atm_image_provider"><option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option><option value="stabilityai" <?php selected($options['image_provider'], 'stabilityai'); ?>>Stability AI (Stable Diffusion)</option><option value="flux" <?php selected($options['image_provider'], 'flux'); ?>>Flux.1 (BFL Pro)</option><option value="fal" <?php selected($options['image_provider'], 'fal'); ?>>Fal.ai (Multiple Models)</option></select><p class="description">Choose your default service for generating images.</p></td></tr>
-                        <tr><th scope="row">Stability AI API Key</th><td><input type="password" name="atm_stability_api_key" value="<?php echo esc_attr($options['stability_key']); ?>" class="regular-text" /><p class="description">Required to use the Stable Diffusion image generator. Get a key from <a href="https://platform.stability.ai/" target="_blank">Stability AI</a>.</p></td></tr>
-                        <tr><th scope="row">Flux API Key</th><td><input type="password" name="atm_flux_api_key" value="<?php echo esc_attr($options['flux_key']); ?>" class="regular-text" /><p class="description">Required to use the Flux.1 image generator. Get a key from <a href="https://bfl.ai/" target="_blank">Black Forest Labs</a>.</p></td></tr>
                         <tr><th scope="row">Fal.ai API Key</th><td><input type="password" name="atm_fal_api_key" value="<?php echo esc_attr($options['fal_key']); ?>" class="regular-text" /><p class="description">Required to use the Fal.ai image generator. Get a key from <a href="https://fal.ai/" target="_blank">fal.ai</a>. The key is usually in a `key_id:key_secret` format.</p></td></tr>
-                        <tr><th scope="row">Default Fal.ai Image Model</th><td><select name="atm_fal_image_model"><?php foreach ($options['fal_image_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['fal_image_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default model to use when "Fal.ai" is the provider.</p></td></tr>
                     </table>
                 </div>
 
@@ -179,55 +176,36 @@ class ATM_Settings {
     }
 
     public function get_settings() {
-        return [
-            'openrouter_key' => get_option('atm_openrouter_api_key', ''),
-            'openai_key'     => get_option('atm_openai_api_key', ''),
-            'news_api_key' => get_option('atm_news_api_key', ''),
-            'gnews_api_key' => get_option('atm_gnews_api_key', ''),
-            'rss_feeds' => get_option('atm_rss_feeds', ''),
-            'scrapingant_key' => get_option('atm_scrapingant_api_key', ''),
-            'guardian_api_key' => get_option('atm_guardian_api_key', ''),
-            'article_model'  => get_option('atm_article_model', 'openai/gpt-4o'),
-            'content_model'  => get_option('atm_content_model', 'anthropic/claude-3-haiku'),
-            'article_prompt' => get_option('atm_article_prompt', self::get_default_article_prompt()),
-            'image_prompt'   => get_option('atm_image_prompt', self::get_default_image_prompt()),
-            'podcast_prompt' => get_option('atm_podcast_prompt', self::get_default_podcast_prompt()),
-            'image_quality'  => get_option('atm_image_quality', 'hd'),
-            'image_size'     => get_option('atm_image_size', '1792x1024'),
-            'image_provider' => get_option('atm_image_provider', 'openai'),
-            'stability_key'  => get_option('atm_stability_api_key', ''),
-            'flux_key'  => get_option('atm_flux_api_key', ''),
-            'fal_key' => get_option('atm_fal_api_key', ''),
-            'fal_image_model' => get_option('atm_fal_image_model', 'fal-ai/flux-krea-lora'),
-            'article_models' => [
-                'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
-                'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
-                'google/gemini-flash-1.5' => 'Google: Gemini 1.5 Flash (Fast & Capable)',
-                'meta-llama/llama-3-70b-instruct' => 'Meta: Llama 3 70B (Great Open Source)',
-                'mistralai/mistral-large' => 'Mistral: Large (Strong Competitor)',
-                'microsoft/wizardlm-2-8x22b' => 'Microsoft: WizardLM-2 (Highly Capable)',
-                'databricks/dbrx-instruct' => 'Databricks: DBRX Instruct (Strong Open Model)',
-                'cognitivecomputations/dolphin-mixtral-8x7b' => 'Dolphin Mixtral (Creative)',
-                'nousresearch/nous-hermes-2-mixtral-8x7b-dpo' => 'Nous Hermes 2 (Dialogue)',
-            ],
-            'content_models' => [
-                'anthropic/claude-3-haiku' => 'Claude 3 Haiku (Fast & Cheap)',
-                'openai/gpt-4o' => 'GPT-4o (Highest Quality)',
-                'google/gemini-flash-1.5' => 'Google Gemini 1.5 Flash',
-            ],
-            'openrouter_image_models' => [
-                'stabilityai/stable-diffusion-3' => 'Stable Diffusion 3 (Newest & Best)',
-                'playgroundai/playground-v2.5' => 'Playground v2.5 (Aesthetic)',
-                'google/imagen-2' => 'Google Imagen 2 (Photorealistic)',
-                'ideogram/ideogram-v1' => 'Ideogram v1 (Good with Text)',
-            ],
-            'fal_image_models' => [
-                'fal-ai/flux-krea-lora'           => 'Flux Krea LoRA',
-                'fal-ai/imagen4/preview'          => 'Imagen 4 (Preview)',
-                'fal-ai/recraft/v3/text-to-image' => 'Recraft v3',
-            ],
-        ];
-    }
+    return [
+        'openrouter_key' => get_option('atm_openrouter_api_key', ''),
+        'openai_key'     => get_option('atm_openai_api_key', ''),
+        'news_api_key' => get_option('atm_news_api_key', ''),
+        'gnews_api_key' => get_option('atm_gnews_api_key', ''),
+        'rss_feeds' => get_option('atm_rss_feeds', ''),
+        'scrapingant_key' => get_option('atm_scrapingant_api_key', ''),
+        'guardian_api_key' => get_option('atm_guardian_api_key', ''),
+        'fal_key' => get_option('atm_fal_api_key', ''), // Keep this for Imagen 4
+        'article_model'  => get_option('atm_article_model', 'openai/gpt-4o'),
+        'content_model'  => get_option('atm_content_model', 'anthropic/claude-3-haiku'),
+        'article_prompt' => get_option('atm_article_prompt', ATM_API::get_default_article_prompt()),
+        'image_prompt'   => get_option('atm_image_prompt', ATM_API::get_default_image_prompt()),
+        'podcast_prompt' => get_option('atm_podcast_prompt', ATM_API::get_default_master_prompt()),
+        'image_quality'  => get_option('atm_image_quality', 'hd'),
+        'image_size'     => get_option('atm_image_size', '1792x1024'),
+        'image_provider' => get_option('atm_image_provider', 'openai'), // Default provider
+        'article_models' => [
+            'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
+            'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
+            'google/gemini-flash-1.5' => 'Google: Gemini 1.5 Flash (Fast & Capable)',
+            'meta-llama/llama-3-70b-instruct' => 'Meta: Llama 3 70B (Great Open Source)',
+        ],
+        'content_models' => [
+            'anthropic/claude-3-haiku' => 'Claude 3 Haiku (Fast & Cheap)',
+            'openai/gpt-4o' => 'GPT-4o (Highest Quality)',
+            'google/gemini-flash-1.5' => 'Google Gemini 1.5 Flash',
+        ],
+    ];
+}
 
     // Default Prompts
     public static function get_default_article_prompt() {

@@ -343,135 +343,62 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
-    public static function generate_image_with_fal($prompt, $size_override = '', $model_override = '') {
+    public static function generate_image_with_imagen4($prompt, $size_override = '') {
     $api_key = get_option('atm_fal_api_key');
     if (empty($api_key)) {
-        throw new Exception('Fal.ai API key not configured.');
+        throw new Exception('Fal.ai API key is not configured for Imagen 4.');
     }
 
-    $model = !empty($model_override) ? $model_override : get_option('atm_fal_image_model', 'fal-ai/flux-krea-lora');
-
-    // Use the correct job queue endpoint
+    $model = 'fal-ai/imagen4/preview';
     $endpoint_url = 'https://queue.fal.run/' . $model;
 
+    // Imagen 4 uses width and height parameters
     $size_map = [
-        '1024x1024' => 'square_1_1',
-        '1792x1024' => 'landscape_16_9',
-        '1024x1792' => 'portrait_9_16',
+        '1024x1024' => ['width' => 1024, 'height' => 1024],
+        '1792x1024' => ['width' => 1536, 'height' => 864], // Common 16:9
+        '1024x1792' => ['width' => 864, 'height' => 1536], // Common 9:16
     ];
     $default_size = '1792x1024';
     $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
-    $image_size_preset = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
+    $dimensions = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
+
+    $request_body = array_merge(['prompt' => $prompt], $dimensions);
 
     $initial_response = wp_remote_post($endpoint_url, [
         'headers' => [
-            // Use "Key" with the full, unsplit API key
             'Authorization' => 'Key ' . $api_key,
             'Content-Type'  => 'application/json',
             'Accept'        => 'application/json'
         ],
-        'body'    => json_encode(['prompt' => $prompt, 'image_size' => $image_size_preset]),
+        'body'    => json_encode($request_body),
         'timeout' => 30
     ]);
 
-    if (is_wp_error($initial_response)) {
-        throw new Exception('Fal.ai API call failed: ' . $initial_response->get_error_message());
-    }
-
+    // ... (The rest of the robust polling logic from the previous step)
+    if (is_wp_error($initial_response)) throw new Exception('Fal.ai API call failed: ' . $initial_response->get_error_message());
     $initial_body = json_decode(wp_remote_retrieve_body($initial_response), true);
     $response_code = wp_remote_retrieve_response_code($initial_response);
-
     if ($response_code !== 200 || empty($initial_body['request_id'])) {
-        $error_detail = isset($initial_body['detail']) ? $initial_body['detail'] : 'Invalid response. Check your API key format is `key_id:key_secret`.';
+        $error_detail = isset($initial_body['detail']) ? $initial_body['detail'] : 'Invalid response. Check your API key format.';
         error_log('Fal.ai Initial Error: ' . wp_remote_retrieve_body($initial_response));
         throw new Exception('Fal.ai API Error: ' . $error_detail);
     }
-
     $request_id = $initial_body['request_id'];
     $status_url = 'https://fal.ai/api/v1/requests/' . $request_id . '/status';
-
-    $max_retries = 40; // Wait up to 2 minutes
+    $max_retries = 40;
     for ($i = 0; $i < $max_retries; $i++) {
         sleep(3);
         $status_response = wp_remote_get($status_url, ['headers' => ['Authorization' => 'Key ' . $api_key]]);
-
-        if (is_wp_error($status_response)) {
-            throw new Exception('Fal.ai polling failed: ' . $status_response->get_error_message());
-        }
-
+        if (is_wp_error($status_response)) throw new Exception('Fal.ai polling failed: ' . $status_response->get_error_message());
         $status_body = json_decode(wp_remote_retrieve_body($status_response), true);
-
         if (isset($status_body['status']) && $status_body['status'] === 'COMPLETED') {
-            if (isset($status_body['response']['images'][0]['url'])) {
-                return $status_body['response']['images'][0]['url'];
-            }
-            if (isset($status_body['response']['image_url'])) {
-                return $status_body['response']['image_url'];
-            }
+            if (isset($status_body['response']['images'][0]['url'])) return $status_body['response']['images'][0]['url'];
         } elseif (isset($status_body['status']) && in_array($status_body['status'], ['ERROR', 'FAILED'])) {
             $error_logs = isset($status_body['logs']) ? implode("\n", array_column($status_body['logs'], 'message')) : 'No details provided.';
             throw new Exception('Fal.ai image generation failed. Details: ' . $error_logs);
         }
     }
-
     throw new Exception('Fal.ai image generation timed out after 2 minutes.');
-}
-
-    public static function generate_image_with_stability($prompt, $size_override = '') {
-    $api_key = get_option('atm_stability_api_key');
-    if (empty($api_key)) {
-        throw new Exception('Stability AI API key not configured.');
-    }
-
-    // --- FIX: Map WordPress sizes to Stability AI aspect ratios ---
-    $aspect_ratio_map = [
-        '1024x1024' => '1:1',
-        '1792x1024' => '16:9',
-        '1024x1792' => '9:16',
-    ];
-    $default_size = '1792x1024';
-    $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
-    $aspect_ratio = isset($aspect_ratio_map[$selected_size]) ? $aspect_ratio_map[$selected_size] : $aspect_ratio_map[$default_size];
-
-    // Using a more common default model that should work on most plans
-    $model = 'stable-diffusion-xl-1024-v1-0'; 
-
-    $boundary = wp_generate_password(24);
-    $body = '';
-    $body .= '--' . $boundary . "\r\n";
-    $body .= 'Content-Disposition: form-data; name="prompt"' . "\r\n\r\n";
-    $body .= $prompt . "\r\n";
-    $body .= '--' . $boundary . "\r\n";
-    $body .= 'Content-Disposition: form-data; name="model"' . "\r\n\r\n";
-    $body .= $model . "\r\n";
-    $body .= '--' . $boundary . "\r\n";
-    $body .= 'Content-Disposition: form-data; name="aspect_ratio"' . "\r\n\r\n";
-    $body .= $aspect_ratio . "\r\n"; // Use the selected aspect ratio
-    $body .= '--' . $boundary . '--';
-
-    $response = wp_remote_post('https://api.stability.ai/v2beta/stable-image/generate/core', [
-        'headers' => [
-            'Authorization' => 'Bearer ' . $api_key,
-            'Content-Type' => 'multipart/form-data; boundary=' . $boundary,
-            'Accept' => 'image/*'
-        ],
-        'body'    => $body,
-        'timeout' => 120
-    ]);
-
-    if (is_wp_error($response)) {
-        throw new Exception('Stability AI API call failed: ' . $response->get_error_message());
-    }
-
-    $response_code = wp_remote_retrieve_response_code($response);
-    if ($response_code !== 200) {
-        $error_body = wp_remote_retrieve_body($response);
-        $error_data = json_decode($error_body, true);
-        $error_message = isset($error_data['errors'][0]) ? $error_data['errors'][0] : 'Unknown API error. Check your Stability AI account for credits/plan details.';
-        throw new Exception('Stability AI Error: ' . $error_message);
-    }
-
-    return wp_remote_retrieve_body($response);
 }
 
     public static function resolve_redirect_url($url) {

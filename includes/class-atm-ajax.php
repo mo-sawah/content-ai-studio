@@ -478,20 +478,16 @@ Your entire output MUST be a single, valid JSON object with three keys:
         $is_url = false;
 
         switch ($provider) {
-            case 'stabilityai':
-                $image_data = ATM_API::generate_image_with_stability($prompt, $size_override);
-                $is_url = false;
-                break;
-            case 'fal':
-                $image_data = ATM_API::generate_image_with_fal($prompt, $size_override, $model_override);
-                $is_url = true;
-                break;
-            case 'openai':
-            default:
-                $image_data = ATM_API::generate_image_with_openai($prompt, $size_override, $quality_override);
-                $is_url = true;
-                break;
-        }
+    case 'imagen4':
+        $image_data = ATM_API::generate_image_with_imagen4($prompt, $size_override);
+        $is_url = true;
+        break;
+    case 'openai':
+    default:
+        $image_data = ATM_API::generate_image_with_openai($prompt, $size_override, $quality_override);
+        $is_url = true;
+        break;
+}
 
         if ($is_url) {
             $attachment_id = $this->set_image_from_url($image_data, $post_id);

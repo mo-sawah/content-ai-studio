@@ -11,13 +11,9 @@ function ImageGenerator({ setActiveView }) {
     const [imageSize, setImageSize] = useState('');
     const [imageQuality, setImageQuality] = useState('');
     const [provider, setProvider] = useState('');
-    const [imageModel, setImageModel] = useState('');
 
     const { editPost } = useDispatch('core/editor');
-    const { image_provider: defaultProvider, openrouter_image_models, fal_image_models } = atm_studio_data;
-
-    const openRouterModelOptions = [ { label: 'Use Default Model', value: '' }, ...Object.entries(openrouter_image_models).map(([value, label]) => ({ label, value })) ];
-    const falModelOptions = [ { label: 'Use Default Model', value: '' }, ...Object.entries(fal_image_models).map(([value, label]) => ({ label, value })) ];
+    const { image_provider: defaultProvider } = atm_studio_data;
     const currentProvider = provider || defaultProvider;
 
     const handleGenerate = async () => {
@@ -31,8 +27,7 @@ function ImageGenerator({ setActiveView }) {
                 prompt: prompt,
                 size: imageSize,
                 quality: imageQuality,
-                provider: provider,
-                model: imageModel,
+                provider: currentProvider,
             });
 
             if (response.success) {
@@ -75,15 +70,14 @@ function ImageGenerator({ setActiveView }) {
                     options={[
                         { label: `Use Default (${defaultProvider})`, value: '' },
                         { label: 'OpenAI (DALL-E 3)', value: 'openai' },
-                        { label: 'Stability AI (Stable Diffusion)', value: 'stabilityai' },
-                        { label: 'Fal.ai (Multiple Models)', value: 'fal' },
+                        { label: 'Fal.ai (Imagen 4)', value: 'imagen4' },
                     ]}
                     disabled={isLoading}
                 />
 
                 <TextareaControl
                     label="Image Prompt"
-                    help="Leave empty for an automatic prompt. You can use shortcodes like [article_title]."
+                    help="Leave empty for an automatic prompt based on your article's content."
                     value={prompt}
                     onChange={setPrompt}
                     placeholder="A photorealistic image of..."
@@ -91,28 +85,8 @@ function ImageGenerator({ setActiveView }) {
                     disabled={isLoading}
                 />
 
-                {currentProvider === 'fal' && (
-                    <SelectControl
-                        label="Fal.ai Model (Override)"
-                        value={imageModel}
-                        onChange={setImageModel}
-                        options={falModelOptions}
-                        disabled={isLoading}
-                    />
-                )}
-
-                {currentProvider === 'openrouter' && (
-                    <SelectControl
-                        label="OpenRouter Model (Override)"
-                        value={imageModel}
-                        onChange={setImageModel}
-                        options={openRouterModelOptions}
-                        disabled={isLoading}
-                    />
-                )}
-
                 <div className="atm-grid-2">
-                     <SelectControl
+                    <SelectControl
                         label="Image Size (Override)"
                         value={imageSize}
                         onChange={setImageSize}
