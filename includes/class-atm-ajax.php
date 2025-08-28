@@ -6,6 +6,18 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    public function upload_podcast_image() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        $post_id = intval($_POST['post_id']);
+        $image_url = sanitize_url($_POST['image_url']);
+        if ($image_url) {
+            update_post_meta($post_id, '_atm_podcast_image', $image_url);
+            wp_send_json_success(['image_url' => $image_url]);
+        } else {
+            wp_send_json_error('Invalid image URL');
+        }
+    }
+    
     public function __construct() {
         // Core Actions for the React App & other features
         add_action('wp_ajax_generate_article_title', array($this, 'generate_article_title'));
@@ -16,6 +28,7 @@ class ATM_Ajax {
         add_action('wp_ajax_generate_featured_image', array($this, 'generate_featured_image'));
         add_action('wp_ajax_generate_podcast_script', array($this, 'generate_podcast_script'));
         add_action('wp_ajax_generate_podcast', array($this, 'generate_podcast'));
+        add_action('wp_ajax_upload_podcast_image', array($this, 'upload_podcast_image'));
         
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));
@@ -114,6 +127,7 @@ class ATM_Ajax {
             }
             $podcast_url = $upload_dir['baseurl'] . '/podcasts/' . $filename;
             update_post_meta($post_id, '_atm_podcast_url', $podcast_url);
+            update_post_meta($post_id, '_atm_podcast_script', $script);
             
             wp_send_json_success(['message' => 'Podcast generated successfully!', 'podcast_url' => $podcast_url]);
             

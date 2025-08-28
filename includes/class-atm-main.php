@@ -231,6 +231,12 @@ class ATM_Main {
     'elevenlabs_voices' => ATM_API::get_elevenlabs_voices(), // New
 );
 
+$post_id = get_the_ID();
+if ($post_id) {
+    $localized_data['existing_podcast_url'] = get_post_meta($post_id, '_atm_podcast_url', true);
+    $localized_data['existing_podcast_script'] = get_post_meta($post_id, '_atm_podcast_script', true);
+}
+
     wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
     wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data); // Pass data to our React app
 }
