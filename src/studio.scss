@@ -1,63 +1,104 @@
-// Main container for the entire app
-.atm-studio-container {
-    // This sets the dark background and default text color from your design
-    background-color: #2d3748;
-    color: #e2e8f0;
-    padding: 1rem;
-    border-radius: 8px;
-    margin: -12px; // Overcome default WordPress padding
+/* --- Main Meta Box & Container --- */
+// This overrides the default WordPress padding for a cleaner look.
+#article-to-media .inside {
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-/* Hub View */
+.atm-studio-container {
+    background-color: #121619; // Your new dark background color
+    color: #e2e8f0;
+    padding: 2rem;
+    border-radius: 8px;
+    margin: -12px;
+}
+
+/* --- Hub View --- */
 .atm-hub {
     text-align: center;
     padding: 2rem 1rem;
 
     h2 {
-        font-size: 32px; // Larger font size
-        font-weight: 600;
-        color: #ffffff; // White text for the title
+        font-size: 35px;   // Updated size
+        font-weight: 600;  // Updated weight
+        color: #ffffff;
         margin: 0 0 8px;
     }
 
     .atm-hub-subtitle,
     .atm-hub-footer {
         font-size: 14px;
-        color: #a0aec0; // Lighter gray for subtitles
+        color: #a0aec0;
         margin: 0;
     }
 
     .atm-hub-actions {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); // Wider buttons
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 1rem;
         margin: 2.5rem 0;
     }
 }
 
-// --- NEW Button Styles to Match Your Design ---
+/* --- Button Styles --- */
 .atm-studio-container .components-button.is-primary {
     background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%);
+    color: #ffffff;      // Updated text color to white
+    font-size: 16px;      // Updated font size
+    font-weight: 600;
     border: none;
     border-radius: 8px;
-    font-weight: 600;
-    padding: 10px 20px;
+    padding: 12px 20px;
     height: auto;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;      // Ensures the pointer cursor appears on hover
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    &:disabled {
+        background: #4a5569;
+        transform: none;
+        box-shadow: none;
     }
 }
 
-.atm-studio-container .components-button.is-secondary {
-    background-color: #4a5569;
-    color: #e2e8f0;
-    border-color: #718096;
+/* --- Modern Form Controls --- */
+.atm-studio-container {
+    // Target all text inputs, textareas, and select dropdowns
+    .components-text-control__input,
+    .components-textarea-control__input,
+    .components-select-control__input {
+        background-color: #2d3748;
+        color: #e2e8f0;
+        border: 1px solid #4a5569;
+        border-radius: 6px;
+        padding: 10px 12px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+        &:focus {
+            border-color: #8E2DE2;
+            box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3);
+            outline: none;
+        }
+    }
+
+    // Style the labels for the form controls
+    .components-base-control__label {
+        color: #a0aec0;
+        font-weight: 500;
+        margin-bottom: 8px !important;
+    }
+
+    // Style the help text
+    .components-base-control__help {
+        color: #718096;
+    }
 }
 
-// --- Styles for Generator Views (we will add more here later) ---
+/* --- Generator View Headers & Layout --- */
 .atm-generator-view {
     .atm-view-header {
         display: flex;
@@ -75,7 +116,7 @@
     }
 
     .atm-back-btn {
-        background: none;
+        background: transparent;
         border: 1px solid #718096;
         border-radius: 50%;
         cursor: pointer;
@@ -97,5 +138,12 @@
     .atm-form-container {
         display: grid;
         gap: 1.25rem;
+    }
+
+    .atm-status-message {
+        color: #94a3b8;
+        font-style: italic;
+        text-align: center;
+        margin-top: 1rem;
     }
 }
