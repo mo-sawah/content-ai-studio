@@ -460,24 +460,41 @@ Your entire output MUST be a single, valid JSON object with three keys:
         $size_override = isset($_POST['size']) ? sanitize_text_field($_POST['size']) : '';
         $quality_override = isset($_POST['quality']) ? sanitize_text_field($_POST['quality']) : '';
         $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
-        $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
+
+        // Validate prompt
+        if (empty(trim($prompt))) {
+            throw new Exception('Image prompt cannot be empty.');
+        }
 
         $provider = !empty($provider_override) ? $provider_override : get_option('atm_image_provider', 'openai');
         $image_data = null;
         $is_url = false;
 
         switch ($provider) {
-    case 'google':
-        $image_data = ATM_API::generate_image_with_google_imagen($prompt, $size_override);
-        $is_url = false; // Google returns raw data, not a URL
-        break;
-    case 'openai':
-    default:
-        $image_data = ATM_API::generate_image_with_openai($prompt, $size_override, $quality_override);
-        $is_url = true;
-        break;
-}
+            case 'google':
+                try {
+                    $image_data = ATM_API::generate_image_with_google_imagen($prompt, $size_override);
+                    $is_url = false; // Google returns raw data
+                } catch (Exception $e) {
+                    // Log the specific Google error for debugging
+                    error_log('Google Imagen Error: ' . $e->getMessage());
+                    throw new Exception('Google image generation failed: ' . $e->getMessage());
+                }
+                break;
+                
+            case 'openai':
+            default:
+                try {
+                    $image_data = ATM_API::generate_image_with_openai($prompt, $size_override, $quality_override);
+                    $is_url = true; // OpenAI returns URL
+                } catch (Exception $e) {
+                    error_log('OpenAI Image Error: ' . $e->getMessage());
+                    throw new Exception('OpenAI image generation failed: ' . $e->getMessage());
+                }
+                break;
+        }
 
+        // Handle the response based on data type
         if ($is_url) {
             $attachment_id = $this->set_image_from_url($image_data, $post_id);
         } else {

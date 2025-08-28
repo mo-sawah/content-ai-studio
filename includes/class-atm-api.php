@@ -352,35 +352,33 @@ public static function generate_image_with_google_imagen($prompt, $size_override
         throw new Exception('Google AI API key is not configured.');
     }
 
-    $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $api_key;
+    // Use the correct Imagen API endpoint
+    $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:generateImages?key=' . $api_key;
 
-    // --- FINAL FIX: Create an explicit command to use the image_generator tool ---
-    $instructed_prompt = "You are a helpful assistant with access to a tool called 'image_generator'. A user wants an image. Your task is to call this tool. Use the following user-provided text as the 'prompt' argument for the tool: \"{$prompt}\"";
-
+    // Build the correct request structure
     $request_body = [
-        'contents' => [
-            'parts' => [
-                ['text' => $instructed_prompt]
-            ]
-        ],
-        // We still declare the tool so the model knows what "image_generator" is
-        'tools' => [
-            [
-                'functionDeclarations' => [
-                    [
-                        'name' => 'image_generator',
-                        'description' => 'Generates an image based on a textual prompt.',
-                        'parameters' => [
-                            'type' => 'OBJECT',
-                            'properties' => [
-                                'prompt' => ['type' => 'STRING']
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+        'prompt' => $prompt,
+        'config' => [
+            'numberOfImages' => 1,
         ]
     ];
+
+    // Handle aspect ratio based on size override
+    if (!empty($size_override)) {
+        switch ($size_override) {
+            case '1024x1024':
+                $request_body['config']['aspectRatio'] = '1:1';
+                break;
+            case '1792x1024':
+                $request_body['config']['aspectRatio'] = '16:9';
+                break;
+            case '1024x1792':
+                $request_body['config']['aspectRatio'] = '9:16';
+                break;
+            default:
+                $request_body['config']['aspectRatio'] = '1:1';
+        }
+    }
 
     $response = wp_remote_post($endpoint_url, [
         'headers' => ['Content-Type' => 'application/json'],
@@ -400,22 +398,80 @@ public static function generate_image_with_google_imagen($prompt, $size_override
         throw new Exception('Google Imagen Error: ' . $error_message);
     }
 
-    // With the correct prompt, we expect the image data directly in the response
-    if (!isset($result['candidates'][0]['content']['parts'][0]['fileData']['data'])) {
-        $finish_reason = $result['candidates'][0]['finishReason'] ?? 'UNKNOWN';
-        $error_text = 'Google API did not return an image. Reason: ' . $finish_reason . '.';
-        if($finish_reason === 'SAFETY') {
-            $error_text .= ' The prompt was likely blocked for safety reasons.';
-        } else if ($finish_reason === 'STOP') {
-            $error_text .= ' The model did not call the image tool. The prompt might need adjustment.';
-        }
-        error_log('Google Imagen Response Body: ' . $body); // Add logging for debugging
-        throw new Exception($error_text);
+    // Parse the correct response structure
+    if (!isset($result['generatedImages'][0]['image']['imageBytes'])) {
+        error_log('Google Imagen Response: ' . $body); // For debugging
+        throw new Exception('Google API did not return image data. Response: ' . substr($body, 0, 200) . '...');
     }
 
-    $base64_image_data = $result['candidates'][0]['content']['parts'][0]['fileData']['data'];
+    // Return decoded image data
+    return base64_decode($result['generatedImages'][0]['image']['imageBytes']);
+}
 
-    return base64_decode($base64_image_data);
+// STEP 2: Add this helper function for prompt enhancement (optional but recommended)
+private static function enhance_image_prompt($prompt) {
+    // Simple prompt enhancement - you can make this more sophisticated
+    if (strlen($prompt) < 50) {
+        return $prompt . ', high quality, detailed, professional';
+    }
+    return $prompt;
+}
+
+// STEP 3: Update your generate_image_with_openai function to use prompt enhancement too
+public static function generate_image_with_openai($prompt, $size_override = '', $quality_override = '') {
+    $api_key = get_option('atm_openai_api_key');
+    if (empty($api_key)) {
+        throw new Exception('OpenAI API key not configured in settings.');
+    }
+
+    // Enhance the prompt for better results
+    $enhanced_prompt = self::enhance_image_prompt($prompt);
+    error_log("Enhanced DALL-E Prompt: " . $enhanced_prompt);
+
+    $image_size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1792x1024');
+    $image_quality = !empty($quality_override) ? $quality_override : get_option('atm_image_quality', 'hd');
+
+    $post_data = json_encode([
+        'model'   => 'dall-e-3',
+        'prompt'  => $enhanced_prompt,
+        'n'       => 1,
+        'size'    => $image_size,
+        'quality' => $image_quality,
+        'style'   => 'vivid'
+    ]);
+
+    $response = wp_remote_post('https://api.openai.com/v1/images/generations', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type'  => 'application/json',
+        ],
+        'body'    => $post_data,
+        'timeout' => 120
+    ]);
+
+    if (is_wp_error($response)) {
+        throw new Exception('Image generation failed: ' . $response->get_error_message());
+    }
+
+    $body = wp_remote_retrieve_body($response);
+    $result = json_decode($body, true);
+    $response_code = wp_remote_retrieve_response_code($response);
+
+    if ($response_code !== 200) {
+        $error_message = 'Invalid response from OpenAI API (Code: ' . $response_code . ')';
+        if (isset($result['error']['message'])) {
+            $error_message = 'API Error: ' . $result['error']['message'];
+        }
+        error_log('OpenAI Image API Error: ' . $body);
+        throw new Exception($error_message);
+    }
+
+    if (!isset($result['data'][0]['url'])) {
+        error_log('OpenAI Image API Error: Malformed success response. ' . $body);
+        throw new Exception('Image generation succeeded but the response was invalid.');
+    }
+
+    return $result['data'][0]['url'];
 }
 
     public static function resolve_redirect_url($url) {
