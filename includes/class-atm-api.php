@@ -344,22 +344,15 @@ class ATM_API {
      */
 
     public static function generate_image_with_fal($prompt, $size_override = '', $model_override = '') {
-    $api_key_full = get_option('atm_fal_api_key');
-    if (empty($api_key_full)) {
+    $api_key = get_option('atm_fal_api_key');
+    if (empty($api_key)) {
         throw new Exception('Fal.ai API key not configured.');
     }
 
-    // --- FIX: Split the key and use only the secret part ---
-    $key_parts = explode(':', $api_key_full);
-    $api_key = isset($key_parts[1]) ? $key_parts[1] : $api_key_full;
-    // --- END FIX ---
+    $model = !empty($model_override) ? $model_override : get_option('atm_fal_image_model', 'fal-ai/flux-krea-lora');
 
-    $model = !empty($model_override) ? $model_override : get_option('atm_fal_image_model', 'fal-ai/stable-diffusion-v3-medium');
-
-    // This is the URL to initially submit the job
     $endpoint_url = 'https://queue.fal.run/' . $model;
 
-    // The sizes in the dropdown map to specific 'image_size' presets for Fal.ai
     $size_map = [
         '1024x1024' => 'square_1_1',
         '1792x1024' => 'landscape_16_9',
@@ -371,7 +364,7 @@ class ATM_API {
 
     $initial_response = wp_remote_post($endpoint_url, [
         'headers' => [
-            'Authorization' => 'Key ' . $api_key,
+            'Authorization' => 'Key ' . $api_key, // Sends the full key now
             'Content-Type' => 'application/json',
             'Accept' => 'application/json'
         ],
@@ -385,17 +378,15 @@ class ATM_API {
 
     $initial_body = json_decode(wp_remote_retrieve_body($initial_response), true);
 
-    // --- FIX: Improved error checking for the initial request ---
-    if (wp_remote_retrieve_response_code($initial_response) !== 202 || empty($initial_body['request_id'])) {
+    if (wp_remote_retrieve_response_code($initial_response) >= 400 || empty($initial_body['request_id'])) {
         $error_detail = isset($initial_body['detail']) ? $initial_body['detail'] : 'Invalid response from Fal.ai. Check your API key format (key_id:key_secret).';
         throw new Exception('Fal.ai API Error: ' . $error_detail);
     }
 
     $request_id = $initial_body['request_id'];
     $status_url = 'https://queue.fal.run/' . $model . '/requests/' . $request_id . '/status';
-    // --- END FIX ---
 
-    $max_retries = 30; // Increased to 90 seconds total wait time
+    $max_retries = 30;
     for ($i = 0; $i < $max_retries; $i++) {
         sleep(3);
         $status_response = wp_remote_get($status_url, ['headers' => ['Authorization' => 'Key ' . $api_key]]);
