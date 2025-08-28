@@ -226,7 +226,9 @@ class ATM_Main {
     'article_models' => $settings['article_models'],
     'writing_styles' => $writing_styles,
     'image_provider' => $settings['image_provider'],
+    'audio_provider' => $settings['audio_provider'], // New
     'tts_voices' => ['alloy' => 'Alloy', 'echo' => 'Echo', 'fable' => 'Fable', 'onyx' => 'Onyx', 'nova' => 'Nova', 'shimmer' => 'Shimmer'],
+    'elevenlabs_voices' => ATM_API::get_elevenlabs_voices(), // New
 );
 
     wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);

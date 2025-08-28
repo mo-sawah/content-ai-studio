@@ -1,23 +1,31 @@
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { Button, TextareaControl, Spinner, SelectControl } from '@wordpress/components';
 
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
-
-// Helper to get content from the block editor
-const getEditorContent = () => {
-    return wp.data.select('core/editor').getEditedPostContent();
-};
+const getEditorContent = () => wp.data.select('core/editor').getEditedPostContent();
 
 function PodcastGenerator({ setActiveView }) {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
     const [scriptContent, setScriptContent] = useState('');
-    const [selectedVoice, setSelectedVoice] = useState('alloy');
+    const [selectedVoice, setSelectedVoice] = useState('');
     const [selectedLanguage, setSelectedLanguage] = useState('English');
+    const [audioProvider, setAudioProvider] = useState(atm_studio_data.audio_provider || 'openai');
 
     const postId = useSelect(select => select('core/editor').getCurrentPostId(), []);
-    const voiceOptions = Object.entries(atm_studio_data.tts_voices).map(([value, label]) => ({ label, value }));
+
+    // Prepare voice options from localized data
+    const openaiVoices = Object.entries(atm_studio_data.tts_voices).map(([value, label]) => ({ label, value }));
+    const elevenlabsVoices = Object.entries(atm_studio_data.elevenlabs_voices).map(([value, label]) => ({ label, value }));
+    const voiceOptions = audioProvider === 'elevenlabs' ? elevenlabsVoices : openaiVoices;
+
+    // Effect to set a default voice when the provider or options change
+    useEffect(() => {
+        if (voiceOptions.length > 0) {
+            setSelectedVoice(voiceOptions[0].value);
+        }
+    }, [audioProvider, voiceOptions.length]);
 
     const handleGenerateScript = async () => {
         const editorContent = getEditorContent();
@@ -29,9 +37,7 @@ function PodcastGenerator({ setActiveView }) {
         setStatusMessage('Generating podcast script...');
         try {
             const response = await callAjax('generate_podcast_script', {
-                content: editorContent,
-                post_id: postId,
-                language: selectedLanguage,
+                content: editorContent, post_id: postId, language: selectedLanguage,
             });
             if (!response.success) throw new Error(response.data);
             setScriptContent(response.data.script);
@@ -55,6 +61,7 @@ function PodcastGenerator({ setActiveView }) {
                 post_id: postId,
                 script: scriptContent,
                 voice: selectedVoice,
+                provider: audioProvider,
             });
             if (!response.success) throw new Error(response.data);
             setStatusMessage('✅ Success! The page will now reload to show the audio player.');
@@ -76,44 +83,34 @@ function PodcastGenerator({ setActiveView }) {
 
             <div className="atm-form-container">
                 <SelectControl
-                    label="Script Language"
-                    value={selectedLanguage}
-                    onChange={setSelectedLanguage}
-                    options={[
-                        { label: 'English', value: 'English' },
-                        { label: 'Spanish', value: 'Spanish' },
-                        { label: 'French', value: 'French' },
-                        { label: 'German', value: 'German' },
-                        // Add more languages as needed
-                    ]}
+                    label="Script Language" value={selectedLanguage} onChange={setSelectedLanguage}
+                    options={[ { label: 'English', value: 'English' }, { label: 'Spanish', value: 'Spanish' }, { label: 'French', value: 'French' }, { label: 'German', value: 'German' } ]}
                     disabled={isLoading}
                 />
-
                 <Button isSecondary onClick={handleGenerateScript} disabled={isLoading}>
                     {isLoading && statusMessage.includes('script') ? <Spinner /> : '1. Generate Script from Post Content'}
                 </Button>
-
                 <TextareaControl
-                    label="Podcast Script"
-                    help="The generated script will appear here. You can edit it before generating the audio."
-                    value={scriptContent}
-                    onChange={setScriptContent}
-                    rows="15"
-                    disabled={isLoading}
+                    label="Podcast Script" help="The generated script will appear here. You can edit it before generating the audio."
+                    value={scriptContent} onChange={setScriptContent}
+                    rows="15" disabled={isLoading}
                 />
-
-                <SelectControl
-                    label="AI Voice"
-                    value={selectedVoice}
-                    onChange={setSelectedVoice}
-                    options={voiceOptions}
-                    disabled={isLoading}
-                />
-
-                <Button isPrimary onClick={handleGenerateAudio} disabled={isLoading || !scriptContent.trim()}>
+                <div className="atm-grid-2">
+                    <SelectControl
+                        label="Audio Provider" value={audioProvider} onChange={setAudioProvider}
+                        options={[ { label: 'OpenAI TTS', value: 'openai' }, { label: 'ElevenLabs', value: 'elevenlabs' } ]}
+                        disabled={isLoading || elevenlabsVoices.length === 0}
+                        help={elevenlabsVoices.length === 0 ? 'Enter ElevenLabs API key in settings to enable.' : ''}
+                    />
+                    <SelectControl
+                        label="AI Voice" value={selectedVoice} onChange={setSelectedVoice}
+                        options={voiceOptions} disabled={isLoading || !voiceOptions.length}
+                        help={!voiceOptions.length ? 'No voices available for this provider.' : ''}
+                    />
+                </div>
+                <Button isPrimary onClick={handleGenerateAudio} disabled={isLoading || !scriptContent.trim() || !selectedVoice}>
                     {isLoading && statusMessage.includes('audio') ? <Spinner /> : '2. Generate MP3 Audio'}
                 </Button>
-
                 {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
             </div>
         </div>

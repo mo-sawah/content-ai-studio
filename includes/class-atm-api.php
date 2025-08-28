@@ -343,6 +343,77 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
+    public static function get_elevenlabs_voices() {
+    $api_key = get_option('atm_elevenlabs_api_key');
+    if (empty($api_key)) {
+        return []; // Return empty if no key
+    }
+
+    $transient_key = 'atm_elevenlabs_voices';
+    $cached_voices = get_transient($transient_key);
+    if ($cached_voices) {
+        return $cached_voices;
+    }
+
+    $response = wp_remote_get('https://api.elevenlabs.io/v1/voices', [
+        'headers' => ['xi-api-key' => $api_key],
+        'timeout' => 20
+    ]);
+
+    if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+        error_log('ElevenLabs API Error: Failed to fetch voices.');
+        return [];
+    }
+
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    $voices = [];
+    if (isset($body['voices'])) {
+        foreach ($body['voices'] as $voice) {
+            $voices[$voice['voice_id']] = $voice['name'];
+        }
+    }
+
+    set_transient($transient_key, $voices, 6 * HOUR_IN_SECONDS); // Cache for 6 hours
+    return $voices;
+}
+
+public static function generate_audio_with_elevenlabs($script_chunk, $voice_id) {
+    $api_key = get_option('atm_elevenlabs_api_key');
+    if (empty($api_key)) {
+        throw new Exception('ElevenLabs API key not configured');
+    }
+
+    $endpoint_url = 'https://api.elevenlabs.io/v1/text-to-speech/' . $voice_id;
+
+    $response = wp_remote_post($endpoint_url, [
+        'headers' => [
+            'xi-api-key'   => $api_key,
+            'Content-Type' => 'application/json',
+            'Accept'       => 'audio/mpeg'
+        ],
+        'body'    => json_encode([
+            'text'     => $script_chunk,
+            'model_id' => 'eleven_multilingual_v2'
+        ]),
+        'timeout' => 300
+    ]);
+
+    if (is_wp_error($response)) {
+        throw new Exception('ElevenLabs API call failed: ' . $response->get_error_message());
+    }
+
+    $audio_content = wp_remote_retrieve_body($response);
+
+    if (wp_remote_retrieve_response_code($response) !== 200) {
+        $error_body = json_decode($audio_content, true);
+        $error_message = isset($error_body['detail']['message']) ? $error_body['detail']['message'] : 'An unknown API error occurred.';
+        error_log('ElevenLabs API Error: ' . $audio_content);
+        throw new Exception('ElevenLabs API Error: ' . $error_message);
+    }
+
+    return $audio_content;
+}
+    
     /**
  * Enhances a simple image prompt into a detailed one, like ChatGPT.
  */
