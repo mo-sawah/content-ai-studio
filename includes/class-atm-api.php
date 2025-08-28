@@ -352,6 +352,7 @@ public static function generate_image_with_google_imagen($prompt, $size_override
         throw new Exception('Google AI API key is not configured.');
     }
 
+    // Gemini uses width and height. We map our named sizes to pixel values.
     $size_map = [
         '1024x1024' => ['width' => 1024, 'height' => 1024],
         '1792x1024' => ['width' => 1536, 'height' => 864], // 16:9
@@ -361,12 +362,17 @@ public static function generate_image_with_google_imagen($prompt, $size_override
     $selected_size = !empty($size_override) ? $size_override : get_option('atm_image_size', $default_size);
     $dimensions = isset($size_map[$selected_size]) ? $size_map[$selected_size] : $size_map[$default_size];
 
+    // We use gemini-1.5-flash as it's fast and optimized for this.
     $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $api_key;
+
+    // --- THE FIX IS HERE: Wrap the user's prompt in a direct command ---
+    $instructed_prompt = 'Generate an image with the following description: ' . $prompt;
 
     $request_body = [
         'contents' => [
             'parts' => [
-                ['text' => $prompt]
+                // Use the new instructed prompt
+                ['text' => $instructed_prompt]
             ]
         ],
         'tools' => [
@@ -389,7 +395,7 @@ public static function generate_image_with_google_imagen($prompt, $size_override
         ],
         'toolConfig' => [
             'functionCallingConfig' => [
-                'mode' => 'ANY', // <-- THE FIX IS HERE
+                'mode' => 'ANY',
                 'allowedFunctionNames' => ['image_generator']
             ]
         ]
@@ -412,10 +418,8 @@ public static function generate_image_with_google_imagen($prompt, $size_override
         $error_message = isset($result['error']['message']) ? $result['error']['message'] : 'Unknown API error.';
         throw new Exception('Google Imagen Error: ' . $error_message);
     }
-    
-    // Check for the base64 data in the response
+
     if (!isset($result['candidates'][0]['content']['parts'][0]['fileData']['data'])) {
-        // If image data is not there, it's possible the prompt was unsafe or refused.
         $finish_reason = $result['candidates'][0]['finishReason'] ?? 'UNKNOWN';
         $error_text = 'Google API did not return an image. Reason: ' . $finish_reason . '.';
         if($finish_reason === 'SAFETY') {
