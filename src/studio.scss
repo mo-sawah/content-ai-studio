@@ -815,13 +815,35 @@
     gap: 1.5rem;
 }
 
-.atm-autocomplete-container {
-    position: relative;
+.atm-autocomplete-form {
     display: flex;
     gap: 0.5rem;
+    align-items: center;
 
+    // This is the key fix for the width
+    .components-base-control {
+        flex: 1;
+        margin-bottom: 0;
+    }
+}
+
+.atm-autocomplete-container {
     .components-text-control__input {
-        flex-grow: 1;
+        min-height: 48px; // Taller search box
+    }
+
+    .atm-search-button {
+        height: 48px;
+        width: 48px;
+        min-width: 48px;
+        padding: 0;
+        background: #2d3748 !important;
+        border: 1px solid #4a5569 !important;
+
+        &:hover:not(:disabled) {
+            background-color: #374151 !important;
+            border-color: #6b7280 !important;
+        }
     }
 }
 
@@ -829,12 +851,13 @@
     position: absolute;
     top: 100%;
     left: 0;
-    right: 0;
+    // Adjust right position to account for the button width + gap
+    right: calc(48px + 0.5rem); 
     background: #2d3748;
     border: 1px solid #4a5569;
     border-top: none;
     border-radius: 0 0 6px 6px;
-    margin: -4px 0 0 0;
+    margin: -8px 0 0 0;
     padding: 4px;
     list-style: none;
     z-index: 1000;
@@ -872,6 +895,27 @@
     border-radius: 8px;
     border: 1px solid #4a5569;
 
+    .atm-video-actions .components-button:not(.is-embed) {
+        color: #cbd5e1; // Light gray text for better visibility
+
+        &:hover {
+            color: #ffffff;
+        }
+    }
+
+    .atm-video-actions .components-button.is-embed {
+        background-color: #e2e8f0 !important;
+        color: #121619 !important;
+        font-weight: 600;
+        height: 30px; // Smaller button height
+        padding: 0 10px;
+        font-size: 13px;
+
+        &:hover {
+            background-color: #ffffff !important;
+        }
+    }
+
     @media (max-width: 768px) {
         flex-direction: column;
     }
@@ -886,6 +930,8 @@
         height: auto;
         border-radius: 6px;
         display: block;
+        min-height: 115px;
+        object-fit: cover;
     }
 
     @media (max-width: 768px) {
@@ -976,9 +1022,10 @@
         background-color: #e2e8f0 !important;
         color: #121619 !important;
         font-weight: 600;
-        height: 32px;
-        min-width: 80px;
-        padding: 0 12px;
+        height: 25px;
+        min-width: 60px;
+        padding: 0 10px;
+        margin-top: 5px;
 
         &:hover {
             background-color: #ffffff !important;

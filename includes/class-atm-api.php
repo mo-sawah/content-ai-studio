@@ -349,7 +349,7 @@ class ATM_API {
             return $cached;
         }
 
-        $url = 'http://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=' . urlencode($query);
+        $url = 'https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=' . urlencode($query);
         $response = wp_remote_get($url);
 
         if (is_wp_error($response) || 200 !== wp_remote_retrieve_response_code($response)) {
