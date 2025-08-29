@@ -1,42 +1,31 @@
 /* --- Main Meta Box & Container --- */
-// This overrides the default WordPress padding for a cleaner look.
 #article-to-media .inside {
     margin: 0 !important;
     padding: 0 !important;
 }
-
 .atm-studio-container {
-    background-color: #121619; // Your new dark background color
+    background-color: #121619;
     color: #e2e8f0;
     padding: 2rem;
     border-radius: 8px;
     margin: 15px;
 }
 
-.atm-studio-container h2 {
-    font-size: 35px !important;
-    font-weight: 600 !important;
-}
-
 /* --- Hub View --- */
 .atm-hub {
     text-align: center;
     padding: 2rem 1rem;
-
     h2 {
-        font-size: 35px;   // Updated size
-        font-weight: 600;  // Updated weight
+        font-size: 35px !important;
+        font-weight: 600 !important;
         color: #ffffff;
         margin: 0 0 8px;
     }
-
-    .atm-hub-subtitle,
-    .atm-hub-footer {
+    .atm-hub-subtitle, .atm-hub-footer {
         font-size: 14px;
         color: #a0aec0;
         margin: 0;
     }
-
     .atm-hub-actions {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -45,79 +34,80 @@
     }
 }
 
-/* --- Button Styles --- */
+/* --- General Button Styles --- */
+.atm-studio-container .components-button {
+    cursor: pointer;
+    height: auto;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    justify-content: center; // Center text inside all buttons
+    &.is-primary {
+        grid-column: 1 / -1;
+    }
+    &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+}
 .atm-studio-container .components-button.is-primary {
     background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%);
-    color: #ffffff;      // Updated text color to white
-    font-size: 16px;      // Updated font size
-    font-weight: 600;
+    color: #ffffff;
     border: none;
-    border-radius: 8px;
-    padding: 12px 20px;
-    height: auto;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;      // Ensures the pointer cursor appears on hover
-    justify-content: center;
-
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    &:hover:not(:disabled) {
+        background: linear-gradient(135deg, #3A00B3 0%, #7A27C1 100%);
     }
-
     &:disabled {
         background: #4a5569;
-        transform: none;
-        box-shadow: none;
+    }
+}
+.atm-studio-container .components-button.is-secondary {
+    background-color: #2d3748;
+    color: #e2e8f0;
+    border: 1px solid #4a5569;
+    width: 100%;
+    &:hover:not(:disabled) {
+        background-color: #4a5569;
+        border-color: #718096;
+    }
+}
+
+/* --- NEW: Modern DropdownMenu Styles --- */
+.atm-studio-container .components-dropdown-menu {
+    width: 100%;
+    .components-dropdown-menu__toggle {
+        width: 100%;
+        justify-content: space-between; // Pushes arrow to the right
+        &::after { // Style the default dropdown arrow
+            color: #e7e7e7;
+        }
     }
 }
 
 /* --- Modern Form Controls --- */
 .atm-studio-container {
-    // Target all text inputs, textareas, and select dropdowns
     .components-text-control__input,
-    .components-textarea-control__input,
-    .components-select-control__input {
-        background-color: #2d3748 !important;
-        color: #e2e8f0 !important;
+    .components-textarea-control__input {
+        background-color: #2d3748;
+        color: #e2e8f0;
         border: 1px solid #4a5569;
         border-radius: 6px;
         padding: 10px 12px;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
-
-        // --- FIX: Remove the default white 'border' (which is actually a box-shadow) ---
-        box-shadow: none !important;
-
-        &::placeholder {
-            color: #94a3b8;
-        }
-
+        &::placeholder { color: #94a3b8; }
         &:focus {
             border-color: #8E2DE2;
-            box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3) !important;
+            box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3);
             outline: none;
         }
     }
-
-    // Specific styles for Dropdown Menus
-    .components-select-control__input {
-        -webkit-appearance: none;
-        appearance: none;
-
-        // --- FIX: Update SVG arrow color to #e7e7e7 ---
-        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23e7e7e7%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
-        background-repeat: no-repeat;
-        background-position: right 12px top 50%;
-        background-size: 8px auto;
-        padding-right: 30px;
-    }
-
     .components-base-control__label {
-        // --- FIX: Ensure label color is set to #a0aec0 ---
         color: #a0aec0;
         font-weight: 500;
         margin-bottom: 8px !important;
     }
-
     .components-base-control__help {
         color: #718096;
     }
@@ -132,14 +122,12 @@
         border-bottom: 1px solid #4a5569;
         padding-bottom: 1rem;
         margin-bottom: 1.5rem;
-
         h3 {
             margin: 0;
             font-size: 20px;
             color: #ffffff;
         }
     }
-
     .atm-back-btn {
         background: transparent;
         border: 1px solid #718096;
@@ -153,111 +141,19 @@
         color: #e2e8f0;
         padding: 0;
         transition: background-color 0.2s ease, border-color 0.2s ease;
-
         &:hover {
             background-color: #4a5569;
             border-color: #a0aec0;
         }
     }
-
     .atm-form-container {
         display: grid;
         gap: 1.25rem;
     }
-
     .atm-status-message {
         color: #94a3b8;
         font-style: italic;
         text-align: center;
         margin-top: 1rem;
-    }
-}
-
-// custom fixes for wp admin
-.atm-studio-container {
-    // Target all possible dropdown selectors with higher specificity
-    .components-select-control__input,
-    select.components-select-control__input,
-    .components-base-control .components-select-control__input {
-        background-color: #2d3748 !important;
-        color: #e2e8f0 !important;
-        border: 1px solid #4a5569 !important;
-        border-radius: 6px !important;
-        
-        // Remove ALL possible box-shadow variations
-        box-shadow: none !important;
-        -webkit-box-shadow: none !important;
-        -moz-box-shadow: none !important;
-        
-        // Remove any outline that might appear as a border
-        outline: none !important;
-        -webkit-appearance: none !important;
-        appearance: none !important;
-
-        &:focus {
-            border-color: #8E2DE2 !important;
-            box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3) !important;
-            -webkit-box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3) !important;
-            outline: none !important;
-        }
-    }
-}
-
-// Target WordPress component wrapper as well
-.atm-studio-container {
-    .components-base-control,
-    .components-select-control {
-        .components-select-control__input {
-            background-color: #2d3748 !important;
-            border: 1px solid #4a5569 !important;
-            box-shadow: none !important;
-            outline: none !important;
-            
-            &::before,
-            &::after {
-                display: none !important;
-            }
-        }
-    }
-}
-
-// Add this to target the entire component wrapper
-.atm-studio-container {
-    .components-base-control {
-        // Reset any inherited styles
-        * {
-            box-shadow: none !important;
-            -webkit-box-shadow: none !important;
-        }
-    }
-    
-    // Your existing dropdown styles here...
-}
-
-.atm-studio-container {
-    .components-select-control__input {
-        // Your existing styles...
-        
-        // Remove any pseudo-elements that might create borders
-        &::before,
-        &::after {
-            display: none !important;
-            content: none !important;
-        }
-        
-        // Also check for focus-within effects on parent
-        &:focus-within {
-            box-shadow: none !important;
-        }
-    }
-    
-    // Target the parent component too
-    .components-select-control {
-        &::before,
-        &::after {
-            display: none !important;
-        }
-        
-        box-shadow: none !important;
     }
 }
