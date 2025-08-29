@@ -172,3 +172,92 @@
         margin-top: 1rem;
     }
 }
+
+// custom fixes for wp admin
+.atm-studio-container {
+    // Target all possible dropdown selectors with higher specificity
+    .components-select-control__input,
+    select.components-select-control__input,
+    .components-base-control .components-select-control__input {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #4a5569 !important;
+        border-radius: 6px !important;
+        
+        // Remove ALL possible box-shadow variations
+        box-shadow: none !important;
+        -webkit-box-shadow: none !important;
+        -moz-box-shadow: none !important;
+        
+        // Remove any outline that might appear as a border
+        outline: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+
+        &:focus {
+            border-color: #8E2DE2 !important;
+            box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3) !important;
+            -webkit-box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3) !important;
+            outline: none !important;
+        }
+    }
+}
+
+// Target WordPress component wrapper as well
+.atm-studio-container {
+    .components-base-control,
+    .components-select-control {
+        .components-select-control__input {
+            background-color: #2d3748 !important;
+            border: 1px solid #4a5569 !important;
+            box-shadow: none !important;
+            outline: none !important;
+            
+            &::before,
+            &::after {
+                display: none !important;
+            }
+        }
+    }
+}
+
+// Add this to target the entire component wrapper
+.atm-studio-container {
+    .components-base-control {
+        // Reset any inherited styles
+        * {
+            box-shadow: none !important;
+            -webkit-box-shadow: none !important;
+        }
+    }
+    
+    // Your existing dropdown styles here...
+}
+
+.atm-studio-container {
+    .components-select-control__input {
+        // Your existing styles...
+        
+        // Remove any pseudo-elements that might create borders
+        &::before,
+        &::after {
+            display: none !important;
+            content: none !important;
+        }
+        
+        // Also check for focus-within effects on parent
+        &:focus-within {
+            box-shadow: none !important;
+        }
+    }
+    
+    // Target the parent component too
+    .components-select-control {
+        &::before,
+        &::after {
+            display: none !important;
+        }
+        
+        box-shadow: none !important;
+    }
+}
