@@ -1036,3 +1036,16 @@
 .atm-video-search-container .components-button.is-primary {
     max-height: 48px;
 }
+
+.atm-filter-button {
+    background-color: transparent !important;
+    border: 1px solid #4a5569 !important;
+    color: #a0aec0 !important;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    height: auto;
+    transition: transform .2s ease, box-shadow .2s ease;
+    max-height: 48px;
+}
