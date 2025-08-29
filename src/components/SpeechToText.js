@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
-import { Button, Spinner } from '@wordpress/components';
+import { Spinner } from '@wordpress/components';
 
 function SpeechToText({ setActiveView }) {
     const [isRecording, setIsRecording] = useState(false);
@@ -101,26 +101,53 @@ function SpeechToText({ setActiveView }) {
         setTimeout(() => setStatusMessage('Click the button to start a new recording.'), 3000);
     };
 
-    const isDisabled = isRecording || isTranscribing;
+    const isDisabled = isTranscribing;
 
     return (
         <div className="atm-generator-view">
             <div className="atm-view-header">
-                <button className="atm-back-btn" onClick={() => setActiveView('hub')} disabled={isDisabled}>
+                <button className="atm-back-btn" onClick={() => setActiveView('hub')} disabled={isDisabled || isRecording}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
                 <h3>Speech to Text</h3>
             </div>
-            <div className="atm-speech-to-text-container">
-                <Button 
-                    isPrimary 
-                    className={`atm-record-button ${isRecording ? 'is-recording' : ''}`}
-                    onClick={isRecording ? handleStopRecording : handleStartRecording}
-                    disabled={isTranscribing}
-                >
-                    {isTranscribing ? <Spinner /> : (isRecording ? 'Stop Recording' : 'Start Recording')}
-                </Button>
-                <p className="atm-status-message">{statusMessage}</p>
+            
+            <div className="atm-speech-container">
+                <div className="atm-recording-section">
+                    <div className={`atm-record-button-wrapper ${isRecording ? 'is-recording' : ''}`}>
+                        {/* Pulse rings for recording animation */}
+                        <div className="atm-pulse-ring atm-pulse-ring-1"></div>
+                        <div className="atm-pulse-ring atm-pulse-ring-2"></div>
+                        <div className="atm-pulse-ring atm-pulse-ring-3"></div>
+                        
+                        {/* Main record button */}
+                        <button 
+                            className={`atm-record-button ${isRecording ? 'is-recording' : ''} ${isTranscribing ? 'is-transcribing' : ''}`}
+                            onClick={isRecording ? handleStopRecording : handleStartRecording}
+                            disabled={isTranscribing}
+                        >
+                            {isTranscribing ? (
+                                <Spinner />
+                            ) : isRecording ? (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="6" y="6" width="12" height="12" rx="2"/>
+                                </svg>
+                            ) : (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 1c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2s2-.9 2-2V3c0-1.1-.9-2-2-2z"/>
+                                    <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 17v4M8 21h8"/>
+                                </svg>
+                            )}
+                        </button>
+                    </div>
+                    
+                    <p className="atm-recording-status">{statusMessage}</p>
+                </div>
+                
+                {/* Instructions */}
+                <div className="atm-instructions">
+                    <p>Click the microphone to start recording your voice. The audio will be automatically transcribed and inserted into your post content.</p>
+                </div>
             </div>
         </div>
     );

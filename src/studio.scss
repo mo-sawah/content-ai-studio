@@ -359,3 +359,241 @@
         font-weight: 600;
     }
 }
+
+/* --- Speech to Text Modern Recording Styles --- */
+.atm-speech-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+.atm-recording-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* Record Button Container with Pulse Animation */
+.atm-record-button-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+    
+    /* Pulse rings - hidden by default */
+    .atm-pulse-ring {
+        position: absolute;
+        border: 3px solid #ef4444;
+        border-radius: 50%;
+        opacity: 0;
+        transform: scale(1);
+        pointer-events: none;
+    }
+    
+    .atm-pulse-ring-1 {
+        width: 100%;
+        height: 100%;
+        animation-delay: 0s;
+    }
+    
+    .atm-pulse-ring-2 {
+        width: 120%;
+        height: 120%;
+        animation-delay: 0.5s;
+    }
+    
+    .atm-pulse-ring-3 {
+        width: 140%;
+        height: 140%;
+        animation-delay: 1s;
+    }
+    
+    /* Show and animate pulse rings when recording */
+    &.is-recording .atm-pulse-ring {
+        animation: atm-pulse 2s infinite;
+    }
+}
+
+/* Pulse animation keyframes */
+@keyframes atm-pulse {
+    0% {
+        transform: scale(0.8);
+        opacity: 1;
+    }
+    70% {
+        transform: scale(1.2);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(1.4);
+        opacity: 0;
+    }
+}
+
+/* Main Record Button */
+.atm-record-button {
+    position: relative;
+    z-index: 10;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    
+    /* Default state - gradient background */
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+    color: #ffffff;
+    
+    /* Hover effects */
+    &:hover:not(:disabled) {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+    }
+    
+    &:active:not(:disabled) {
+        transform: translateY(0) scale(0.98);
+    }
+    
+    /* Recording state - red background */
+    &.is-recording {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        animation: atm-recording-pulse 1s infinite alternate;
+        
+        &:hover {
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+    }
+    
+    /* Transcribing state - processing */
+    &.is-transcribing {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        cursor: not-allowed;
+        
+        &:hover {
+            transform: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+    }
+    
+    /* Icon styling */
+    svg {
+        width: 28px;
+        height: 28px;
+        transition: all 0.2s ease;
+    }
+    
+    /* Stop icon (square) animation when recording */
+    &.is-recording svg {
+        animation: atm-stop-icon-pulse 2s infinite;
+    }
+}
+
+/* Recording pulse animation for the button */
+@keyframes atm-recording-pulse {
+    0% {
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+    100% {
+        box-shadow: 0 4px 25px rgba(239, 68, 68, 0.6), 0 0 0 4px rgba(239, 68, 68, 0.1);
+    }
+}
+
+/* Stop icon pulse animation */
+@keyframes atm-stop-icon-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Status Message */
+.atm-recording-status {
+    font-size: 16px;
+    font-weight: 500;
+    color: #e2e8f0;
+    margin: 0;
+    min-height: 24px;
+    
+    /* Different colors based on state */
+    .atm-record-button-wrapper.is-recording + & {
+        color: #fca5a5;
+    }
+    
+    .atm-record-button.is-transcribing ~ & {
+        color: #94a3b8;
+    }
+}
+
+/* Instructions Section */
+.atm-instructions {
+    max-width: 400px;
+    
+    p {
+        color: #94a3b8;
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 0;
+    }
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+    .atm-record-button-wrapper {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .atm-record-button {
+        width: 70px;
+        height: 70px;
+        
+        svg {
+            width: 24px;
+            height: 24px;
+        }
+    }
+    
+    .atm-speech-container {
+        padding: 1.5rem;
+        gap: 1.5rem;
+    }
+}
+
+/* Additional visual enhancement - glow effect */
+.atm-record-button-wrapper.is-recording::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    animation: atm-glow-pulse 2s infinite;
+}
+
+@keyframes atm-glow-pulse {
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+}
