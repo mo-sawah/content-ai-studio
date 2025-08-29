@@ -101,7 +101,7 @@ function ImageGenerator({ setActiveView }) {
                     <DropdownMenu
                         className="atm-custom-dropdown"
                         icon={chevronDown}
-                        label={providerLabel || `Use Default (${defaultProvider})`}
+                        text={providerLabel || `Use Default (${defaultProvider})`}
                         controls={providerOptions.map(option => ({
                             title: option.label,
                             onClick: () => {
@@ -130,7 +130,7 @@ function ImageGenerator({ setActiveView }) {
                         <DropdownMenu
                             className="atm-custom-dropdown"
                             icon={chevronDown}
-                            label={imageSizeLabel}
+                            text={imageSizeLabel}
                             controls={sizeOptions.map(option => ({
                                 title: option.label,
                                 onClick: () => {
@@ -148,7 +148,7 @@ function ImageGenerator({ setActiveView }) {
                         <DropdownMenu
                             className="atm-custom-dropdown"
                             icon={chevronDown}
-                            label={imageQualityLabel}
+                            text={imageQualityLabel}
                             controls={qualityOptions.map(option => ({
                                 title: option.label,
                                 onClick: () => {

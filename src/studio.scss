@@ -131,6 +131,10 @@
 
     // Style the DropdownMenu trigger button
     .atm-custom-dropdown {
+        // Make sure the dropdown container takes full width
+        width: 100% !important;
+        position: relative !important;
+        
         .components-dropdown-menu__toggle {
             background-color: #2d3748 !important;
             color: #e2e8f0 !important;
@@ -183,7 +187,9 @@
             border-radius: 6px !important;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
             padding: 4px !important;
-            min-width: 200px !important;
+            // Make dropdown menu match the width of the trigger button
+            min-width: 100% !important;
+            width: 100% !important;
             
             // Style individual menu items
             .components-menu-group {
@@ -192,11 +198,12 @@
                     background-color: transparent !important;
                     border: none !important;
                     border-radius: 4px !important;
-                    padding: 8px 12px !important;
+                    padding: 10px 12px !important;
                     font-size: 14px !important;
                     text-align: left !important;
                     width: 100% !important;
                     transition: background-color 0.2s ease !important;
+                    white-space: nowrap !important;
                     
                     &:hover {
                         background-color: #374151 !important;
@@ -215,6 +222,12 @@
                     -webkit-box-shadow: none !important;
                 }
             }
+        }
+        
+        // Force the popover to position relative to the dropdown
+        &.components-popover {
+            position: absolute !important;
+            z-index: 999999 !important;
         }
     }
 }
