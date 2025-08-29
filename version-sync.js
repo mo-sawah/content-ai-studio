@@ -16,17 +16,16 @@ console.log(`Syncing to version ${newVersion}...`);
 const filesToUpdate = [
     {
         path: path.join(__dirname, 'article-to-media.php'),
-        // This regex looks for "* Version: 1.2.3" and "define('ATM_VERSION', '1.2.3');"
         patterns: [
             /(^\s*\* Version:\s*)[0-9a-zA-Z.-]+$/m,
-            /(define\('ATM_VERSION',\s*')[0-9a-zA-Z.-]+(');)/m
+            // --- THIS IS THE CORRECTED LINE ---
+            /(define\('ATM_VERSION',\s*')[0-9a-zA-Z.-]+('\);)/m 
         ],
         replacements: [
             `$1${newVersion}`,
             `$1${newVersion}$2`
         ]
     }
-    // Add other files here if needed in the future
 ];
 
 filesToUpdate.forEach(fileInfo => {
