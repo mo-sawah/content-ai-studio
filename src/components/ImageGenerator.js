@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useLayoutEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { Button, TextareaControl, Spinner, DropdownMenu } from '@wordpress/components';
 import { chevronDown } from '@wordpress/icons';
@@ -24,21 +24,9 @@ function ImageGenerator({ setActiveView }) {
     const { image_provider: defaultProvider } = atm_studio_data;
     const currentProvider = provider || defaultProvider;
 
-    // Custom dropdown component with improved width calculation
+    // Custom dropdown component with width matching using popoverProps
     const CustomDropdown = ({ label, text, options, onChange, disabled, helpText }) => {
         const dropdownRef = useRef(null);
-        const [dropdownWidth, setDropdownWidth] = useState('auto');
-
-        // Use useLayoutEffect to calculate width before render
-        useLayoutEffect(() => {
-            if (dropdownRef.current) {
-                const toggleButton = dropdownRef.current.querySelector('.components-dropdown-menu__toggle');
-                if (toggleButton) {
-                    const width = toggleButton.offsetWidth;
-                    setDropdownWidth(width + 'px');
-                }
-            }
-        }, [text]); // Recalculate when text changes
 
         return (
             <div className="atm-dropdown-field" ref={dropdownRef}>
@@ -57,24 +45,9 @@ function ImageGenerator({ setActiveView }) {
                     popoverProps={{
                         className: 'atm-popover',
                         style: {
-                            '--atm-dropdown-width': dropdownWidth
-                        },
-                        // Force the popover to recalculate position
-                        onOpen: () => {
-                            // Get fresh width measurement when popover opens
-                            if (dropdownRef.current) {
-                                const toggleButton = dropdownRef.current.querySelector('.components-dropdown-menu__toggle');
-                                if (toggleButton) {
-                                    const width = toggleButton.offsetWidth;
-                                    // Apply width directly to popover content
-                                    setTimeout(() => {
-                                        const popover = document.querySelector('.atm-popover .components-popover__content');
-                                        if (popover) {
-                                            popover.style.setProperty('--atm-dropdown-width', width + 'px');
-                                        }
-                                    }, 0);
-                                }
-                            }
+                            '--atm-dropdown-width': dropdownRef.current?.offsetWidth
+                                ? dropdownRef.current.offsetWidth + 'px'
+                                : 'auto'
                         }
                     }}
                 />
@@ -123,7 +96,7 @@ function ImageGenerator({ setActiveView }) {
             });
 
             if (response.success) {
-                setStatusMessage('✅ Image generated and set!');
+                setStatusMessage('âœ… Image generated and set!');
                 const { attachment_id, html } = response.data;
                 const isBlockEditor = document.body.classList.contains('block-editor-page');
 
