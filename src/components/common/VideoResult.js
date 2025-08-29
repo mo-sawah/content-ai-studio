@@ -1,10 +1,15 @@
+import { useState } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { external, link, embed } from '@wordpress/icons';
 
 function VideoResult({ video, onEmbed }) {
+    const [copied, setCopied] = useState(false);
+
     const copyToClipboard = () => {
         navigator.clipboard.writeText(video.url);
-        // You could add a small "Copied!" notification here
+        setCopied(true);
+        // Reset the text after 2 seconds
+        setTimeout(() => setCopied(false), 2000);
     };
 
     return (
@@ -20,8 +25,10 @@ function VideoResult({ video, onEmbed }) {
                 </div>
                 <div className="atm-video-actions">
                     <Button icon={external} href={video.url} target="_blank">Watch</Button>
-                    <Button icon={link} onClick={copyToClipboard}>Copy Link</Button>
-                    <Button icon={embed} isPrimary onClick={() => onEmbed(video.url)}>Embed</Button>
+                    <Button icon={link} onClick={copyToClipboard}>
+                        {copied ? 'Copied!' : 'Copy Link'}
+                    </Button>
+                    <Button icon={embed} onClick={() => onEmbed(video.url)} className="is-embed">Embed</Button>
                 </div>
             </div>
         </div>

@@ -62,6 +62,9 @@ function VideoSearch({ setActiveView }) {
             
             <div className="atm-video-search-container">
                 <AutocompleteSearch onSearch={handleSearch} disabled={isLoading} />
+                <p className="components-base-control__help" style={{ marginTop: '-1rem' }}>
+                    Search for videos on YouTube.
+                </p>
 
                 {isLoading && <div className="atm-video-spinner-container"><Spinner /></div>}
                 

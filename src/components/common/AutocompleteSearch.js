@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from '@wordpress/element';
 import { TextControl, Button } from '@wordpress/components';
 import { Icon, search } from '@wordpress/icons';
 
+// Helper function for making AJAX calls
+const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
+
 // Simple debounce function
 const debounce = (func, delay) => {
     let timeoutId;
@@ -22,15 +25,8 @@ function AutocompleteSearch({ onSearch, disabled }) {
             return;
         }
         try {
-            const response = await jQuery.ajax({
-                url: atm_studio_data.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'get_youtube_suggestions',
-                    nonce: atm_studio_data.nonce,
-                    query: searchQuery,
-                },
-            });
+            // Use the callAjax helper for consistency
+            const response = await callAjax('get_youtube_suggestions', { query: searchQuery });
             if (response.success) {
                 setSuggestions(response.data);
                 setShowSuggestions(true);
@@ -68,7 +64,7 @@ function AutocompleteSearch({ onSearch, disabled }) {
                 placeholder="Search for videos on YouTube..."
                 disabled={disabled}
             />
-            <Button type="submit" isPrimary disabled={disabled || !query}>
+            <Button type="submit" isPrimary disabled={disabled || !query} className="atm-search-button">
                 <Icon icon={search} />
             </Button>
             {showSuggestions && suggestions.length > 0 && (
