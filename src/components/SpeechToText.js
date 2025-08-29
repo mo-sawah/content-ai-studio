@@ -1,14 +1,13 @@
 import { useState, useRef } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
-import { Spinner, TextareaControl } from '@wordpress/components';
+import { Spinner } from '@wordpress/components';
 
 function SpeechToText({ setActiveView }) {
     // --- STATE MANAGEMENT ---
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [statusMessage, setStatusMessage] = useState('Click the button to start recording.');
-    const [prompt, setPrompt] = useState(''); // State for the prompt textarea
-    // Language state has been removed
+    // Prompt state has been removed
 
     // --- REFS ---
     const mediaRecorderRef = useRef(null);
@@ -68,8 +67,7 @@ function SpeechToText({ setActiveView }) {
         formData.append('action', 'transcribe_audio');
         formData.append('nonce', atm_studio_data.nonce);
         formData.append('audio_file', audioBlob, 'recording.webm');
-        formData.append('prompt', prompt); // Append the prompt
-        // Language formData append has been removed
+        // Prompt formData append has been removed
 
         try {
             const response = await fetch(atm_studio_data.ajax_url, {
@@ -112,17 +110,7 @@ function SpeechToText({ setActiveView }) {
                 <h3>Speech to Text</h3>
             </div>
 
-            <div className="atm-form-container">
-                {/* Language Dropdown has been removed */}
-                
-                <TextareaControl
-                    label="Keywords / Prompt (Optional)"
-                    help="Provide names, acronyms, or specific jargon to improve accuracy (e.g., WordPress, Gemini, PHP)."
-                    value={prompt}
-                    onChange={setPrompt}
-                    disabled={isRecording || isTranscribing}
-                />
-            </div>
+            {/* The empty form container has been removed for a cleaner layout */}
             
             <div className="atm-speech-container">
                 <div className="atm-recording-section">
@@ -147,8 +135,12 @@ function SpeechToText({ setActiveView }) {
                             )}
                         </button>
                     </div>
-                    
                     <p className="atm-recording-status">{statusMessage}</p>
+                </div>
+                
+                {/* --- Instructions have been added back --- */}
+                <div className="atm-instructions">
+                    <p>Click the microphone to start recording your voice. The audio will be automatically transcribed and inserted into your post content.</p>
                 </div>
             </div>
         </div>

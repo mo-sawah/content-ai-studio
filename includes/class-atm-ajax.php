@@ -24,12 +24,10 @@ class ATM_Ajax {
             throw new Exception('File upload error: ' . $file['error']);
         }
         
-        // Get prompt from POST data
-        $prompt = isset($_POST['prompt']) ? sanitize_textarea_field($_POST['prompt']) : '';
-        // Language line has been removed
-
-        // Pass the data to the API method
-        $transcript = ATM_API::transcribe_audio_with_whisper($file['tmp_name'], $prompt); // <-- Language parameter removed from call
+        // Prompt logic has been removed.
+        
+        // Pass only the file to the API method.
+        $transcript = ATM_API::transcribe_audio_with_whisper($file['tmp_name']);
         wp_send_json_success(['transcript' => $transcript]);
 
     } catch (Exception $e) {

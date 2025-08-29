@@ -349,7 +349,7 @@ class ATM_API {
  * @return string The transcribed text.
  * @throws Exception On API error.
  */
-public static function transcribe_audio_with_whisper($audio_file_path, $prompt = '') {
+public static function transcribe_audio_with_whisper($audio_file_path) {
         $api_key = get_option('atm_openai_api_key');
         if (empty($api_key)) {
             throw new Exception('OpenAI API key not configured.');
@@ -372,13 +372,8 @@ public static function transcribe_audio_with_whisper($audio_file_path, $prompt =
         $data .= '--' . $boundary . "\r\n";
         $data .= 'Content-Disposition: form-data; name="model"' . "\r\n\r\n";
         $data .= 'whisper-1' . "\r\n";
-    
-        // Add prompt field if provided
-        if (!empty($prompt)) {
-            $data .= '--' . $boundary . "\r\n";
-            $data .= 'Content-Disposition: form-data; name="prompt"' . "\r\n\r\n";
-            $data .= $prompt . "\r\n";
-        }
+        
+        // Prompt logic has been removed
         
         // Add file field
         $data .= '--' . $boundary . "\r\n";
