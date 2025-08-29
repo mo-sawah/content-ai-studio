@@ -1,4 +1,3 @@
-// in src/components/common/AutocompleteSearch.js
 import { useState } from '@wordpress/element';
 import { TextControl, Button } from '@wordpress/components';
 import { Icon, search, filter } from '@wordpress/icons';
@@ -20,10 +19,20 @@ function AutocompleteSearch({ onSearch, onFilterClick, disabled }) {
                     placeholder="Search for videos on YouTube..."
                     disabled={disabled}
                 />
-                <Button type="submit" isPrimary disabled={disabled || !query} className="atm-search-button">
+                <Button 
+                    type="submit" 
+                    isPrimary 
+                    disabled={disabled || !query} 
+                    className="atm-search-button"
+                >
                     <Icon icon={search} />
                 </Button>
-                <Button onClick={onFilterClick} disabled={disabled} className="atm-filter-button">
+                <Button
+                    isSecondary
+                    onClick={onFilterClick}
+                    disabled={disabled}
+                    className="atm-filter-button"
+                >
                     <Icon icon={filter} />
                 </Button>
             </form>

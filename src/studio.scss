@@ -819,9 +819,9 @@
 .atm-autocomplete-form {
     display: flex;
     gap: 0.5rem;
-    align-items: stretch; // This is the key fix for button height
+    align-items: stretch; // This makes all direct children the same height
 
-    // This is the key fix for the width
+    // Target the wrapper for the TextControl to make it expand
     .components-base-control {
         flex: 1;
         margin-bottom: 0;
@@ -829,41 +829,52 @@
 }
 
 .atm-autocomplete-container {
-    // Make the search input taller
+    // Ensure the input field fills its container vertically
     .components-text-control__input {
         min-height: 48px;
-        height: 100%; // Make input fill its container
+        height: 100%;
     }
+}
 
-    // Shared styles for Search and Filter buttons
-    .atm-search-button,
-    .atm-filter-button {
-        width: 48px;
-        min-width: 48px;
-        padding: 0 !important;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        // height property removed to allow stretching
-    }
+// Shared styles for BOTH buttons to ensure they are identical squares
+.atm-search-button,
+.atm-filter-button {
+    width: 48px !important;
+    min-width: 48px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: auto !important; // Let the parent's "stretch" handle the height
+    border-radius: 8px !important; // Keep your border-radius
+}
 
-    // Specific styles for Search button
-    .atm-search-button {
-        background: #2d3748 !important;
-        border: 1px solid #4a5569 !important;
+// Combined styles for both buttons from your last request
+.atm-filter-button,
+.atm-search-button {
+    background-color: transparent !important;
+    border: 1px solid #4a5569 !important;
+    color: #a0aec0 !important;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
 
-        &:hover:not(:disabled) {
-            background-color: #374151 !important;
-            border-color: #6b7280 !important;
-        }
-    }
+// Hover state for both buttons
+.atm-filter-button:hover:not(:disabled),
+.atm-search-button:hover:not(:disabled) {
+    background-color: #374151 !important;
+    border-color: #6b7280 !important;
+    color: #ffffff !important;
+}
+
+// Keep the primary search button slightly different if needed (optional)
+.atm-search-button {
+    background: #2d3748 !important;
 }
 
 .atm-suggestions-list {
     position: absolute;
     top: 100%;
     left: 0;
-    // Adjust right position to account for the button width + gap
     right: calc(48px + 0.5rem); 
     background: #2d3748;
     border: 1px solid #4a5569;
@@ -907,25 +918,21 @@
     border-radius: 8px;
     border: 1px solid #4a5569;
 
-    // Fix button text colors for "Watch" and "Copy Link"
     .atm-video-actions .components-button:not(.is-embed) {
-        color: #cbd5e1; // Light gray text for better visibility
-
+        color: #cbd5e1;
         &:hover {
-            color: #ffffff; // Make it brighter on hover
+            color: #ffffff;
         }
     }
 
-    // Style the "Embed" button
     .atm-video-actions .components-button.is-embed {
         background-color: #e2e8f0 !important;
-        color: #121619 !important;
+        color: #121919 !important;
         font-weight: 600;
         height: 25px;
         min-width: 60px;
         padding: 0 10px;
         margin-top: 5px;
-
         &:hover {
             background-color: #ffffff !important;
         }
@@ -990,7 +997,7 @@
 .atm-video-actions {
     display: flex;
     gap: 0.5rem;
-    margin-top: auto; // Pushes buttons to the bottom
+    margin-top: auto;
     align-items: center;
 
     .components-button {
@@ -1000,21 +1007,6 @@
 }
 
 /* --- Specific Filter Button and Modal Styles --- */
-
-// Styles for the new "Filter" button to match the search button
-.atm-filter-button {
-    background-color: transparent !important;
-    color: #a0aec0 !important;
-    border: 1px solid #4a5569 !important;
-
-    &:hover:not(:disabled) {
-        background-color: #2d3748 !important;
-        border-color: #6b7280 !important;
-        color: #ffffff !important;
-    }
-}
-
-// Styles for the pop-up filter modal
 .atm-filter-modal .components-modal__content {
     background: #1e293b;
     color: #e2e8f0;
@@ -1031,21 +1023,4 @@
 
 .atm-filter-modal .components-modal__header .components-button {
     color: #e2e8f0 !important;
-}
-
-.atm-video-search-container .components-button.is-primary {
-    max-height: 48px;
-}
-
-.atm-autocomplete-container .atm-filter-button, .atm-autocomplete-container .atm-search-button {
-    background-color: transparent !important;
-    border: 1px solid #4a5569 !important;
-    color: #a0aec0 !important;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    height: auto;
-    transition: transform .2s ease, box-shadow .2s ease;
-    max-height: 48px;
 }
