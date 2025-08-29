@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
-import { useDispatch, useSelect } from '@wordpress/data';
+import { useDispatch } from '@wordpress/data';
 import { Button, TextareaControl, Spinner } from '@wordpress/components';
 import { createBlock } from '@wordpress/blocks';
 import CustomDropdown from './common/CustomDropdown';
@@ -7,7 +7,6 @@ import { useSpeechToText } from '../hooks/useSpeechToText';
 
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
 
-// Helper to get all editor content
 const getEditorContent = () => {
     const editor = wp.data.select('core/editor');
     return {
@@ -16,7 +15,6 @@ const getEditorContent = () => {
     };
 };
 
-// Helper to update editor content
 const updateEditorContent = (title, markdownContent) => {
     const isBlockEditor = !!wp.data.select('core/block-editor');
     const htmlContent = window.marked ? window.marked.parse(markdownContent) : markdownContent;
@@ -26,7 +24,6 @@ const updateEditorContent = (title, markdownContent) => {
         const blocks = wp.blocks.parse(htmlContent);
         wp.data.dispatch('core/block-editor').resetBlocks(blocks);
     } else {
-        // Fallback for Classic Editor
         jQuery('#title').val(title).trigger('blur');
         if (window.tinymce?.get('content')) {
             window.tinymce.get('content').setContent(htmlContent);
@@ -36,7 +33,6 @@ const updateEditorContent = (title, markdownContent) => {
     }
 };
 
-
 function Translator({ setActiveView }) {
     const [sourceText, setSourceText] = useState('');
     const [translatedText, setTranslatedText] = useState('');
@@ -45,8 +41,6 @@ function Translator({ setActiveView }) {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
     const [recordStatus, setRecordStatus] = useState('');
-    
-    // --- NEW: State for the full editor translation ---
     const [editorTargetLanguage, setEditorTargetLanguage] = useState('Spanish');
     const [editorTargetLanguageLabel, setEditorTargetLanguageLabel] = useState('Spanish');
     const [isEditorTranslating, setIsEditorTranslating] = useState(false);
@@ -57,7 +51,7 @@ function Translator({ setActiveView }) {
     const { isRecording, isTranscribing, startRecording, stopRecording } = useSpeechToText({
         onTranscriptionComplete: (transcript) => {
             setSourceText(current => current + (current ? ' ' : '') + transcript);
-            setRecordStatus('✅ Transcription complete. Ready to translate.');
+            setRecordStatus('✅ Transcription complete.');
             setTimeout(() => setRecordStatus(''), 3000);
         },
         onTranscriptionError: (error) => {
@@ -100,7 +94,6 @@ function Translator({ setActiveView }) {
         setStatusMessage('Text inserted into editor!');
     };
 
-    // --- NEW: Function to handle full editor translation ---
     const handleTranslateEditor = async () => {
         setIsEditorTranslating(true);
         setStatusMessage('Reading editor content...');
@@ -149,14 +142,11 @@ function Translator({ setActiveView }) {
             </div>
             
             <div className="atm-form-container">
-                 {/* --- NEW: Full Editor Translation Section --- */}
                 <div className="atm-translator-full-editor">
                     <Button isPrimary onClick={handleTranslateEditor} disabled={isBusy}>Translate Editor</Button>
                     <span>to</span>
                     <CustomDropdown
-                        label=""
-                        text={editorTargetLanguageLabel}
-                        options={languageOptions}
+                        label="" text={editorTargetLanguageLabel} options={languageOptions}
                         onChange={(option) => {
                             setEditorTargetLanguage(option.value);
                             setEditorTargetLanguageLabel(option.label);
@@ -167,18 +157,18 @@ function Translator({ setActiveView }) {
 
                 <hr className="atm-form-divider" />
 
-                {/* --- NEW: Re-arranged layout for snippet translation --- */}
+                {/* --- NEW: Label is now separate for better alignment --- */}
+                <label className="components-base-control__label">Text Snippet to Translate</label>
                 <div className="atm-translator-main-area">
-                    <div className="atm-translator-text-input">
-                         <TextareaControl
-                            label="Text Snippet to Translate"
-                            value={sourceText}
-                            onChange={setSourceText}
-                            placeholder="Type your text here..."
-                            rows={8}
-                            disabled={isBusy}
-                        />
-                    </div>
+                    <TextareaControl
+                        // The label is removed from here to allow for alignment
+                        value={sourceText}
+                        onChange={setSourceText}
+                        placeholder="Type your text here..."
+                        rows={8}
+                        disabled={isBusy}
+                        className="atm-translator-text-input" // Add a class for sizing
+                    />
                     <div className="atm-translator-recorder">
                         <h4>Or Record to Translate</h4>
                         <div className={`atm-record-button-wrapper is-small ${isRecording ? 'is-recording' : ''}`}>
@@ -203,30 +193,20 @@ function Translator({ setActiveView }) {
 
                 <CustomDropdown
                     label="Translate Snippet To"
-                    text={targetLanguageLabel}
-                    options={languageOptions}
+                    text={targetLanguageLabel} options={languageOptions}
                     onChange={(option) => {
                         setTargetLanguage(option.value);
                         setTargetLanguageLabel(option.label);
                     }}
                     disabled={isBusy}
                 />
-
                 <Button isSecondary onClick={handleTranslate} disabled={isBusy || !sourceText.trim()}>
                     {isLoading ? <Spinner/> : 'Translate Snippet'}
                 </Button>
-
-                <TextareaControl
-                    label="Translated Snippet"
-                    value={translatedText}
-                    readOnly
-                    rows={8}
-                />
-                
+                <TextareaControl label="Translated Snippet" value={translatedText} readOnly rows={8} />
                 <Button isSecondary onClick={handleSendToEditor} disabled={!translatedText.trim() || isBusy}>
                     Insert Snippet into Editor
                 </Button>
-
                 {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
             </div>
         </div>

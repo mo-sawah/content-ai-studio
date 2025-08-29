@@ -749,7 +749,7 @@
         margin-bottom: 0;
 
         .atm-dropdown-label {
-            display: none; // Hide the label as it's redundant here
+            display: none;
         }
     }
 }
@@ -757,8 +757,8 @@
 .atm-translator-main-area {
     display: flex;
     gap: 1.5rem;
-    // Use 'stretch' to make both child elements the same height automatically.
-    align-items: stretch;
+    align-items: stretch; // This makes them equal height
+    margin-bottom: 1.25rem;
 
     @media (max-width: 960px) {
         flex-direction: column;
@@ -767,28 +767,26 @@
 
 .atm-translator-text-input {
     flex: 1;
-    min-width: 0; // Prevents flexbox from overflowing
+    min-width: 0;
+
+    // Remove the default label margin, since we handle it separately now
+    .components-base-control__label {
+        display: none;
+    }
 }
 
-/* --- This is the updated code for the recorder box --- */
 .atm-translator-recorder {
-    // Flex properties to center the content inside the box
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    
-    // Set a width, but let the parent container control the height
-    width: 30%;
-    
-    // Use padding for internal spacing instead of a fixed height
+    width: 30%; // Set the desired width
+    min-width: 200px; // Prevent it from getting too small
     padding: 1rem;
-    
     background: #2d3748;
     border-radius: 6px;
     
-    // Make the box shrink nicely on smaller screens
     @media (max-width: 960px) {
         width: 100%;
         padding: 1.5rem 1rem;
