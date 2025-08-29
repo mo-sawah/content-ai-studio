@@ -68,6 +68,7 @@
         background: #4a5569;
         transform: none;
         box-shadow: none;
+        margin-bottom: calc(8px);
     }
 }
 
@@ -85,6 +86,7 @@
     transition: background-color 0.2s ease, border-color 0.2s ease;
     cursor: pointer;
     justify-content: center;
+    margin-bottom: calc(8px);
 
     &:hover:not(:disabled) {
         background-color: #5a6478;
@@ -1023,4 +1025,9 @@
 
 .atm-filter-modal .components-modal__header .components-button {
     color: #e2e8f0 !important;
+
+}
+    
+.atm-video-search-container .components-button.is-primary {
+    margin-bottom: calc(8px);
 }
