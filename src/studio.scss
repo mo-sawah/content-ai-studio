@@ -725,3 +725,85 @@
         min-height: 18px;
     }
 }
+
+/* --- Translator UI Enhancements --- */
+
+.atm-form-divider {
+    border: none;
+    border-top: 1px solid #4a5569;
+    margin: 1.5rem 0;
+}
+
+.atm-translator-full-editor {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    
+    span {
+        color: #a0aec0;
+        font-size: 14px;
+    }
+
+    .atm-dropdown-field {
+        flex: 1;
+        margin-bottom: 0;
+
+        .atm-dropdown-label {
+            display: none; // Hide the label as it's redundant here
+        }
+    }
+}
+
+.atm-translator-main-area {
+    display: flex;
+    gap: 1.5rem;
+    // Use 'stretch' to make both child elements the same height automatically.
+    align-items: stretch;
+
+    @media (max-width: 960px) {
+        flex-direction: column;
+    }
+}
+
+.atm-translator-text-input {
+    flex: 1;
+    min-width: 0; // Prevents flexbox from overflowing
+}
+
+/* --- This is the updated code for the recorder box --- */
+.atm-translator-recorder {
+    // Flex properties to center the content inside the box
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    
+    // Set a width, but let the parent container control the height
+    width: 30%;
+    
+    // Use padding for internal spacing instead of a fixed height
+    padding: 1rem;
+    
+    background: #2d3748;
+    border-radius: 6px;
+    
+    // Make the box shrink nicely on smaller screens
+    @media (max-width: 960px) {
+        width: 100%;
+        padding: 1.5rem 1rem;
+    }
+
+    h4 {
+        margin: 0 0 0.5rem 0;
+        color: #a0aec0;
+        font-size: 13px;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    .atm-recording-status {
+        font-size: 13px;
+        min-height: 18px;
+    }
+}
