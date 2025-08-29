@@ -1,4 +1,4 @@
-import { useState } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { Button, TextareaControl, Spinner, DropdownMenu } from '@wordpress/components';
 import { chevronDown } from '@wordpress/icons';
@@ -15,10 +15,75 @@ function ImageGenerator({ setActiveView }) {
     const [imageQualityLabel, setImageQualityLabel] = useState('Use Default');
     const [provider, setProvider] = useState('');
     const [providerLabel, setProviderLabel] = useState('');
+    
+    const providerRef = useRef(null);
+    const sizeRef = useRef(null);
+    const qualityRef = useRef(null);
 
     const { editPost } = useDispatch('core/editor');
     const { image_provider: defaultProvider } = atm_studio_data;
     const currentProvider = provider || defaultProvider;
+
+    // Effect to set popover widths
+    useEffect(() => {
+        const setPopoverWidth = () => {
+            // Set width for all dropdown popovers
+            const dropdowns = document.querySelectorAll('.atm-custom-dropdown .components-dropdown-menu__toggle');
+            const popovers = document.querySelectorAll('.components-dropdown-menu__popover .components-popover__content');
+            
+            dropdowns.forEach((dropdown, index) => {
+                if (popovers[index]) {
+                    const width = dropdown.offsetWidth;
+                    popovers[index].style.minWidth = `${width}px`;
+                    popovers[index].style.width = `${width}px`;
+                }
+            });
+        };
+
+        // Set initial width and also on window resize
+        const timer = setTimeout(setPopoverWidth, 100);
+        window.addEventListener('resize', setPopoverWidth);
+        
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', setPopoverWidth);
+        };
+    }, []);
+
+    // Custom dropdown component with width matching
+    const CustomDropdown = ({ label, text, options, onChange, disabled, helpText }) => {
+        return (
+            <div className="atm-dropdown-field">
+                <label className="atm-dropdown-label">{label}</label>
+                <DropdownMenu
+                    className="atm-custom-dropdown"
+                    icon={chevronDown}
+                    text={text}
+                    controls={options.map(option => ({
+                        title: option.label,
+                        onClick: () => {
+                            onChange(option);
+                            // Trigger width recalculation after selection
+                            setTimeout(() => {
+                                const dropdowns = document.querySelectorAll('.atm-custom-dropdown .components-dropdown-menu__toggle');
+                                const popovers = document.querySelectorAll('.components-dropdown-menu__popover .components-popover__content');
+                                
+                                dropdowns.forEach((dropdown, index) => {
+                                    if (popovers[index]) {
+                                        const width = dropdown.offsetWidth;
+                                        popovers[index].style.minWidth = `${width}px`;
+                                        popovers[index].style.width = `${width}px`;
+                                    }
+                                });
+                            }, 50);
+                        }
+                    }))}
+                    disabled={disabled}
+                />
+                {helpText && <p className="atm-dropdown-help">{helpText}</p>}
+            </div>
+        );
+    };
 
     // Dropdown options
     const providerOptions = [
@@ -95,23 +160,16 @@ function ImageGenerator({ setActiveView }) {
             </div>
 
             <div className="atm-form-container">
-                {/* Custom Dropdown for Image Provider */}
-                <div className="atm-dropdown-field">
-                    <label className="atm-dropdown-label">Image Provider</label>
-                    <DropdownMenu
-                        className="atm-custom-dropdown"
-                        icon={chevronDown}
-                        text={providerLabel || `Use Default (${defaultProvider})`}
-                        controls={providerOptions.map(option => ({
-                            title: option.label,
-                            onClick: () => {
-                                setProvider(option.value);
-                                setProviderLabel(option.label);
-                            }
-                        }))}
-                        disabled={isLoading}
-                    />
-                </div>
+                <CustomDropdown
+                    label="Image Provider"
+                    text={providerLabel || `Use Default (${defaultProvider})`}
+                    options={providerOptions}
+                    onChange={(option) => {
+                        setProvider(option.value);
+                        setProviderLabel(option.label);
+                    }}
+                    disabled={isLoading}
+                />
 
                 <TextareaControl
                     label="Image Prompt"
@@ -124,44 +182,28 @@ function ImageGenerator({ setActiveView }) {
                 />
 
                 <div className="atm-grid-2">
-                    {/* Custom Dropdown for Image Size */}
-                    <div className="atm-dropdown-field">
-                        <label className="atm-dropdown-label">Image Size (Override)</label>
-                        <DropdownMenu
-                            className="atm-custom-dropdown"
-                            icon={chevronDown}
-                            text={imageSizeLabel}
-                            controls={sizeOptions.map(option => ({
-                                title: option.label,
-                                onClick: () => {
-                                    setImageSize(option.value);
-                                    setImageSizeLabel(option.label);
-                                }
-                            }))}
-                            disabled={isLoading}
-                        />
-                    </div>
+                    <CustomDropdown
+                        label="Image Size (Override)"
+                        text={imageSizeLabel}
+                        options={sizeOptions}
+                        onChange={(option) => {
+                            setImageSize(option.value);
+                            setImageSizeLabel(option.label);
+                        }}
+                        disabled={isLoading}
+                    />
 
-                    {/* Custom Dropdown for Quality */}
-                    <div className="atm-dropdown-field">
-                        <label className="atm-dropdown-label">Quality (Override)</label>
-                        <DropdownMenu
-                            className="atm-custom-dropdown"
-                            icon={chevronDown}
-                            text={imageQualityLabel}
-                            controls={qualityOptions.map(option => ({
-                                title: option.label,
-                                onClick: () => {
-                                    setImageQuality(option.value);
-                                    setImageQualityLabel(option.label);
-                                }
-                            }))}
-                            disabled={isLoading}
-                        />
-                        {currentProvider !== 'openai' && (
-                            <p className="atm-dropdown-help">Note: Quality setting is only for OpenAI/DALL-E 3.</p>
-                        )}
-                    </div>
+                    <CustomDropdown
+                        label="Quality (Override)"
+                        text={imageQualityLabel}
+                        options={qualityOptions}
+                        onChange={(option) => {
+                            setImageQuality(option.value);
+                            setImageQualityLabel(option.label);
+                        }}
+                        disabled={isLoading}
+                        helpText={currentProvider !== 'openai' ? 'Note: Quality setting is only for OpenAI/DALL-E 3.' : ''}
+                    />
                 </div>
 
                 <Button isPrimary onClick={handleGenerate} disabled={isLoading}>
