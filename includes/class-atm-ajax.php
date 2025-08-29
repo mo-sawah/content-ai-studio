@@ -7,30 +7,35 @@ if (!defined('ABSPATH')) {
 class ATM_Ajax {
 
     public function transcribe_audio() {
-        if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
-        }
-
-        check_ajax_referer('atm_nonce', 'nonce');
-
-        try {
-            if (!isset($_FILES['audio_chunk'])) {
-                throw new Exception('No audio file was received.');
-            }
-
-            $file = $_FILES['audio_chunk'];
-
-            if ($file['error'] !== UPLOAD_ERR_OK) {
-                throw new Exception('File upload error: ' . $file['error']);
-            }
-
-            $transcript = ATM_API::transcribe_audio_with_whisper($file['tmp_name']);
-            wp_send_json_success(['transcript' => $transcript]);
-
-        } catch (Exception $e) {
-            wp_send_json_error($e->getMessage());
-        }
+    if (!ATM_Licensing::is_license_active()) {
+        wp_send_json_error('Please activate your license key to use this feature.');
     }
+
+    check_ajax_referer('atm_nonce', 'nonce');
+
+    try {
+        if (!isset($_FILES['audio_file'])) {
+            throw new Exception('No audio file was received.');
+        }
+
+        $file = $_FILES['audio_file'];
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception('File upload error: ' . $file['error']);
+        }
+        
+        // Get prompt from POST data
+        $prompt = isset($_POST['prompt']) ? sanitize_textarea_field($_POST['prompt']) : '';
+        // Language line has been removed
+
+        // Pass the data to the API method
+        $transcript = ATM_API::transcribe_audio_with_whisper($file['tmp_name'], $prompt); // <-- Language parameter removed from call
+        wp_send_json_success(['transcript' => $transcript]);
+
+    } catch (Exception $e) {
+        wp_send_json_error($e->getMessage());
+    }
+}
     
     public function upload_podcast_image() {
         check_ajax_referer('atm_nonce', 'nonce');
