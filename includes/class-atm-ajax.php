@@ -8,33 +8,36 @@ class ATM_Ajax {
 
     
     public function translate_editor_content() {
-    if (!ATM_Licensing::is_license_active()) {
-        wp_send_json_error('Please activate your license key to use this feature.');
-    }
-
-    check_ajax_referer('atm_nonce', 'nonce');
-
-    try {
-        if (empty($_POST['title']) || empty($_POST['content']) || empty($_POST['target_language'])) {
-            throw new Exception('Title, content, and target language are required.');
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
         }
 
-        $title = sanitize_text_field(stripslashes($_POST['title']));
-        $content = wp_kses_post(stripslashes($_POST['content']));
-        $target_language = sanitize_text_field($_POST['target_language']);
+        check_ajax_referer('atm_nonce', 'nonce');
+        
+        // --- ADD THIS LINE ---
+        @ini_set('max_execution_time', 300); // Allow up to 5 minutes for translation
 
-        // Use the new, more powerful single API call
-        $translation_result = ATM_API::translate_document($title, $content, $target_language);
+        try {
+            if (empty($_POST['title']) || empty($_POST['content']) || empty($_POST['target_language'])) {
+                throw new Exception('Title, content, and target language are required.');
+            }
 
-        wp_send_json_success([
-            'translated_title' => $translation_result['translated_title'],
-            'translated_content' => $translation_result['translated_content']
-        ]);
+            $title = sanitize_text_field(stripslashes($_POST['title']));
+            // Use a more permissive sanitization for content to preserve HTML/Markdown
+            $content = wp_kses_post(stripslashes($_POST['content']));
+            $target_language = sanitize_text_field($_POST['target_language']);
 
-    } catch (Exception $e) {
-        wp_send_json_error($e->getMessage());
+            $translation_result = ATM_API::translate_document($title, $content, $target_language);
+
+            wp_send_json_success([
+                'translated_title' => $translation_result['translated_title'],
+                'translated_content' => $translation_result['translated_content']
+            ]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
     }
-}
     
     public function transcribe_audio() {
     if (!ATM_Licensing::is_license_active()) {

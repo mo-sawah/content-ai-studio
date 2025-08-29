@@ -356,34 +356,33 @@ class ATM_API {
     );
 }
 
-public static function translate_document($title, $content, $target_language) {
-    $system_prompt = "You are an expert multilingual translator. Your task is to translate the user-provided JSON object containing an article's title and content.
-- Automatically detect the source language of the text.
-- Translate both the 'title' and 'content' fields accurately into " . $target_language . ".
-- Maintain the original Markdown formatting in the content.
-- Your entire response MUST be a single, valid JSON object with two keys: `translated_title` and `translated_content`.
-- Do not add any extra text, commentary, or code fences outside of the final JSON object.";
+    public static function translate_document($title, $content, $target_language) {
+        $system_prompt = "You are an expert multilingual translator. Your task is to translate a JSON object containing an article's 'title' and 'content'.
+    - The user's input will be a JSON string.
+    - You must automatically detect the source language.
+    - Translate the 'title' and 'content' values into " . $target_language . ".
+    - Preserve all Markdown formatting (like headings, lists, bold text) in the translated content.
+    - Your response MUST be ONLY the translated JSON object, with no other text, comments, or markdown code fences. The JSON object must contain two keys: `translated_title` and `translated_content`.";
 
-    $user_content = json_encode(['title' => $title, 'content' => $content]);
-    
-    $model = get_option('atm_translation_model', 'anthropic/claude-3-haiku');
+        $user_content = json_encode(['title' => $title, 'content' => $content]);
+        
+        $model = get_option('atm_translation_model', 'anthropic/claude-3-haiku');
 
-    // Use json_mode to ensure the AI returns valid JSON
-    $raw_response = self::enhance_content_with_openrouter(
-        ['content' => $user_content],
-        $system_prompt,
-        $model,
-        true // This enables JSON mode
-    );
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $user_content],
+            $system_prompt,
+            $model,
+            true // Enable JSON mode
+        );
 
-    $result = json_decode($raw_response, true);
-    if (json_last_error() !== JSON_ERROR_NONE || !isset($result['translated_title']) || !isset($result['translated_content'])) {
-        error_log('Content AI Studio - Invalid JSON from translation API: ' . $raw_response);
-        throw new Exception('The AI returned an invalid response structure during translation.');
+        $result = json_decode($raw_response, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['translated_title']) || !isset($result['translated_content'])) {
+            error_log('Content AI Studio - Invalid JSON from translation API: ' . $raw_response);
+            throw new Exception('The AI returned an invalid response structure during translation. Try using a "High Quality" model from the settings for better reliability.');
+        }
+        
+        return $result;
     }
-    
-    return $result;
-}
 
     /**
  * Transcribes an audio file using the OpenAI Whisper API.
