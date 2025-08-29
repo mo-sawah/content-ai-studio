@@ -14,7 +14,6 @@ function VideoSearch({ setActiveView }) {
     const [statusMessage, setStatusMessage] = useState('Enter a search term to find YouTube videos.');
     const [lastQuery, setLastQuery] = useState('');
     
-    // State for filters and modal
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [filters, setFilters] = useState({
         order: 'relevance',
@@ -26,13 +25,12 @@ function VideoSearch({ setActiveView }) {
 
     const handleSearch = async (query) => {
         if (!query) return;
-        setLastQuery(query); // Store the query for re-searching with new filters
+        setLastQuery(query);
         setIsLoading(true);
         setSearchResults([]);
         setStatusMessage(`Searching for "${query}"...`);
 
         try {
-            // Pass the current filters state to the AJAX call
             const response = await callAjax('search_youtube', { query, filters });
             if (response.success) {
                 setSearchResults(response.data);
@@ -47,12 +45,18 @@ function VideoSearch({ setActiveView }) {
         }
     };
     
-    // Updates a single filter value in the state
+    // --- UPDATED: This function now fixes the date filter logic ---
     const handleFilterChange = (key, value) => {
-        setFilters(prevFilters => ({ ...prevFilters, [key]: value }));
+        setFilters(prevFilters => {
+            const newFilters = { ...prevFilters, [key]: value };
+            // If a date filter is set, automatically switch to sort by date for accurate results.
+            if (key === 'publishedAfter' && value !== '') {
+                newFilters.order = 'date';
+            }
+            return newFilters;
+        });
     };
 
-    // Closes the modal and re-runs the last search with the new filters
     const applyFiltersAndSearch = () => {
         setIsModalOpen(false);
         if (lastQuery) {
@@ -60,12 +64,15 @@ function VideoSearch({ setActiveView }) {
         }
     };
 
+    // --- UPDATED: This function now creates a wider embed block ---
     const handleEmbed = (url) => {
         const isBlockEditor = !!wp.data.select('core/block-editor');
         if (isBlockEditor) {
             const embedBlock = createBlock('core/embed', {
                 url: url,
                 providerNameSlug: 'youtube',
+                align: 'wide', // This makes the block wider in most themes
+                className: 'atm-youtube-embed', // For any custom CSS you might want
             });
             insertBlocks(embedBlock);
         } else {
