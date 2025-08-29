@@ -41,6 +41,7 @@ function ImageGenerator({ setActiveView }) {
     ];
 
     const handleGenerate = async () => {
+        // Check if the prompt is empty
         if (!prompt.trim()) {
             alert('Please enter a prompt for the image.');
             return;
@@ -53,7 +54,7 @@ function ImageGenerator({ setActiveView }) {
         try {
             const response = await callAjax('generate_featured_image', {
                 post_id: postId,
-                prompt: prompt,
+                prompt: prompt, // Send the user's direct prompt
                 size: imageSize,
                 quality: imageQuality,
                 provider: currentProvider,
