@@ -99,6 +99,7 @@ function checkAndGenerateImage(button, postId) {
         setTimeout(() => resetButton(button, 'Generate Article'), 2000);
         isGenerating = false;
     }
+}
     // Handle the new "Generate Script" button
 $('#atm-generate-script-btn').on('click', function() {
     const button = $(this);

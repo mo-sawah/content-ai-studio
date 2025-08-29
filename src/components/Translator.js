@@ -1,4 +1,4 @@
-import { useState } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element'; // <-- Ensure useEffect is included here
 import { useDispatch } from '@wordpress/data';
 import { Button, TextareaControl, Spinner } from '@wordpress/components';
 import { createBlock } from '@wordpress/blocks';
@@ -16,14 +16,13 @@ function Translator({ setActiveView }) {
     const [statusMessage, setStatusMessage] = useState('');
     
     const { insertBlocks } = useDispatch('core/block-editor');
-    
-    // --- NEW: More specific status for recording ---
+
     const [recordStatus, setRecordStatus] = useState('');
 
     const { isRecording, isTranscribing, startRecording, stopRecording } = useSpeechToText({
         onTranscriptionComplete: (transcript) => {
             setSourceText(current => current + (current ? ' ' : '') + transcript);
-            setRecordStatus('✅ Transcription complete.');
+            setRecordStatus('✅ Transcription complete. Ready to translate.');
             setTimeout(() => setRecordStatus(''), 3000);
         },
         onTranscriptionError: (error) => {
@@ -31,7 +30,6 @@ function Translator({ setActiveView }) {
         }
     });
 
-    // --- NEW: Expanded language list ---
     const languageOptions = [
         { label: 'Spanish', value: 'Spanish' },
         { label: 'French', value: 'French' },
@@ -85,7 +83,6 @@ function Translator({ setActiveView }) {
         setStatusMessage('Text inserted into editor!');
     };
     
-    // --- NEW: Update recording status message based on state ---
     useEffect(() => {
         if (isRecording) {
             setRecordStatus('Recording... Click to stop.');
@@ -113,7 +110,6 @@ function Translator({ setActiveView }) {
                     disabled={isLoading || isRecording || isTranscribing}
                 />
                 
-                {/* --- NEW: Record button styled like SpeechToText but smaller --- */}
                 <div className="atm-recording-section" style={{gap: '0.5rem', marginBottom: '1rem'}}>
                     <div className={`atm-record-button-wrapper is-small ${isRecording ? 'is-recording' : ''}`}>
                          <div className="atm-pulse-ring atm-pulse-ring-1"></div>
