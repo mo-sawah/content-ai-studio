@@ -13,6 +13,7 @@ function Hub({ setActiveView }) {
                 <Button isPrimary onClick={() => setActiveView('graphs')}>Generate Graphs</Button>
                 <Button isPrimary disabled>Generate Videos</Button>
                 <Button isPrimary onClick={() => setActiveView('speech_to_text')}>Speech to Text</Button>
+                <Button isPrimary onClick={() => setActiveView('translate')}>Translate Text</Button>
             </div>
             <p className="atm-hub-footer">Your Day to Day AI helper, Content AI Studio.</p>
         </div>

@@ -6,6 +6,7 @@ import ArticleGenerator from './ArticleGenerator';
 import ImageGenerator from './ImageGenerator'; // Import the new component
 import PodcastGenerator from './PodcastGenerator'; 
 import SpeechToText from './SpeechToText';
+import Translator from './Translator'; // <-- Import the new component
 
 function App() {
     const [activeView, setActiveView] = useState(
@@ -30,7 +31,8 @@ function App() {
             case 'speech_to_text':
                 return <SpeechToText setActiveView={setActiveView} />;
             
-                // Add other cases for podcast, etc. later
+            case 'translate':
+                return <Translator setActiveView={setActiveView} />;
 
             default: // The 'hub' view
                 return <Hub setActiveView={setActiveView} />;

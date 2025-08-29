@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    
     public function transcribe_audio() {
     if (!ATM_Licensing::is_license_active()) {
         wp_send_json_error('Please activate your license key to use this feature.');
@@ -34,6 +35,30 @@ class ATM_Ajax {
         wp_send_json_error($e->getMessage());
     }
 }
+
+public function translate_text() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+
+        check_ajax_referer('atm_nonce', 'nonce');
+
+        try {
+            if (empty($_POST['source_text']) || empty($_POST['target_language'])) {
+                throw new Exception('Source text and target language are required.');
+            }
+
+            $source_text = sanitize_textarea_field(stripslashes($_POST['source_text']));
+            $target_language = sanitize_text_field($_POST['target_language']);
+
+            $translated_text = ATM_API::translate_text($source_text, $target_language);
+
+            wp_send_json_success(['translated_text' => $translated_text]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
     
     public function upload_podcast_image() {
         check_ajax_referer('atm_nonce', 'nonce');
@@ -59,6 +84,7 @@ class ATM_Ajax {
         add_action('wp_ajax_generate_podcast', array($this, 'generate_podcast'));
         add_action('wp_ajax_upload_podcast_image', array($this, 'upload_podcast_image'));
         add_action('wp_ajax_transcribe_audio', array($this, 'transcribe_audio'));
+        add_action('wp_ajax_translate_text', array($this, 'translate_text'));
         
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));

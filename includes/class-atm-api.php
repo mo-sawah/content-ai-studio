@@ -343,6 +343,19 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
+    public static function translate_text($text, $target_language) {
+        $system_prompt = "You are an expert translator. Translate the following text into " . $target_language . ". Provide ONLY the translated text, without any additional comments, introductions, or quotation marks.";
+        
+        // We can use a fast and efficient model for this task.
+        $model = 'anthropic/claude-3-haiku';
+        
+        return self::enhance_content_with_openrouter(
+            ['content' => $text],
+            $system_prompt,
+            $model
+        );
+    }
+
     /**
  * Transcribes an audio file using the OpenAI Whisper API.
  * @param string $audio_file_path The temporary path to the uploaded audio file.
