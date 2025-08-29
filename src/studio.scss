@@ -155,20 +155,24 @@
             -webkit-box-shadow: none !important;
             outline: none !important;
             
-            // Fix text alignment and ensure it takes available space
-            .components-dropdown-menu__indicator {
-                order: 2 !important;
-                margin-left: auto !important;
-                flex-shrink: 0 !important;
-            }
-            
-            // Style the text content
-            span:not(.components-dropdown-menu__indicator) {
+            // Fix the text content positioning
+            > span:first-child {
                 flex: 1 !important;
                 text-align: left !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
                 white-space: nowrap !important;
+                margin-right: 8px !important;
+            }
+            
+            // Position the dropdown arrow on the right
+            .components-dropdown-menu__indicator,
+            .dashicon,
+            svg {
+                color: #a0aec0 !important;
+                flex-shrink: 0 !important;
+                margin-left: auto !important;
+                order: 2 !important;
             }
             
             &:hover:not(:disabled) {
@@ -185,14 +189,6 @@
             &:disabled {
                 opacity: 0.6;
                 cursor: not-allowed;
-            }
-            
-            // Style the dropdown arrow
-            .dashicon,
-            svg {
-                color: #a0aec0 !important;
-                margin-left: auto !important;
-                flex-shrink: 0 !important;
             }
         }
     }
