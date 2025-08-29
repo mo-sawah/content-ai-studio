@@ -1,7 +1,8 @@
 // src/components/NewsForm.js
-import { useState } from '@wordpress/element';
-import { useDispatch, useSelect } from '@wordpress/data'; // --- NEW: Import useSelect ---
-import { Button, TextControl, CheckboxControl, Spinner, SelectControl } from '@wordpress/components';
+import { useState, useRef } from '@wordpress/element';
+import { useDispatch, useSelect } from '@wordpress/data';
+import { Button, TextControl, CheckboxControl, Spinner, DropdownMenu } from '@wordpress/components';
+import { chevronDown } from '@wordpress/icons';
 
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
 const updateEditorContent = (title, markdownContent) => {
@@ -34,13 +35,50 @@ function NewsForm() {
     const [statusMessage, setStatusMessage] = useState('');
     const [topic, setTopic] = useState('');
     const [newsSource, setNewsSource] = useState('newsapi');
+    const [newsSourceLabel, setNewsSourceLabel] = useState('NewsAPI.org');
     const [forceFresh, setForceFresh] = useState(false);
     const [generateImage, setGenerateImage] = useState(false);
 
-    // --- NEW: Get the savePost function and check if the post is saving ---
     const { savePost } = useDispatch('core/editor');
     const isSaving = useSelect(select => select('core/editor').isSavingPost());
-    // --- END NEW ---
+
+    // Custom dropdown component
+    const CustomDropdown = ({ label, text, options, onChange, disabled, helpText }) => {
+        const dropdownRef = useRef(null);
+
+        return (
+            <div className="atm-dropdown-field" ref={dropdownRef}>
+                <label className="atm-dropdown-label">{label}</label>
+                <DropdownMenu
+                    className="atm-custom-dropdown"
+                    icon={chevronDown}
+                    text={text}
+                    controls={options.map(option => ({
+                        title: option.label,
+                        onClick: () => {
+                            onChange(option);
+                        }
+                    }))}
+                    disabled={disabled}
+                    popoverProps={{
+                        className: 'atm-popover',
+                        style: {
+                            '--atm-dropdown-width': dropdownRef.current?.offsetWidth
+                                ? dropdownRef.current.offsetWidth + 'px'
+                                : 'auto'
+                        }
+                    }}
+                />
+                {helpText && <p className="atm-dropdown-help">{helpText}</p>}
+            </div>
+        );
+    };
+
+    const newsSourceOptions = [
+        { label: 'NewsAPI.org', value: 'newsapi' },
+        { label: 'GNews.io', value: 'gnews' },
+        { label: 'The Guardian', value: 'guardian' },
+    ];
 
     const handleGenerate = async () => {
         if (!topic) {
@@ -65,10 +103,8 @@ function NewsForm() {
             setStatusMessage('✅ News article inserted!');
 
             if (generateImage) {
-                // --- NEW: Save the post before generating the image ---
                 setStatusMessage('Saving post...');
                 await savePost();
-                // --- END NEW ---
 
                 setStatusMessage('Generating featured image...');
                 const imageResponse = await callAjax('generate_featured_image', { post_id: postId, prompt: '' });
@@ -98,15 +134,14 @@ function NewsForm() {
                 placeholder="e.g., recent AI developments"
                 disabled={isLoading || isSaving}
             />
-            <SelectControl
+            <CustomDropdown
                 label="News Source"
-                value={newsSource}
-                options={[
-                    { label: 'NewsAPI.org', value: 'newsapi' },
-                    { label: 'GNews.io', value: 'gnews' },
-                    { label: 'The Guardian', value: 'guardian' },
-                ]}
-                onChange={setNewsSource}
+                text={newsSourceLabel}
+                options={newsSourceOptions}
+                onChange={(option) => {
+                    setNewsSource(option.value);
+                    setNewsSourceLabel(option.label);
+                }}
                 disabled={isLoading || isSaving}
             />
             <CheckboxControl

@@ -1,11 +1,44 @@
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { Button, TextareaControl, Spinner, SelectControl } from '@wordpress/components';
+import { Button, TextareaControl, Spinner, DropdownMenu } from '@wordpress/components';
+import { chevronDown } from '@wordpress/icons';
 
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
 const getEditorContent = () => wp.data.select('core/editor').getEditedPostContent();
 
-// --- NEW: Player View Component ---
+// Custom dropdown component (shared between components)
+const CustomDropdown = ({ label, text, options, onChange, disabled, helpText }) => {
+    const dropdownRef = useRef(null);
+
+    return (
+        <div className="atm-dropdown-field" ref={dropdownRef}>
+            <label className="atm-dropdown-label">{label}</label>
+            <DropdownMenu
+                className="atm-custom-dropdown"
+                icon={chevronDown}
+                text={text}
+                controls={options.map(option => ({
+                    title: option.label,
+                    onClick: () => {
+                        onChange(option);
+                    }
+                }))}
+                disabled={disabled}
+                popoverProps={{
+                    className: 'atm-popover',
+                    style: {
+                        '--atm-dropdown-width': dropdownRef.current?.offsetWidth
+                            ? dropdownRef.current.offsetWidth + 'px'
+                            : 'auto'
+                    }
+                }}
+            />
+            {helpText && <p className="atm-dropdown-help">{helpText}</p>}
+        </div>
+    );
+};
+
+// Player View Component
 function PlayerView({ podcastUrl, initialScript, onRegenerate, postId }) {
     const [isRegenerating, setIsRegenerating] = useState(false);
 
@@ -42,45 +75,91 @@ function PlayerView({ podcastUrl, initialScript, onRegenerate, postId }) {
 function GeneratorView({ handleGenerateScript, handleGenerateAudio, statusMessage, isLoading }) {
     const [scriptContent, setScriptContent] = useState('');
     const [selectedVoice, setSelectedVoice] = useState('');
+    const [selectedVoiceLabel, setSelectedVoiceLabel] = useState('');
     const [selectedLanguage, setSelectedLanguage] = useState('English');
+    const [selectedLanguageLabel, setSelectedLanguageLabel] = useState('English');
     const [audioProvider, setAudioProvider] = useState(atm_studio_data.audio_provider || 'openai');
+    const [audioProviderLabel, setAudioProviderLabel] = useState('OpenAI TTS');
 
     const openaiVoices = Object.entries(atm_studio_data.tts_voices).map(([value, label]) => ({ label, value }));
     const elevenlabsVoices = Object.entries(atm_studio_data.elevenlabs_voices).map(([value, label]) => ({ label, value }));
     const voiceOptions = audioProvider === 'elevenlabs' ? elevenlabsVoices : openaiVoices;
 
+    const languageOptions = [
+        { label: 'English', value: 'English' },
+        { label: 'Spanish', value: 'Spanish' },
+        { label: 'French', value: 'French' },
+        { label: 'German', value: 'German' }
+    ];
+
+    const providerOptions = [
+        { label: 'OpenAI TTS', value: 'openai' },
+        { label: 'ElevenLabs', value: 'elevenlabs' }
+    ];
+
     useEffect(() => {
         if (voiceOptions.length > 0 && !selectedVoice) {
             setSelectedVoice(voiceOptions[0].value);
+            setSelectedVoiceLabel(voiceOptions[0].label);
         }
     }, [audioProvider, voiceOptions.length]);
 
+    // Update provider label when audioProvider changes
+    useEffect(() => {
+        const provider = providerOptions.find(option => option.value === audioProvider);
+        if (provider) {
+            setAudioProviderLabel(provider.label);
+        }
+    }, [audioProvider]);
+
     return (
         <div className="atm-form-container">
-            <SelectControl
-                label="Script Language" value={selectedLanguage} onChange={setSelectedLanguage}
-                options={[ { label: 'English', value: 'English' }, { label: 'Spanish', value: 'Spanish' }, { label: 'French', value: 'French' }, { label: 'German', value: 'German' } ]}
+            <CustomDropdown
+                label="Script Language"
+                text={selectedLanguageLabel}
+                options={languageOptions}
+                onChange={(option) => {
+                    setSelectedLanguage(option.value);
+                    setSelectedLanguageLabel(option.label);
+                }}
                 disabled={isLoading}
             />
             <Button isSecondary onClick={() => handleGenerateScript(selectedLanguage, setScriptContent)} disabled={isLoading}>
                 {isLoading && statusMessage.includes('script') ? <Spinner /> : '1. Generate Script from Post Content'}
             </Button>
             <TextareaControl
-                label="Podcast Script" help="The generated script will appear here. You can edit it before generating the audio."
-                value={scriptContent} onChange={setScriptContent}
-                rows="15" disabled={isLoading}
+                label="Podcast Script"
+                help="The generated script will appear here. You can edit it before generating the audio."
+                value={scriptContent}
+                onChange={setScriptContent}
+                rows="15"
+                disabled={isLoading}
             />
             <div className="atm-grid-2">
-                <SelectControl
-                    label="Audio Provider" value={audioProvider} onChange={setAudioProvider}
-                    options={[ { label: 'OpenAI TTS', value: 'openai' }, { label: 'ElevenLabs', value: 'elevenlabs' } ]}
+                <CustomDropdown
+                    label="Audio Provider"
+                    text={audioProviderLabel}
+                    options={providerOptions}
+                    onChange={(option) => {
+                        setAudioProvider(option.value);
+                        setAudioProviderLabel(option.label);
+                        // Reset voice selection when provider changes
+                        setSelectedVoice('');
+                        setSelectedVoiceLabel('');
+                    }}
                     disabled={isLoading || elevenlabsVoices.length === 0}
-                    help={elevenlabsVoices.length === 0 ? 'Enter ElevenLabs API key in settings to enable.' : ''}
+                    helpText={elevenlabsVoices.length === 0 ? 'Enter ElevenLabs API key in settings to enable.' : ''}
                 />
-                <SelectControl
-                    label="AI Voice" value={selectedVoice} onChange={setSelectedVoice}
-                    options={voiceOptions} disabled={isLoading || !voiceOptions.length}
-                    help={!voiceOptions.length ? 'No voices available for this provider.' : ''}
+                <CustomDropdown
+                    label="AI Voice"
+                    text={selectedVoiceLabel || (voiceOptions[0] ? voiceOptions[0].label : 'No voices available')}
+                    options={voiceOptions}
+                    onChange={(option) => {
+                        setSelectedVoice(option.value);
+                        setSelectedVoiceLabel(option.label);
+                    }}
+                    disabled={isLoading || !voiceOptions.length}
+                    helpText={!voiceOptions.length ? 'No voices available for this provider.' : ''}
                 />
             </div>
             <Button isPrimary onClick={() => handleGenerateAudio(scriptContent, selectedVoice, audioProvider)} disabled={isLoading || !scriptContent.trim() || !selectedVoice}>
@@ -97,16 +176,6 @@ function PodcastGenerator({ setActiveView }) {
     const postId = useSelect(select => select('core/editor').getCurrentPostId(), []);
     const { existing_podcast_url, existing_podcast_script } = atm_studio_data;
 
-    const handleGenerateScript = async (language, setScriptContent) => {
-        // ... (same as before)
-    };
-
-    const handleGenerateAudio = async (script, voice, provider) => {
-        // ... (same as before)
-    };
-
-    // Refactor handleGenerateScript and handleGenerateAudio to be outside the child components
-    // so they can be passed down and also used for regeneration.
     const memoizedHandleGenerateScript = async (language, setScriptContent) => {
         const editorContent = getEditorContent();
         if (!editorContent.trim()) {

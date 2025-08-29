@@ -1,7 +1,8 @@
 // src/components/CreativeForm.js
-import { useState } from '@wordpress/element';
-import { useDispatch, useSelect } from '@wordpress/data'; // --- NEW: Import useSelect ---
-import { Button, SelectControl, TextControl, TextareaControl, CheckboxControl, Spinner } from '@wordpress/components';
+import { useState, useRef } from '@wordpress/element';
+import { useDispatch, useSelect } from '@wordpress/data';
+import { Button, TextControl, TextareaControl, CheckboxControl, Spinner, DropdownMenu } from '@wordpress/components';
+import { chevronDown } from '@wordpress/icons';
 
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
 const updateEditorContent = (title, markdownContent) => {
@@ -35,18 +36,71 @@ function CreativeForm() {
     const [keyword, setKeyword] = useState('');
     const [title, setTitle] = useState('');
     const [writingStyle, setWritingStyle] = useState('default_seo');
+    const [writingStyleLabel, setWritingStyleLabel] = useState('');
     const [articleModel, setArticleModel] = useState('');
+    const [articleModelLabel, setArticleModelLabel] = useState('Use Default Model');
     const [wordCount, setWordCount] = useState('');
+    const [wordCountLabel, setWordCountLabel] = useState('Default');
     const [customPrompt, setCustomPrompt] = useState('');
     const [generateImage, setGenerateImage] = useState(false);
 
-    // --- NEW: Get the savePost function and check if the post is saving ---
     const { savePost } = useDispatch('core/editor');
     const isSaving = useSelect(select => select('core/editor').isSavingPost());
-    // --- END NEW ---
 
-    const modelOptions = [ { label: 'Use Default Model', value: '' }, ...Object.entries(atm_studio_data.article_models).map(([value, label]) => ({ label, value })) ];
+    // Custom dropdown component
+    const CustomDropdown = ({ label, text, options, onChange, disabled, helpText }) => {
+        const dropdownRef = useRef(null);
+
+        return (
+            <div className="atm-dropdown-field" ref={dropdownRef}>
+                <label className="atm-dropdown-label">{label}</label>
+                <DropdownMenu
+                    className="atm-custom-dropdown"
+                    icon={chevronDown}
+                    text={text}
+                    controls={options.map(option => ({
+                        title: option.label,
+                        onClick: () => {
+                            onChange(option);
+                        }
+                    }))}
+                    disabled={disabled}
+                    popoverProps={{
+                        className: 'atm-popover',
+                        style: {
+                            '--atm-dropdown-width': dropdownRef.current?.offsetWidth
+                                ? dropdownRef.current.offsetWidth + 'px'
+                                : 'auto'
+                        }
+                    }}
+                />
+                {helpText && <p className="atm-dropdown-help">{helpText}</p>}
+            </div>
+        );
+    };
+
+    const modelOptions = [
+        { label: 'Use Default Model', value: '' },
+        ...Object.entries(atm_studio_data.article_models).map(([value, label]) => ({ label, value }))
+    ];
+
     const styleOptions = Object.entries(atm_studio_data.writing_styles).map(([value, { label }]) => ({ label, value }));
+
+    const lengthOptions = [
+        { label: 'Default', value: '' },
+        { label: 'Short (~500 words)', value: '500' },
+        { label: 'Standard (~800 words)', value: '800' },
+        { label: 'Medium (~1200 words)', value: '1200' },
+        { label: 'Long (~2000 words)', value: '2000' }
+    ];
+
+    // Set initial writing style label
+    if (!writingStyleLabel && styleOptions.length > 0) {
+        const defaultStyle = styleOptions.find(option => option.value === writingStyle);
+        if (defaultStyle) {
+            setWritingStyleLabel(defaultStyle.label);
+        }
+    }
 
     const handleGenerate = async () => {
         setIsLoading(true);
@@ -75,13 +129,11 @@ function CreativeForm() {
             setStatusMessage('✅ Article content inserted!');
 
             if (generateImage) {
-                // --- NEW: Save the post before generating the image ---
                 setStatusMessage('Saving post...');
                 await savePost();
-                // --- END NEW ---
 
                 setStatusMessage('Generating featured image...');
-                const imageResponse = await callAjax('generate_featured_image', { post_id: postId, prompt: '' }); // Prompt is empty to trigger auto-generation
+                const imageResponse = await callAjax('generate_featured_image', { post_id: postId, prompt: '' });
                 if (!imageResponse.success) {
                     alert('Article was generated and saved, but the image failed: ' + imageResponse.data);
                 } else {
@@ -107,9 +159,36 @@ function CreativeForm() {
                 <TextControl label="or Article Title" value={title} onChange={setTitle} placeholder="e.g., 5 Ways AI is Revolutionizing Marketing" disabled={isLoading || isSaving} />
             </div>
             <div className="atm-grid-3">
-                <SelectControl label="Article Model" value={articleModel} options={modelOptions} onChange={setArticleModel} disabled={isLoading || isSaving} />
-                <SelectControl label="Writing Style" value={writingStyle} options={styleOptions} onChange={setWritingStyle} disabled={isLoading || isSaving} />
-                <SelectControl label="Article Length" value={wordCount} options={[ { label: 'Default', value: '' }, { label: 'Short (~500 words)', value: '500' }, { label: 'Standard (~800 words)', value: '800' }, { label: 'Medium (~1200 words)', value: '1200' }, { label: 'Long (~2000 words)', value: '2000' } ]} onChange={setWordCount} disabled={isLoading || isSaving} />
+                <CustomDropdown
+                    label="Article Model"
+                    text={articleModelLabel}
+                    options={modelOptions}
+                    onChange={(option) => {
+                        setArticleModel(option.value);
+                        setArticleModelLabel(option.label);
+                    }}
+                    disabled={isLoading || isSaving}
+                />
+                <CustomDropdown
+                    label="Writing Style"
+                    text={writingStyleLabel || (styleOptions[0] ? styleOptions[0].label : 'Loading...')}
+                    options={styleOptions}
+                    onChange={(option) => {
+                        setWritingStyle(option.value);
+                        setWritingStyleLabel(option.label);
+                    }}
+                    disabled={isLoading || isSaving}
+                />
+                <CustomDropdown
+                    label="Article Length"
+                    text={wordCountLabel}
+                    options={lengthOptions}
+                    onChange={(option) => {
+                        setWordCount(option.value);
+                        setWordCountLabel(option.label);
+                    }}
+                    disabled={isLoading || isSaving}
+                />
             </div>
             <TextareaControl label="Custom Prompt (Optional)" value={customPrompt} onChange={setCustomPrompt} placeholder="Leave empty to use the selected Writing Style. If you write a prompt here, it will be used instead." rows="6" disabled={isLoading || isSaving} />
             <CheckboxControl label="Also generate a featured image" checked={generateImage} onChange={setGenerateImage} disabled={isLoading || isSaving} />
