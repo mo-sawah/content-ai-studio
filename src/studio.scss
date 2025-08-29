@@ -309,3 +309,12 @@
         grid-template-columns: 1fr;
     }
 }
+
+// Force all dropdown popovers to use the CSS variable width
+body .components-popover.atm-popover {
+    .components-popover__content {
+        width: var(--atm-dropdown-width, 200px) !important;
+        min-width: var(--atm-dropdown-width, 200px) !important;
+        max-width: var(--atm-dropdown-width, 200px) !important;
+    }
+}
