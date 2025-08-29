@@ -7,6 +7,32 @@ if (!defined('ABSPATH')) {
 class ATM_Ajax {
 
     
+    public function get_youtube_suggestions() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $query = sanitize_text_field($_POST['query']);
+            $suggestions = ATM_API::get_youtube_autocomplete_suggestions($query);
+            wp_send_json_success($suggestions);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function search_youtube() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $query = sanitize_text_field($_POST['query']);
+            $results = ATM_API::search_youtube_videos($query);
+            wp_send_json_success($results);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+
     public function translate_editor_content() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key to use this feature.');
@@ -118,6 +144,8 @@ public function translate_text() {
         add_action('wp_ajax_transcribe_audio', array($this, 'transcribe_audio'));
         add_action('wp_ajax_translate_text', array($this, 'translate_text'));
         add_action('wp_ajax_translate_editor_content', array($this, 'translate_editor_content'));
+        add_action('wp_ajax_get_youtube_suggestions', array($this, 'get_youtube_suggestions'));
+        add_action('wp_ajax_search_youtube', array($this, 'search_youtube'));
 
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));

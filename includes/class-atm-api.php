@@ -343,18 +343,93 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
+    public static function get_youtube_autocomplete_suggestions($query) {
+        $transient_key = 'atm_yt_suggest_' . substr(md5($query), 0, 12);
+        if (false !== ($cached = get_transient($transient_key))) {
+            return $cached;
+        }
+
+        $url = 'http://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=' . urlencode($query);
+        $response = wp_remote_get($url);
+
+        if (is_wp_error($response) || 200 !== wp_remote_retrieve_response_code($response)) {
+            throw new Exception('Could not fetch autocomplete suggestions.');
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        // The response is a weird JSONP-like format: `["query", ["suggestion1", "suggestion2", ...]]`
+        $json = json_decode($body, true);
+        $suggestions = isset($json[1]) && is_array($json[1]) ? $json[1] : [];
+
+        set_transient($transient_key, $suggestions, HOUR_IN_SECONDS); // Cache for 1 hour
+        return $suggestions;
+    }
+
+    public static function search_youtube_videos($query) {
+        $api_key = get_option('atm_google_youtube_api_key');
+        if (empty($api_key)) {
+            throw new Exception('YouTube API key is not configured in settings.');
+        }
+        
+        $transient_key = 'atm_yt_search_' . substr(md5($query), 0, 12);
+        if (false !== ($cached = get_transient($transient_key))) {
+            return $cached;
+        }
+
+        $url = 'https://www.googleapis.com/youtube/v3/search?' . http_build_query([
+            'part' => 'snippet',
+            'q' => $query,
+            'maxResults' => 10,
+            'type' => 'video',
+            'key' => $api_key
+        ]);
+
+        $response = wp_remote_get($url);
+
+        if (is_wp_error($response)) {
+            throw new Exception('YouTube API call failed: ' . $response->get_error_message());
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if ($response_code !== 200) {
+            $error_message = isset($body['error']['message']) ? $body['error']['message'] : 'An unknown API error occurred.';
+            throw new Exception('YouTube API Error: ' . $error_message);
+        }
+        
+        $results = [];
+        if (!empty($body['items'])) {
+            foreach ($body['items'] as $item) {
+                $results[] = [
+                    'id' => $item['id']['videoId'],
+                    'title' => $item['snippet']['title'],
+                    'description' => $item['snippet']['description'],
+                    'thumbnail' => $item['snippet']['thumbnails']['medium']['url'],
+                    'channel' => $item['snippet']['channelTitle'],
+                    'date' => date('M j, Y', strtotime($item['snippet']['publishedAt'])),
+                    'url' => 'https://www.youtube.com/watch?v=' . $item['id']['videoId']
+                ];
+            }
+        }
+
+        set_transient($transient_key, $results, 3 * HOUR_IN_SECONDS); // Cache for 3 hours
+        return $results;
+    }
+
+
     public static function translate_text($text, $target_language) {
-    $system_prompt = "You are an expert multilingual translator. Your task is to automatically detect the source language of the text provided by the user and then translate it accurately into " . $target_language . ". Provide ONLY the translated text, with no extra commentary, introductions, or quotation marks.";
-    
-    // We can use a fast and efficient model for this task.
-    $model = get_option('atm_translation_model', 'anthropic/claude-3-haiku');
-    
-    return self::enhance_content_with_openrouter(
-        ['content' => $text],
-        $system_prompt,
-        $model
-    );
-}
+        $system_prompt = "You are an expert multilingual translator. Your task is to automatically detect the source language of the text provided by the user and then translate it accurately into " . $target_language . ". Provide ONLY the translated text, with no extra commentary, introductions, or quotation marks.";
+        
+        // We can use a fast and efficient model for this task.
+        $model = get_option('atm_translation_model', 'anthropic/claude-3-haiku');
+        
+        return self::enhance_content_with_openrouter(
+            ['content' => $text],
+            $system_prompt,
+            $model
+        );
+    }
 
     public static function translate_document($title, $content, $target_language) {
         $system_prompt = "You are an expert multilingual translator. Your task is to translate a JSON object containing an article's 'title' and 'content'.

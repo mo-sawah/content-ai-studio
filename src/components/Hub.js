@@ -10,10 +10,10 @@ function Hub({ setActiveView }) {
                 <Button isPrimary onClick={() => setActiveView('articles')}>Generate Articles</Button>
                 <Button isPrimary onClick={() => setActiveView('images')}>Generate Images</Button>
                 <Button isPrimary onClick={() => setActiveView('podcast')}>Generate Podcast</Button>
-                <Button isPrimary onClick={() => setActiveView('graphs')}>Generate Graphs</Button>
-                <Button isPrimary disabled>Generate Videos</Button>
+                <Button isPrimary onClick={() => setActiveView('video')}>Video Search</Button>
                 <Button isPrimary onClick={() => setActiveView('speech_to_text')}>Speech to Text</Button>
                 <Button isPrimary onClick={() => setActiveView('translate')}>Translate Text</Button>
+                <Button isPrimary onClick={() => setActiveView('graphs')}>Generate Graphs</Button>
             </div>
             <p className="atm-hub-footer">Your Day to Day AI helper, Content AI Studio.</p>
         </div>
