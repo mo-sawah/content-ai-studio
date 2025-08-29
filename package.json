@@ -5,7 +5,8 @@
   "scripts": {
     "build": "wp-scripts build src/index.js src/studio.js",
     "start": "wp-scripts start src/index.js src/studio.js",
-    "zip": "wp-scripts plugin-zip"
+    "zip": "wp-scripts plugin-zip",
+    "postversion": "node version-sync.js"
   },
   "devDependencies": {
     "@wordpress/scripts": "^27.9.0"

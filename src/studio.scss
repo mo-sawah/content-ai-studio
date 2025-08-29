@@ -821,9 +821,9 @@
 .atm-autocomplete-form {
     display: flex;
     gap: 0.5rem;
-    align-items: stretch; // This makes all direct children the same height
+    align-items: stretch; // This is the key fix for button height
 
-    // Target the wrapper for the TextControl to make it expand
+    // This is the key fix for the width
     .components-base-control {
         flex: 1;
         margin-bottom: 0;
@@ -831,10 +831,10 @@
 }
 
 .atm-autocomplete-container {
-    // Ensure the input field fills its container vertically
+    // Make the search input taller
     .components-text-control__input {
         min-height: 48px;
-        height: 100%;
+        height: 100%; // Make input fill its container
     }
 }
 
@@ -848,7 +848,7 @@
     align-items: center !important;
     justify-content: center !important;
     height: auto !important; // Let the parent's "stretch" handle the height
-    border-radius: 8px !important; // Keep your border-radius
+    border-radius: 8px !important;
 }
 
 // Combined styles for both buttons from your last request
@@ -984,9 +984,10 @@
     margin: 0;
     line-height: 1.5;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    -webkit-line-clamp: 2;
+    line-clamp: 2; // --- THIS IS THE FIX ---
 }
 
 .atm-video-meta {
@@ -1025,9 +1026,13 @@
 
 .atm-filter-modal .components-modal__header .components-button {
     color: #e2e8f0 !important;
-
 }
     
 .atm-video-search-container .components-button.is-primary {
     margin-bottom: calc(8px);
+}
+
+.atm-video-search-container .components-button.is-secondary {
+    box-shadow: unset;
+    outline: 0;
 }

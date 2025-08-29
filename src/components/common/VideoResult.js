@@ -1,6 +1,7 @@
 import { useState } from '@wordpress/element';
 import { Button } from '@wordpress/components';
-import { external, link, embed } from '@wordpress/icons';
+// --- THIS IS THE FIX: Replaced 'embed' with 'plus' ---
+import { external, link, plus } from '@wordpress/icons';
 
 function VideoResult({ video, onEmbed }) {
     const [copied, setCopied] = useState(false);
@@ -8,7 +9,6 @@ function VideoResult({ video, onEmbed }) {
     const copyToClipboard = () => {
         navigator.clipboard.writeText(video.url);
         setCopied(true);
-        // Reset the text after 2 seconds
         setTimeout(() => setCopied(false), 2000);
     };
 
@@ -28,7 +28,8 @@ function VideoResult({ video, onEmbed }) {
                     <Button icon={link} onClick={copyToClipboard}>
                         {copied ? 'Copied!' : 'Copy Link'}
                     </Button>
-                    <Button icon={embed} onClick={() => onEmbed(video.url)} className="is-embed">Embed</Button>
+                    {/* --- THIS IS THE FIX: Use the imported 'plus' icon --- */}
+                    <Button icon={plus} onClick={() => onEmbed(video.url)} className="is-embed">Embed</Button>
                 </div>
             </div>
         </div>
