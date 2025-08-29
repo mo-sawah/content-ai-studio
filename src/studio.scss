@@ -261,3 +261,128 @@
         box-shadow: none !important;
     }
 }
+
+/* --- Custom Dropdown Styles --- */
+// Add this to your existing studio.scss file, replacing all the SelectControl styling
+.atm-studio-container {
+    .atm-dropdown-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 1.25rem;
+        
+        .atm-dropdown-label {
+            color: #a0aec0;
+            font-weight: 500;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .atm-dropdown-help {
+            color: #718096;
+            font-size: 12px;
+            margin: 4px 0 0;
+            line-height: 1.4;
+        }
+    }
+
+    // Style the DropdownMenu trigger button
+    .atm-custom-dropdown {
+        .components-dropdown-menu__toggle {
+            background-color: #2d3748 !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #4a5569 !important;
+            border-radius: 6px !important;
+            padding: 10px 12px !important;
+            min-height: 40px !important;
+            width: 100% !important;
+            justify-content: space-between !important;
+            text-align: left !important;
+            font-size: 14px !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+            
+            // Remove any default styling
+            box-shadow: none !important;
+            -webkit-box-shadow: none !important;
+            outline: none !important;
+            
+            &:hover:not(:disabled) {
+                background-color: #374151 !important;
+                border-color: #6b7280 !important;
+            }
+            
+            &:focus {
+                border-color: #8E2DE2 !important;
+                box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3) !important;
+                outline: none !important;
+            }
+            
+            &:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+            
+            // Style the dropdown arrow
+            .dashicon,
+            svg {
+                color: #a0aec0 !important;
+                margin-left: auto !important;
+                flex-shrink: 0 !important;
+            }
+        }
+    }
+
+    // Style the dropdown menu popup
+    .components-dropdown-menu__popover {
+        .components-popover__content {
+            background-color: #2d3748 !important;
+            border: 1px solid #4a5569 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+            padding: 4px !important;
+            min-width: 200px !important;
+            
+            // Style individual menu items
+            .components-menu-group {
+                .components-menu-item__button {
+                    color: #e2e8f0 !important;
+                    background-color: transparent !important;
+                    border: none !important;
+                    border-radius: 4px !important;
+                    padding: 8px 12px !important;
+                    font-size: 14px !important;
+                    text-align: left !important;
+                    width: 100% !important;
+                    transition: background-color 0.2s ease !important;
+                    
+                    &:hover {
+                        background-color: #374151 !important;
+                        color: #ffffff !important;
+                    }
+                    
+                    &:focus {
+                        background-color: #8E2DE2 !important;
+                        color: #ffffff !important;
+                        outline: none !important;
+                        box-shadow: none !important;
+                    }
+                    
+                    // Remove any default WordPress styling
+                    box-shadow: none !important;
+                    -webkit-box-shadow: none !important;
+                }
+            }
+        }
+    }
+}
+
+// Grid layout for two-column dropdowns
+.atm-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+}
