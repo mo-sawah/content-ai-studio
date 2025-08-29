@@ -310,3 +310,9 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Force dropdown popovers to match toggle width */
+.atm-popover .components-popover__content {
+  width: var(--atm-dropdown-width, auto) !important;
+  min-width: var(--atm-dropdown-width, auto) !important;
+}

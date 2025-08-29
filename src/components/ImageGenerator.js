@@ -24,36 +24,12 @@ function ImageGenerator({ setActiveView }) {
     const { image_provider: defaultProvider } = atm_studio_data;
     const currentProvider = provider || defaultProvider;
 
-    // Effect to set popover widths
-    useEffect(() => {
-        const setPopoverWidth = () => {
-            // Set width for all dropdown popovers
-            const dropdowns = document.querySelectorAll('.atm-custom-dropdown .components-dropdown-menu__toggle');
-            const popovers = document.querySelectorAll('.components-dropdown-menu__popover .components-popover__content');
-            
-            dropdowns.forEach((dropdown, index) => {
-                if (popovers[index]) {
-                    const width = dropdown.offsetWidth;
-                    popovers[index].style.minWidth = `${width}px`;
-                    popovers[index].style.width = `${width}px`;
-                }
-            });
-        };
-
-        // Set initial width and also on window resize
-        const timer = setTimeout(setPopoverWidth, 100);
-        window.addEventListener('resize', setPopoverWidth);
-        
-        return () => {
-            clearTimeout(timer);
-            window.removeEventListener('resize', setPopoverWidth);
-        };
-    }, []);
-
-    // Custom dropdown component with width matching
+    // Custom dropdown component with width matching using popoverProps
     const CustomDropdown = ({ label, text, options, onChange, disabled, helpText }) => {
+        const dropdownRef = useRef(null);
+
         return (
-            <div className="atm-dropdown-field">
+            <div className="atm-dropdown-field" ref={dropdownRef}>
                 <label className="atm-dropdown-label">{label}</label>
                 <DropdownMenu
                     className="atm-custom-dropdown"
@@ -63,22 +39,17 @@ function ImageGenerator({ setActiveView }) {
                         title: option.label,
                         onClick: () => {
                             onChange(option);
-                            // Trigger width recalculation after selection
-                            setTimeout(() => {
-                                const dropdowns = document.querySelectorAll('.atm-custom-dropdown .components-dropdown-menu__toggle');
-                                const popovers = document.querySelectorAll('.components-dropdown-menu__popover .components-popover__content');
-                                
-                                dropdowns.forEach((dropdown, index) => {
-                                    if (popovers[index]) {
-                                        const width = dropdown.offsetWidth;
-                                        popovers[index].style.minWidth = `${width}px`;
-                                        popovers[index].style.width = `${width}px`;
-                                    }
-                                });
-                            }, 50);
                         }
                     }))}
                     disabled={disabled}
+                    popoverProps={{
+                        className: 'atm-popover',
+                        style: {
+                            '--atm-dropdown-width': dropdownRef.current?.offsetWidth
+                                ? dropdownRef.current.offsetWidth + 'px'
+                                : 'auto'
+                        }
+                    }}
                 />
                 {helpText && <p className="atm-dropdown-help">{helpText}</p>}
             </div>
@@ -106,7 +77,6 @@ function ImageGenerator({ setActiveView }) {
     ];
 
     const handleGenerate = async () => {
-        // Check if the prompt is empty
         if (!prompt.trim()) {
             alert('Please enter a prompt for the image.');
             return;
@@ -119,7 +89,7 @@ function ImageGenerator({ setActiveView }) {
         try {
             const response = await callAjax('generate_featured_image', {
                 post_id: postId,
-                prompt: prompt, // Send the user's direct prompt
+                prompt: prompt,
                 size: imageSize,
                 quality: imageQuality,
                 provider: currentProvider,
