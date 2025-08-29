@@ -344,17 +344,17 @@ class ATM_API {
      */
 
     public static function translate_text($text, $target_language) {
-        $system_prompt = "You are an expert translator. Translate the following text into " . $target_language . ". Provide ONLY the translated text, without any additional comments, introductions, or quotation marks.";
-        
-        // We can use a fast and efficient model for this task.
-        $model = 'anthropic/claude-3-haiku';
-        
-        return self::enhance_content_with_openrouter(
-            ['content' => $text],
-            $system_prompt,
-            $model
-        );
-    }
+    $system_prompt = "You are an expert multilingual translator. Your task is to automatically detect the source language of the text provided by the user and then translate it accurately into " . $target_language . ". Provide ONLY the translated text, with no extra commentary, introductions, or quotation marks.";
+    
+    // We can use a fast and efficient model for this task.
+    $model = 'anthropic/claude-3-haiku';
+    
+    return self::enhance_content_with_openrouter(
+        ['content' => $text],
+        $system_prompt,
+        $model
+    );
+}
 
     /**
  * Transcribes an audio file using the OpenAI Whisper API.

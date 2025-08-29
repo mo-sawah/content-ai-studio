@@ -393,6 +393,34 @@
         transform: scale(1);
         pointer-events: none;
     }
+
+    &.is-small {
+        width: 80px;
+        height: 80px;
+
+        .atm-record-button {
+            width: 50px;
+            height: 50px;
+
+            svg, .atm-mic-icon {
+                width: 20px;
+                height: 20px;
+            }
+        }
+        
+        .atm-pulse-ring-2 { height: 120%; width: 120%; }
+        .atm-pulse-ring-3 { height: 140%; width: 140%; }
+
+        // Adjust spinner size for the small button
+        .components-spinner {
+            width: 24px !important;
+            height: 24px !important;
+            svg {
+                width: 20px !important;
+                height: 20px !important;
+            }
+        }
+    }
     
     .atm-pulse-ring-1 {
         width: 100%;

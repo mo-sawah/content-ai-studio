@@ -2,7 +2,7 @@ import { useState } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { Button, TextareaControl, Spinner } from '@wordpress/components';
 import { createBlock } from '@wordpress/blocks';
-import CustomDropdown from './common/CustomDropdown'; // We will create this
+import CustomDropdown from './common/CustomDropdown';
 import { useSpeechToText } from '../hooks/useSpeechToText';
 
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
@@ -16,25 +16,38 @@ function Translator({ setActiveView }) {
     const [statusMessage, setStatusMessage] = useState('');
     
     const { insertBlocks } = useDispatch('core/block-editor');
+    
+    // --- NEW: More specific status for recording ---
+    const [recordStatus, setRecordStatus] = useState('');
 
-    // Use our new reusable hook!
     const { isRecording, isTranscribing, startRecording, stopRecording } = useSpeechToText({
         onTranscriptionComplete: (transcript) => {
             setSourceText(current => current + (current ? ' ' : '') + transcript);
-            setStatusMessage('✅ Transcription complete. Ready to translate.');
+            setRecordStatus('✅ Transcription complete.');
+            setTimeout(() => setRecordStatus(''), 3000);
         },
         onTranscriptionError: (error) => {
-            setStatusMessage(`Error: ${error}`);
+            setRecordStatus(`Error: ${error}`);
         }
     });
 
+    // --- NEW: Expanded language list ---
     const languageOptions = [
         { label: 'Spanish', value: 'Spanish' },
         { label: 'French', value: 'French' },
         { label: 'German', value: 'German' },
+        { label: 'Chinese (Simplified)', value: 'Chinese (Simplified)' },
         { label: 'Japanese', value: 'Japanese' },
-        { label: 'Chinese', value: 'Chinese' },
+        { label: 'Russian', value: 'Russian' },
+        { label: 'Portuguese', value: 'Portuguese' },
+        { label: 'Italian', value: 'Italian' },
         { label: 'Arabic', value: 'Arabic' },
+        { label: 'Hindi', value: 'Hindi' },
+        { label: 'Korean', value: 'Korean' },
+        { label: 'Dutch', value: 'Dutch' },
+        { label: 'Turkish', value: 'Turkish' },
+        { label: 'Polish', value: 'Polish' },
+        { label: 'Swedish', value: 'Swedish' },
     ];
     
     const handleTranslate = async () => {
@@ -71,6 +84,15 @@ function Translator({ setActiveView }) {
         insertBlocks(newBlock);
         setStatusMessage('Text inserted into editor!');
     };
+    
+    // --- NEW: Update recording status message based on state ---
+    useEffect(() => {
+        if (isRecording) {
+            setRecordStatus('Recording... Click to stop.');
+        } else if (isTranscribing) {
+            setRecordStatus('Transcribing...');
+        }
+    }, [isRecording, isTranscribing]);
 
     return (
         <div className="atm-generator-view">
@@ -90,29 +112,43 @@ function Translator({ setActiveView }) {
                     rows={8}
                     disabled={isLoading || isRecording || isTranscribing}
                 />
-
-                <div className="atm-grid-2">
-                    <CustomDropdown
-                        label="Translate To"
-                        text={targetLanguageLabel}
-                        options={languageOptions}
-                        onChange={(option) => {
-                            setTargetLanguage(option.value);
-                            setTargetLanguageLabel(option.label);
-                        }}
-                        disabled={isLoading || isRecording || isTranscribing}
-                    />
-                    <div className="atm-actions-group" style={{alignSelf: 'end'}}>
-                        {isRecording ? (
-                            <Button isDestructive onClick={stopRecording}>Stop Recording</Button>
-                        ) : (
-                            <Button isSecondary onClick={startRecording} disabled={isLoading || isTranscribing}>Record Audio</Button>
-                        )}
-                        <Button isPrimary onClick={handleTranslate} disabled={isLoading || isRecording || isTranscribing}>
-                            {(isLoading || isTranscribing) ? <Spinner/> : 'Translate'}
-                        </Button>
+                
+                {/* --- NEW: Record button styled like SpeechToText but smaller --- */}
+                <div className="atm-recording-section" style={{gap: '0.5rem', marginBottom: '1rem'}}>
+                    <div className={`atm-record-button-wrapper is-small ${isRecording ? 'is-recording' : ''}`}>
+                         <div className="atm-pulse-ring atm-pulse-ring-1"></div>
+                         <div className="atm-pulse-ring atm-pulse-ring-2"></div>
+                         <button 
+                            className={`atm-record-button ${isRecording ? 'is-recording' : ''} ${isTranscribing ? 'is-transcribing' : ''}`}
+                            onClick={isRecording ? stopRecording : startRecording}
+                            disabled={isLoading || isTranscribing}
+                            aria-label={isRecording ? 'Stop Recording' : 'Start Recording'}
+                        >
+                            {isTranscribing ? <Spinner /> : isRecording ? (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                            ) : (
+                                <img src={`${atm_studio_data.plugin_url}/includes/images/mic.svg`} alt="Microphone" className="atm-mic-icon"/>
+                            )}
+                        </button>
                     </div>
+                    { (isRecording || isTranscribing || recordStatus) && <p className="atm-recording-status">{recordStatus}</p> }
                 </div>
+
+
+                <CustomDropdown
+                    label="Translate To"
+                    text={targetLanguageLabel}
+                    options={languageOptions}
+                    onChange={(option) => {
+                        setTargetLanguage(option.value);
+                        setTargetLanguageLabel(option.label);
+                    }}
+                    disabled={isLoading || isRecording || isTranscribing}
+                />
+
+                <Button isPrimary onClick={handleTranslate} disabled={isLoading || isRecording || isTranscribing || !sourceText.trim()}>
+                    {isLoading ? <Spinner/> : 'Translate'}
+                </Button>
 
                 <TextareaControl
                     label="Translated Text"
@@ -121,7 +157,7 @@ function Translator({ setActiveView }) {
                     rows={8}
                 />
                 
-                <Button isSecondary onClick={handleSendToEditor} disabled={!translatedText.trim()}>
+                <Button isSecondary onClick={handleSendToEditor} disabled={!translatedText.trim() || isLoading}>
                     Send to Editor
                 </Button>
 
