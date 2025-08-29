@@ -133,10 +133,13 @@ function SpeechToText({ setActiveView }) {
                                     <rect x="6" y="6" width="12" height="12" rx="2"/>
                                 </svg>
                             ) : (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M12 1c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2s2-.9 2-2V3c0-1.1-.9-2-2-2z"/>
-                                    <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 17v4M8 21h8"/>
-                                </svg>
+                                <img 
+                                    src={`${atm_studio_data.plugin_url || '/wp-content/plugins/article-to-media'}/includes/images/mic.svg`} 
+                                    alt="Microphone" 
+                                    width="24" 
+                                    height="24"
+                                    className="atm-mic-icon"
+                                />
                             )}
                         </button>
                     </div>

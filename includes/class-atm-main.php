@@ -224,6 +224,7 @@ class ATM_Main {
     'ajax_url' => admin_url('admin-ajax.php'),
     'nonce' => wp_create_nonce('atm_nonce'),
     'article_models' => $settings['article_models'],
+    'plugin_url' => ATM_PLUGIN_URL, // New
     'writing_styles' => $writing_styles,
     'image_provider' => $settings['image_provider'],
     'audio_provider' => $settings['audio_provider'], // New
