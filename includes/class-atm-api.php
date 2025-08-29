@@ -350,50 +350,101 @@ class ATM_API {
  * @throws Exception On API error.
  */
     public static function transcribe_audio_with_whisper($audio_file_path) {
-        $api_key = get_option('atm_openai_api_key');
-        if (empty($api_key)) {
-            throw new Exception('OpenAI API key not configured.');
-        }
-
-        $boundary = wp_generate_password(24);
-        $body = '';
-
-        // Add the model field
-        $body .= '--' . $boundary . "\r\n";
-        $body .= 'Content-Disposition: form-data; name="model"' . "\r\n\r\n";
-        $body .= 'whisper-1' . "\r\n";
-
-        // Add the file field
-        $body .= '--' . $boundary . "\r\n";
-        $body .= 'Content-Disposition: form-data; name="file"; filename="audio.webm"' . "\r\n";
-        $body .= 'Content-Type: audio/webm' . "\r\n\r\n";
-        $body .= file_get_contents($audio_file_path) . "\r\n";
-
-        $body .= '--' . $boundary . '--';
-
-        $response = wp_remote_post('https://api.openai.com/v1/audio/transcriptions', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type'  => 'multipart/form-data; boundary=' . $boundary,
-            ],
-            'body'    => $body,
-            'timeout' => 120
-        ]);
-
-        if (is_wp_error($response)) {
-            throw new Exception('Whisper API call failed: ' . $response->get_error_message());
-        }
-
-        $response_body = wp_remote_retrieve_body($response);
-        $result = json_decode($response_body, true);
-
-        if (wp_remote_retrieve_response_code($response) !== 200) {
-            $error_message = isset($result['error']['message']) ? $result['error']['message'] : 'Unknown API error.';
-            throw new Exception('Whisper API Error: ' . $error_message);
-        }
-
-        return $result['text'];
+    $api_key = get_option('atm_openai_api_key');
+    if (empty($api_key)) {
+        throw new Exception('OpenAI API key not configured.');
     }
+
+    // Verify file exists and is readable
+    if (!file_exists($audio_file_path) || !is_readable($audio_file_path)) {
+        throw new Exception('Audio file not found or not readable.');
+    }
+
+    // Get file info
+    $file_size = filesize($audio_file_path);
+    $file_content = file_get_contents($audio_file_path);
+    
+    if ($file_content === false || $file_size === 0) {
+        throw new Exception('Could not read audio file or file is empty.');
+    }
+
+    // Create a unique boundary
+    $boundary = 'FormBoundary' . uniqid();
+    
+    // Build multipart form data manually
+    $data = '';
+    
+    // Add model field
+    $data .= '--' . $boundary . "\r\n";
+    $data .= 'Content-Disposition: form-data; name="model"' . "\r\n";
+    $data .= "\r\n";
+    $data .= 'whisper-1' . "\r\n";
+    
+    // Add file field
+    $data .= '--' . $boundary . "\r\n";
+    $data .= 'Content-Disposition: form-data; name="file"; filename="audio.webm"' . "\r\n";
+    $data .= 'Content-Type: audio/webm' . "\r\n";
+    $data .= "\r\n";
+    $data .= $file_content . "\r\n";
+    
+    // Add response format (optional, helps with consistency)
+    $data .= '--' . $boundary . "\r\n";
+    $data .= 'Content-Disposition: form-data; name="response_format"' . "\r\n";
+    $data .= "\r\n";
+    $data .= 'text' . "\r\n";
+    
+    // Close boundary
+    $data .= '--' . $boundary . '--' . "\r\n";
+
+    $response = wp_remote_post('https://api.openai.com/v1/audio/transcriptions', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type' => 'multipart/form-data; boundary=' . $boundary,
+            'Content-Length' => strlen($data)
+        ],
+        'body' => $data,
+        'timeout' => 180, // Increased timeout
+        'data_format' => 'body' // Important: tell WordPress to send raw body
+    ]);
+
+    if (is_wp_error($response)) {
+        throw new Exception('Whisper API call failed: ' . $response->get_error_message());
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+    
+    // Log response for debugging
+    error_log('Whisper API Response Code: ' . $response_code);
+    error_log('Whisper API Response Body: ' . $response_body);
+    
+    if ($response_code !== 200) {
+        $result = json_decode($response_body, true);
+        $error_message = 'HTTP ' . $response_code;
+        
+        if (isset($result['error']['message'])) {
+            $error_message .= ': ' . $result['error']['message'];
+        } elseif (isset($result['error'])) {
+            $error_message .= ': ' . print_r($result['error'], true);
+        } else {
+            $error_message .= ': ' . $response_body;
+        }
+        
+        throw new Exception('Whisper API Error: ' . $error_message);
+    }
+
+    $result = json_decode($response_body, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception('Invalid JSON response from Whisper API: ' . $response_body);
+    }
+    
+    if (!isset($result['text'])) {
+        throw new Exception('No transcription text in API response: ' . $response_body);
+    }
+
+    return trim($result['text']);
+}
     
     public static function get_elevenlabs_voices() {
     $api_key = get_option('atm_elevenlabs_api_key');
