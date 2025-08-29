@@ -365,24 +365,42 @@ class ATM_API {
         return $suggestions;
     }
 
-    public static function search_youtube_videos($query) {
+    public static function search_youtube_videos($query, $filters = []) {
         $api_key = get_option('atm_google_youtube_api_key');
         if (empty($api_key)) {
             throw new Exception('YouTube API key is not configured in settings.');
         }
         
-        $transient_key = 'atm_yt_search_' . substr(md5($query), 0, 12);
+        // Make the cache key unique to the query AND filters
+        $filter_hash = empty($filters) ? '' : substr(md5(json_encode($filters)), 0, 8);
+        $transient_key = 'atm_yt_search_' . substr(md5($query . $filter_hash), 0, 12);
+        
         if (false !== ($cached = get_transient($transient_key))) {
             return $cached;
         }
 
-        $url = 'https://www.googleapis.com/youtube/v3/search?' . http_build_query([
+        $api_params = [
             'part' => 'snippet',
             'q' => $query,
             'maxResults' => 10,
             'type' => 'video',
             'key' => $api_key
-        ]);
+        ];
+        
+        // Merge filters into the API parameters
+        if (!empty($filters['order']) && $filters['order'] !== 'relevance') {
+            $api_params['order'] = $filters['order'];
+        }
+        if (!empty($filters['videoDuration']) && $filters['videoDuration'] !== 'any') {
+            $api_params['videoDuration'] = $filters['videoDuration'];
+        }
+        if (!empty($filters['publishedAfter'])) {
+            // Format date for YouTube API (RFC 3339)
+            $date = new DateTime($filters['publishedAfter']);
+            $api_params['publishedAfter'] = $date->format(DateTime::RFC3339);
+        }
+        
+        $url = 'https://www.googleapis.com/youtube/v3/search?' . http_build_query($api_params);
 
         $response = wp_remote_get($url);
 
@@ -413,7 +431,7 @@ class ATM_API {
             }
         }
 
-        set_transient($transient_key, $results, 3 * HOUR_IN_SECONDS); // Cache for 3 hours
+        set_transient($transient_key, $results, 1 * HOUR_IN_SECONDS); // Cache for 1 hours
         return $results;
     }
 

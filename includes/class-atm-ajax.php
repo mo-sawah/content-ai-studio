@@ -25,6 +25,7 @@ class ATM_Ajax {
         check_ajax_referer('atm_nonce', 'nonce');
         try {
             $query = sanitize_text_field($_POST['query']);
+            $filters = isset($_POST['filters']) ? (array) $_POST['filters'] : [];
             $results = ATM_API::search_youtube_videos($query);
             wp_send_json_success($results);
         } catch (Exception $e) {
