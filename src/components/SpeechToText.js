@@ -70,20 +70,26 @@ function SpeechToText({ setActiveView }) {
             formData.append('audio_chunk', chunk, 'audio.webm');
 
             try {
-                const response = await jQuery.ajax({
-                    url: atm_studio_data.ajax_url,
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
+                // Use fetch instead of jQuery.ajax to avoid conflicts
+                const response = await fetch(atm_studio_data.ajax_url, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
                 });
 
-                if (response.success) {
-                    fullTranscript += response.data.transcript + ' ';
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    fullTranscript += result.data.transcript + ' ';
                 } else {
-                    throw new Error(response.data);
+                    throw new Error(result.data || 'Transcription failed');
                 }
             } catch (error) {
+                console.error('Transcription error:', error);
                 setStatusMessage(`Error during transcription: ${error.message || 'Unknown error'}`);
                 setIsTranscribing(false);
                 return;
@@ -91,10 +97,14 @@ function SpeechToText({ setActiveView }) {
         }
 
         // Insert the final combined transcript into the editor
-        const newBlock = wp.blocks.createBlock('core/paragraph', { content: fullTranscript.trim() });
-        insertBlocks(newBlock);
-
-        setStatusMessage('✅ Transcription complete and inserted into the editor!');
+        if (fullTranscript.trim()) {
+            const newBlock = wp.blocks.createBlock('core/paragraph', { content: fullTranscript.trim() });
+            insertBlocks(newBlock);
+            setStatusMessage('✅ Transcription complete and inserted into the editor!');
+        } else {
+            setStatusMessage('No transcript generated. Please try recording again.');
+        }
+        
         setIsTranscribing(false);
         audioChunksRef.current = []; // Clear chunks for next time
 
