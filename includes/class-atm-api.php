@@ -347,13 +347,42 @@ class ATM_API {
     $system_prompt = "You are an expert multilingual translator. Your task is to automatically detect the source language of the text provided by the user and then translate it accurately into " . $target_language . ". Provide ONLY the translated text, with no extra commentary, introductions, or quotation marks.";
     
     // We can use a fast and efficient model for this task.
-    $model = 'anthropic/claude-3-haiku';
+    $model = get_option('atm_translation_model', 'anthropic/claude-3-haiku');
     
     return self::enhance_content_with_openrouter(
         ['content' => $text],
         $system_prompt,
         $model
     );
+}
+
+public static function translate_document($title, $content, $target_language) {
+    $system_prompt = "You are an expert multilingual translator. Your task is to translate the user-provided JSON object containing an article's title and content.
+- Automatically detect the source language of the text.
+- Translate both the 'title' and 'content' fields accurately into " . $target_language . ".
+- Maintain the original Markdown formatting in the content.
+- Your entire response MUST be a single, valid JSON object with two keys: `translated_title` and `translated_content`.
+- Do not add any extra text, commentary, or code fences outside of the final JSON object.";
+
+    $user_content = json_encode(['title' => $title, 'content' => $content]);
+    
+    $model = get_option('atm_translation_model', 'anthropic/claude-3-haiku');
+
+    // Use json_mode to ensure the AI returns valid JSON
+    $raw_response = self::enhance_content_with_openrouter(
+        ['content' => $user_content],
+        $system_prompt,
+        $model,
+        true // This enables JSON mode
+    );
+
+    $result = json_decode($raw_response, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !isset($result['translated_title']) || !isset($result['translated_content'])) {
+        error_log('Content AI Studio - Invalid JSON from translation API: ' . $raw_response);
+        throw new Exception('The AI returned an invalid response structure during translation.');
+    }
+    
+    return $result;
 }
 
     /**

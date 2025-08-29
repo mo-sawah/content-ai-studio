@@ -116,6 +116,7 @@ class ATM_Settings {
                         <tr><th scope="row">Default Article Model</th><td><select name="atm_article_model"><?php foreach ($options['article_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['article_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
                         <tr><th scope="row">Default Podcast Content Model</th><td><select name="atm_content_model"><?php foreach ($options['content_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
                         <tr><th scope="row">Default Podcast Audio Provider</th><td><select name="atm_audio_provider"><option value="openai" <?php selected($options['audio_provider'], 'openai'); ?>>OpenAI TTS</option><option value="elevenlabs" <?php selected($options['audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option></select></td></tr>
+                        <tr><th scope="row">Translation Quality Model</th><td><select name="atm_translation_model"><?php foreach ($options['translation_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['translation_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">"High Quality" is more accurate but slower and more expensive. "Fast" is good for quick drafts.</p></td></tr>
                     </table>
                 </div>
                 <div class="atm-settings-card">
@@ -156,6 +157,7 @@ class ATM_Settings {
     update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
     update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
     update_option('atm_image_provider', sanitize_text_field($_POST['atm_image_provider']));
+    update_option('atm_translation_model', sanitize_text_field($_POST['atm_translation_model']));
     echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
 }
 
@@ -176,6 +178,7 @@ class ATM_Settings {
         'image_quality'    => get_option('atm_image_quality', 'hd'),
         'image_size'       => get_option('atm_image_size', '1792x1024'),
         'image_provider'   => get_option('atm_image_provider', 'openai'),
+        'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
         'article_models'   => [
             'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
             'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
@@ -186,6 +189,11 @@ class ATM_Settings {
             'anthropic/claude-3-haiku' => 'Claude 3 Haiku (Fast & Cheap)',
             'openai/gpt-4o' => 'GPT-4o (Highest Quality)',
             'google/gemini-flash-1.5' => 'Google Gemini 1.5 Flash',
+        ],
+        'translation_models' => [
+            'anthropic/claude-3-haiku' => 'Fast (Claude 3 Haiku)',
+            'openai/gpt-4o' => 'High Quality (GPT-4o)',
+            'anthropic/claude-3-opus' => 'Highest Quality (Claude 3 Opus)',
         ],
     ];
 }
