@@ -192,25 +192,30 @@
             }
         }
     }
+}
 
-    // Style the dropdown menu popup
-    .components-dropdown-menu__popover {        
-        // Force the popover to position relative to the dropdown
-        &.components-popover {
-            position: absolute !important;
-            z-index: 999999 !important;
-        }
-        
+/* --- Dropdown Popover/Menu Styles --- */
+// Target the popover more specifically
+.atm-popover,
+.components-dropdown-menu__popover,
+.components-popover {
+    // When it's a dropdown menu popover
+    &.components-popover {
         .components-popover__content {
             background-color: #2d3748 !important;
             border: 1px solid #4a5569 !important;
             border-radius: 6px !important;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
             padding: 4px !important;
+            // Force width from CSS variable
+            width: var(--atm-dropdown-width, 200px) !important;
+            min-width: var(--atm-dropdown-width, 200px) !important;
+            max-width: var(--atm-dropdown-width, 200px) !important;
             
             // Style individual menu items
             .components-menu-group {
-                .components-menu-item__button {
+                .components-menu-item__button,
+                .components-button {
                     color: #e2e8f0 !important;
                     background-color: transparent !important;
                     border: none !important;
@@ -221,6 +226,7 @@
                     width: 100% !important;
                     transition: background-color 0.2s ease !important;
                     white-space: nowrap !important;
+                    display: block !important;
                     
                     &:hover {
                         background-color: #374151 !important;
@@ -240,13 +246,6 @@
                 }
             }
         }
-    }
-    
-    // More aggressive width matching - target the popover directly
-    &:has(.atm-custom-dropdown) .components-dropdown-menu__popover .components-popover__content,
-    .atm-custom-dropdown + .components-dropdown-menu__popover .components-popover__content {
-        min-width: var(--dropdown-width) !important;
-        width: var(--dropdown-width) !important;
     }
 }
 
@@ -309,10 +308,4 @@
     @media (max-width: 768px) {
         grid-template-columns: 1fr;
     }
-}
-
-/* Force dropdown popovers to match toggle width */
-.atm-popover .components-popover__content {
-  width: var(--atm-dropdown-width, auto) !important;
-  min-width: var(--atm-dropdown-width, auto) !important;
 }
