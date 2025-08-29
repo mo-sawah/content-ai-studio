@@ -28,27 +28,28 @@ function FilterModal({ isOpen, onClose, filters, onFilterChange, onApply }) {
                     value={filters.videoDuration}
                     options={[
                         { label: 'Any', value: 'any' },
-                        { label: 'Short (< 4 minutes)', value: 'short' },
-                        { label: 'Medium (4-20 minutes)', value: 'medium' },
-                        { label: 'Long (> 20 minutes)', value: 'long' },
+                        { label: 'Short (< 4 min)', value: 'short' },
+                        { label: 'Medium (4-20 min)', value: 'medium' },
+                        { label: 'Long (> 20 min)', value: 'long' },
                     ]}
                     onChange={(value) => onFilterChange('videoDuration', value)}
                 />
                 <SelectControl
                     label="Upload Date"
                     value={filters.publishedAfter}
+                    // --- THE FIX: Using static string values ---
                     options={[
                         { label: 'Anytime', value: '' },
-                        { label: 'Last Hour', value: new Date(Date.now() - 3600 * 1000).toISOString() },
-                        { label: 'Today', value: new Date(Date.now() - 86400 * 1000).toISOString() },
-                        { label: 'This Week', value: new Date(Date.now() - 7 * 86400 * 1000).toISOString() },
-                        { label: 'This Month', value: new Date(Date.now() - 30 * 86400 * 1000).toISOString() },
-                        { label: 'This Year', value: new Date(Date.now() - 365 * 86400 * 1000).toISOString() },
+                        { label: 'Last Hour', value: 'hour' },
+                        { label: 'Today', value: 'day' },
+                        { label: 'This Week', value: 'week' },
+                        { label: 'This Month', value: 'month' },
+                        { label: 'This Year', value: 'year' },
                     ]}
                     onChange={(value) => onFilterChange('publishedAfter', value)}
                 />
                 <Button isPrimary onClick={onApply}>
-                    Apply Filters
+                    Apply Filters & Search
                 </Button>
             </div>
         </Modal>

@@ -1027,7 +1027,13 @@
 .atm-filter-modal .components-modal__header .components-button {
     color: #e2e8f0 !important;
 }
-    
+
+.atm-filter-modal .components-base-control__label {
+    color: #a0aec0 !important; // Makes filter labels light gray and readable
+    font-size: 13px !important;
+}
+
+/* --- My Styles --- */
 .atm-video-search-container .components-button.is-primary {
     margin-bottom: calc(8px);
 }

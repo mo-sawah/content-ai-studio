@@ -344,11 +344,7 @@ class ATM_API {
      */
 
     public static function get_youtube_autocomplete_suggestions($query) {
-        $transient_key = 'atm_yt_suggest_' . substr(md5($query), 0, 12);
-        if (false !== ($cached = get_transient($transient_key))) {
-            return $cached;
-        }
-
+        // Caching has been removed.
         $url = 'https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=' . urlencode($query);
         $response = wp_remote_get($url);
 
@@ -357,11 +353,9 @@ class ATM_API {
         }
 
         $body = wp_remote_retrieve_body($response);
-        // The response is a weird JSONP-like format: `["query", ["suggestion1", "suggestion2", ...]]`
         $json = json_decode($body, true);
         $suggestions = isset($json[1]) && is_array($json[1]) ? $json[1] : [];
 
-        set_transient($transient_key, $suggestions, HOUR_IN_SECONDS); // Cache for 1 hour
         return $suggestions;
     }
 
@@ -371,13 +365,7 @@ class ATM_API {
             throw new Exception('YouTube API key is not configured in settings.');
         }
         
-        // Make the cache key unique to the query AND filters
-        $filter_hash = empty($filters) ? '' : substr(md5(json_encode($filters)), 0, 8);
-        $transient_key = 'atm_yt_search_' . substr(md5($query . $filter_hash), 0, 12);
-        
-        if (false !== ($cached = get_transient($transient_key))) {
-            return $cached;
-        }
+        // Caching has been removed.
 
         $api_params = [
             'part' => 'snippet',
@@ -394,10 +382,23 @@ class ATM_API {
         if (!empty($filters['videoDuration']) && $filters['videoDuration'] !== 'any') {
             $api_params['videoDuration'] = $filters['videoDuration'];
         }
+
+        // Convert simple date strings from the frontend to the RFC 3339 format the API needs
         if (!empty($filters['publishedAfter'])) {
-            // Format date for YouTube API (RFC 3339)
-            $date = new DateTime($filters['publishedAfter']);
-            $api_params['publishedAfter'] = $date->format(DateTime::RFC3339);
+            $interval_string = '';
+            switch($filters['publishedAfter']) {
+                case 'hour': $interval_string = 'PT1H'; break;
+                case 'day': $interval_string = 'P1D'; break;
+                case 'week': $interval_string = 'P1W'; break;
+                case 'month': $interval_string = 'P1M'; break;
+                case 'year': $interval_string = 'P1Y'; break;
+            }
+            
+            if ($interval_string) {
+                $date = new DateTime();
+                $date->sub(new DateInterval($interval_string));
+                $api_params['publishedAfter'] = $date->format(DateTime::RFC3339);
+            }
         }
         
         $url = 'https://www.googleapis.com/youtube/v3/search?' . http_build_query($api_params);
@@ -430,8 +431,7 @@ class ATM_API {
                 ];
             }
         }
-
-        set_transient($transient_key, $results, 1 * HOUR_IN_SECONDS); // Cache for 1 hours
+        
         return $results;
     }
 
