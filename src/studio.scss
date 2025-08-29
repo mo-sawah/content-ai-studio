@@ -663,3 +663,65 @@
         height: 24px !important;
         margin: 0 !important;
     }
+
+/* --- Added for Translator UI --- */
+
+.atm-form-divider {
+    border: none;
+    border-top: 1px solid #4a5569;
+    margin: 1.5rem 0;
+}
+
+.atm-translator-full-editor {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    
+    span {
+        color: #a0aec0;
+        font-size: 14px;
+    }
+
+    .atm-dropdown-field {
+        flex: 1;
+        margin-bottom: 0;
+
+        .atm-dropdown-label {
+            display: none; // Hide the label as it's redundant here
+        }
+    }
+}
+
+.atm-translator-main-area {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+
+    @media (max-width: 960px) {
+        flex-direction: column;
+    }
+}
+
+.atm-translator-text-input {
+    flex: 1;
+    min-width: 0; // Prevents flexbox from overflowing
+}
+
+.atm-translator-recorder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    
+    h4 {
+        margin: 0 0 0.5rem 0;
+        color: #a0aec0;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .atm-recording-status {
+        font-size: 13px;
+        min-height: 18px;
+    }
+}

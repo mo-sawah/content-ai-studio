@@ -7,6 +7,36 @@ if (!defined('ABSPATH')) {
 class ATM_Ajax {
 
     
+    public function translate_editor_content() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+
+        check_ajax_referer('atm_nonce', 'nonce');
+
+        try {
+            if (empty($_POST['title']) || empty($_POST['content']) || empty($_POST['target_language'])) {
+                throw new Exception('Title, content, and target language are required.');
+            }
+
+            $title = sanitize_text_field(stripslashes($_POST['title']));
+            $content = wp_kses_post(stripslashes($_POST['content'])); // Use wp_kses_post for content
+            $target_language = sanitize_text_field($_POST['target_language']);
+
+            // Translate both title and content
+            $translated_title = ATM_API::translate_text($title, $target_language);
+            $translated_content = ATM_API::translate_text($content, $target_language);
+
+            wp_send_json_success([
+                'translated_title' => $translated_title,
+                'translated_content' => $translated_content
+            ]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
     public function transcribe_audio() {
     if (!ATM_Licensing::is_license_active()) {
         wp_send_json_error('Please activate your license key to use this feature.');
@@ -85,7 +115,8 @@ public function translate_text() {
         add_action('wp_ajax_upload_podcast_image', array($this, 'upload_podcast_image'));
         add_action('wp_ajax_transcribe_audio', array($this, 'transcribe_audio'));
         add_action('wp_ajax_translate_text', array($this, 'translate_text'));
-        
+        add_action('wp_ajax_translate_editor_content', array($this, 'translate_editor_content'));
+
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));
         add_action('wp_ajax_generate_inline_image', array($this, 'generate_inline_image'));
