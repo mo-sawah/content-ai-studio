@@ -349,7 +349,7 @@ class ATM_API {
  * @return string The transcribed text.
  * @throws Exception On API error.
  */
-    public static function transcribe_audio_with_whisper($audio_file_path) {
+public static function transcribe_audio_with_whisper($audio_file_path) {
     $api_key = get_option('atm_openai_api_key');
     if (empty($api_key)) {
         throw new Exception('OpenAI API key not configured.');
@@ -387,12 +387,6 @@ class ATM_API {
     $data .= "\r\n";
     $data .= $file_content . "\r\n";
     
-    // Add response format (optional, helps with consistency)
-    $data .= '--' . $boundary . "\r\n";
-    $data .= 'Content-Disposition: form-data; name="response_format"' . "\r\n";
-    $data .= "\r\n";
-    $data .= 'text' . "\r\n";
-    
     // Close boundary
     $data .= '--' . $boundary . '--' . "\r\n";
 
@@ -400,11 +394,9 @@ class ATM_API {
         'headers' => [
             'Authorization' => 'Bearer ' . $api_key,
             'Content-Type' => 'multipart/form-data; boundary=' . $boundary,
-            'Content-Length' => strlen($data)
         ],
         'body' => $data,
-        'timeout' => 180, // Increased timeout
-        'data_format' => 'body' // Important: tell WordPress to send raw body
+        'timeout' => 180,
     ]);
 
     if (is_wp_error($response)) {
@@ -419,13 +411,12 @@ class ATM_API {
     error_log('Whisper API Response Body: ' . $response_body);
     
     if ($response_code !== 200) {
+        // Try to parse as JSON for error messages
         $result = json_decode($response_body, true);
         $error_message = 'HTTP ' . $response_code;
         
-        if (isset($result['error']['message'])) {
+        if (json_last_error() === JSON_ERROR_NONE && isset($result['error']['message'])) {
             $error_message .= ': ' . $result['error']['message'];
-        } elseif (isset($result['error'])) {
-            $error_message .= ': ' . print_r($result['error'], true);
         } else {
             $error_message .= ': ' . $response_body;
         }
@@ -433,17 +424,21 @@ class ATM_API {
         throw new Exception('Whisper API Error: ' . $error_message);
     }
 
-    $result = json_decode($response_body, true);
+    // The response should be plain text transcription
+    $transcription = trim($response_body);
     
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new Exception('Invalid JSON response from Whisper API: ' . $response_body);
+    // Check if the response might be JSON (in case API format changes)
+    $json_check = json_decode($response_body, true);
+    if (json_last_error() === JSON_ERROR_NONE && isset($json_check['text'])) {
+        // If it's JSON with a 'text' field, use that
+        $transcription = trim($json_check['text']);
     }
     
-    if (!isset($result['text'])) {
-        throw new Exception('No transcription text in API response: ' . $response_body);
+    if (empty($transcription)) {
+        throw new Exception('Empty transcription received from Whisper API');
     }
 
-    return trim($result['text']);
+    return $transcription;
 }
     
     public static function get_elevenlabs_voices() {
