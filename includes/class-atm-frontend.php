@@ -9,6 +9,7 @@ class ATM_Frontend {
 
     public function enqueue_frontend_scripts() {
         if (is_single()) {
+            // Enqueue the main player script and style on all single posts
             wp_enqueue_script(
                 'atm-frontend-script',
                 ATM_PLUGIN_URL . 'assets/js/frontend.js',
@@ -16,15 +17,36 @@ class ATM_Frontend {
                 ATM_VERSION,
                 true
             );
-            
+
             wp_enqueue_style(
                 'atm-frontend-style',
                 ATM_PLUGIN_URL . 'assets/css/frontend.css',
-                array(),
+                array('dashicons'), // Add dashicons as a dependency for the toggle button
                 ATM_VERSION
             );
+
+            // --- NEW CHART SCRIPT LOGIC ---
+            // Check if the current post content has our chart shortcode
+            global $post;
+            if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'atm_chart')) {
+                // Only load chart scripts if the shortcode exists
+                wp_enqueue_script(
+                    'atm-frontend-charts',
+                    ATM_PLUGIN_URL . 'assets/js/frontend-charts.js',
+                    array('wp-api-fetch'),
+                    ATM_VERSION,
+                    true
+                );
+
+                // Pass data for the REST API and theme
+                wp_localize_script('atm-frontend-charts', 'atm_charts_data', [
+                    'nonce'          => wp_create_nonce('wp_rest'),
+                    'chart_api_base' => rest_url('atm/v1/charts/'),
+                    'theme_mode'     => 'light'
+                ]);
+            }
         }
-    }
+}
     
     public function embed_podcast_in_content($content) {
         if (!is_single() || !in_the_loop() || !is_main_query() || !get_option('atm_auto_embed', 1)) {

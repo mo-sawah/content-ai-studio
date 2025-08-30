@@ -14,26 +14,9 @@ class ATM_Main {
     // --- ADD THIS NEW FUNCTION to handle shortcode rendering ---
     public function render_chart_shortcode($atts) {
         $atts = shortcode_atts(array('id' => 0), $atts, 'atm_chart');
-        $chart_id = intval($atts['id']);
-
-        if (!$chart_id) {
+        if (!intval($atts['id'])) {
             return '';
         }
-
-        // Enqueue scripts only when the shortcode is present
-        wp_enqueue_script(
-            'atm-frontend-charts',
-            ATM_PLUGIN_URL . 'assets/js/frontend-charts.js',
-            array('wp-api-fetch'), ATM_VERSION, true
-        );
-        
-       // Pass data for the REST API and theme
-        wp_localize_script('atm-frontend-charts', 'atm_chart_data', [
-            'root'           => esc_url_raw(rest_url()),
-            'nonce'          => wp_create_nonce('wp_rest'), // For secure API requests
-            'chart_api_base' => rest_url('atm/v1/charts/'),
-            'theme_mode'     => 'light' // Default theme
-        ]);
 
         return sprintf(
             '<div id="atm-chart-wrapper-%1$s" class="atm-chart-wrapper">
