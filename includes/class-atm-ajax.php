@@ -6,16 +6,6 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
-    public function test_bfl_api() {
-    check_ajax_referer('atm_nonce', 'nonce');
-    try {
-        $result = ATM_API::test_bfl_api_key();
-        wp_send_json_success($result);
-    } catch (Exception $e) {
-        wp_send_json_error($e->getMessage());
-    }
-}
-    
     public function save_atm_chart() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key to use this feature.');
@@ -205,7 +195,6 @@ public function translate_text() {
     
     public function __construct() {
         // Core Actions for the React App & other features
-        add_action('wp_ajax_test_bfl_api', array($this, 'test_bfl_api'));
         add_action('wp_ajax_generate_article_title', array($this, 'generate_article_title'));
         add_action('wp_ajax_generate_article_content', array($this, 'generate_article_content'));
         add_action('wp_ajax_generate_news_article', array($this, 'generate_news_article'));
@@ -589,8 +578,8 @@ Your entire output MUST be a single, valid JSON object with three keys:
                     $image_data = ATM_API::generate_image_with_google_imagen($final_prompt, $size_override);
                     $is_url = false;
                     break;
-                case 'bfl': // Changed from 'blockflow' to 'bfl'
-                    $image_data = ATM_API::generate_image_with_bfl($final_prompt, '', $size_override);
+                case 'blockflow': // <-- ADD THIS CASE
+                    $image_data = ATM_API::generate_image_with_blockflow($final_prompt, '', $size_override);
                     $is_url = false;
                     break;
                 case 'openai':

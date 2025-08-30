@@ -98,92 +98,16 @@ class ATM_Settings {
             <div class="atm-settings-card">
                 <h2>🔑 API Configuration</h2>
                 <table class="form-table">
-                    <tr>
-                        <th scope="row">OpenRouter API Key</th>
-                        <td>
-                            <input type="password" name="atm_openrouter_api_key" value="<?php echo esc_attr($options['openrouter_key']); ?>" class="regular-text" required />
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">OpenAI API Key</th>
-                        <td>
-                            <input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" />
-                            <p class="description">Used for DALL-E 3 image generation and OpenAI TTS voices.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Google AI API Key</th>
-                        <td>
-                            <input type="password" name="atm_google_api_key" value="<?php echo esc_attr($options['google_key']); ?>" class="regular-text" />
-                            <p class="description">Used for Imagen 4 image generation. Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Black Forest Labs API Key</th>
-                        <td>
-                            <input type="password" name="atm_bfl_api_key" value="<?php echo esc_attr($options['bfl_key'] ?? ''); ?>" class="regular-text" />
-                            <p class="description">Required for FLUX image generation. Get a key from <a href="https://api.bfl.ml/" target="_blank">Black Forest Labs</a>.</p>
-                        </td>
-                    </tr>
-                    <tr>
-    <th scope="row">Test BFL API Key</th>
-    <td>
-        <?php
-        if (!empty(get_option('atm_bfl_api_key'))) {
-            $test_result = ATM_API::test_bfl_api_key();
-            if ($test_result['success']) {
-                echo '<span style="color: green;">✅ ' . esc_html($test_result['message']) . '</span>';
-            } else {
-                echo '<span style="color: red;">❌ ' . esc_html($test_result['message']) . '</span>';
-            }
-        } else {
-            echo '<span style="color: orange;">⚠️ No API key configured</span>';
-        }
-        ?>
-    </td>
-</tr>
-                    <tr>
-                        <th scope="row">ElevenLabs API Key</th>
-                        <td>
-                            <input type="password" name="atm_elevenlabs_api_key" value="<?php echo esc_attr($options['elevenlabs_key']); ?>" class="regular-text" />
-                            <p class="description">Get a key from <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a> for additional high-quality voices.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">News API Key</th>
-                        <td>
-                            <input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" />
-                            <p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a>.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">GNews API Key</th>
-                        <td>
-                            <input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" />
-                            <p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">The Guardian API Key</th>
-                        <td>
-                            <input type="password" name="atm_guardian_api_key" value="<?php echo esc_attr($options['guardian_api_key']); ?>" class="regular-text" />
-                            <p class="description">Get a free key from <a href="https://open-platform.theguardian.com/" target="_blank">The Guardian</a>.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Google API Key (for YouTube Search)</th>
-                        <td>
-                            <input type="password" name="atm_google_youtube_api_key" value="<?php echo esc_attr($options['google_youtube_key']); ?>" class="regular-text" />
-                            <p class="description">Required for the Video Search feature. Get a key from the <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">ScrapingAnt API Key</th>
-                        <td>
-                            <input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" />
-                            <p class="description">Required for RSS scraping. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p>
-                        </td>
-                    </tr>
+                    <tr><th scope="row">OpenRouter API Key</th><td><input type="password" name="atm_openrouter_api_key" value="<?php echo esc_attr($options['openrouter_key']); ?>" class="regular-text" required /></td></tr>
+                    <tr><th scope="row">OpenAI API Key</th><td><input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" /><p class="description">Used for DALL-E 3 image generation and OpenAI TTS voices.</p></td></tr>
+                    <tr><th scope="row">Google AI API Key</th><td><input type="password" name="atm_google_api_key" value="<?php echo esc_attr($options['google_key']); ?>" class="regular-text" /><p class="description">Used for Imagen 4 image generation. Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p></td></tr>
+                    <tr><th scope="row">BlockFlow API Key</th><td><input type="password" name="atm_blockflow_api_key" value="<?php echo esc_attr($options['blockflow_key']); ?>" class="regular-text" /><p class="description">Required for FLUX image generation. Get a key from <a href="https://app.blockflow.ai/" target="_blank">BlockFlow.ai</a>.</p></td></tr>
+                    <tr><th scope="row">ElevenLabs API Key</th><td><input type="password" name="atm_elevenlabs_api_key" value="<?php echo esc_attr($options['elevenlabs_key']); ?>" class="regular-text" /><p class="description">Get a key from <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a> for additional high-quality voices.</p></td></tr>
+                    <tr><th scope="row">News API Key</th><td><input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a>.</p></td></tr>
+                    <tr><th scope="row">GNews API Key</th><td><input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p></td></tr>
+                    <tr><th scope="row">The Guardian API Key</th><td><input type="password" name="atm_guardian_api_key" value="<?php echo esc_attr($options['guardian_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://open-platform.theguardian.com/" target="_blank">The Guardian</a>.</p></td></tr>
+                    <tr><th scope="row">Google API Key (for YouTube Search)</th><td><input type="password" name="atm_google_youtube_api_key" value="<?php echo esc_attr($options['google_youtube_key']); ?>" class="regular-text" /><p class="description">Required for the Video Search feature. Get a key from the <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p></td></tr>
+                    <tr><th scope="row">ScrapingAnt API Key</th><td><input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" /><p class="description">Required for RSS scraping. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p></td></tr>
                 </table>
             </div>
 
@@ -206,7 +130,7 @@ class ATM_Settings {
                                 <select name="atm_image_provider">
                                     <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
                                     <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
-                                    <option value="bfl" <?php selected($options['image_provider'], 'bfl'); ?>>Black Forest Labs (FLUX)</option>
+                                    <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>BlockFlow (FLUX)</option> </select>
                             </td>
                         </tr>
                         <tr><th scope="row">Default FLUX Image Model</th><td><select name="atm_flux_model"><?php foreach ($options['flux_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['flux_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default FLUX model for realistic image generation.</p></td></tr>
@@ -232,12 +156,12 @@ class ATM_Settings {
     update_option('atm_openrouter_api_key', sanitize_text_field($_POST['atm_openrouter_api_key']));
     update_option('atm_openai_api_key', sanitize_text_field($_POST['atm_openai_api_key']));
     update_option('atm_google_api_key', sanitize_text_field($_POST['atm_google_api_key']));
-    update_option('atm_bfl_api_key', sanitize_text_field($_POST['atm_bfl_api_key'])); // Changed from blockflow to bfl
-    update_option('atm_flux_model', sanitize_text_field($_POST['atm_flux_model']));
-    update_option('atm_elevenlabs_api_key', sanitize_text_field($_POST['atm_elevenlabs_api_key']));
+    update_option('atm_blockflow_api_key', sanitize_text_field($_POST['atm_blockflow_api_key'])); // <-- ADD THIS
+    update_option('atm_flux_model', sanitize_text_field($_POST['atm_flux_model'])); // <-- ADD THIS
+    update_option('atm_elevenlabs_api_key', sanitize_text_field($_POST['atm_elevenlabs_api_key'])); // New
     update_option('atm_article_model', sanitize_text_field($_POST['atm_article_model']));
     update_option('atm_content_model', sanitize_text_field($_POST['atm_content_model']));
-    update_option('atm_audio_provider', sanitize_text_field($_POST['atm_audio_provider']));
+    update_option('atm_audio_provider', sanitize_text_field($_POST['atm_audio_provider'])); // New
     update_option('atm_news_api_key', sanitize_text_field($_POST['atm_news_api_key']));
     update_option('atm_gnews_api_key', sanitize_text_field($_POST['atm_gnews_api_key']));
     update_option('atm_guardian_api_key', sanitize_text_field($_POST['atm_guardian_api_key']));
@@ -251,54 +175,54 @@ class ATM_Settings {
     echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
 }
 
-    // Replace your get_settings method with this:
     public function get_settings() {
-        return [
-            'openrouter_key'   => get_option('atm_openrouter_api_key', ''),
-            'openai_key'       => get_option('atm_openai_api_key', ''),
-            'google_key'       => get_option('atm_google_api_key', ''),
-            'bfl_key'          => get_option('atm_bfl_api_key', ''), // Changed from blockflow_key to bfl_key
-            'elevenlabs_key'   => get_option('atm_elevenlabs_api_key', ''),
-            'news_api_key'     => get_option('atm_news_api_key', ''),
-            'gnews_api_key'    => get_option('atm_gnews_api_key', ''),
-            'rss_feeds'        => get_option('atm_rss_feeds', ''),
-            'scrapingant_key'  => get_option('atm_scrapingant_api_key', ''),
-            'guardian_api_key' => get_option('atm_guardian_api_key', ''),
-            'article_model'    => get_option('atm_article_model', 'openai/gpt-4o'),
-            'content_model'    => get_option('atm_content_model', 'anthropic/claude-3-haiku'),
-            'audio_provider'   => get_option('atm_audio_provider', 'openai'),
-            'image_quality'    => get_option('atm_image_quality', 'hd'),
-            'image_size'       => get_option('atm_image_size', '1792x1024'),
-            'image_provider'   => get_option('atm_image_provider', 'openai'),
-            'flux_model'       => get_option('atm_flux_model', 'flux-pro-1.1-ultra'), // Updated default
-            'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
-            'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
-            'flux_models' => [
-                'flux-pro-1.1-ultra'    => 'FLUX Pro 1.1 Ultra (Highest Quality)',
-                'flux-pro-1.1'          => 'FLUX Pro 1.1',
-                'flux-pro'              => 'FLUX Pro',
-                'flux-1.1-pro'          => 'FLUX 1.1 Pro',
-                'flux-dev'              => 'FLUX Dev',
-                'flux-schnell'          => 'FLUX Schnell (Fastest)',
-            ],
-            'article_models'   => [
-                'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
-                'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
-                'google/gemini-flash-1.5' => 'Google: Gemini 1.5 Flash (Fast & Capable)',
-                'meta-llama/llama-3-70b-instruct' => 'Meta: Llama 3 70B (Great Open Source)',
-            ],
-            'content_models'   => [
-                'anthropic/claude-3-haiku' => 'Claude 3 Haiku (Fast & Cheap)',
-                'openai/gpt-4o' => 'GPT-4o (Highest Quality)',
-                'google/gemini-flash-1.5' => 'Google Gemini 1.5 Flash',
-            ],
-            'translation_models' => [
-                'anthropic/claude-3-haiku' => 'Fast (Claude 3 Haiku)',
-                'openai/gpt-4o' => 'High Quality (GPT-4o)',
-                'anthropic/claude-3-opus' => 'Highest Quality (Claude 3 Opus)',
-            ],
-        ];
-    }
+    return [
+        'openrouter_key'   => get_option('atm_openrouter_api_key', ''),
+        'openai_key'       => get_option('atm_openai_api_key', ''),
+        'google_key'       => get_option('atm_google_api_key', ''),
+        'blockflow_key'    => get_option('atm_blockflow_api_key', ''), // <-- ADD THIS
+        'elevenlabs_key'   => get_option('atm_elevenlabs_api_key', ''), // New
+        'news_api_key'     => get_option('atm_news_api_key', ''),
+        'gnews_api_key'    => get_option('atm_gnews_api_key', ''),
+        'rss_feeds'        => get_option('atm_rss_feeds', ''),
+        'scrapingant_key'  => get_option('atm_scrapingant_api_key', ''),
+        'guardian_api_key' => get_option('atm_guardian_api_key', ''),
+        'article_model'    => get_option('atm_article_model', 'openai/gpt-4o'),
+        'content_model'    => get_option('atm_content_model', 'anthropic/claude-3-haiku'),
+        'audio_provider'   => get_option('atm_audio_provider', 'openai'), // New
+        'image_quality'    => get_option('atm_image_quality', 'hd'),
+        'image_size'       => get_option('atm_image_size', '1792x1024'),
+        'image_provider'   => get_option('atm_image_provider', 'openai'),
+        'flux_model'       => get_option('atm_flux_model', 'flux-1-schnell'), // <-- FIX IS HERE
+        'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
+        'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
+        'flux_models' => [
+            'flux-1-schnell'        => 'FLUX 1 Schnell',
+            'flux-1-dev'            => 'FLUX 1 Dev (Fast)',
+            'flux-pro'              => 'FLUX Pro',
+            'flux-pro-1.1'          => 'FLUX Pro 1.1',
+            'flux-pro-1.1-ultra'    => 'FLUX Pro 1.1 Ultra (High Quality)',
+            'flux-kontext-pro'      => 'FLUX Kontext Pro',
+            'flux-kontext-max'      => 'FLUX Kontext Max (Best Quality)',
+         ],
+        'article_models'   => [
+            'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
+            'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
+            'google/gemini-flash-1.5' => 'Google: Gemini 1.5 Flash (Fast & Capable)',
+            'meta-llama/llama-3-70b-instruct' => 'Meta: Llama 3 70B (Great Open Source)',
+        ],
+        'content_models'   => [
+            'anthropic/claude-3-haiku' => 'Claude 3 Haiku (Fast & Cheap)',
+            'openai/gpt-4o' => 'GPT-4o (Highest Quality)',
+            'google/gemini-flash-1.5' => 'Google Gemini 1.5 Flash',
+        ],
+        'translation_models' => [
+            'anthropic/claude-3-haiku' => 'Fast (Claude 3 Haiku)',
+            'openai/gpt-4o' => 'High Quality (GPT-4o)',
+            'anthropic/claude-3-opus' => 'Highest Quality (Claude 3 Opus)',
+        ],
+    ];
+}
 
     // Default Prompts
     public static function get_default_article_prompt() {
