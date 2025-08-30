@@ -118,14 +118,22 @@ class ATM_Settings {
                         <tr><th scope="row">Default Article Model</th><td><select name="atm_article_model"><?php foreach ($options['article_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['article_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
                         <tr><th scope="row">Default Podcast Content Model</th><td><select name="atm_content_model"><?php foreach ($options['content_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
                         <tr><th scope="row">Default Podcast Audio Provider</th><td><select name="atm_audio_provider"><option value="openai" <?php selected($options['audio_provider'], 'openai'); ?>>OpenAI TTS</option><option value="elevenlabs" <?php selected($options['audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option></select></td></tr>
-                        <tr><th scope="row">Default FLUX Image Model</th><td><select name="atm_flux_model"><?php foreach ($options['flux_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['flux_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default FLUX model for realistic image generation.</p></td></tr>
                         <tr><th scope="row">Translation Quality Model</th><td><select name="atm_translation_model"><?php foreach ($options['translation_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['translation_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">"High Quality" is more accurate but slower and more expensive. "Fast" is good for quick drafts.</p></td></tr>
                     </table>
                 </div>
                 <div class="atm-settings-card">
                     <h2>🖼️ Image Generation Defaults</h2>
                     <table class="form-table">
-                        <tr><th scope="row">Default Image Provider</th><td><select name="atm_image_provider"><option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option><option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option></select></td></tr>
+                        <tr>
+                            <th scope="row">Default Image Provider</th>
+                            <td>
+                                <select name="atm_image_provider">
+                                    <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
+                                    <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
+                                    <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>BlockFlow (FLUX)</option> </select>
+                            </td>
+                        </tr>
+                        <tr><th scope="row">Default FLUX Image Model</th><td><select name="atm_flux_model"><?php foreach ($options['flux_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['flux_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default FLUX model for realistic image generation.</p></td></tr>
                         <tr><th scope="row">Default Image Quality</th><td><select name="atm_image_quality"><option value="standard" <?php selected($options['image_quality'], 'standard'); ?>>Standard</option><option value="hd" <?php selected($options['image_quality'], 'hd'); ?>>HD</option></select><p class="description">"HD" is only for OpenAI/DALL-E 3.</p></td></tr>
                         <tr><th scope="row">Default Image Size</th><td><select name="atm_image_size"><option value="1792x1024" <?php selected($options['image_size'], '1792x1024'); ?>>16:9 Landscape</option><option value="1024x1024" <?php selected($options['image_size'], '1024x1024'); ?>>1:1 Square</option><option value="1024x1792" <?php selected($options['image_size'], '1024x1792'); ?>>9:16 Portrait</option></select></td></tr>
                     </table>
@@ -185,6 +193,7 @@ class ATM_Settings {
         'image_quality'    => get_option('atm_image_quality', 'hd'),
         'image_size'       => get_option('atm_image_size', '1792x1024'),
         'image_provider'   => get_option('atm_image_provider', 'openai'),
+        'flux_model'       => get_option('atm_flux_model', 'flux-1-schnell'), // <-- FIX IS HERE
         'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
         'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
         'flux_models' => [
