@@ -9,7 +9,9 @@
     "postversion": "node version-sync.js"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^27.9.0"
+    "@prettier/plugin-php": "^0.24.0",
+    "@wordpress/scripts": "^27.9.0",
+    "prettier": "^3.6.2"
   },
   "dependencies": {
     "@wordpress/components": "^30.2.0",

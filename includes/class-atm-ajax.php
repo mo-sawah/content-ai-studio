@@ -369,7 +369,10 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long. Ensure the content is detailed and comprehensive enough to meet this length requirement.";
             }
             $generated_content = ATM_API::enhance_content_with_openrouter(['content' => $article_title], $system_prompt, $model_override ?: get_option('atm_article_model'), false);
-            wp_send_json_success(['article_content' => $generated_content]);
+            wp_send_json_success([
+    'article_title'   => $article_title,
+    'article_content' => $generated_content
+]);
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }

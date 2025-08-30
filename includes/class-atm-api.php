@@ -440,7 +440,7 @@ class ATM_API {
 
     // --- 2. Polling for the Result ---
     $final_result = null;
-    $max_attempts = 60; // Poll for a maximum of 60 seconds (120 * 0.5s)
+    $max_attempts = 180; // Poll for a maximum of 90 seconds (180 * 0.5s)
     $attempts = 0;
 
     while ($attempts < $max_attempts) {
