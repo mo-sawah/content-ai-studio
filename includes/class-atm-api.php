@@ -15,6 +15,7 @@ class ATM_RSS_Parser {
  * @param string $content The long content to summarize.
  * @return string The summarized content.
  */
+
 public static function summarize_content_for_rewrite($content) {
     $summary_prompt = 'You are a text summarization expert. Your task is to read the following article content and create a concise but comprehensive summary. The summary should capture all the main points, key facts, and the overall conclusion of the article. Output only the summary text. The article is below:';
 
@@ -71,6 +72,28 @@ public static function summarize_content_for_rewrite($content) {
     /**
      * Fetch RSS content with cURL for better control
      */
+    private static function extract_image_from_rss_item($item) {
+        // 1. Check for Media RSS (media:content)
+        $media_content = $item->children('media', true)->content;
+        if (isset($media_content->attributes()->url)) {
+            return (string)$media_content->attributes()->url;
+        }
+
+        // 2. Check for enclosure tag
+        if (isset($item->enclosure) && isset($item->enclosure->attributes()->type) && strpos($item->enclosure->attributes()->type, 'image') !== false) {
+            return (string)$item->enclosure->attributes()->url;
+        }
+
+        // 3. Fallback: Search for the first <img> tag in the content
+        $content = (string)($item->children('content', true)->encoded ?? $item->description ?? '');
+        if (preg_match('/<img[^>]+src="([^">]+)"/', $content, $matches)) {
+            return $matches[1];
+        }
+
+        return ''; // Return empty if no image is found
+    }
+
+
     private static function fetch_rss_content($url) {
         $args = array(
             'timeout' => 30,
@@ -373,27 +396,6 @@ Follow these rules strictly:
         }
         
         return $raw_response; // Return the raw JSON string
-    }
-
-    private static function extract_image_from_rss_item($item) {
-        // 1. Check for Media RSS (media:content)
-        $media_content = $item->children('media', true)->content;
-        if (isset($media_content->attributes()->url)) {
-            return (string)$media_content->attributes()->url;
-        }
-
-        // 2. Check for enclosure tag
-        if (isset($item->enclosure) && isset($item->enclosure->attributes()->type) && strpos($item->enclosure->attributes()->type, 'image') !== false) {
-            return (string)$item->enclosure->attributes()->url;
-        }
-
-        // 3. Fallback: Search for the first <img> tag in the content
-        $content = (string)($item->children('content', true)->encoded ?? $item->description ?? '');
-        if (preg_match('/<img[^>]+src="([^">]+)"/', $content, $matches)) {
-            return $matches[1];
-        }
-
-        return ''; // Return empty if no image is found
     }
 
     public static function get_youtube_autocomplete_suggestions($query) {
