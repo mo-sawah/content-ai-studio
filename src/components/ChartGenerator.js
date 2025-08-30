@@ -1,4 +1,4 @@
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element'; // <-- useRef is the key
 import { Button, TextareaControl, Spinner } from '@wordpress/components';
 
 // Load ECharts library dynamically
@@ -22,20 +22,31 @@ function ChartGenerator({ setActiveView }) {
     const [chartConfig, setChartConfig] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('Describe the chart you want to create.');
-    const chartRef = useState(null);
+    
+    // --- THIS IS THE FIX: Use useRef to create a stable reference to the DOM element ---
+    const chartRef = useRef(null);
 
     useEffect(() => {
         let chartInstance = null;
         if (chartRef.current && chartConfig) {
             loadECharts().then(echarts => {
-                chartInstance = echarts.init(chartRef.current, 'dark'); // Initialize with dark theme
+                // Initialize ECharts on the .current property of the ref
+                chartInstance = echarts.init(chartRef.current, 'dark');
                 chartInstance.setOption(JSON.parse(chartConfig));
+
+                // Add a resize listener to make the chart responsive
+                const resizeObserver = new ResizeObserver(() => {
+                    chartInstance?.resize();
+                });
+                resizeObserver.observe(chartRef.current);
+                
+                // Cleanup when the component unmounts
+                return () => {
+                    resizeObserver.disconnect();
+                    chartInstance?.dispose();
+                };
             }).catch(err => console.error("ECharts loading failed:", err));
         }
-        // Cleanup on unmount
-        return () => {
-            chartInstance?.dispose();
-        };
     }, [chartConfig]);
 
     const handleGenerate = async () => {
@@ -87,6 +98,7 @@ function ChartGenerator({ setActiveView }) {
                 {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
 
                 <div className="atm-chart-preview-container">
+                    {/* The ref is now correctly assigned to the div */}
                     <div ref={chartRef} style={{ width: '100%', height: '400px', display: chartConfig ? 'block' : 'none' }}></div>
                 </div>
 
