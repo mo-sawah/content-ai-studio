@@ -1209,7 +1209,7 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
                 'X-Title' => get_bloginfo('name')
             ],
             'body' => json_encode($body_data),
-            'timeout' => 120
+            'timeout' => 300
         ]);
 
         if (is_wp_error($response)) {
