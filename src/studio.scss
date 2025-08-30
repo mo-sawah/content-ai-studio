@@ -58,6 +58,10 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     cursor: pointer;      // Ensures the pointer cursor appears on hover
     justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 
     &:hover {
         transform: translateY(-2px);
