@@ -1009,9 +1009,14 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
      * @return string The AI's response.
      * @throws Exception On API error.
      */
-    public static function enhance_content_with_openrouter($content_data, $system_prompt, $model_override = '', $json_mode = false) {
+    public static function enhance_content_with_openrouter($content_data, $system_prompt, $model_override = '', $json_mode = false, $web_search = false) {
         $api_key = get_option('atm_openrouter_api_key');
-        $model = !empty($model_override) ? $model_override : get_option('atm_content_model', 'anthropic/claude-3-haiku');
+        $model = !empty($model_override) ? $model_override : get_option('atm_article_model', 'openai/gpt-4o');
+
+        // Append the :online suffix if web search is enabled
+        if ($web_search) {
+            $model .= ':online';
+        }
 
         if (empty($api_key)) throw new Exception('OpenRouter API key not configured');
 
