@@ -367,52 +367,105 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
-    public static function generate_image_with_blockflow($prompt, $model_override = '', $size_override = '') {
-        $api_key = get_option('atm_blockflow_api_key');
-        if (empty($api_key)) {
-            throw new Exception('BlockFlow API key is not configured.');
-        }
+    public static function generate_image_with_bfl($prompt, $model_override = '', $size_override = '') {
+    // Use BFL API key instead of BlockFlow
+    $api_key = get_option('atm_bfl_api_key'); // Change this setting name
+    if (empty($api_key)) {
+        throw new Exception('Black Forest Labs API key is not configured.');
+    }
 
-        $model = !empty($model_override) ? $model_override : get_option('atm_flux_model', 'flux-1-schnell');
+    $model = !empty($model_override) ? $model_override : get_option('atm_flux_model', 'flux-pro-1.1-ultra');
+    
+    // Parse size override
+    $width = 1024;
+    $height = 1024;
+    if (!empty($size_override)) {
+        list($width, $height) = explode('x', $size_override);
+        $width = (int)$width;
+        $height = (int)$height;
+    }
 
-        // BlockFlow uses width and height, not a single size string.
-        list($width, $height) = explode('x', !empty($size_override) ? $size_override : get_option('atm_image_size', '1024x1024'));
+    $body_data = [
+        'prompt' => self::enhance_image_prompt($prompt),
+        'width' => $width,
+        'height' => $height,
+        'prompt_upsampling' => false,
+        'seed' => null,
+        'safety_tolerance' => 2,
+        'output_format' => 'png'
+    ];
 
-        $body_data = [
-            'prompt' => self::enhance_image_prompt($prompt), // Reuse our prompt enhancer
-            'model_id' => $model,
-            'height' => (int)$height,
-            'width' => (int)$width,
-            'num_inference_steps' => 50,
-            'output_format' => 'png' // Request a standard format
-        ];
+    // Use Black Forest Labs' official API endpoint
+    $response = wp_remote_post('https://api.bfl.ml/v1/' . $model, [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type'  => 'application/json',
+        ],
+        'body'    => json_encode($body_data),
+        'timeout' => 120
+    ]);
 
-        $response = wp_remote_post('https://api.blockflow.ai/v1/images/generation', [
+    if (is_wp_error($response)) {
+        throw new Exception('Black Forest Labs API call failed: ' . $response->get_error_message());
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code !== 200) {
+        $error_body = json_decode($response_body, true);
+        $error_message = isset($error_body['error']) ? $error_body['error'] : 'An unknown API error occurred.';
+        error_log('Black Forest Labs API Error: ' . $response_body);
+        throw new Exception('Black Forest Labs API Error: ' . $error_message);
+    }
+
+    $result = json_decode($response_body, true);
+    
+    // BFL API returns a task ID first, then you need to poll for the result
+    if (isset($result['id'])) {
+        return self::poll_bfl_result($result['id'], $api_key);
+    } else {
+        throw new Exception('Unexpected response from Black Forest Labs API');
+    }
+}
+
+private static function poll_bfl_result($task_id, $api_key) {
+    $max_attempts = 60; // 5 minutes max
+    $attempt = 0;
+    
+    while ($attempt < $max_attempts) {
+        $response = wp_remote_get('https://api.bfl.ml/v1/get_result', [
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type'  => 'application/json',
             ],
-            'body'    => json_encode($body_data),
-            'timeout' => 120
+            'body' => ['id' => $task_id],
+            'timeout' => 30
         ]);
-
+        
         if (is_wp_error($response)) {
-            throw new Exception('BlockFlow API call failed: ' . $response->get_error_message());
+            throw new Exception('Failed to poll BFL result: ' . $response->get_error_message());
         }
-
-        $response_code = wp_remote_retrieve_response_code($response);
-        $image_data = wp_remote_retrieve_body($response);
-
-        if ($response_code !== 200) {
-            $error_body = json_decode($image_data, true);
-            $error_message = isset($error_body['error']) ? $error_body['error'] : 'An unknown API error occurred.';
-            error_log('BlockFlow API Error: ' . $image_data);
-            throw new Exception('BlockFlow API Error: ' . $error_message);
+        
+        $result = json_decode(wp_remote_retrieve_body($response), true);
+        
+        if ($result['status'] === 'Ready') {
+            // Download the image and return binary data
+            $image_response = wp_remote_get($result['result']['sample']);
+            if (is_wp_error($image_response)) {
+                throw new Exception('Failed to download generated image');
+            }
+            return wp_remote_retrieve_body($image_response);
+        } elseif ($result['status'] === 'Error') {
+            throw new Exception('Image generation failed: ' . ($result['error'] ?? 'Unknown error'));
         }
-
-        // The API returns the raw image data directly, not a URL
-        return $image_data;
+        
+        // Still processing, wait and try again
+        sleep(5);
+        $attempt++;
     }
+    
+    throw new Exception('Image generation timed out');
+}
 
     public static function generate_chart_config_from_prompt($prompt) {
         $system_prompt = "You are an expert data visualization assistant specializing in Apache ECharts. Your task is to generate a valid ECharts JSON configuration object based on the user's request.

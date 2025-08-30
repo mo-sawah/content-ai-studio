@@ -578,8 +578,8 @@ Your entire output MUST be a single, valid JSON object with three keys:
                     $image_data = ATM_API::generate_image_with_google_imagen($final_prompt, $size_override);
                     $is_url = false;
                     break;
-                case 'blockflow': // <-- ADD THIS CASE
-                    $image_data = ATM_API::generate_image_with_blockflow($final_prompt, '', $size_override);
+                case 'bfl': // Changed from 'blockflow' to 'bfl'
+                    $image_data = ATM_API::generate_image_with_bfl($final_prompt, '', $size_override);
                     $is_url = false;
                     break;
                 case 'openai':

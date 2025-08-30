@@ -101,7 +101,13 @@ class ATM_Settings {
                     <tr><th scope="row">OpenRouter API Key</th><td><input type="password" name="atm_openrouter_api_key" value="<?php echo esc_attr($options['openrouter_key']); ?>" class="regular-text" required /></td></tr>
                     <tr><th scope="row">OpenAI API Key</th><td><input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" /><p class="description">Used for DALL-E 3 image generation and OpenAI TTS voices.</p></td></tr>
                     <tr><th scope="row">Google AI API Key</th><td><input type="password" name="atm_google_api_key" value="<?php echo esc_attr($options['google_key']); ?>" class="regular-text" /><p class="description">Used for Imagen 4 image generation. Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p></td></tr>
-                    <tr><th scope="row">BlockFlow API Key</th><td><input type="password" name="atm_blockflow_api_key" value="<?php echo esc_attr($options['blockflow_key']); ?>" class="regular-text" /><p class="description">Required for FLUX image generation. Get a key from <a href="https://app.blockflow.ai/" target="_blank">BlockFlow.ai</a>.</p></td></tr>
+                    <tr>
+                        <th scope="row">Black Forest Labs API Key</th>
+                        <td>
+                            <input type="password" name="atm_bfl_api_key" value="<?php echo esc_attr($options['bfl_key']); ?>" class="regular-text" />
+                            <p class="description">Required for FLUX image generation. Get a key from <a href="https://api.bfl.ml/" target="_blank">Black Forest Labs</a>.</p>
+                        </td>
+                    </tr>
                     <tr><th scope="row">ElevenLabs API Key</th><td><input type="password" name="atm_elevenlabs_api_key" value="<?php echo esc_attr($options['elevenlabs_key']); ?>" class="regular-text" /><p class="description">Get a key from <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a> for additional high-quality voices.</p></td></tr>
                     <tr><th scope="row">News API Key</th><td><input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a>.</p></td></tr>
                     <tr><th scope="row">GNews API Key</th><td><input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p></td></tr>
@@ -130,7 +136,7 @@ class ATM_Settings {
                                 <select name="atm_image_provider">
                                     <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
                                     <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
-                                    <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>BlockFlow (FLUX)</option> </select>
+                                    <option value="bfl" <?php selected($options['image_provider'], 'bfl'); ?>>Black Forest Labs (FLUX)</option>
                             </td>
                         </tr>
                         <tr><th scope="row">Default FLUX Image Model</th><td><select name="atm_flux_model"><?php foreach ($options['flux_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['flux_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default FLUX model for realistic image generation.</p></td></tr>
