@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { Button, TextareaControl, Spinner } from '@wordpress/components';
+import { Button, TextareaControl } from '@wordpress/components';
+import CustomSpinner from './common/CustomSpinner';
 import CustomDropdown from './common/CustomDropdown';
 
 // Player View Component
@@ -51,7 +52,7 @@ function PlayerView({ podcastUrl, onRegenerate, postId }) {
             <div className="atm-grid-2">
                 <Button isSecondary onClick={handleChangeCover}>Change Cover Image</Button>
                 <Button isDestructive onClick={handleRegenerateClick} disabled={isRegenerating}>
-                    {isRegenerating ? <Spinner /> : 'Regenerate Audio'}
+                    {isRegenerating ? <><CustomSpinner /> Regenerating...</> : 'Regenerate Audio'}
                 </Button>
             </div>
         </div>
@@ -118,7 +119,7 @@ function GeneratorView({ handleGenerateScript, handleGenerateAudio, statusMessag
                 disabled={isLoading}
             />
             <Button isSecondary onClick={() => handleGenerateScript(selectedLanguage, setScriptContent)} disabled={isLoading}>
-                {isLoading && statusMessage.includes('script') ? <Spinner /> : 'Step 1: Generate Script from Post Content'}
+                {isLoading && statusMessage.includes('script') ? <><CustomSpinner /> Generating Script...</> : 'Step 1: Generate Script from Post Content'}
             </Button>
             <TextareaControl
                 label="Podcast Script"
@@ -152,7 +153,7 @@ function GeneratorView({ handleGenerateScript, handleGenerateAudio, statusMessag
                 />
             </div>
             <Button isPrimary onClick={() => handleGenerateAudio(scriptContent, selectedVoice, audioProvider)} disabled={isLoading || !scriptContent.trim() || !selectedVoice}>
-                {isLoading && statusMessage.includes('audio') ? <Spinner /> : 'Step 2: Generate MP3 Audio'}
+                {isLoading && statusMessage.includes('audio') ? <><CustomSpinner /> Generating Audio...</> : 'Step 2: Generate MP3 Audio'}
             </Button>
         </div>
     );

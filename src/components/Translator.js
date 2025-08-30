@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
-import { Button, TextareaControl, Spinner } from '@wordpress/components';
+import { Button, TextareaControl } from '@wordpress/components';
+import CustomSpinner from './common/CustomSpinner';
 import { createBlock } from '@wordpress/blocks';
 import CustomDropdown from './common/CustomDropdown';
 import { useSpeechToText } from '../hooks/useSpeechToText';
@@ -143,7 +144,9 @@ function Translator({ setActiveView }) {
             
             <div className="atm-form-container">
                 <div className="atm-translator-full-editor">
-                    <Button isPrimary onClick={handleTranslateEditor} disabled={isBusy}>Translate Editor</Button>
+                    <Button isPrimary onClick={handleTranslateEditor} disabled={isBusy}>
+                        {isEditorTranslating ? <><CustomSpinner /> Translating...</> : 'Translate Editor'}
+                    </Button>
                     <span>to</span>
                     <CustomDropdown
                         label="" text={editorTargetLanguageLabel} options={languageOptions}
@@ -180,7 +183,7 @@ function Translator({ setActiveView }) {
                                 disabled={isBusy}
                                 aria-label={isRecording ? 'Stop Recording' : 'Start Recording'}
                             >
-                                {isTranscribing ? <Spinner /> : isRecording ? (
+                                {isTranscribing ? <CustomSpinner /> : isRecording ? (
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
                                 ) : (
                                     <img src={`${atm_studio_data.plugin_url}/includes/images/mic.svg`} alt="Microphone" className="atm-mic-icon"/>
@@ -201,7 +204,7 @@ function Translator({ setActiveView }) {
                     disabled={isBusy}
                 />
                 <Button isSecondary onClick={handleTranslate} disabled={isBusy || !sourceText.trim()}>
-                    {isLoading ? <Spinner/> : 'Translate Snippet'}
+                    {isLoading ? <><CustomSpinner /> Translating...</> : 'Translate Snippet'}
                 </Button>
                 <TextareaControl label="Translated Snippet" value={translatedText} readOnly rows={8} />
                 <Button isSecondary onClick={handleSendToEditor} disabled={!translatedText.trim() || isBusy}>

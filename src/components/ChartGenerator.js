@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
-import { Button, TextareaControl, Spinner, TextControl } from '@wordpress/components';
+import { Button, TextareaControl, TextControl } from '@wordpress/components';
+import CustomSpinner from './common/CustomSpinner';
 
 // Load ECharts library dynamically
 const loadECharts = () => {
@@ -127,7 +128,7 @@ function ChartGenerator({ setActiveView }) {
                     disabled={isLoading}
                 />
                 <Button isPrimary onClick={handleGenerate} disabled={isLoading || !prompt.trim()}>
-                    {isLoading ? <Spinner /> : 'Generate Chart'}
+                    {isLoading ? <><CustomSpinner /> Generating...</> : 'Generate Chart'}
                 </Button>
                 
                 {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
@@ -146,7 +147,7 @@ function ChartGenerator({ setActiveView }) {
                             disabled={isLoading}
                         />
                         <Button isPrimary onClick={handleSaveChart} disabled={isLoading || !chartTitle.trim()}>
-                            {isLoading ? <Spinner /> : (chartId ? 'Update Chart' : 'Save Chart')}
+                            {isLoading ? <><CustomSpinner /> {chartId ? 'Updating...' : 'Saving...'} </> : (chartId ? 'Update Chart' : 'Save Chart')}
                         </Button>
                         
                         {chartId && (
