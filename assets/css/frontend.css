@@ -102,10 +102,10 @@ body.atm-chart-theme-dark {
     color: var(--atm-chart-toggle-color);
     border: none;
     border-radius: 50%; /* Make it perfectly round */
-    width: 36px;
-    height: 36px;
-    min-width: 36px; /* Ensure it's not squashed */
-    min-height: 36px; /* Ensure it's not squashed */
+    width: 7px;
+    height: 40px;
+    max-width: 40px; /* Ensure it's not squashed */
+    max-height: 40px; /* Ensure it's not squashed */
     display: flex;
     align-items: center;
     justify-content: center;

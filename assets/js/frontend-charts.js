@@ -17,11 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to update the theme of all ECharts instances
     const updateAllChartsTheme = () => {
-        document.querySelectorAll('.atm-chart-container').forEach(container => {
-            const chartInstance = getInstanceByDom(container.querySelector('.atm-chart')); // No "echarts."
+        document.querySelectorAll('.atm-chart-wrapper').forEach(wrapper => {
+            const chartInstance = getInstanceByDom(wrapper.querySelector('.atm-chart'));
             if (chartInstance) {
                 chartInstance.dispose(); // Dispose old instance
-                renderChart(container.id.replace('atm-chart-wrapper-', '')); // Re-render with new theme
+                renderChart(wrapper.id.replace('atm-chart-wrapper-', '')); // Re-render with new theme
             }
         });
     };
