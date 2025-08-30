@@ -359,12 +359,23 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 throw new Exception("Article title cannot be empty.");
             }
             $system_prompt = '';
-            if (!empty($custom_prompt) && $post) {
-                $system_prompt = ATM_API::replace_prompt_shortcodes($custom_prompt, $post);
-            } else {
-                $writing_styles = ATM_API::get_writing_styles();
-                $system_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
+            // Get all available writing styles
+            $writing_styles = ATM_API::get_writing_styles();
+
+            // Start with the prompt for the selected style, falling back to default if it's invalid
+            $system_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
+
+            // If the user provided a custom prompt, it overrides the selected style's prompt
+            if (!empty($custom_prompt)) {
+                $system_prompt = $custom_prompt;
             }
+
+            // Now, replace shortcodes in whichever prompt was selected
+            if ($post) {
+                $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
+            }
+
+            // Add word count instructions if applicable
             if ($word_count > 0) {
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long. Ensure the content is detailed and comprehensive enough to meet this length requirement.";
             }
