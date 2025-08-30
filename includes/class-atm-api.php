@@ -1163,6 +1163,18 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
                 ['role' => 'system', 'content' => $system_prompt],
                 ['role' => 'user', 'content' => $content_data['content']]
             ],
+            // --- ADD THE FOLLOWING BLOCK ---
+            'tool_choice' => 'any',
+            'tools' => [
+                [
+                    'type' => 'function',
+                    'function' => [
+                        'name' => 'web_search',
+                        'max_results' => (int)get_option('atm_web_search_results', 5)
+                    ]
+                ]
+            ],
+            // --- END OF NEW BLOCK ---
             'max_tokens' => 4000,
             'temperature' => 0.7
         ];

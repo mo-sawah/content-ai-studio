@@ -119,6 +119,18 @@ class ATM_Settings {
                         <tr><th scope="row">Default Podcast Content Model</th><td><select name="atm_content_model"><?php foreach ($options['content_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
                         <tr><th scope="row">Default Podcast Audio Provider</th><td><select name="atm_audio_provider"><option value="openai" <?php selected($options['audio_provider'], 'openai'); ?>>OpenAI TTS</option><option value="elevenlabs" <?php selected($options['audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option></select></td></tr>
                         <tr><th scope="row">Translation Quality Model</th><td><select name="atm_translation_model"><?php foreach ($options['translation_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['translation_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">"High Quality" is more accurate but slower and more expensive. "Fast" is good for quick drafts.</p></td></tr>
+                        <tr>
+                            <th scope="row">Web Search Results</th>
+                            <td>
+                                <select name="atm_web_search_results">
+                                    <option value="3" <?php selected($options['web_search_results'], '3'); ?>>3 Results (Balanced)</option>
+                                    <option value="5" <?php selected($options['web_search_results'], '5'); ?>>5 Results (Default)</option>
+                                    <option value="1" <?php selected($options['web_search_results'], '1'); ?>>1 Result (Fastest & Cheapest)</option>
+                                    <option value="10" <?php selected($options['web_search_results'], '10'); ?>>10 Results (Most Detailed)</option>
+                                </select>
+                                <p class="description">Control the number of web search results used. Fewer results are cheaper and faster but may be less comprehensive.</p>
+                            </td>
+                        </tr>
                     </table>
                 </div>
                 <div class="atm-settings-card">
@@ -172,6 +184,7 @@ class ATM_Settings {
     update_option('atm_image_provider', sanitize_text_field($_POST['atm_image_provider']));
     update_option('atm_translation_model', sanitize_text_field($_POST['atm_translation_model']));
     update_option('atm_google_youtube_api_key', sanitize_text_field($_POST['atm_google_youtube_api_key']));
+    update_option('atm_web_search_results', intval($_POST['atm_web_search_results'])); // <-- ADD THIS
     echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
 }
 
@@ -184,6 +197,7 @@ class ATM_Settings {
         'elevenlabs_key'   => get_option('atm_elevenlabs_api_key', ''), // New
         'news_api_key'     => get_option('atm_news_api_key', ''),
         'gnews_api_key'    => get_option('atm_gnews_api_key', ''),
+            'web_search_results' => get_option('atm_web_search_results', 5), // <-- ADD THIS
         'rss_feeds'        => get_option('atm_rss_feeds', ''),
         'scrapingant_key'  => get_option('atm_scrapingant_api_key', ''),
         'guardian_api_key' => get_option('atm_guardian_api_key', ''),
