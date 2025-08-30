@@ -1,6 +1,7 @@
 // src/components/RssForm.js
 import { useState } from '@wordpress/element';
-import { Button, TextControl, CheckboxControl, Spinner } from '@wordpress/components';
+import { Button, TextControl, CheckboxControl } from '@wordpress/components';
+import CustomSpinner from './common/CustomSpinner';
 
 // We can move these helpers to a shared file later
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
@@ -122,10 +123,10 @@ function RssForm() {
             />
             <div className="atm-grid-2">
                 <Button isSecondary onClick={() => handleFetch(keyword, deepSearch)} disabled={isLoading || !keyword}>
-                    {isLoading ? <Spinner /> : 'Search Feeds'}
+                    {isLoading ? <><CustomSpinner /> Searching...</> : 'Search Feeds'}
                 </Button>
                 <Button isPrimary onClick={() => handleFetch()} disabled={isLoading}>
-                    {isLoading ? <Spinner /> : 'Fetch Latest Articles'}
+                    {isLoading ? <><CustomSpinner /> Fetching...</> : 'Fetch Latest Articles'}
                 </Button>
             </div>
             {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
@@ -138,7 +139,7 @@ function RssForm() {
                             <small className="atm-rss-item-meta">{article.source} | {article.date}</small>
                             <p className="atm-rss-item-desc">{article.description.substring(0, 120)}...</p>
                             <Button isPrimary onClick={() => handleGenerateFromRss(article, index)} disabled={isLoading || article.isGenerating}>
-                                {article.isGenerating ? <Spinner/> : 'Generate Article'}
+                                {article.isGenerating ? <><CustomSpinner /> Generating...</> : 'Generate Article'}
                             </Button>
                         </div>
                     ))}

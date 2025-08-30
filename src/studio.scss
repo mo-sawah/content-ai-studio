@@ -1137,6 +1137,7 @@ body.wp-admin .atm-filter-modal .components-base-control__label {
   width: 20px;
   height: 20px;
   animation: atm-spin 1s linear infinite;
+  filter: invert(100%) sepia(0%) saturate(7483%) hue-rotate(256deg) brightness(100%) contrast(100%);
 }
 
 /* --- My Styles --- */

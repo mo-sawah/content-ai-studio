@@ -1,7 +1,8 @@
 // src/components/NewsForm.js
 import { useState, useRef } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { Button, TextControl, CheckboxControl, Spinner, DropdownMenu } from '@wordpress/components';
+import { Button, TextControl, CheckboxControl, DropdownMenu } from '@wordpress/components';
+import CustomSpinner from './common/CustomSpinner';
 import { chevronDown } from '@wordpress/icons';
 
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
@@ -157,7 +158,14 @@ function NewsForm() {
                 disabled={isLoading || isSaving}
             />
             <Button isPrimary onClick={handleGenerate} disabled={isLoading || isSaving || !topic}>
-                {isLoading || isSaving ? <Spinner /> : 'Generate News Article'}
+                {isLoading || isSaving ? (
+                    <>
+                        <CustomSpinner />
+                        Generating...
+                    </>
+                ) : (
+                    'Generate News Article'
+                )}
             </Button>
             {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
         </div>

@@ -1,7 +1,8 @@
 // src/components/CreativeForm.js
 import { useState, useRef } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { Button, TextControl, TextareaControl, CheckboxControl, Spinner, DropdownMenu } from '@wordpress/components';
+import { Button, TextControl, TextareaControl, CheckboxControl, DropdownMenu } from '@wordpress/components';
+import CustomSpinner from './common/CustomSpinner';
 import { chevronDown } from '@wordpress/icons';
 
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
@@ -193,7 +194,14 @@ function CreativeForm() {
             <TextareaControl label="Custom Prompt (Optional)" value={customPrompt} onChange={setCustomPrompt} placeholder="Leave empty to use the selected Writing Style. If you write a prompt here, it will be used instead." rows="6" disabled={isLoading || isSaving} />
             <CheckboxControl label="Also generate a featured image" checked={generateImage} onChange={setGenerateImage} disabled={isLoading || isSaving} />
             <Button isPrimary onClick={handleGenerate} disabled={isLoading || isSaving || (!keyword && !title)}>
-                {isLoading || isSaving ? <Spinner /> : 'Generate Creative Article'}
+                {isLoading || isSaving ? (
+                    <>
+                        <CustomSpinner />
+                        Generating...
+                    </>
+                ) : (
+                    'Generate Creative Article'
+                )}
             </Button>
             {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
         </div>
