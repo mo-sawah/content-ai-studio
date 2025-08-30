@@ -38,7 +38,7 @@ function ChartGenerator({ setActiveView }) {
         if (chartRef.current && chartConfig) {
             loadECharts().then(echarts => {
                 // Initialize ECharts on the .current property of the ref
-                chartInstance = echarts.init(chartRef.current, 'dark');
+                chartInstance = echarts.init(chartRef.current, 'light');
                 chartInstance.setOption(JSON.parse(chartConfig));
 
                 // Add a resize listener to make the chart responsive
