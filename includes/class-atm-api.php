@@ -1148,35 +1148,27 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
             throw new Exception('OpenRouter API key not configured');
         }
 
-        // Determine the base model.
-        // Note: This logic assumes a sensible default; individual calls might provide a specific model.
+        // Determine the base model (WITHOUT :online suffix)
         $model = !empty($model_override) ? $model_override : get_option('atm_article_model', 'openai/gpt-4o');
-
-        // --- THIS IS THE CORE CHANGE ---
-        // Always append the :online suffix to enable web search for any model.
-        $model .= ':online';
-        // --- END OF CORE CHANGE ---
+        
+        // Get the web search results setting
+        $web_search_results = (int)get_option('atm_web_search_results', 5);
 
         $body_data = [
-            'model' => $model,
+            'model' => $model, // Use base model without :online
             'messages' => [
                 ['role' => 'system', 'content' => $system_prompt],
                 ['role' => 'user', 'content' => $content_data['content']]
             ],
-            // --- ADD THE FOLLOWING BLOCK ---
-            'tool_choice' => 'auto',
-            'tools' => [
-                [
-                    'type' => 'function',
-                    'function' => [
-                        'name' => 'web_search',
-                        'max_results' => (int)get_option('atm_web_search_results', 5)
-                    ]
-                ]
-            ],
-            // --- END OF NEW BLOCK ---
             'max_tokens' => 4000,
-            'temperature' => 0.7
+            'temperature' => 0.7,
+            // Use the plugins parameter instead of :online suffix
+            'plugins' => [
+                [
+                    'id' => 'web',
+                    'max_results' => $web_search_results
+                ]
+            ]
         ];
 
         if ($json_mode) {
