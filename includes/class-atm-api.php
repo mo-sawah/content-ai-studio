@@ -351,7 +351,8 @@ Follow these rules strictly:
 2.  The generated JSON object MUST be complete and ready to be passed directly to `echarts.init()`.
 3.  The design must be modern and futuristic. Use gradients, subtle shadows, and a clean aesthetic suitable for a dark theme. Ensure all text is easily readable with high contrast.
 4.  Tooltips, a legend, and data zoom features should be enabled and configured appropriately.
-5.  Your entire response MUST be ONLY the valid JSON configuration object. Do not include any extra text, explanations, comments, or markdown code fences like \`\`\`json. The response must start with `{` and end with `}`.";
+5.  CRITICAL: Do NOT generate `map` or `geo` type charts, as they require external map data files. You can use any other chart type like `bar`, `line`, `pie`, `scatter`, `treemap`, `sunburst`, etc.
+6.  Your entire response MUST be ONLY the valid JSON configuration object. Do not include any extra text, explanations, comments, or markdown code fences like ```json. The response must start with { and end with }.";
 
         // A powerful model is needed for this complex task.
         $model = 'openai/gpt-4o'; 
