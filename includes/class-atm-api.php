@@ -222,6 +222,7 @@ public static function summarize_content_for_rewrite($content) {
         }
         
         return [
+            'image' => self::extract_image_from_rss_item($item), // <-- ADD THIS LINE
             'title' => trim($title),
             'link' => trim($link),
             'description' => trim(strip_tags($description)),
@@ -372,6 +373,27 @@ Follow these rules strictly:
         }
         
         return $raw_response; // Return the raw JSON string
+    }
+
+    private static function extract_image_from_rss_item($item) {
+        // 1. Check for Media RSS (media:content)
+        $media_content = $item->children('media', true)->content;
+        if (isset($media_content->attributes()->url)) {
+            return (string)$media_content->attributes()->url;
+        }
+
+        // 2. Check for enclosure tag
+        if (isset($item->enclosure) && isset($item->enclosure->attributes()->type) && strpos($item->enclosure->attributes()->type, 'image') !== false) {
+            return (string)$item->enclosure->attributes()->url;
+        }
+
+        // 3. Fallback: Search for the first <img> tag in the content
+        $content = (string)($item->children('content', true)->encoded ?? $item->description ?? '');
+        if (preg_match('/<img[^>]+src="([^">]+)"/', $content, $matches)) {
+            return $matches[1];
+        }
+
+        return ''; // Return empty if no image is found
     }
 
     public static function get_youtube_autocomplete_suggestions($query) {

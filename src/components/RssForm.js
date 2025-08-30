@@ -1,6 +1,7 @@
 // src/components/RssForm.js
 import { useState } from '@wordpress/element';
 import { Button, TextControl, CheckboxControl } from '@wordpress/components';
+import { external } from '@wordpress/icons'; // <-- ADD THIS IMPORT
 import CustomSpinner from './common/CustomSpinner';
 
 // We can move these helpers to a shared file later
@@ -137,8 +138,14 @@ function RssForm() {
                         <div key={article.guid} className="atm-video-result-item"> {/* Use the same card class */}
 
                             {/* A placeholder for where a thumbnail would go */}
-                            <div className="atm-video-thumbnail atm-rss-thumbnail-placeholder">
-                                <span className="dashicons dashicons-rss"></span>
+                            <div className="atm-video-thumbnail">
+                                {article.image ? (
+                                    <img src={article.image} alt={article.title} />
+                                ) : (
+                                    <div className="atm-rss-thumbnail-placeholder">
+                                        <span className="dashicons dashicons-rss"></span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="atm-video-details">
@@ -152,6 +159,7 @@ function RssForm() {
                                 <div className="atm-video-actions">
                                     <Button 
                                         isSecondary 
+                                        icon={external}
                                         href={article.link} 
                                         target="_blank"
                                     >
