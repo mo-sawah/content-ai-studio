@@ -1155,16 +1155,6 @@ body.wp-admin .atm-filter-modal .components-base-control__label {
   filter: invert(100%) sepia(0%) saturate(7483%) hue-rotate(256deg) brightness(100%) contrast(100%);
 }
 
-/* --- My Styles --- */
-.atm-video-search-container .components-button.is-primary {
-    margin-bottom: calc(8px);
-}
-
-.atm-video-search-container .components-button.is-secondary {
-    box-shadow: unset;
-    outline: 0;
-}
-
 /* --- RSS Results Enhancement --- */
 .atm-rss-thumbnail-placeholder {
   display: flex;
@@ -1178,4 +1168,59 @@ body.wp-admin .atm-filter-modal .components-base-control__label {
     width: 48px;
     height: 48px;
   }
+}
+
+/* --- Universal Thumbnail Styles --- */
+.atm-video-thumbnail {
+    flex-shrink: 0;
+    width: 160px; /* Base width for larger screens */
+    height: 150px; /* Enforce a 16:9 aspect ratio */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    overflow: hidden; /* Ensures image corners are rounded */
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Ensures image fills the container */
+    }
+
+    @media (max-width: 768px) {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9; /* Modern way to maintain aspect ratio */
+    }
+}
+
+/* --- RSS Placeholder Specific Styles --- */
+.atm-rss-thumbnail-placeholder {
+    background-color: #374151;
+
+    .dashicons-rss {
+        font-size: 48px;
+        color: #718096;
+        width: 48px;
+        height: 48px;
+    }
+}
+
+/* --- My Styles --- */
+.atm-video-search-container .components-button.is-primary {
+    margin-bottom: calc(8px);
+}
+
+.atm-video-search-container .components-button.is-secondary {
+    box-shadow: unset;
+    outline: 0;
+}
+
+.atm-video-result-item .atm-video-actions .components-button:not(.is-embed) {
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.atm-video-result-item .atm-video-actions .components-button.is-primary {
+    background: #d7d7d7 !important;
 }

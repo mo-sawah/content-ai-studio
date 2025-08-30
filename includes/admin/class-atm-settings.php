@@ -101,6 +101,7 @@ class ATM_Settings {
                     <tr><th scope="row">OpenRouter API Key</th><td><input type="password" name="atm_openrouter_api_key" value="<?php echo esc_attr($options['openrouter_key']); ?>" class="regular-text" required /></td></tr>
                     <tr><th scope="row">OpenAI API Key</th><td><input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" /><p class="description">Used for DALL-E 3 image generation and OpenAI TTS voices.</p></td></tr>
                     <tr><th scope="row">Google AI API Key</th><td><input type="password" name="atm_google_api_key" value="<?php echo esc_attr($options['google_key']); ?>" class="regular-text" /><p class="description">Used for Imagen 4 image generation. Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p></td></tr>
+                    <tr><th scope="row">BlockFlow API Key</th><td><input type="password" name="atm_blockflow_api_key" value="<?php echo esc_attr($options['blockflow_key']); ?>" class="regular-text" /><p class="description">Required for FLUX image generation. Get a key from <a href="https://app.blockflow.ai/" target="_blank">BlockFlow.ai</a>.</p></td></tr>
                     <tr><th scope="row">ElevenLabs API Key</th><td><input type="password" name="atm_elevenlabs_api_key" value="<?php echo esc_attr($options['elevenlabs_key']); ?>" class="regular-text" /><p class="description">Get a key from <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a> for additional high-quality voices.</p></td></tr>
                     <tr><th scope="row">News API Key</th><td><input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a>.</p></td></tr>
                     <tr><th scope="row">GNews API Key</th><td><input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p></td></tr>
@@ -117,6 +118,7 @@ class ATM_Settings {
                         <tr><th scope="row">Default Article Model</th><td><select name="atm_article_model"><?php foreach ($options['article_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['article_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
                         <tr><th scope="row">Default Podcast Content Model</th><td><select name="atm_content_model"><?php foreach ($options['content_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
                         <tr><th scope="row">Default Podcast Audio Provider</th><td><select name="atm_audio_provider"><option value="openai" <?php selected($options['audio_provider'], 'openai'); ?>>OpenAI TTS</option><option value="elevenlabs" <?php selected($options['audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option></select></td></tr>
+                        <tr><th scope="row">Default FLUX Image Model</th><td><select name="atm_flux_model"><?php foreach ($options['flux_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['flux_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default FLUX model for realistic image generation.</p></td></tr>
                         <tr><th scope="row">Translation Quality Model</th><td><select name="atm_translation_model"><?php foreach ($options['translation_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['translation_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">"High Quality" is more accurate but slower and more expensive. "Fast" is good for quick drafts.</p></td></tr>
                     </table>
                 </div>
@@ -146,6 +148,8 @@ class ATM_Settings {
     update_option('atm_openrouter_api_key', sanitize_text_field($_POST['atm_openrouter_api_key']));
     update_option('atm_openai_api_key', sanitize_text_field($_POST['atm_openai_api_key']));
     update_option('atm_google_api_key', sanitize_text_field($_POST['atm_google_api_key']));
+    update_option('atm_blockflow_api_key', sanitize_text_field($_POST['atm_blockflow_api_key'])); // <-- ADD THIS
+    update_option('atm_flux_model', sanitize_text_field($_POST['atm_flux_model'])); // <-- ADD THIS
     update_option('atm_elevenlabs_api_key', sanitize_text_field($_POST['atm_elevenlabs_api_key'])); // New
     update_option('atm_article_model', sanitize_text_field($_POST['atm_article_model']));
     update_option('atm_content_model', sanitize_text_field($_POST['atm_content_model']));
@@ -168,6 +172,7 @@ class ATM_Settings {
         'openrouter_key'   => get_option('atm_openrouter_api_key', ''),
         'openai_key'       => get_option('atm_openai_api_key', ''),
         'google_key'       => get_option('atm_google_api_key', ''),
+        'blockflow_key'    => get_option('atm_blockflow_api_key', ''), // <-- ADD THIS
         'elevenlabs_key'   => get_option('atm_elevenlabs_api_key', ''), // New
         'news_api_key'     => get_option('atm_news_api_key', ''),
         'gnews_api_key'    => get_option('atm_gnews_api_key', ''),
@@ -182,6 +187,15 @@ class ATM_Settings {
         'image_provider'   => get_option('atm_image_provider', 'openai'),
         'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
         'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
+        'flux_models' => [
+            'flux-1-schnell'        => 'FLUX 1 Schnell',
+            'flux-1-dev'            => 'FLUX 1 Dev (Fast)',
+            'flux-pro'              => 'FLUX Pro',
+            'flux-pro-1.1'          => 'FLUX Pro 1.1',
+            'flux-pro-1.1-ultra'    => 'FLUX Pro 1.1 Ultra (High Quality)',
+            'flux-kontext-pro'      => 'FLUX Kontext Pro',
+            'flux-kontext-max'      => 'FLUX Kontext Max (Best Quality)',
+         ],
         'article_models'   => [
             'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
             'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',

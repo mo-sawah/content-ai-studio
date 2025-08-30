@@ -62,6 +62,8 @@ function ImageGenerator({ setActiveView }) {
         { label: `Use Default (${defaultProvider})`, value: '' },
         { label: 'OpenAI (DALL-E 3)', value: 'openai' },
         { label: 'Google (Imagen 4)', value: 'google' },
+        { label: 'BlockFlow (FLUX)', value: 'blockflow' }, // <-- ADD THIS LINE
+
     ];
 
     const sizeOptions = [
