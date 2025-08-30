@@ -365,7 +365,7 @@ class ATM_API {
             throw new Exception('YouTube API key is not configured in settings.');
         }
         
-        // Caching has been removed.
+        // Caching has been removed to ensure fresh results.
 
         $api_params = [
             'part' => 'snippet',
@@ -383,21 +383,23 @@ class ATM_API {
             $api_params['videoDuration'] = $filters['videoDuration'];
         }
 
-        // Convert simple date strings from the frontend to the RFC 3339 format the API needs
+        // --- THIS IS THE FIX for the date filter logic ---
         if (!empty($filters['publishedAfter'])) {
-            $interval_string = '';
-            switch($filters['publishedAfter']) {
-                case 'hour': $interval_string = 'PT1H'; break;
-                case 'day': $interval_string = 'P1D'; break;
-                case 'week': $interval_string = 'P1W'; break;
-                case 'month': $interval_string = 'P1M'; break;
-                case 'year': $interval_string = 'P1Y'; break;
-            }
+            $interval_map = [
+                'hour'  => '-1 hour',
+                'day'   => '-1 day',
+                'week'  => '-1 week',
+                'month' => '-1 month',
+                'year'  => '-1 year',
+            ];
             
-            if ($interval_string) {
-                $date = new DateTime();
-                $date->sub(new DateInterval($interval_string));
-                $api_params['publishedAfter'] = $date->format(DateTime::RFC3339);
+            if (isset($interval_map[$filters['publishedAfter']])) {
+                $interval = $interval_map[$filters['publishedAfter']];
+                // Use current_time to get a timestamp respecting the WordPress timezone setting.
+                $timestamp = current_time('timestamp');
+                $past_timestamp = strtotime($interval, $timestamp);
+                // wp_date() ensures the final format is also timezone-aware.
+                $api_params['publishedAfter'] = wp_date(DateTime::RFC3339, $past_timestamp);
             }
         }
         

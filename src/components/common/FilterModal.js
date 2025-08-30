@@ -1,6 +1,6 @@
-import { Modal, Button, SelectControl } from '@wordpress/components';
+import { Modal, SelectControl } from '@wordpress/components';
 
-function FilterModal({ isOpen, onClose, filters, onFilterChange, onApply }) {
+function FilterModal({ isOpen, onClose, filters, onFilterChange }) {
     if (!isOpen) {
         return null;
     }
@@ -22,6 +22,8 @@ function FilterModal({ isOpen, onClose, filters, onFilterChange, onApply }) {
                         { label: 'Rating', value: 'rating' },
                     ]}
                     onChange={(value) => onFilterChange('order', value)}
+                    // Disable if a date filter is active, as it forces sorting by date
+                    disabled={!!filters.publishedAfter}
                 />
                 <SelectControl
                     label="Duration"
@@ -37,7 +39,6 @@ function FilterModal({ isOpen, onClose, filters, onFilterChange, onApply }) {
                 <SelectControl
                     label="Upload Date"
                     value={filters.publishedAfter}
-                    // --- THE FIX: Using static string values ---
                     options={[
                         { label: 'Anytime', value: '' },
                         { label: 'Last Hour', value: 'hour' },
@@ -48,9 +49,7 @@ function FilterModal({ isOpen, onClose, filters, onFilterChange, onApply }) {
                     ]}
                     onChange={(value) => onFilterChange('publishedAfter', value)}
                 />
-                <Button isPrimary onClick={onApply}>
-                    Apply Filters & Search
-                </Button>
+                {/* The "Apply" button has been removed for a better UX */}
             </div>
         </Modal>
     );

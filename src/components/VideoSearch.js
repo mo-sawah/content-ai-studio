@@ -1,4 +1,4 @@
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { createBlock } from '@wordpress/blocks';
 import { Spinner } from '@wordpress/components';
@@ -13,7 +13,6 @@ function VideoSearch({ setActiveView }) {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('Enter a search term to find YouTube videos.');
     const [lastQuery, setLastQuery] = useState('');
-    
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [filters, setFilters] = useState({
         order: 'relevance',
@@ -34,7 +33,7 @@ function VideoSearch({ setActiveView }) {
             const response = await callAjax('search_youtube', { query, filters });
             if (response.success) {
                 setSearchResults(response.data);
-                setStatusMessage(response.data.length > 0 ? `Showing ${response.data.length} results for "${query}"` : 'No results found.');
+                setStatusMessage(response.data.length > 0 ? `Showing results for "${query}"` : 'No results found.');
             } else {
                 throw new Error(response.data);
             }
@@ -45,43 +44,43 @@ function VideoSearch({ setActiveView }) {
         }
     };
     
-    // --- UPDATED: This function now fixes the date filter logic ---
     const handleFilterChange = (key, value) => {
         setFilters(prevFilters => {
             const newFilters = { ...prevFilters, [key]: value };
-            // If a date filter is set, automatically switch to sort by date for accurate results.
             if (key === 'publishedAfter' && value !== '') {
                 newFilters.order = 'date';
+            }
+            // If user manually changes sort order back to relevance, clear the date filter
+            if (key === 'order' && value === 'relevance') {
+                newFilters.publishedAfter = '';
             }
             return newFilters;
         });
     };
 
-    const applyFiltersAndSearch = () => {
-        setIsModalOpen(false);
+    // --- NEW: Automatically re-search when filters change ---
+    useEffect(() => {
+        // Don't run on the initial render or if no search has been made yet
         if (lastQuery) {
             handleSearch(lastQuery);
         }
-    };
+    }, [filters]); // This effect runs whenever the 'filters' object changes
 
-    // --- UPDATED: This function now creates a wider embed block ---
     const handleEmbed = (url) => {
         const isBlockEditor = !!wp.data.select('core/block-editor');
         if (isBlockEditor) {
             const embedBlock = createBlock('core/embed', {
-                url: url,
+                url,
                 providerNameSlug: 'youtube',
-                align: 'wide', // This makes the block wider in most themes
-                className: 'atm-youtube-embed', // For any custom CSS you might want
+                align: 'wide', // Set a responsive width
+                className: 'atm-youtube-embed',
             });
             insertBlocks(embedBlock);
         } else {
-            // Classic Editor
-            const embedCode = `\n${url}\n`;
+            const embedCode = `\n<div class="wp-video" style="width: 100%;"><iframe src="${url.replace('/watch?v=', '/embed/')}" width="500" height="281" style="width: 100%; aspect-ratio: 16/9; height: auto;" frameborder="0" allowfullscreen></iframe></div>\n`;
             window.send_to_editor(embedCode);
         }
         setStatusMessage('✅ Video embedded successfully!');
-        setTimeout(() => setStatusMessage(''), 3000);
     };
 
     return (
@@ -100,20 +99,20 @@ function VideoSearch({ setActiveView }) {
                     disabled={isLoading}
                 />
                 <p className="components-base-control__help" style={{ marginTop: '-1rem' }}>
-                    Search for videos on YouTube.
+                    Search for videos on YouTube. Use filters for more specific results.
                 </p>
 
                 {isLoading && <div className="atm-video-spinner-container"><Spinner /></div>}
                 
-                {!isLoading && searchResults.length === 0 && <p className="atm-status-message">{statusMessage}</p>}
-                
-                {searchResults.length > 0 && (
+                {!isLoading && searchResults.length > 0 && (
                     <div className="atm-video-results-list">
                         {searchResults.map(video => (
                             <VideoResult key={video.id} video={video} onEmbed={handleEmbed} />
                         ))}
                     </div>
                 )}
+
+                 {!isLoading && searchResults.length === 0 && <p className="atm-status-message">{statusMessage}</p>}
             </div>
 
             <FilterModal
@@ -121,7 +120,6 @@ function VideoSearch({ setActiveView }) {
                 onClose={() => setIsModalOpen(false)}
                 filters={filters}
                 onFilterChange={handleFilterChange}
-                onApply={applyFiltersAndSearch}
             />
         </div>
     );

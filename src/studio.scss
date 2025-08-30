@@ -1013,13 +1013,26 @@
     align-items: center;
 }
 
-/* --- Filter Modal Styles --- */
+/* --- Specific Filter Button and Modal Styles --- */
+
+.atm-button-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(0.8);
+    transition: filter .2s ease;
+}
+
+.atm-filter-button:hover:not(:disabled) .atm-button-icon {
+    filter: brightness(0) invert(1);
+}
+
 .atm-filter-modal .components-modal__content {
     background: #1e293b;
     color: #e2e8f0;
 }
 
-.atm-filter-modal .components-base-control__label {
+// More aggressive selector to fix label colors
+body.wp-admin .atm-filter-modal .components-base-control__label {
     color: #a0aec0 !important;
     font-size: 12px !important;
     text-transform: uppercase;
@@ -1039,6 +1052,7 @@
 .atm-filter-modal .components-modal__header .components-button {
     color: #e2e8f0 !important;
 }
+
 
 /* --- My Styles --- */
 .atm-video-search-container .components-button.is-primary {

@@ -1,6 +1,6 @@
 import { useState } from '@wordpress/element';
 import { TextControl, Button } from '@wordpress/components';
-import { Icon, search } from '@wordpress/icons'; // We no longer need 'filter' from here
+import { Icon, search } from '@wordpress/icons'; // 'filter' is removed
 
 function AutocompleteSearch({ onSearch, onFilterClick, disabled }) {
     const [query, setQuery] = useState('');
@@ -28,7 +28,7 @@ function AutocompleteSearch({ onSearch, onFilterClick, disabled }) {
                     disabled={disabled}
                     className="atm-filter-button"
                 >
-                    {/* --- THIS IS THE CHANGE: Use an <img> tag for your custom SVG --- */}
+                    {/* --- Use an <img> tag for your custom SVG --- */}
                     <img 
                         src={`${atm_studio_data.plugin_url}includes/images/filter.svg`} 
                         alt="Filter" 
