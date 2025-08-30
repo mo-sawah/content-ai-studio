@@ -126,6 +126,23 @@ class ATM_Settings {
                         </td>
                     </tr>
                     <tr>
+    <th scope="row">Test BFL API Key</th>
+    <td>
+        <?php
+        if (!empty(get_option('atm_bfl_api_key'))) {
+            $test_result = ATM_API::test_bfl_api_key();
+            if ($test_result['success']) {
+                echo '<span style="color: green;">✅ ' . esc_html($test_result['message']) . '</span>';
+            } else {
+                echo '<span style="color: red;">❌ ' . esc_html($test_result['message']) . '</span>';
+            }
+        } else {
+            echo '<span style="color: orange;">⚠️ No API key configured</span>';
+        }
+        ?>
+    </td>
+</tr>
+                    <tr>
                         <th scope="row">ElevenLabs API Key</th>
                         <td>
                             <input type="password" name="atm_elevenlabs_api_key" value="<?php echo esc_attr($options['elevenlabs_key']); ?>" class="regular-text" />

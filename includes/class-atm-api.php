@@ -367,6 +367,57 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
+    public static function test_bfl_api_key() {
+    $api_key = get_option('atm_bfl_api_key');
+    if (empty($api_key)) {
+        return ['success' => false, 'message' => 'No API key configured'];
+    }
+    
+    // Test with a simple request to see if authentication works
+    $test_data = [
+        'prompt' => 'A simple test image of a red apple',
+        'width' => 512,
+        'height' => 512,
+        'prompt_upsampling' => false,
+        'output_format' => 'png'
+    ];
+    
+    $response = wp_remote_post('https://api.bfl.ml/v1/flux-pro-1.1-ultra', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type'  => 'application/json',
+            'User-Agent'    => 'WordPress/' . get_bloginfo('version'),
+        ],
+        'body'    => json_encode($test_data),
+        'timeout' => 30
+    ]);
+    
+    if (is_wp_error($response)) {
+        return [
+            'success' => false, 
+            'message' => 'HTTP Error: ' . $response->get_error_message()
+        ];
+    }
+    
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+    
+    if ($response_code === 200) {
+        $result = json_decode($response_body, true);
+        if (isset($result['id'])) {
+            return [
+                'success' => true,
+                'message' => 'API key is valid! Task ID: ' . $result['id']
+            ];
+        }
+    }
+    
+    return [
+        'success' => false,
+        'message' => 'HTTP ' . $response_code . ': ' . $response_body
+    ];
+}
+
     public static function generate_image_with_bfl($prompt, $model_override = '', $size_override = '') {
     // Use BFL API key instead of BlockFlow
     $api_key = get_option('atm_bfl_api_key'); // Change this setting name
