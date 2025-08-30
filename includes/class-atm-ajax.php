@@ -606,7 +606,7 @@ Your entire output MUST be a single, valid JSON object with three keys:
             }
             set_post_thumbnail($post_id, $attachment_id);
             $thumbnail_html = _wp_post_thumbnail_html($attachment_id, $post_id);
-            wp_send_json_success(['attachment_id' => $attachment_id, 'html' => $thumbnail_html]);
+            wp_send_json_success(['attachment_id' => $attachment_id, 'html' => $thumbnail_html, 'generated_prompt' => $final_prompt]);
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
