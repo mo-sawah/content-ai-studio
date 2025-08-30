@@ -1112,15 +1112,6 @@ body.wp-admin .atm-filter-modal .components-base-control__label {
     }
 }
 
-/* --- My Styles --- */
-.atm-video-search-container .components-button.is-primary {
-    margin-bottom: calc(8px);
-}
-
-.atm-video-search-container .components-button.is-secondary {
-    box-shadow: unset;
-    outline: 0;
-}
 
 /* --- FIX for Loading Button Alignment --- */
 .atm-studio-container .components-button {
@@ -1130,4 +1121,30 @@ body.wp-admin .atm-filter-modal .components-base-control__label {
     justify-content: center;
     gap: 8px;
   }
+}
+
+/* --- Custom Spinner Animation --- */
+@keyframes atm-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.atm-custom-spinner {
+  width: 20px;
+  height: 20px;
+  animation: atm-spin 1s linear infinite;
+}
+
+/* --- My Styles --- */
+.atm-video-search-container .components-button.is-primary {
+    margin-bottom: calc(8px);
+}
+
+.atm-video-search-container .components-button.is-secondary {
+    box-shadow: unset;
+    outline: 0;
 }

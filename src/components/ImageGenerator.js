@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { Button, TextareaControl, Spinner, DropdownMenu } from '@wordpress/components';
+import CustomSpinner from './common/CustomSpinner';
 import { chevronDown } from '@wordpress/icons';
 
 const callAjax = (action, data) => jQuery.ajax({ url: atm_studio_data.ajax_url, type: 'POST', data: { action, nonce: atm_studio_data.nonce, ...data } });
@@ -179,7 +180,7 @@ function ImageGenerator({ setActiveView }) {
                 <Button isPrimary onClick={handleGenerate} disabled={isLoading}>
                     {isLoading ? (
                         <>
-                            <Spinner />
+                            <CustomSpinner />
                             Processing...
                         </>
                     ) : (
