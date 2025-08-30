@@ -3,6 +3,9 @@
   "version": "1.6.104",
   "private": true,
   "scripts": {
+  "release": "npm version patch --no-git-tag-version && npm run build && git add . && git commit -m \"chore: bump version and build\" && git push"
+},
+  "scripts": {
     "build": "wp-scripts build src/index.js src/studio.js",
     "start": "wp-scripts start src/index.js src/studio.js",
     "zip": "wp-scripts plugin-zip",

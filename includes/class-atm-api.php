@@ -369,19 +369,22 @@ class ATM_API {
      */
 
     public static function generate_prompt_from_content($title, $content) {
-    // Prepare a clean, concise version of the content for the AI
+    // Prepare a clean, full version of the content for the AI
     $clean_content = wp_strip_all_tags($content);
-    $excerpt = wp_trim_words($clean_content, 200, '...');
 
-    $system_prompt = 'You are an expert prompt engineer for AI image generators like DALL-E 3 and Midjourney. Your task is to create a single, detailed, and artistic prompt based on the provided article title and excerpt.
+    // This is your new, more detailed prompt
+    $system_prompt = 'You are an expert prompt engineer for AI image generators like DALL-E 3 and Midjourney. Your task is to create a single, highly detailed prompt that will generate a photorealistic image based on the provided article title and full article body.
 
     Follow these rules:
-    1.  Read the title and excerpt to understand the core subject, mood, and key elements of the article.
-    2.  Do not describe the article itself. Instead, create a prompt for a single, compelling image that visually represents the article\'s main theme.
-    3.  The prompt should be descriptive and include details about the subject, setting, lighting (e.g., "cinematic lighting"), and style (e.g., "photorealistic", "digital art").
-    4.  Your entire response MUST be only the generated prompt text. Do not include any extra words, explanations, or quotation marks.';
+    1. Carefully read the title and the entire article body to understand the core subject, mood, atmosphere, and key elements.
+    2. The image generated from your prompt must represent the main theme, story, or emotion of the article, not the article itself.
+    3. Include rich visual details: main subjects, environment, colors, textures, perspective, depth, and cinematic lighting.
+    4. Specify artistic style, realism, or mood, for example: "photorealistic", "ultra-realistic", "cinematic", "digital art".
+    5. Make the prompt vivid, imaginative, and suitable for generating a striking, professional-quality image.
+    6. Your entire response MUST be only the generated prompt text. Do not include any extra words, explanations, or quotation marks.';
 
-    $content_for_ai = "Article Title: " . $title . "\n\nArticle Excerpt:\n" . $excerpt;
+    // Use the full, cleaned content instead of the excerpt
+    $content_for_ai = "Article Title: " . $title . "\n\nArticle Body:\n" . $clean_content;
 
     // Use a fast and creative model for this task
     $model = 'anthropic/claude-3-haiku';
