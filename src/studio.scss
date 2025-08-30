@@ -1075,6 +1075,39 @@ body.wp-admin .atm-filter-modal .components-base-control__label {
     }
 }
 
+// Find the existing .atm-chart-actions rule and add to it
+.atm-chart-actions {
+    margin-top: 1rem;
+    text-align: center;
+    display: grid;
+    gap: 1rem;
+
+    p {
+        font-size: 13px;
+        color: #a0aec0;
+        font-style: italic;
+        margin: 0;
+    }
+}
+
+// Add this new rule for the shortcode display
+.atm-shortcode-display {
+    margin-top: 1rem;
+    text-align: left;
+
+    .components-base-control__label {
+        display: none;
+    }
+    
+    input[type="text"] {
+        text-align: center;
+        background-color: #1a202c !important;
+        font-family: monospace;
+        font-size: 14px;
+        cursor: copy;
+    }
+}
+
 /* --- My Styles --- */
 .atm-video-search-container .components-button.is-primary {
     margin-bottom: calc(8px);

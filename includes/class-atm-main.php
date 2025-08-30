@@ -7,6 +7,39 @@ if (!defined('ABSPATH')) {
 
 class ATM_Main {
     
+    public function register_shortcodes() {
+        add_shortcode('atm_chart', array($this, 'render_chart_shortcode'));
+    }
+
+    // --- ADD THIS NEW FUNCTION to handle shortcode rendering ---
+    public function render_chart_shortcode($atts) {
+        $atts = shortcode_atts(array('id' => 0), $atts, 'atm_chart');
+        $chart_id = intval($atts['id']);
+
+        if (!$chart_id) {
+            return '';
+        }
+
+        // Enqueue scripts only when the shortcode is present
+        wp_enqueue_script(
+            'echarts-library',
+            'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js',
+            array(), '5.5.0', true
+        );
+        wp_enqueue_script(
+            'atm-frontend-charts',
+            ATM_PLUGIN_URL . 'assets/js/frontend-charts.js',
+            array('echarts-library', 'wp-api-fetch'), ATM_VERSION, true
+        );
+        
+        // Pass the site URL for the REST API
+        wp_localize_script('atm-frontend-charts', 'atm_chart_data', [
+            'root' => esc_url_raw(rest_url()),
+        ]);
+
+        return '<div class="atm-chart-container" data-chart-id="' . esc_attr($chart_id) . '" style="width: 100%; height: 500px;"></div>';
+    }
+    
     public function register_chart_post_type() {
         $args = array(
             'public'              => false,
@@ -159,6 +192,7 @@ class ATM_Main {
         add_action('rest_api_init', array($this, 'register_rest_routes'));
         add_action('init', array($this, 'register_chart_post_type'));
         add_action('rest_api_init', array($this, 'register_chart_rest_routes'));
+        add_action('init', array($this, 'register_shortcodes'));
 
         // --- LICENSE CHECK ---
         if (ATM_Licensing::is_license_active()) {

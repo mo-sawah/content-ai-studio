@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from '@wordpress/element'; // <-- useRef is the key
-import { Button, TextareaControl, Spinner } from '@wordpress/components';
+import { useState, useEffect, useRef } from '@wordpress/element';
+import { Button, TextareaControl, Spinner, TextControl } from '@wordpress/components';
 
 // Load ECharts library dynamically
 const loadECharts = () => {
@@ -23,11 +23,17 @@ function ChartGenerator({ setActiveView }) {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('Describe the chart you want to create.');
     
-    // --- THIS IS THE FIX: Use useRef to create a stable reference to the DOM element ---
+    // --- FIX: Use useRef for stable DOM references ---
     const chartRef = useRef(null);
+    
+    // State for saving the chart
+    const [chartTitle, setChartTitle] = useState('');
+    const [chartId, setChartId] = useState(null);
 
     useEffect(() => {
         let chartInstance = null;
+        let resizeObserver = null;
+
         if (chartRef.current && chartConfig) {
             loadECharts().then(echarts => {
                 // Initialize ECharts on the .current property of the ref
@@ -35,18 +41,19 @@ function ChartGenerator({ setActiveView }) {
                 chartInstance.setOption(JSON.parse(chartConfig));
 
                 // Add a resize listener to make the chart responsive
-                const resizeObserver = new ResizeObserver(() => {
+                resizeObserver = new ResizeObserver(() => {
                     chartInstance?.resize();
                 });
                 resizeObserver.observe(chartRef.current);
-                
-                // Cleanup when the component unmounts
-                return () => {
-                    resizeObserver.disconnect();
-                    chartInstance?.dispose();
-                };
+
             }).catch(err => console.error("ECharts loading failed:", err));
         }
+        
+        // Cleanup function to run when the component unmounts or chartConfig changes
+        return () => {
+            resizeObserver?.disconnect();
+            chartInstance?.dispose();
+        };
     }, [chartConfig]);
 
     const handleGenerate = async () => {
@@ -63,6 +70,34 @@ function ChartGenerator({ setActiveView }) {
             if (response.success) {
                 setChartConfig(response.data.chart_config);
                 setStatusMessage('✅ Chart generated successfully!');
+            } else {
+                throw new Error(response.data);
+            }
+        } catch (error) {
+            setStatusMessage(`Error: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSaveChart = async () => {
+        if (!chartTitle.trim()) {
+            alert('Please provide a title for your chart before saving.');
+            return;
+        }
+        setIsLoading(true);
+        setStatusMessage('Saving chart...');
+
+        try {
+            const response = await callAjax('save_atm_chart', {
+                title: chartTitle,
+                chart_config: chartConfig,
+                chart_id: chartId
+            });
+
+            if (response.success) {
+                setChartId(response.data.chart_id);
+                setStatusMessage(`✅ Chart saved successfully! Use the shortcode to embed it.`);
             } else {
                 throw new Error(response.data);
             }
@@ -98,14 +133,32 @@ function ChartGenerator({ setActiveView }) {
                 {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
 
                 <div className="atm-chart-preview-container">
-                    {/* The ref is now correctly assigned to the div */}
                     <div ref={chartRef} style={{ width: '100%', height: '400px', display: chartConfig ? 'block' : 'none' }}></div>
                 </div>
 
                 {chartConfig && (
                     <div className="atm-chart-actions">
-                        <p>Once saved, you will get a shortcode to embed this chart.</p>
-                        <Button isSecondary disabled>Save Chart (Coming Soon)</Button>
+                        <TextControl
+                            label="Chart Title (for your reference)"
+                            value={chartTitle}
+                            onChange={setChartTitle}
+                            placeholder="e.g., Q3 Sales Report"
+                            disabled={isLoading}
+                        />
+                        <Button isPrimary onClick={handleSaveChart} disabled={isLoading || !chartTitle.trim()}>
+                            {isLoading ? <Spinner /> : (chartId ? 'Update Chart' : 'Save Chart')}
+                        </Button>
+                        
+                        {chartId && (
+                            <div className="atm-shortcode-display">
+                                <p>Embed this chart anywhere with this shortcode:</p>
+                                <TextControl
+                                    value={`[atm_chart id="${chartId}"]`}
+                                    readOnly
+                                    onClick={(e) => e.target.select()}
+                                />
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

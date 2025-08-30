@@ -6,6 +6,47 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    public function save_atm_chart() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+
+        try {
+            $chart_title = sanitize_text_field($_POST['title']);
+            $chart_config = wp_kses_post(stripslashes($_POST['chart_config']));
+            $chart_id = isset($_POST['chart_id']) ? intval($_POST['chart_id']) : 0;
+
+            if (empty($chart_title) || empty($chart_config)) {
+                throw new Exception('Chart title and configuration are required.');
+            }
+
+            $post_data = array(
+                'post_title'  => $chart_title,
+                'post_type'   => 'atm_chart',
+                'post_status' => 'publish',
+            );
+
+            if ($chart_id > 0) {
+                $post_data['ID'] = $chart_id;
+                $new_chart_id = wp_update_post($post_data);
+            } else {
+                $new_chart_id = wp_insert_post($post_data);
+            }
+
+            if (is_wp_error($new_chart_id)) {
+                throw new Exception($new_chart_id->get_error_message());
+            }
+
+            update_post_meta($new_chart_id, '_atm_chart_config', $chart_config);
+
+            wp_send_json_success(['chart_id' => $new_chart_id]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
     public function generate_chart_from_ai() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key to use this feature.');
@@ -169,6 +210,7 @@ public function translate_text() {
         add_action('wp_ajax_get_youtube_suggestions', array($this, 'get_youtube_suggestions'));
         add_action('wp_ajax_search_youtube', array($this, 'search_youtube'));
         add_action('wp_ajax_generate_chart_from_ai', array($this, 'generate_chart_from_ai'));
+        add_action('wp_ajax_save_atm_chart', array($this, 'save_atm_chart'));
 
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));
