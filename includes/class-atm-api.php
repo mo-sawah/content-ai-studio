@@ -373,15 +373,16 @@ class ATM_API {
     $clean_content = wp_strip_all_tags($content);
 
     // This is your new, more detailed prompt
-    $system_prompt = 'You are an expert prompt engineer for AI image generators like DALL-E 3 and Midjourney. Your task is to create a single, highly detailed prompt that will generate a photorealistic image based on the provided article title and full article body.
+    $system_prompt = 'You are an expert prompt engineer for AI image generators like DALL-E 3. Your task is to create a single, concise, and powerful prompt that visually represents the provided article.
 
-    Follow these rules:
-    1. Carefully read the title and the entire article body to understand the core subject, mood, atmosphere, and key elements.
-    2. The image generated from your prompt must represent the main theme, story, or emotion of the article, not the article itself.
-    3. Include rich visual details: main subjects, environment, colors, textures, perspective, depth, and cinematic lighting.
-    4. The image must be photorealistic or ultra-realistic. Do not use artistic, cartoon, or other non-realistic styles. Focus entirely on realism, accurate lighting, textures, and lifelike details.
-    5. Make the prompt vivid, ultra-realistic, and detailed, and suitable for generating a striking, professional-quality image.
-    6. Your entire response MUST be only the generated prompt text. Do not include any extra words, explanations, or quotation marks.';
+Follow these rules:
+1. Read the title and body to understand the core theme, mood, and key subjects.
+2. Condense the main idea into a single, visual scene. Do not describe multiple scenes.
+3. The prompt MUST be a single paragraph and under 100 words.
+4. Structure the prompt as a series of descriptive phrases separated by commas.
+5. Start with the main subject, then add details about the setting, atmosphere, lighting, and style.
+6. Example format: "A high-angle shot of a modern city skyline at dusk, cinematic lighting, photorealistic, reflecting themes of progress and tension."
+7. Your entire response MUST be only the generated prompt text, with no extra words or quotation marks.';
 
     // Use the full, cleaned content instead of the excerpt
     $content_for_ai = "Article Title: " . $title . "\n\nArticle Body:\n" . $clean_content;
