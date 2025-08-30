@@ -379,8 +379,8 @@ class ATM_API {
     1. Carefully read the title and the entire article body to understand the core subject, mood, atmosphere, and key elements.
     2. The image generated from your prompt must represent the main theme, story, or emotion of the article, not the article itself.
     3. Include rich visual details: main subjects, environment, colors, textures, perspective, depth, and cinematic lighting.
-    4. Specify artistic style, realism, or mood, for example: "photorealistic", "ultra-realistic", "cinematic", "digital art".
-    5. Make the prompt vivid, imaginative, and suitable for generating a striking, professional-quality image.
+    4. The image must be photorealistic or ultra-realistic. Do not use artistic, cartoon, or other non-realistic styles. Focus entirely on realism, accurate lighting, textures, and lifelike details.
+    5. Make the prompt vivid, ultra-realistic, and detailed, and suitable for generating a striking, professional-quality image.
     6. Your entire response MUST be only the generated prompt text. Do not include any extra words, explanations, or quotation marks.';
 
     // Use the full, cleaned content instead of the excerpt
