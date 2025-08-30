@@ -365,7 +365,35 @@ class ATM_API {
      *
      * @param string $url The initial URL to check.
      * @return string The final destination URL, or the original URL if not a redirect.
+     * 
      */
+
+    public static function generate_prompt_from_content($title, $content) {
+    // Prepare a clean, concise version of the content for the AI
+    $clean_content = wp_strip_all_tags($content);
+    $excerpt = wp_trim_words($clean_content, 200, '...');
+
+    $system_prompt = 'You are an expert prompt engineer for AI image generators like DALL-E 3 and Midjourney. Your task is to create a single, detailed, and artistic prompt based on the provided article title and excerpt.
+
+    Follow these rules:
+    1.  Read the title and excerpt to understand the core subject, mood, and key elements of the article.
+    2.  Do not describe the article itself. Instead, create a prompt for a single, compelling image that visually represents the article\'s main theme.
+    3.  The prompt should be descriptive and include details about the subject, setting, lighting (e.g., "cinematic lighting"), and style (e.g., "photorealistic", "digital art").
+    4.  Your entire response MUST be only the generated prompt text. Do not include any extra words, explanations, or quotation marks.';
+
+    $content_for_ai = "Article Title: " . $title . "\n\nArticle Excerpt:\n" . $excerpt;
+
+    // Use a fast and creative model for this task
+    $model = 'anthropic/claude-3-haiku';
+
+    $generated_prompt = self::enhance_content_with_openrouter(
+        ['content' => $content_for_ai],
+        $system_prompt,
+        $model
+    );
+
+    return trim($generated_prompt);
+}
 
     public static function generate_image_with_blockflow($prompt, $model_override = '', $size_override = '') {
     $api_key = get_option('atm_blockflow_api_key');

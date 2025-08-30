@@ -556,20 +556,25 @@ Your entire output MUST be a single, valid JSON object with three keys:
         @ini_set('max_execution_time', 300);
         try {
             $post_id = intval($_POST['post_id']);
-            $prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : '';
+            $manual_prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : '';
             $size_override = isset($_POST['size']) ? sanitize_text_field($_POST['size']) : '';
             $quality_override = isset($_POST['quality']) ? sanitize_text_field($_POST['quality']) : '';
             $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
+
             $post = get_post($post_id);
             if (!$post) {
                 throw new Exception("Post not found.");
             }
-            if (empty(trim($prompt))) {
-                $prompt_template = ATM_API::get_default_image_prompt();
+
+            $final_prompt = '';
+
+            // If the user provided a manual prompt, use it.
+            if (!empty(trim($manual_prompt))) {
+                $final_prompt = ATM_API::replace_prompt_shortcodes($manual_prompt, $post);
             } else {
-                $prompt_template = $prompt;
+                // Otherwise, generate a prompt from the post content.
+                $final_prompt = ATM_API::generate_prompt_from_content($post->post_title, $post->post_content);
             }
-            $final_prompt = ATM_API::replace_prompt_shortcodes($prompt_template, $post);
             $provider = !empty($provider_override) ? $provider_override : get_option('atm_image_provider', 'openai');
             $image_data = null;
             $is_url = false;
