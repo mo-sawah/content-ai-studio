@@ -46,6 +46,11 @@ body.atm-chart-theme-light {
     --atm-chart-border-color: #e0e0e0;
     --atm-chart-toggle-bg: #f0f0f0;
     --atm-chart-toggle-color: #666666;
+    --atm-chart-grid-line-color: #eeeeee; /* Light grid lines */
+    --atm-chart-axis-label-color: #666666; /* Darker labels */
+    --atm-chart-legend-color: #333333; /* Dark legend text */
+    --atm-chart-data-zoom-handle-color: #c9c9c9; /* Handle color */
+    --atm-chart-data-zoom-mask-color: rgba(220, 220, 220, 0.4); /* Mask color */
 }
 
 body.atm-chart-theme-dark {
@@ -54,6 +59,11 @@ body.atm-chart-theme-dark {
     --atm-chart-border-color: #444444;
     --atm-chart-toggle-bg: #3c3e41;
     --atm-chart-toggle-color: #ffffff;
+    --atm-chart-grid-line-color: #3c3c3c; /* Darker grid lines for contrast */
+    --atm-chart-axis-label-color: #cccccc; /* Lighter labels */
+    --atm-chart-legend-color: #e0e0e0; /* Light legend text */
+    --atm-chart-data-zoom-handle-color: #555555; /* Handle color */
+    --atm-chart-data-zoom-mask-color: rgba(60, 60, 60, 0.4); /* Mask color */
 }
 
 /* General Chart Container Styles */
@@ -91,22 +101,24 @@ body.atm-chart-theme-dark {
     background-color: var(--atm-chart-toggle-bg);
     color: var(--atm-chart-toggle-color);
     border: none;
-    border-radius: 50%; /* Make it round */
+    border-radius: 50%; /* Make it perfectly round */
     width: 36px;
     height: 36px;
+    min-width: 36px; /* Ensure it's not squashed */
+    min-height: 36px; /* Ensure it's not squashed */
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 18px; /* For the Dashicon */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 18px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Enhanced shadow */
     transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
-    z-index: 10; /* Ensure it's on top */
+    z-index: 10;
 }
 
 .atm-theme-toggle:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px); /* Slightly more pronounced lift on hover */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Deeper shadow on hover */
 }
 
 .atm-theme-toggle .dashicons {
@@ -133,3 +145,43 @@ body.atm-chart-theme-dark {
     color: var(--atm-chart-text-color) !important;
     margin: 0;
 }
+
+/* ECharts Common Text/Element Styling for Theming */
+.atm-chart-wrapper .echarts-for-react,
+.atm-chart-wrapper .ec-charts {
+    color: var(--atm-chart-text-color); /* Fallback for main chart area text */
+}
+
+/* Tooltip text color */
+.ec-tooltip {
+    background-color: var(--atm-chart-bg-color) !important;
+    border-color: var(--atm-chart-border-color) !important;
+    color: var(--atm-chart-text-color) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+.ec-tooltip .ec-tooltip-title {
+    color: var(--atm-chart-text-color) !important;
+}
+.ec-tooltip .ec-tooltip-content {
+    color: var(--atm-chart-text-color) !important;
+}
+
+/* Legend text color */
+.ec-legend-item text {
+    fill: var(--atm-chart-legend-color) !important;
+}
+
+/* Axis label text color */
+.ec-axis-label text {
+    fill: var(--atm-chart-axis-label-color) !important;
+}
+
+/* DataZoom Handle and Mask */
+.ec-datazoom-handle {
+    fill: var(--atm-chart-data-zoom-handle-color) !important;
+    stroke: var(--atm-chart-data-zoom-handle-color) !important;
+}
+.ec-datazoom-mask {
+    fill: var(--atm-chart-data-zoom-mask-color) !important;
+}
+

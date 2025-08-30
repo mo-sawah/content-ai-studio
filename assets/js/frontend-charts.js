@@ -45,25 +45,72 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(response => response.json())
         .then(data => {
-            const option = data; // <-- THIS IS THE FIX
-            // Apply common default styles
-            option.backgroundColor = 'transparent'; // Ensure background is transparent
+    const option = data;
 
-            // Set chart title style for better dark/light mode compatibility
-            if (option.title) {
-                option.title.textStyle = {
-                    color: currentTheme === 'dark' ? '#eee' : '#333'
-                };
-            }
+    // Get CSS variable values for the current theme
+    const rootStyles = getComputedStyle(document.body);
+    const textColor = rootStyles.getPropertyValue('--atm-chart-text-color').trim();
+    const gridLineColor = rootStyles.getPropertyValue('--atm-chart-grid-line-color').trim();
+    const axisLabelColor = rootStyles.getPropertyValue('--atm-chart-axis-label-color').trim();
+    const legendColor = rootStyles.getPropertyValue('--atm-chart-legend-color').trim();
+    const dataZoomHandleColor = rootStyles.getPropertyValue('--atm-chart-data-zoom-handle-color').trim();
+    const dataZoomMaskColor = rootStyles.getPropertyValue('--atm-chart-data-zoom-mask-color').trim();
 
-            chartInstance.setOption(option);
-            // Adjust chart size dynamically
-            setTimeout(() => chartInstance.resize(), 100); 
-        })
-        .catch(error => {
-            console.error('Error fetching chart data:', error);
-            chartDom.innerHTML = `<p style="color: red;">Error loading chart: ${error.message}</p>`;
+    // Apply common default styles
+    option.backgroundColor = 'transparent'; // Ensure background is transparent
+
+    // Set chart title style
+    if (option.title) {
+        option.title.textStyle = { color: textColor };
+    }
+
+    // Set grid line colors
+    if (option.xAxis && Array.isArray(option.xAxis)) {
+        option.xAxis.forEach(axis => {
+            axis.axisLine = { lineStyle: { color: gridLineColor } };
+            axis.axisLabel = { color: axisLabelColor };
+            axis.splitLine = { lineStyle: { color: gridLineColor } };
         });
+    } else if (option.xAxis) { // For a single xAxis config
+        option.xAxis.axisLine = { lineStyle: { color: gridLineColor } };
+        option.xAxis.axisLabel = { color: axisLabelColor };
+        option.xAxis.splitLine = { lineStyle: { color: gridLineColor } };
+    }
+
+    if (option.yAxis && Array.isArray(option.yAxis)) {
+        option.yAxis.forEach(axis => {
+            axis.axisLine = { lineStyle: { color: gridLineColor } };
+            axis.axisLabel = { color: axisLabelColor };
+            axis.splitLine = { lineStyle: { color: gridLineColor } };
+        });
+    } else if (option.yAxis) { // For a single yAxis config
+        option.yAxis.axisLine = { lineStyle: { color: gridLineColor } };
+        option.yAxis.axisLabel = { color: axisLabelColor };
+        option.yAxis.splitLine = { lineStyle: { color: gridLineColor } };
+    }
+
+    // Set legend text color
+    if (option.legend) {
+        option.legend.textStyle = { color: legendColor };
+    }
+
+    // Set DataZoom styles
+    if (option.dataZoom) {
+        if (Array.isArray(option.dataZoom)) {
+            option.dataZoom.forEach(dz => {
+                dz.handleStyle = { color: dataZoomHandleColor };
+                dz.fillerColor = dataZoomMaskColor;
+            });
+        } else {
+            option.dataZoom.handleStyle = { color: dataZoomHandleColor };
+            option.dataZoom.fillerColor = dataZoomMaskColor;
+        }
+    }
+
+    chartInstance.setOption(option);
+    // Adjust chart size dynamically
+    setTimeout(() => chartInstance.resize(), 100); 
+})
 
         // Make chart responsive
         window.addEventListener('resize', () => chartInstance.resize());
