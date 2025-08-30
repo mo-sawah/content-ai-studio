@@ -1148,31 +1148,33 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
             throw new Exception('OpenRouter API key not configured');
         }
 
-        // Determine the user's preferred model from settings.
-        $preferred_model = !empty($model_override) ? $model_override : get_option('atm_article_model', 'openai/gpt-4o');
+        // Determine the base model.
+        // Note: This logic assumes a sensible default; individual calls might provide a specific model.
+        $model = !empty($model_override) ? $model_override : get_option('atm_article_model', 'openai/gpt-4o');
+
+        // --- THIS IS THE CORE CHANGE ---
+        // Always append the :online suffix to enable web search for any model.
+        $model .= ':online';
+        // --- END OF CORE CHANGE ---
 
         $body_data = [
-            // --- THIS IS THE CORE CHANGE ---
-            // Use the 'auto' model to allow for tool use and customization.
-            'model' => 'openrouter/auto', 
-            'route' => 'fallback', // Tells 'auto' to try the user's preferred model.
-            'models' => [$preferred_model], // The model to use for the final writing step.
-            // --- END OF CORE CHANGE ---
+            'model' => $model,
             'messages' => [
                 ['role' => 'system', 'content' => $system_prompt],
                 ['role' => 'user', 'content' => $content_data['content']]
             ],
-            'tool_choice' => 'auto', // Correctly tell the model to decide when to use tools.
+            // --- ADD THE FOLLOWING BLOCK ---
+            'tool_choice' => 'auto',
             'tools' => [
                 [
                     'type' => 'function',
                     'function' => [
                         'name' => 'web_search',
-                        // This will now be respected by the API.
                         'max_results' => (int)get_option('atm_web_search_results', 5)
                     ]
                 ]
             ],
+            // --- END OF NEW BLOCK ---
             'max_tokens' => 4000,
             'temperature' => 0.7
         ];
@@ -1189,7 +1191,7 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
                 'X-Title' => get_bloginfo('name')
             ],
             'body' => json_encode($body_data),
-            'timeout' => 180
+            'timeout' => 300
         ]);
 
         if (is_wp_error($response)) {
