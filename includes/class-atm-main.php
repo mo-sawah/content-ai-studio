@@ -22,14 +22,9 @@ class ATM_Main {
 
         // Enqueue scripts only when the shortcode is present
         wp_enqueue_script(
-            'echarts-library',
-            'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js',
-            array(), '5.5.0', true
-        );
-        wp_enqueue_script(
             'atm-frontend-charts',
             ATM_PLUGIN_URL . 'assets/js/frontend-charts.js',
-            array('echarts-library', 'wp-api-fetch'), ATM_VERSION, true
+            array('wp-api-fetch'), ATM_VERSION, true
         );
         
        // Pass data for the REST API and theme
@@ -174,6 +169,13 @@ class ATM_Main {
         $this->init_hooks();
     }
 
+    public function add_module_type_to_script($tag, $handle, $src) {
+        if ('atm-frontend-charts' === $handle) {
+            $tag = '<script type="module" src="' . esc_url($src) . '" id="' . $handle . '-js"></script>';
+        }
+        return $tag;
+    }
+
     private function load_dependencies() {
         // Admin-related files
         require_once ATM_PLUGIN_PATH . 'includes/admin/class-atm-meta-box.php';
@@ -211,6 +213,7 @@ class ATM_Main {
         // Frontend hooks
         add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'));
         add_filter('the_content', array($frontend, 'embed_podcast_in_content'));
+        add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
     }
     
     public function enqueue_admin_scripts($hook) {

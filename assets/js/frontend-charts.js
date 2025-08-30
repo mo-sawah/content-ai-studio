@@ -1,4 +1,4 @@
-import * as echarts from 'echarts';
+import * as echarts from 'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Get the current theme from localStorage or default to 'light'
