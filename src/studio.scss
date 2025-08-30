@@ -1053,6 +1053,27 @@ body.wp-admin .atm-filter-modal .components-base-control__label {
     color: #e2e8f0 !important;
 }
 
+/* --- AI Chart Generator --- */
+
+.atm-chart-preview-container {
+    background-color: #2d3748;
+    border: 1px solid #4a5569;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    min-height: 420px; // Ensure it has a height even when empty
+}
+
+.atm-chart-actions {
+    margin-top: 1rem;
+    text-align: center;
+
+    p {
+        font-size: 13px;
+        color: #a0aec0;
+        font-style: italic;
+    }
+}
 
 /* --- My Styles --- */
 .atm-video-search-container .components-button.is-primary {

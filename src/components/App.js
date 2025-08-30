@@ -8,6 +8,7 @@ import PodcastGenerator from './PodcastGenerator';
 import SpeechToText from './SpeechToText';
 import Translator from './Translator'; // <-- Import the new component
 import VideoSearch from './VideoSearch';
+import ChartGenerator from './ChartGenerator';
 
 function App() {
     const [activeView, setActiveView] = useState(
@@ -37,6 +38,9 @@ function App() {
 
             case 'video':
                 return <VideoSearch setActiveView={setActiveView} />;
+            
+            case 'graphs':
+                return <ChartGenerator setActiveView={setActiveView} />;
 
             default: // The 'hub' view
                 return <Hub setActiveView={setActiveView} />;

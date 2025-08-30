@@ -6,7 +6,49 @@ if (!defined('ABSPATH')) {
 }
 
 class ATM_Main {
+    
+    public function register_chart_post_type() {
+        $args = array(
+            'public'              => false,
+            'show_ui'             => false,
+            'show_in_menu'        => false,
+            'show_in_admin_bar'   => false,
+            'show_in_nav_menus'   => false,
+            'can_export'          => true,
+            'has_archive'         => false,
+            'exclude_from_search' => true,
+            'publicly_queryable'  => false,
+            'capability_type'     => 'post',
+            'show_in_rest'        => true, // Important for REST API
+            'rest_base'           => 'charts',
+            'supports'            => array('title', 'custom-fields'),
+        );
+        register_post_type('atm_chart', $args);
+    }
 
+    // --- ADD THIS NEW FUNCTION to register the REST routes ---
+    public function register_chart_rest_routes() {
+        // This route will handle getting chart data for the frontend
+        register_rest_route('atm/v1', '/charts/(?P<id>\d+)', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_chart_data'),
+            'permission_callback' => '__return_true', // Publicly viewable
+        ));
+    }
+
+    // --- ADD THIS NEW FUNCTION to handle the REST callback ---
+    public function get_chart_data($request) {
+        $post_id = $request['id'];
+        $chart_config = get_post_meta($post_id, '_atm_chart_config', true);
+
+        if (empty($chart_config)) {
+            return new WP_Error('no_config', 'Chart configuration not found.', array('status' => 404));
+        }
+
+        // The config is stored as a JSON string, so we decode it
+        return new WP_REST_Response(json_decode($chart_config), 200);
+    }
+    
     public function register_rest_routes() {
         register_rest_route('atm/v1', '/generate-inline-image', array(
             'methods' => 'POST',
@@ -115,6 +157,8 @@ class ATM_Main {
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('admin_head', array($this, 'register_tinymce_button'));
         add_action('rest_api_init', array($this, 'register_rest_routes'));
+        add_action('init', array($this, 'register_chart_post_type'));
+        add_action('rest_api_init', array($this, 'register_chart_rest_routes'));
 
         // --- LICENSE CHECK ---
         if (ATM_Licensing::is_license_active()) {

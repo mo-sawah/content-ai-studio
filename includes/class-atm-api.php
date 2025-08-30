@@ -343,6 +343,36 @@ class ATM_API {
      * @return string The final destination URL, or the original URL if not a redirect.
      */
 
+    public static function generate_chart_config_from_prompt($prompt) {
+        $system_prompt = "You are an expert data visualization assistant specializing in Apache ECharts. Your task is to generate a valid ECharts JSON configuration object based on the user's request.
+
+Follow these rules strictly:
+1.  Analyze the user's prompt to determine the most appropriate chart type and generate relevant, realistic sample data.
+2.  The generated JSON object MUST be complete and ready to be passed directly to `echarts.init()`.
+3.  The design must be modern and futuristic. Use gradients, subtle shadows, and a clean aesthetic suitable for a dark theme. Ensure all text is easily readable with high contrast.
+4.  Tooltips, a legend, and data zoom features should be enabled and configured appropriately.
+5.  Your entire response MUST be ONLY the valid JSON configuration object. Do not include any extra text, explanations, comments, or markdown code fences like \`\`\`json. The response must start with `{` and end with `}`.";
+
+        // A powerful model is needed for this complex task.
+        $model = 'openai/gpt-4o'; 
+        
+        // We must use json_mode to ensure the AI returns a valid object
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $prompt],
+            $system_prompt,
+            $model,
+            true // Enable JSON mode
+        );
+
+        $result = json_decode($raw_response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log('Content AI Studio - Invalid JSON from Chart Generation API: ' . $raw_response);
+            throw new Exception('The AI returned an invalid JSON response. Please try again.');
+        }
+        
+        return $raw_response; // Return the raw JSON string
+    }
+
     public static function get_youtube_autocomplete_suggestions($query) {
         // Caching has been removed.
         $url = 'https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=' . urlencode($query);

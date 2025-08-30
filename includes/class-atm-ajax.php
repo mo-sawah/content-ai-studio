@@ -6,7 +6,28 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
-    
+    public function generate_chart_from_ai() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 300);
+
+        try {
+            $prompt = sanitize_textarea_field(stripslashes($_POST['prompt']));
+            if (empty($prompt)) {
+                throw new Exception('Prompt cannot be empty.');
+            }
+            
+            $chart_config_json = ATM_API::generate_chart_config_from_prompt($prompt);
+            
+            wp_send_json_success(['chart_config' => $chart_config_json]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }    
+
     public function get_youtube_suggestions() {
         check_ajax_referer('atm_nonce', 'nonce');
         try {
@@ -147,6 +168,7 @@ public function translate_text() {
         add_action('wp_ajax_translate_editor_content', array($this, 'translate_editor_content'));
         add_action('wp_ajax_get_youtube_suggestions', array($this, 'get_youtube_suggestions'));
         add_action('wp_ajax_search_youtube', array($this, 'search_youtube'));
+        add_action('wp_ajax_generate_chart_from_ai', array($this, 'generate_chart_from_ai'));
 
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));
