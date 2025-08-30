@@ -347,7 +347,7 @@ class ATM_API {
         $system_prompt = "You are an expert data visualization assistant specializing in Apache ECharts. Your task is to generate a valid ECharts JSON configuration object based on the user's request.
 
 Follow these rules strictly:
-1.  Analyze the user's prompt to determine the most appropriate chart type and generate relevant, realistic sample data.
+1.  Analyze the user's prompt to determine the most appropriate chart type. Use your web search ability to find relevant and realistic sample data for the chart.
 2.  The generated JSON object MUST be complete and ready to be passed directly to `echarts.init()`.
 3.  The design must be modern and futuristic. Use gradients, subtle shadows, and a clean aesthetic suitable for a light theme. Ensure all text is easily readable with high contrast.
 4.  Tooltips, a legend, and data zoom features should be enabled and configured appropriately.
@@ -1286,7 +1286,7 @@ Do not include any text, explanations, or markdown code fences outside of the JS
 
     public static function get_writing_styles() {
         // Base instructions to ensure consistency across all styles
-        $base_instructions = 'Your task is to generate a complete article based on the provided title. The content should be well-structured and formatted using Markdown. Use headings (##), subheadings (###), bullet points, and bold text for emphasis. Ensure the article is comprehensive and engaging. **IMPORTANT: Do not repeat the article title in the content of your response.**';
+        $base_instructions = 'Your task is to generate a complete article based on the provided title, using your web search ability to ensure the information is up-to-date and factual. The content must be well-structured and formatted using Markdown (headings, lists, bold text). When you cite an external source, you MUST format it as a natural, contextual Markdown hyperlink. The anchor text for the link should be a relevant keyword or phrase (e.g., "a recent study showed that..."), not just the website\'s name. **IMPORTANT: Do not repeat the article title in the content of your response.**';
 
         return [
             'default_seo' => [

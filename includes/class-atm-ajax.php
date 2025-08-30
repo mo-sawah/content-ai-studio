@@ -239,6 +239,7 @@ public function translate_text() {
 
             $post = get_post(intval($_POST['post_id']));
             $final_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
+$final_prompt .= ' Use your web search ability to verify facts and add any recent developments to make the podcast as up-to-date as possible.';
 
             $generated_script = ATM_API::enhance_content_with_openrouter(
                 ['content' => $article_content],
@@ -332,7 +333,7 @@ public function translate_text() {
             if (empty($topic)) {
                 throw new Exception("Please provide a keyword or title.");
             }
-            $system_prompt = 'You are an expert SEO content writer. Your task is to generate a single, compelling, SEO-friendly title for an article based on the provided topic. Do not provide any explanation, quotation marks, or any other text. Just the title itself.';
+            $system_prompt = 'You are an expert SEO content writer. Use your web search ability to understand the current context and popular phrasing for the given topic. Your task is to generate a single, compelling, SEO-friendly title. Return only the title itself, with no extra text or quotation marks.';
             $generated_title = ATM_API::enhance_content_with_openrouter(['content' => $topic], $system_prompt, $model_override ?: get_option('atm_article_model'));
             $cleaned_title = trim($generated_title, " \t\n\r\0\x0B\"");
             wp_send_json_success(['article_title' => $cleaned_title]);
@@ -391,10 +392,11 @@ public function translate_text() {
             if (empty($news_context)) {
                 throw new Exception("No recent news found for the topic: '" . esc_html($topic) . "'. Please try a different keyword or source.");
             }
-            $system_prompt = 'You are a professional news reporter and editor. Using the following raw content from news snippets, write a clear, engaging, and well-structured news article in English.
+            $system_prompt = 'You are a professional editor and content enhancer. Your task is to rewrite and expand upon the provided source article content. **Use your web search ability to find additional context, statistics, or related news to enrich the original text.**
 
 Follow these strict guidelines:
 - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human. Your style should be similar to major news outlets like Reuters, Associated Press, or CBS News.
+- When citing a new source you found online, you MUST format it as a natural, contextual Markdown hyperlink.
 - **Originality**: Do not copy verbatim from the source snippets. You must rewrite, summarize, and humanize the content.
 - **Synthesis**: If multiple sources are provided, synthesize them into one cohesive article. Remove any duplicate or irrelevant details.
 - **Objectivity**: Avoid speculation or personal opinions unless they are explicitly cited in the provided data.
@@ -496,7 +498,8 @@ Your entire output MUST be a single, valid JSON object with three keys:
             if (strlen($source_content) > 4000) {
                 $source_content = ATM_API::summarize_content_for_rewrite($source_content);
             }
-            $system_prompt = 'You are a professional news reporter and editor. Using the following source article content, write a clear, engaging, and well-structured new article in English.
+            $system_prompt = 'You are a professional news reporter and editor. Using the following raw content from news snippets, write a clear, engaging, and well-structured news article in English. **Use your web search ability to verify the information and add any missing context.**
+            
 
 Follow these strict guidelines:
 - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human. Your style should be similar to major news outlets like Reuters, Associated Press, or CBS News.
