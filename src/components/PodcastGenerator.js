@@ -1,12 +1,17 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { Button, TextareaControl, Spinner } from '@wordpress/components';
-import CustomDropdown from './common/CustomDropdown'; // Assuming this is in the common folder
+import CustomDropdown from './common/CustomDropdown';
 
 // Player View Component
 function PlayerView({ podcastUrl, onRegenerate, postId }) {
     const [isRegenerating, setIsRegenerating] = useState(false);
     const { editPost } = useDispatch('core/editor');
+    const { podcastScript, podcastVoice, podcastProvider } = useSelect( select => ({
+        podcastScript: select('core/editor').getEditedPostAttribute('meta')?._atm_podcast_script,
+        podcastVoice: select('core/editor').getEditedPostAttribute('meta')?._atm_podcast_voice,
+        podcastProvider: select('core/editor').getEditedPostAttribute('meta')?._atm_podcast_provider,
+    }), []);
 
     const handleChangeCover = () => {
         const mediaUploader = wp.media({
@@ -35,17 +40,13 @@ function PlayerView({ podcastUrl, onRegenerate, postId }) {
 
     const handleRegenerateClick = async () => {
         setIsRegenerating(true);
-        const script = wp.data.select('core/editor').getEditedPostAttribute('meta')._atm_podcast_script;
-        const voice = wp.data.select('core/editor').getEditedPostAttribute('meta')._atm_podcast_voice;
-        const provider = wp.data.select('core/editor').getEditedPostAttribute('meta')._atm_podcast_provider;
-        await onRegenerate(script, voice, provider);
+        await onRegenerate(podcastScript, podcastVoice, podcastProvider);
         setIsRegenerating(false);
     };
 
     return (
         <div className="atm-form-container">
             <h4>Your Podcast is Ready</h4>
-            {/* The player is now rendered via PHP on the frontend */}
             <p className="components-base-control__help">A player has been automatically embedded at the top of your post.</p>
             <div className="atm-grid-2">
                 <Button isSecondary onClick={handleChangeCover}>Change Cover Image</Button>
@@ -70,9 +71,23 @@ function GeneratorView({ handleGenerateScript, handleGenerateAudio, statusMessag
     const elevenlabsVoices = Object.entries(atm_studio_data.elevenlabs_voices).map(([value, label]) => ({ label, value }));
     const voiceOptions = audioProvider === 'elevenlabs' ? elevenlabsVoices : openaiVoices;
 
+    // --- THIS IS THE FIX: Expanded language list ---
     const languageOptions = [
-        { label: 'English', value: 'English' }, { label: 'Spanish', value: 'Spanish' },
-        { label: 'French', value: 'French' }, { label: 'German', value: 'German' }
+        { label: 'English', value: 'English' },
+        { label: 'Spanish', value: 'Spanish' },
+        { label: 'French', value: 'French' },
+        { label: 'German', value: 'German' },
+        { label: 'Chinese (Simplified)', value: 'Chinese' },
+        { label: 'Japanese', value: 'Japanese' },
+        { label: 'Russian', value: 'Russian' },
+        { label: 'Portuguese', value: 'Portuguese' },
+        { label: 'Italian', value: 'Italian' },
+        { label: 'Arabic', value: 'Arabic' },
+        { label: 'Hindi', value: 'Hindi' },
+        { label: 'Korean', value: 'Korean' },
+        { label: 'Dutch', value: 'Dutch' },
+        { label: 'Turkish', value: 'Turkish' },
+        { label: 'Polish', value: 'Polish' },
     ];
 
     const providerOptions = [
