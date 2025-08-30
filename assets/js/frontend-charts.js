@@ -94,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         option.legend.textStyle = { color: legendColor };
     }
 
+
     // Set DataZoom styles
     if (option.dataZoom) {
         if (Array.isArray(option.dataZoom)) {
@@ -105,6 +106,26 @@ document.addEventListener('DOMContentLoaded', () => {
             option.dataZoom.handleStyle = { color: dataZoomHandleColor };
             option.dataZoom.fillerColor = dataZoomMaskColor;
         }
+    }
+    
+    if (option.radar) {
+        // This handles single or multiple radar configs
+        const radars = Array.isArray(option.radar) ? option.radar : [option.radar];
+        radars.forEach(rad => {
+            if (rad.axisName) {
+                rad.axisName.color = axisLabelColor;
+            }
+            if (rad.splitLine) {
+                rad.splitLine.lineStyle = { color: gridLineColor };
+            }
+            if (rad.splitArea && rad.splitArea.areaStyle) {
+                // Optional: Style the alternating background bands
+                rad.splitArea.areaStyle.color = [
+                    'rgba(250, 250, 250, 0.05)',
+                    'rgba(200, 200, 200, 0.05)'
+                ];
+            }
+        });
     }
 
     chartInstance.setOption(option);
