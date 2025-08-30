@@ -1,34 +1,90 @@
-document.addEventListener('DOMContentLoaded', function () {
-    const chartContainers = document.querySelectorAll('.atm-chart-container');
-    
-    if (chartContainers.length === 0 || typeof echarts === 'undefined') {
-        return;
-    }
+import * as echarts from 'echarts';
 
-    chartContainers.forEach(container => {
-        const chartId = container.getAttribute('data-chart-id');
-        if (!chartId) return;
+document.addEventListener('DOMContentLoaded', () => {
+    // Get the current theme from localStorage or default to 'light'
+    let currentTheme = localStorage.getItem('atmChartTheme') || atm_charts_data.atm_theme_mode;
+    document.body.classList.add(`atm-chart-theme-${currentTheme}`);
 
-        const loadingSpinner = document.createElement('div');
-        loadingSpinner.className = 'atm-chart-loading';
-        container.appendChild(loadingSpinner);
+    // Function to apply theme
+    const applyTheme = (theme) => {
+        document.body.classList.remove('atm-chart-theme-dark', 'atm-chart-theme-light');
+        document.body.classList.add(`atm-chart-theme-${theme}`);
+        localStorage.setItem('atmChartTheme', theme);
+        currentTheme = theme;
+        // Update all ECharts instances on the page
+        updateAllChartsTheme();
+    };
 
-        // Fetch chart configuration from our REST API endpoint
-        wp.apiFetch({ path: `/atm/v1/charts/${chartId}` })
-            .then(chartConfig => {
-                container.removeChild(loadingSpinner);
-                const chartInstance = echarts.init(container);
-                chartInstance.setOption(chartConfig);
+    // Function to update the theme of all ECharts instances
+    const updateAllChartsTheme = () => {
+        document.querySelectorAll('.atm-chart-container').forEach(container => {
+            const chartInstance = echarts.getInstanceByDom(container.querySelector('.atm-chart'));
+            if (chartInstance) {
+                chartInstance.dispose(); // Dispose old instance
+                renderChart(container.id.replace('atm-chart-wrapper-', '')); // Re-render with new theme
+            }
+        });
+    };
 
-                // Make chart responsive
-                window.addEventListener('resize', () => {
-                    chartInstance.resize();
-                });
-            })
-            .catch(error => {
-                container.removeChild(loadingSpinner);
-                console.error('Error fetching chart config:', error);
-                container.innerHTML = `<p style="color: red;">Error: Could not load chart data.</p>`;
-            });
+    // Function to render a single chart
+    const renderChart = (chartId) => {
+        const wrapper = document.getElementById(`atm-chart-wrapper-${chartId}`);
+        if (!wrapper) return;
+
+        const chartDom = wrapper.querySelector('.atm-chart');
+        if (!chartDom) return;
+
+        // Initialize ECharts with the current theme
+        const chartInstance = echarts.init(chartDom, currentTheme); // Pass currentTheme here
+
+        // Fetch data and render chart
+        fetch(`${atm_charts_data.chart_api_base}${chartId}`, {
+            headers: {
+                'X-WP-Nonce': atm_charts_data.nonce,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            const option = data.chart_options;
+            // Apply common default styles
+            option.backgroundColor = 'transparent'; // Ensure background is transparent
+
+            // Set chart title style for better dark/light mode compatibility
+            if (option.title) {
+                option.title.textStyle = {
+                    color: currentTheme === 'dark' ? '#eee' : '#333'
+                };
+            }
+
+            chartInstance.setOption(option);
+            // Adjust chart size dynamically
+            setTimeout(() => chartInstance.resize(), 100); 
+        })
+        .catch(error => {
+            console.error('Error fetching chart data:', error);
+            chartDom.innerHTML = `<p style="color: red;">Error loading chart: ${error.message}</p>`;
+        });
+
+        // Make chart responsive
+        window.addEventListener('resize', () => chartInstance.resize());
+    };
+
+    // Find all chart wrappers and render them
+    document.querySelectorAll('.atm-chart-wrapper').forEach(wrapper => {
+        const chartId = wrapper.id.replace('atm-chart-wrapper-', '');
+        renderChart(chartId);
+
+        // Add theme toggle button
+        const toggleButton = document.createElement('button');
+        toggleButton.classList.add('atm-theme-toggle');
+        toggleButton.innerHTML = `<span class="dashicons dashicons-lightbulb"></span>`;
+        toggleButton.title = `Switch to ${currentTheme === 'dark' ? 'light' : 'dark'} mode`;
+        wrapper.prepend(toggleButton); // Add to the top of the wrapper
+
+        toggleButton.addEventListener('click', () => {
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(newTheme);
+            toggleButton.title = `Switch to ${newTheme === 'dark' ? 'light' : 'dark'} mode`;
+        });
     });
 });

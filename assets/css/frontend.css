@@ -36,3 +36,100 @@
 }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 .atm-loading { animation: pulse 1.5s ease-in-out infinite; }
+
+/* --- Frontend Chart Styles --- */
+
+/* Theming Variables */
+body.atm-chart-theme-light {
+    --atm-chart-bg-color: #ffffff;
+    --atm-chart-text-color: #333333;
+    --atm-chart-border-color: #e0e0e0;
+    --atm-chart-toggle-bg: #f0f0f0;
+    --atm-chart-toggle-color: #666666;
+}
+
+body.atm-chart-theme-dark {
+    --atm-chart-bg-color: #2b2d30; /* Dark background */
+    --atm-chart-text-color: #e0e0e0; /* Light text */
+    --atm-chart-border-color: #444444;
+    --atm-chart-toggle-bg: #3c3e41;
+    --atm-chart-toggle-color: #ffffff;
+}
+
+/* General Chart Container Styles */
+.atm-chart-wrapper {
+    position: relative;
+    background-color: var(--atm-chart-bg-color);
+    border: 1px solid var(--atm-chart-border-color);
+    border-radius: 8px;
+    padding: 20px; /* Enhanced padding for modern look */
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.atm-chart-wrapper h2.atm-chart-title { /* Style for chart titles if you add them */
+    color: var(--atm-chart-text-color);
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.8em;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.atm-chart {
+    width: 100%;
+    height: 400px; /* Default height */
+}
+
+/* Theme Toggle Button Styles */
+.atm-theme-toggle {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: var(--atm-chart-toggle-bg);
+    color: var(--atm-chart-toggle-color);
+    border: none;
+    border-radius: 50%; /* Make it round */
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px; /* For the Dashicon */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 10; /* Ensure it's on top */
+}
+
+.atm-theme-toggle:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.atm-theme-toggle .dashicons {
+    line-height: 1; /* Center Dashicon vertically */
+}
+
+/* ECharts Tooltip (global styling for better dark/light compatibility) */
+.echarts-tooltip {
+    background-color: var(--atm-chart-bg-color) !important;
+    border: 1px solid var(--atm-chart-border-color) !important;
+    color: var(--atm-chart-text-color) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.echarts-tooltip h4 {
+    color: var(--atm-chart-text-color) !important;
+    margin-top: 0;
+    margin-bottom: 5px;
+    font-size: 1.1em;
+}
+.echarts-tooltip p {
+    color: var(--atm-chart-text-color) !important;
+    margin: 0;
+}

@@ -32,12 +32,20 @@ class ATM_Main {
             array('echarts-library', 'wp-api-fetch'), ATM_VERSION, true
         );
         
-        // Pass the site URL for the REST API
+       // Pass data for the REST API and theme
         wp_localize_script('atm-frontend-charts', 'atm_chart_data', [
-            'root' => esc_url_raw(rest_url()),
+            'root'           => esc_url_raw(rest_url()),
+            'nonce'          => wp_create_nonce('wp_rest'), // For secure API requests
+            'chart_api_base' => rest_url('atm/v1/charts/'),
+            'theme_mode'     => 'light' // Default theme
         ]);
 
-        return '<div class="atm-chart-container" data-chart-id="' . esc_attr($chart_id) . '" style="width: 100%; height: 500px;"></div>';
+        return sprintf(
+            '<div id="atm-chart-wrapper-%1$s" class="atm-chart-wrapper">
+                <div class="atm-chart" id="atm-chart-%1$s"></div>
+            </div>',
+            esc_attr($atts['id'])
+        );
     }
     
     public function register_chart_post_type() {
