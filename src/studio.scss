@@ -1121,3 +1121,13 @@ body.wp-admin .atm-filter-modal .components-base-control__label {
     box-shadow: unset;
     outline: 0;
 }
+
+/* --- FIX for Loading Button Alignment --- */
+.atm-studio-container .components-button {
+  &:has(.components-spinner) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+}

@@ -83,7 +83,7 @@ function ImageGenerator({ setActiveView }) {
         }
 
         setIsLoading(true);
-        setStatusMessage('Enhancing prompt & generating image...');
+        setStatusMessage(''); // Set status to empty during processing
         const postId = document.getElementById('atm-studio-root').getAttribute('data-post-id');
 
         try {
@@ -177,7 +177,14 @@ function ImageGenerator({ setActiveView }) {
                 </div>
 
                 <Button isPrimary onClick={handleGenerate} disabled={isLoading}>
-                    {isLoading ? <Spinner /> : 'Generate & Set Featured Image'}
+                    {isLoading ? (
+                        <>
+                            <Spinner />
+                            Processing...
+                        </>
+                    ) : (
+                        'Generate & Set Featured Image'
+                    )}
                 </Button>
 
                 {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
