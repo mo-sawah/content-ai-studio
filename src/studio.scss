@@ -1017,6 +1017,19 @@
     gap: 0.5rem;
     margin-top: auto;
     align-items: center;
+
+    // --- ADD THIS NEW RULE ---
+    .components-button.is-secondary {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important; // Adjust padding for a link-like feel
+        color: #cbd5e1; // Set a consistent text color
+
+        &:hover {
+            color: #ffffff;
+        }
+    }
 }
 
 /* --- Specific Filter Button and Modal Styles --- */
