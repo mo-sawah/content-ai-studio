@@ -970,6 +970,8 @@
         height: auto;
         border-radius: 6px;
         display: block;
+        height: 120px;
+        object-fit: cover;
     }
     @media (max-width: 768px) {
         width: 100%;
@@ -1148,4 +1150,19 @@ body.wp-admin .atm-filter-modal .components-base-control__label {
 .atm-video-search-container .components-button.is-secondary {
     box-shadow: unset;
     outline: 0;
+}
+
+/* --- RSS Results Enhancement --- */
+.atm-rss-thumbnail-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #374151; // A slightly lighter dark shade
+
+  .dashicons-rss {
+    font-size: 48px;
+    color: #718096;
+    width: 48px;
+    height: 48px;
+  }
 }

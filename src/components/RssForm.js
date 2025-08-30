@@ -132,15 +132,41 @@ function RssForm() {
             {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
 
             {results.length > 0 && (
-                <div className="atm-rss-results-list">
+                <div className="atm-video-results-list"> {/* Reusing the list container class */}
                     {results.map((article, index) => (
-                        <div key={article.guid} className="atm-rss-item">
-                            <strong className="atm-rss-item-title">{article.title}</strong>
-                            <small className="atm-rss-item-meta">{article.source} | {article.date}</small>
-                            <p className="atm-rss-item-desc">{article.description.substring(0, 120)}...</p>
-                            <Button isPrimary onClick={() => handleGenerateFromRss(article, index)} disabled={isLoading || article.isGenerating}>
-                                {article.isGenerating ? <><CustomSpinner /> Generating...</> : 'Generate Article'}
-                            </Button>
+                        <div key={article.guid} className="atm-video-result-item"> {/* Use the same card class */}
+
+                            {/* A placeholder for where a thumbnail would go */}
+                            <div className="atm-video-thumbnail atm-rss-thumbnail-placeholder">
+                                <span className="dashicons dashicons-rss"></span>
+                            </div>
+
+                            <div className="atm-video-details">
+                                <h4 className="atm-video-title">{article.title}</h4>
+                                <div className="atm-video-meta">
+                                    <span>{article.source}</span> • <span>{article.date}</span>
+                                </div>
+                                <p className="atm-video-description">{article.description.substring(0, 150)}...</p>
+
+                                {/* New action buttons section */}
+                                <div className="atm-video-actions">
+                                    <Button 
+                                        isSecondary 
+                                        href={article.link} 
+                                        target="_blank"
+                                    >
+                                        Visit Website
+                                    </Button>
+                                    <Button 
+                                        isPrimary 
+                                        onClick={() => handleGenerateFromRss(article, index)} 
+                                        disabled={isLoading || article.isGenerating}
+                                        className="is-embed" // Use the same class as the primary action button
+                                    >
+                                        {article.isGenerating ? <><CustomSpinner /> Generating...</> : 'Generate Article'}
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>
