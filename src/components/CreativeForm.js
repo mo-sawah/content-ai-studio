@@ -65,6 +65,7 @@ function CreativeForm() {
   const [wordCountLabel, setWordCountLabel] = useState("Default");
   const [customPrompt, setCustomPrompt] = useState("");
   const [generateImage, setGenerateImage] = useState(false);
+  const [imagePrompt, setImagePrompt] = useState(""); // <-- ADD THIS
 
   const { savePost } = useDispatch("core/editor");
   const isSaving = useSelect((select) => select("core/editor").isSavingPost());
@@ -183,7 +184,7 @@ function CreativeForm() {
         setStatusMessage("Generating featured image...");
         const imageResponse = await callAjax("generate_featured_image", {
           post_id: postId,
-          prompt: "",
+          prompt: imagePrompt,
         });
 
         if (!imageResponse.success) {
@@ -278,9 +279,31 @@ function CreativeForm() {
       <CheckboxControl
         label="Also generate a featured image"
         checked={generateImage}
-        onChange={setGenerateImage}
+        onChange={(isChecked) => {
+          setGenerateImage(isChecked);
+          if (isChecked) {
+            // Pre-fill the prompt when the box is checked
+            const defaultPrompt = `Create a highly photorealistic image that visually represents the following article title in the most accurate and engaging way:\n\n"{{article_title}}"\n\nGuidelines:\n- Style: photorealistic, ultra-realistic, natural lighting\n- Composition: clear, well-framed subject that directly illustrates the article title\n- Avoid: text, logos, watermarks, artistic/cartoon styles\n- Aspect ratio: 16:9 (suitable for a featured article image)\n- Quality: high-resolution, detailed textures, realistic colors`;
+            const finalTitle = title || keyword; // Use title if available, fallback to keyword
+            setImagePrompt(
+              defaultPrompt.replace("{{article_title}}", finalTitle)
+            );
+          }
+        }}
         disabled={isLoading || isSaving}
       />
+
+      {generateImage && (
+        <TextareaControl
+          label="Featured Image Prompt"
+          help="This prompt will be used to generate the image. You can edit it as needed."
+          value={imagePrompt}
+          onChange={setImagePrompt}
+          rows={8}
+          disabled={isLoading || isSaving}
+        />
+      )}
+
       <Button
         isPrimary
         onClick={handleGenerate}
@@ -288,8 +311,7 @@ function CreativeForm() {
       >
         {isLoading || isSaving ? (
           <>
-            <CustomSpinner />
-            Generating...
+            <CustomSpinner /> Generating...
           </>
         ) : (
           "Generate Creative Article"

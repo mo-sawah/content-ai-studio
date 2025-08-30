@@ -559,7 +559,7 @@ Your entire output MUST be a single, valid JSON object with three keys:
         @ini_set('max_execution_time', 300);
         try {
             $post_id = intval($_POST['post_id']);
-            $manual_prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : '';
+            $prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : ''; // This now comes directly from the user
             $size_override = isset($_POST['size']) ? sanitize_text_field($_POST['size']) : '';
             $quality_override = isset($_POST['quality']) ? sanitize_text_field($_POST['quality']) : '';
             $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
@@ -569,24 +569,23 @@ Your entire output MUST be a single, valid JSON object with three keys:
                 throw new Exception("Post not found.");
             }
 
-            $final_prompt = '';
-
-            // If the user provided a manual prompt, use it.
-            if (!empty(trim($manual_prompt))) {
-                $final_prompt = ATM_API::replace_prompt_shortcodes($manual_prompt, $post);
-            } else {
-                // Otherwise, generate a prompt from the post content.
-                $final_prompt = ATM_API::generate_prompt_from_content($post->post_title, $post->post_content);
+            if (empty(trim($prompt))) {
+                throw new Exception('Image prompt cannot be empty.');
             }
+
+            // We use the prompt directly, replacing any shortcodes it might contain
+            $final_prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
+
             $provider = !empty($provider_override) ? $provider_override : get_option('atm_image_provider', 'openai');
             $image_data = null;
             $is_url = false;
+
             switch ($provider) {
                 case 'google':
                     $image_data = ATM_API::generate_image_with_google_imagen($final_prompt, $size_override);
                     $is_url = false;
                     break;
-                case 'blockflow': // <-- ADD THIS CASE
+                case 'blockflow':
                     $image_data = ATM_API::generate_image_with_blockflow($final_prompt, '', $size_override);
                     $is_url = false;
                     break;
@@ -596,17 +595,23 @@ Your entire output MUST be a single, valid JSON object with three keys:
                     $is_url = true;
                     break;
             }
+
             if ($is_url) {
                 $attachment_id = $this->set_image_from_url($image_data, $post_id);
             } else {
                 $attachment_id = $this->set_image_from_data($image_data, $post_id, $final_prompt);
             }
+
             if (is_wp_error($attachment_id)) {
                 throw new Exception($attachment_id->get_error_message());
             }
+
             set_post_thumbnail($post_id, $attachment_id);
             $thumbnail_html = _wp_post_thumbnail_html($attachment_id, $post_id);
-            wp_send_json_success(['attachment_id' => $attachment_id, 'html' => $thumbnail_html, 'generated_prompt' => $final_prompt]);
+
+            // We no longer need to send back the prompt since the user wrote it.
+            wp_send_json_success(['attachment_id' => $attachment_id, 'html' => $thumbnail_html]);
+
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
