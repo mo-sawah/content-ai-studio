@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(response => response.json())
         .then(data => {
-            const option = data.chart_options;
+            const option = data; // <-- THIS IS THE FIX
             // Apply common default styles
             option.backgroundColor = 'transparent'; // Ensure background is transparent
 
