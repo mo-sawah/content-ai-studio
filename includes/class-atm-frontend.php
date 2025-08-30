@@ -17,7 +17,7 @@ class ATM_Frontend {
                 ATM_VERSION,
                 true
             );
-
+            
             wp_enqueue_style(
                 'atm-frontend-style',
                 ATM_PLUGIN_URL . 'assets/css/frontend.css',
@@ -37,7 +37,7 @@ class ATM_Frontend {
                     ATM_VERSION,
                     true
                 );
-
+                
                 // Pass data for the REST API and theme
                 wp_localize_script('atm-frontend-charts', 'atm_charts_data', [
                     'nonce'          => wp_create_nonce('wp_rest'),
@@ -46,7 +46,7 @@ class ATM_Frontend {
                 ]);
             }
         }
-}
+    }
     
     public function embed_podcast_in_content($content) {
         if (!is_single() || !in_the_loop() || !is_main_query() || !get_option('atm_auto_embed', 1)) {

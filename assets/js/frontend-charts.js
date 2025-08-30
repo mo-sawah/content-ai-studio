@@ -1,4 +1,4 @@
-import * as echarts from 'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js';
+import { init, getInstanceByDom } from 'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.esm.min.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Get the current theme from localStorage or default to 'light'
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to update the theme of all ECharts instances
     const updateAllChartsTheme = () => {
         document.querySelectorAll('.atm-chart-container').forEach(container => {
-            const chartInstance = echarts.getInstanceByDom(container.querySelector('.atm-chart'));
+            const chartInstance = getInstanceByDom(container.querySelector('.atm-chart')); // No "echarts."
             if (chartInstance) {
                 chartInstance.dispose(); // Dispose old instance
                 renderChart(container.id.replace('atm-chart-wrapper-', '')); // Re-render with new theme
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!chartDom) return;
 
         // Initialize ECharts with the current theme
-        const chartInstance = echarts.init(chartDom, currentTheme); // Pass currentTheme here
+        const chartInstance = init(chartDom, currentTheme); // No "echarts."
 
         // Fetch data and render chart
         fetch(`${atm_charts_data.chart_api_base}${chartId}`, {
