@@ -1009,16 +1009,31 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
      * @return string The AI's response.
      * @throws Exception On API error.
      */
-    public static function enhance_content_with_openrouter($content_data, $system_prompt, $model_override = '', $json_mode = false, $web_search = false) {
+    /**
+ * Enhance content using OpenRouter, with an option for forced JSON output.
+ * Web search is now enabled by default for all calls.
+ *
+ * @param array $content_data The content to be processed.
+ * @param string $system_prompt The system prompt for the AI.
+ * @param string $model_override Optional model override.
+ * @param bool $json_mode If true, requests JSON output from the API.
+ * @return string The AI's response.
+ * @throws Exception On API error.
+ */
+    public static function enhance_content_with_openrouter($content_data, $system_prompt, $model_override = '', $json_mode = false) {
         $api_key = get_option('atm_openrouter_api_key');
-        $model = !empty($model_override) ? $model_override : get_option('atm_article_model', 'openai/gpt-4o');
-
-        // Append the :online suffix if web search is enabled
-        if ($web_search) {
-            $model .= ':online';
+        if (empty($api_key)) {
+            throw new Exception('OpenRouter API key not configured');
         }
 
-        if (empty($api_key)) throw new Exception('OpenRouter API key not configured');
+        // Determine the base model.
+        // Note: This logic assumes a sensible default; individual calls might provide a specific model.
+        $model = !empty($model_override) ? $model_override : get_option('atm_article_model', 'openai/gpt-4o');
+
+        // --- THIS IS THE CORE CHANGE ---
+        // Always append the :online suffix to enable web search for any model.
+        $model .= ':online';
+        // --- END OF CORE CHANGE ---
 
         $body_data = [
             'model' => $model,
@@ -1030,8 +1045,6 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
             'temperature' => 0.7
         ];
 
-        // **SOLUTION**: Add the response_format parameter to enforce JSON output when requested.
-        // This is the most reliable way to fix the article generation error.
         if ($json_mode) {
             $body_data['response_format'] = ['type' => 'json_object'];
         }
@@ -1046,9 +1059,11 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
             'body' => json_encode($body_data),
             'timeout' => 120
         ]);
-        
-        if (is_wp_error($response)) throw new Exception('Content enhancement failed: ' . $response->get_error_message());
-        
+
+        if (is_wp_error($response)) {
+            throw new Exception('Content enhancement failed: ' . $response->get_error_message());
+        }
+
         $body = wp_remote_retrieve_body($response);
         $result = json_decode($body, true);
 

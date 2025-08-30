@@ -354,7 +354,6 @@ public function translate_text() {
             $style_key = isset($_POST['writing_style']) ? sanitize_key($_POST['writing_style']) : 'default_seo';
             $custom_prompt = isset($_POST['custom_prompt']) ? wp_kses_post(stripslashes($_POST['custom_prompt'])) : '';
             $word_count = isset($_POST['word_count']) ? intval($_POST['word_count']) : 0;
-            $web_search = isset($_POST['web_search']) && $_POST['web_search'] === 'true';
             if (empty($article_title)) {
                 throw new Exception("Article title cannot be empty.");
             }
@@ -368,7 +367,7 @@ public function translate_text() {
             if ($word_count > 0) {
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long. Ensure the content is detailed and comprehensive enough to meet this length requirement.";
             }
-            $generated_content = ATM_API::enhance_content_with_openrouter(['content' => $article_title], $system_prompt, $model_override ?: get_option('atm_article_model'), false, $web_search);
+            $generated_content = ATM_API::enhance_content_with_openrouter(['content' => $article_title], $system_prompt, $model_override ?: get_option('atm_article_model'), false);
             wp_send_json_success(['article_content' => $generated_content]);
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());

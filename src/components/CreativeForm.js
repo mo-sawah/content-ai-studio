@@ -44,7 +44,6 @@ function CreativeForm() {
     const [wordCountLabel, setWordCountLabel] = useState('Default');
     const [customPrompt, setCustomPrompt] = useState('');
     const [generateImage, setGenerateImage] = useState(false);
-    const [webSearch, setWebSearch] = useState(false); // <-- ADD THIS LINE
 
     const { savePost } = useDispatch('core/editor');
     const isSaving = useSelect(select => select('core/editor').isSavingPost());
@@ -124,7 +123,7 @@ function CreativeForm() {
             }
 
             setStatusMessage('Writing article content...');
-            const contentResponse = await callAjax('generate_article_content', { post_id: postId, article_title: finalTitle, model: articleModel, writing_style: writingStyle, custom_prompt: customPrompt, web_search: webSearch, word_count: wordCount });
+            const contentResponse = await callAjax('generate_article_content', { post_id: postId, article_title: finalTitle, model: articleModel, writing_style: writingStyle, custom_prompt: customPrompt, word_count: wordCount });
             if (!contentResponse.success) throw new Error(contentResponse.data);
 
             updateEditorContent(finalTitle, contentResponse.data.article_content);
@@ -193,13 +192,6 @@ function CreativeForm() {
                 />
             </div>
             <TextareaControl label="Custom Prompt (Optional)" value={customPrompt} onChange={setCustomPrompt} placeholder="Leave empty to use the selected Writing Style. If you write a prompt here, it will be used instead." rows="6" disabled={isLoading || isSaving} />
-            <CheckboxControl 
-                label="Enable Web Search"
-                help="Allows the AI to access real-time information from the internet for more current content."
-                checked={webSearch}
-                onChange={setWebSearch}
-                disabled={isLoading || isSaving}
-            />
             <CheckboxControl label="Also generate a featured image" checked={generateImage} onChange={setGenerateImage} disabled={isLoading || isSaving} />
             <Button isPrimary onClick={handleGenerate} disabled={isLoading || isSaving || (!keyword && !title)}>
                 {isLoading || isSaving ? (
