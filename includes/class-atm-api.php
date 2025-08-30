@@ -1164,7 +1164,7 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
                 ['role' => 'user', 'content' => $content_data['content']]
             ],
             // --- ADD THE FOLLOWING BLOCK ---
-            'tool_choice' => 'any',
+            'tool_choice' => 'auto',
             'tools' => [
                 [
                     'type' => 'function',
