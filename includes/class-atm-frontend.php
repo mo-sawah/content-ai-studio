@@ -104,23 +104,4 @@ class ATM_Frontend {
         <?php
         return ob_get_clean();
     }
-
-    public function display_subtitle_before_content($content) {
-        $post_id = get_the_ID();
-
-        // Let the manager decide which key is active
-        $active_key = ATM_Theme_Subtitle_Manager::get_active_subtitle_key($post_id);
-
-        // Only display our own subtitle if the active key is our fallback key (_atm_subtitle).
-        // Otherwise, we assume the theme is handling it.
-        if ($active_key === '_atm_subtitle' && is_single() && in_the_loop() && is_main_query()) {
-            $subtitle = get_post_meta($post_id, '_atm_subtitle', true);
-            if (!empty($subtitle)) {
-                $subtitle_html = '<h2 class="atm-post-subtitle">' . esc_html($subtitle) . '</h2>';
-                return $subtitle_html . $content;
-            }
-        }
-
-        return $content;
-    }
 }

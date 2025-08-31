@@ -8,38 +8,24 @@ if (!defined('ABSPATH')) {
 class ATM_Theme_Subtitle_Manager {
     
     /**
-     * Save subtitle to appropriate theme fields
+     * Saves the subtitle to the theme's field or prepends it to the content as a fallback.
+     *
+     * @param int    $post_id  The ID of the post.
+     * @param string $subtitle The subtitle text.
+     * @param string $content  The original article content.
+     * @return string The final article content (modified if fallback is used).
      */
-    public static function save_subtitle($post_id, $subtitle) {
-        if ($post_id <= 0 || empty($subtitle)) {
-            return false;
+    public static function save_subtitle($post_id, $subtitle, $content) {
+        $active_key = self::get_active_subtitle_key($post_id);
+
+        // If a theme-specific key is found, use it and return the original content.
+        if ($active_key !== '_atm_subtitle') {
+            update_post_meta($post_id, $active_key, $subtitle);
+            return $content;
         }
-        
-        $theme = get_template();
-        $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
-        
-        // Always save to our plugin's field as backup
-        update_post_meta($post_id, '_atm_subtitle', $subtitle);
-        
-        // Save to configured theme field if set
-        if (!empty($theme_subtitle_key)) {
-            update_post_meta($post_id, $theme_subtitle_key, $subtitle);
-            error_log("ATM Plugin: Saved subtitle to configured field: {$theme_subtitle_key}");
-        }
-        
-        // Auto-detect and save to theme-specific fields
-        if (strpos($theme, 'smartmag') !== false) {
-            update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
-            error_log("ATM Plugin: Saved subtitle to SmartMag field: _bunyad_sub_title");
-        } elseif (strpos($theme, 'newspaper') !== false) {
-            update_post_meta($post_id, '_td_subtitle', $subtitle);
-        } elseif (strpos($theme, 'kadence') !== false) {
-            update_post_meta($post_id, '_kadence_post_subtitle', $subtitle);
-        } elseif (strpos($theme, 'genesis') !== false) {
-            update_post_meta($post_id, '_genesis_subtitle', $subtitle);
-        }
-        
-        return true;
+
+        // Fallback: Prepend the subtitle as a Markdown H2 to the content.
+        return "## " . $subtitle . "\n\n" . $content;
     }
     
     /**
