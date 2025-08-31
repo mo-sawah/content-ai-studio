@@ -92,7 +92,7 @@ class ATM_Frontend {
                             </div>
                             <div class="atm-control-buttons">
                                 <button class="atm-speed-btn" title="Playback Speed">1x</button>
-                                <button class="atm-volume-btn" title="Volume"><span class="atm-volume-icon">🔊</span></button>
+                                <button class="atm-volume-btn" title="Volume"><span class="atm-volume-icon">ðŸ”Š</span></button>
                                 <button class="atm-download-btn" data-download-url="<?php echo esc_url($podcast_url); ?>" title="Download Podcast"><img src="https://sawahsolutions.com/img-assets/down001.svg" class="atm-btn-icon" alt="Download" /> Download</button>
                             </div>
                         </div>
@@ -106,21 +106,20 @@ class ATM_Frontend {
     }
 
     public function display_subtitle_before_content($content) {
-        $post_id = get_the_ID();
+        // If a theme-specific key is set in options, do nothing and let the theme handle it.
+        $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
+        if (!empty($theme_subtitle_key)) {
+            return $content;
+        }
 
-        // Let the manager decide which key is active
-        $active_key = ATM_Theme_Subtitle_Manager::get_active_subtitle_key($post_id);
-
-        // Only display our own subtitle if the active key is our fallback key.
-        // Otherwise, we assume the theme is handling it.
-        if ($active_key === '_atm_subtitle' && is_single() && in_the_loop() && is_main_query()) {
-            $subtitle = get_post_meta($post_id, '_atm_subtitle', true);
+        // Otherwise, proceed with our plugin's display logic.
+        if (is_single() && in_the_loop() && is_main_query()) {
+            $subtitle = get_post_meta(get_the_ID(), '_atm_subtitle', true);
             if (!empty($subtitle)) {
                 $subtitle_html = '<h2 class="atm-post-subtitle">' . esc_html($subtitle) . '</h2>';
                 return $subtitle_html . $content;
             }
         }
-
         return $content;
     }
 }
