@@ -453,7 +453,7 @@ body.atm-chart-theme-dark {
 
 .atm-takeaways-content h4 {
   margin: 5px 0 1rem 0 !important;
-  color: var(--takeaways-h4-text);
+  color: var(--takeaways-h4-text) !important;
   font-size: 1.1em;
 }
 

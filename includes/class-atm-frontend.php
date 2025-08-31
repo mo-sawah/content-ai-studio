@@ -94,7 +94,7 @@ class ATM_Frontend {
         $html = '<details class="atm-takeaways-wrapper ' . $theme_class . '">';
         $html .= '<summary class="atm-takeaways-summary">✨ SHOW KEY TAKEAWAYS</summary>';
         $html .= '<div class="atm-takeaways-content">';
-        $html .= '<h4>🔑&nbsp;Key Takeaways</h4>';
+        $html .= '<h4>🔑&nbsp; Key Takeaways</h4>';
         $html .= '<ul>';
         foreach ($takeaways_list as $takeaway) {
             $html .= '<li>' . esc_html($takeaway) . '</li>';
