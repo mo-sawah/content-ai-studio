@@ -170,7 +170,6 @@ class ATM_Main {
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-theme-subtitle-manager.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-frontend.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-licensing.php';
-        require_once ATM_PLUGIN_PATH . 'includes/class-atm-takeaways.php';
         // require_once ATM_PLUGIN_PATH . 'includes/class-atm-block-editor.php'; // ADD THIS LINE
     }
 
@@ -179,7 +178,6 @@ class ATM_Main {
         $settings = new ATM_Settings();
         $ajax = new ATM_Ajax();
         $frontend = new ATM_Frontend();
-        $takeaways = new ATM_Takeaways();
         // $block_editor = new ATM_Block_Editor(); // ADD THIS LINE
 
         // Admin hooks
@@ -192,15 +190,11 @@ class ATM_Main {
         add_action('rest_api_init', array($this, 'register_chart_rest_routes'));
         add_action('init', array($this, 'register_shortcodes'));
 
-        // AJAX hooks
-        // ... (all your existing ajax hooks should be here)
-        add_action('wp_ajax_generate_takeaways', array($ajax, 'generate_takeaways'));
-        add_action('wp_ajax_save_takeaways', array($ajax, 'save_takeaways'));
-
-        // License Check for Meta Box
+        // --- LICENSE CHECK ---
         if (ATM_Licensing::is_license_active()) {
             add_action('add_meta_boxes', array($meta_box, 'add_meta_boxes'));
         }
+        // --- END CHECK ---
 
         // Frontend hooks
         add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'));
@@ -316,8 +310,6 @@ $post_id = get_the_ID();
 if ($post_id) {
     $localized_data['existing_podcast_url'] = get_post_meta($post_id, '_atm_podcast_url', true);
     $localized_data['existing_podcast_script'] = get_post_meta($post_id, '_atm_podcast_script', true);
-    $localized_data['existing_takeaways'] = get_post_meta($post_id, '_atm_key_takeaways', true);
-
 }
 
     wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
