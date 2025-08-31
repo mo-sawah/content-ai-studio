@@ -369,20 +369,24 @@ class ATM_API {
      */
 
     public static function generate_takeaways_from_content($content, $model_override = '') {
+        // --- PROMPT IS UPDATED FOR CONCISENESS AND TO PREVENT INTRODUCTORY TEXT ---
         $system_prompt = "You are an expert editor. Your task is to analyze the following article and extract the 5 most important key takeaways.
-        
-        Guidelines:
-        - Each takeaway should be a single, concise sentence.
-        - Focus on the most critical facts, conclusions, or advice presented in the text.
-        - Do not add any introductory text, titles, or bullet points.
-        - Return ONLY the takeaways, with each one on a new line.";
+
+        CRITICAL RULES:
+        - Each takeaway must be a very concise sentence, ideally under 15 words.
+        - Your entire response MUST consist ONLY of the takeaways.
+        - Each takeaway must be on a new line.
+        - DO NOT include any introductory phrases like 'Here are the 5 most important key takeaways from the article:'. Your response must start directly with the first takeaway.";
         
         $model = !empty($model_override) ? $model_override : get_option('atm_content_model', 'anthropic/claude-3-haiku');
 
+        // --- CALL THE API WITH WEB SEARCH DISABLED ---
         return self::enhance_content_with_openrouter(
             ['content' => $content],
             $system_prompt,
-            $model
+            $model,
+            false, // json_mode is false
+            false  // enable_web_search is false
         );
     }
     

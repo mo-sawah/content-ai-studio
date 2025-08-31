@@ -400,8 +400,9 @@ body.atm-chart-theme-dark {
   cursor: pointer;
   list-style: none; /* Hide default arrow */
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start; /* MODIFICATION: Align summary to the left */
   align-items: center;
+  gap: 0.5em; /* Add a small gap between icon and text */
 }
 .atm-takeaways-summary::-webkit-details-marker {
   display: none; /* Hide default arrow for Chrome */
@@ -411,6 +412,7 @@ body.atm-chart-theme-dark {
   color: #8e2de2;
   font-size: 12px;
   transition: transform 0.2s ease;
+  margin-left: auto; /* Pushes the arrow to the far right */
 }
 .atm-takeaways-wrapper[open] > .atm-takeaways-summary::after {
   transform: rotate(180deg);
@@ -423,13 +425,13 @@ body.atm-chart-theme-dark {
   color: #cbd5e1;
 }
 .atm-takeaways-content h4 {
-  margin: 0 0 1rem 0;
+  margin: 3px 0 1rem 0; /* MODIFICATION: Added margin-top */
   color: #f8fafc;
   font-size: 1.1em;
 }
 .atm-takeaways-content ul {
-  margin: 0;
-  padding-left: 20px;
+  margin: 0 0 0 25px; /* MODIFICATION: Use margin-left instead of padding */
+  padding: 0;
   list-style-type: "✨"; /* Custom bullet */
 }
 .atm-takeaways-content li {
