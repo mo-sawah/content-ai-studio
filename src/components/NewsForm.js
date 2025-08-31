@@ -135,6 +135,15 @@ function NewsForm() {
       );
       setStatusMessage("✅ News article inserted!");
 
+      // ADD THIS
+      if (response.data.subtitle) {
+        setStatusMessage(
+          "✅ News article inserted! Saving post to apply subtitle..."
+        );
+        await savePost();
+        setStatusMessage("✅ News article and subtitle saved!");
+      }
+
       if (generateImage) {
         setStatusMessage("Saving post...");
         await savePost();

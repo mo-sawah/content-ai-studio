@@ -177,6 +177,15 @@ function CreativeForm() {
       updateEditorContent(finalTitle, contentResponse.data.article_content);
       setStatusMessage("✅ Article content inserted!");
 
+      // ADD THIS
+      if (contentResponse.data.subtitle) {
+        setStatusMessage(
+          "✅ Article content inserted! Saving post to apply subtitle..."
+        );
+        await savePost();
+        setStatusMessage("✅ Article and subtitle saved!");
+      }
+
       if (generateImage) {
         setStatusMessage("Saving post...");
         await savePost();
