@@ -177,22 +177,46 @@ function CreativeForm() {
       updateEditorContent(finalTitle, contentResponse.data.article_content);
       setStatusMessage("✅ Article content inserted!");
 
-      // ADD THIS
-      // Replace the existing subtitle handling section with this:
+      // Replace the subtitle handling section with this enhanced version:
       if (contentResponse.data.subtitle) {
         setStatusMessage("✅ Article content inserted! Setting subtitle...");
 
-        // Update the Block Editor meta field directly
-        if (typeof wp !== "undefined" && wp.data) {
-          // Use SmartMag's expected field
-          wp.data.dispatch("core/editor").editPost({
-            meta: {
-              _bunyad_sub_title: contentResponse.data.subtitle,
-            },
+        try {
+          // Method 1: Update Block Editor meta directly
+          if (typeof wp !== "undefined" && wp.data) {
+            const currentMeta =
+              wp.data.select("core/editor").getEditedPostAttribute("meta") ||
+              {};
+
+            wp.data.dispatch("core/editor").editPost({
+              meta: {
+                ...currentMeta,
+                _bunyad_sub_title: contentResponse.data.subtitle,
+                _atm_subtitle: contentResponse.data.subtitle, // Backup field
+              },
+            });
+
+            console.log(
+              "ATM: Updated Block Editor meta with subtitle:",
+              contentResponse.data.subtitle
+            );
+          }
+
+          // Method 2: Also try to update any visible form fields (for SmartMag's custom meta box)
+          const subtitleInputs = document.querySelectorAll(
+            'input[name="_bunyad_sub_title"], input[name*="bunyad_sub_title"]'
+          );
+          subtitleInputs.forEach((input) => {
+            input.value = contentResponse.data.subtitle;
+            // Trigger change event to notify SmartMag's scripts
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            console.log("ATM: Updated visible subtitle input field");
           });
+        } catch (error) {
+          console.warn("ATM: Error setting subtitle:", error);
         }
 
-        // Save the post to persist the changes
+        // Save the post to persist all changes
         await savePost();
         setStatusMessage("✅ Article and subtitle saved!");
       }
