@@ -368,6 +368,17 @@ class ATM_API {
      * 
      */
 
+    public static function get_article_models() {
+        return [
+            'openai/gpt-4o' => 'OpenAI: GPT-4o',
+            'anthropic/claude-3-haiku' => 'Anthropic: Claude 3 Haiku (Fast)',
+            'anthropic/claude-3-sonnet' => 'Anthropic: Claude 3 Sonnet',
+            'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Advanced)',
+            'google/gemini-pro' => 'Google: Gemini Pro',
+            'mistralai/mistral-7b-instruct' => 'Mistral: 7B Instruct (Fast)',
+        ];
+    }
+
     public static function generate_image_with_blockflow($prompt, $model_override = '', $size_override = '') {
     $api_key = get_option('atm_blockflow_api_key');
     if (empty($api_key)) {

@@ -110,36 +110,11 @@ class ATM_Settings {
         $icon_svg = 'data:image/svg+xml;base64,' . base64_encode('<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="atm-grad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop stop-color="#8E2DE2" /><stop offset="1" stop-color="#4A00E0" /></linearGradient></defs><rect x="2" y="13" width="20" height="9" rx="2" fill="url(#atm-grad)" opacity="0.6" /><path d="M6 16H18 M6 18H15" stroke="white" stroke-width="1.2" stroke-linecap="round" /><rect x="2" y="8" width="20" height="9" rx="2" fill="url(#atm-grad)" opacity="0.8" /><path d="M6 12.5H8L10 11L12 14L14 11L16 12.5H18" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" /><rect x="2" y="3" width="20" height="9" rx="2" fill="url(#atm-grad)" /><circle cx="8" cy="7" r="1" fill="white" /><path d="M6 10L9 8L13 9.5L18 7" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" /></svg>');
 
         // Add the main menu page
-        add_menu_page(
-            'Content AI Studio',
-            'AI Studio',
-            'manage_options',
-            'atm-settings', // This is the parent slug
-            array($this, 'render_settings_page'),
-            $icon_svg,
-            25
-        );
-
-        // Add the "Settings" submenu page which points to the parent
-        add_submenu_page(
-            'atm-settings',
-            'Settings',
-            'Settings',
-            'manage_options',
-            'atm-settings', // Parent slug makes this the default page
-            array($this, 'render_settings_page')
-        );
+        add_menu_page('Content AI Studio', 'AI Studio', 'manage_options', 'atm-settings', array($this, 'render_settings_page'), $icon_svg, 25);
 
         // Add the "Key Takeaways" submenu page
         $takeaways_renderer = new ATM_Takeaways();
-        add_submenu_page(
-            'atm-settings', // Parent slug
-            'Key Takeaways Settings',
-            'Key Takeaways',
-            'manage_options',
-            'atm-takeaways-settings', // Unique slug for this page
-            array($takeaways_renderer, 'render_settings_page')
-        );
+        add_submenu_page('atm-settings', 'Key Takeaways Settings', 'Key Takeaways', 'manage_options', 'atm-takeaways-settings', array($takeaways_renderer, 'render_settings_page'));
 
         // Add your existing About and Support pages
         add_submenu_page('atm-settings', 'About Content AI Studio', 'About', 'manage_options', 'content-ai-studio-about', array($this, 'render_about_page'));

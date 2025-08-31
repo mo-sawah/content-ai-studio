@@ -5,7 +5,6 @@ jQuery(document).ready(function ($) {
     var $content = $container.find(".atm-takeaways-content");
     var $toggle = $container.find(".atm-takeaways-toggle");
 
-    // Hide content by default
     $content.hide();
 
     $header.on("click", function () {
