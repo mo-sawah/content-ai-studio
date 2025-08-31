@@ -170,6 +170,7 @@ class ATM_Main {
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-theme-subtitle-manager.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-frontend.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-licensing.php';
+        require_once ATM_PLUGIN_PATH . 'includes/class-atm-takeaways.php';
         // require_once ATM_PLUGIN_PATH . 'includes/class-atm-block-editor.php'; // ADD THIS LINE
     }
 
@@ -178,6 +179,7 @@ class ATM_Main {
         $settings = new ATM_Settings();
         $ajax = new ATM_Ajax();
         $frontend = new ATM_Frontend();
+        new ATM_Takeaways();
         // $block_editor = new ATM_Block_Editor(); // ADD THIS LINE
 
         // Admin hooks
@@ -189,6 +191,8 @@ class ATM_Main {
         add_action('init', array($this, 'register_chart_post_type'));
         add_action('rest_api_init', array($this, 'register_chart_rest_routes'));
         add_action('init', array($this, 'register_shortcodes'));
+        add_action('wp_ajax_generate_takeaways', array($ajax, 'generate_takeaways'));
+        add_action('wp_ajax_save_takeaways', array($ajax, 'save_takeaways'));
 
         // --- LICENSE CHECK ---
         if (ATM_Licensing::is_license_active()) {
@@ -310,6 +314,8 @@ $post_id = get_the_ID();
 if ($post_id) {
     $localized_data['existing_podcast_url'] = get_post_meta($post_id, '_atm_podcast_url', true);
     $localized_data['existing_podcast_script'] = get_post_meta($post_id, '_atm_podcast_script', true);
+    $localized_data['existing_takeaways'] = get_post_meta($post_id, '_atm_key_takeaways', true);
+
 }
 
     wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);

@@ -1,0 +1,74 @@
+/* AI Key Takeaways - Self-Contained Styles */
+.atm-takeaways-container {
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 2em 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+.atm-takeaways-container h4 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+.atm-takeaways-container ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.atm-takeaways-container li {
+  padding-left: 28px;
+  position: relative;
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+.atm-takeaways-container li:last-child {
+  margin-bottom: 0;
+}
+.atm-takeaways-container li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Light Theme */
+.atm-takeaways-container.akt-theme-light {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  color: #343a40;
+}
+.atm-takeaways-container.akt-theme-light h4 {
+  color: #212529;
+}
+.atm-takeaways-container.akt-theme-light li::before {
+  background: #e9ecef;
+  color: #495057;
+}
+
+/* Dark Theme */
+.atm-takeaways-container.akt-theme-dark {
+  background: #2d3748;
+  border: 1px solid #4a5568;
+  color: #e2e8f0;
+}
+.atm-takeaways-container.akt-theme-dark h4 {
+  color: #ffffff;
+}
+.atm-takeaways-container.akt-theme-dark li::before {
+  background: #4a5568;
+  color: #e2e8f0;
+}

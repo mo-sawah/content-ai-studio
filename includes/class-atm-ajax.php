@@ -6,6 +6,66 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    public function generate_takeaways() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $post_id = intval($_POST['post_id']);
+            $post_content = wp_strip_all_tags(get_post_field('post_content', $post_id));
+
+            if (empty($post_content) || strlen($post_content) < 100) {
+                throw new Exception('Post content is too short to generate takeaways.');
+            }
+
+            $model = get_option('atm_takeaways_model', 'anthropic/claude-3-haiku');
+
+            $system_prompt = 'You are an expert editor. Your task is to read the following article and extract the 3 to 5 most important key takeaways. Each takeaway should be a single, concise sentence.
+
+            **Final Output Format:**
+            Your entire output MUST be a single, valid JSON array of strings, where each string is one key takeaway.
+            Example: ["Takeaway one is about this.", "Takeaway two covers this topic.", "Takeaway three highlights this conclusion."]'
+            ;
+
+            $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $post_content], $system_prompt, $model, true);
+            $result = json_decode($raw_response, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($result)) {
+                error_log('ATM Takeaways - Invalid JSON from AI: ' . $raw_response);
+                throw new Exception('The AI returned an invalid response. Please try again.');
+            }
+
+            update_post_meta($post_id, '_atm_key_takeaways', $result);
+            wp_send_json_success(['takeaways' => $result]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function save_takeaways() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $post_id = intval($_POST['post_id']);
+            $takeaways_text = sanitize_textarea_field(stripslashes($_POST['takeaways']));
+            $takeaways_array = array_filter(array_map('trim', explode("\n", $takeaways_text)));
+
+            if (empty($takeaways_array)) {
+                delete_post_meta($post_id, '_atm_key_takeaways');
+                wp_send_json_success(['message' => 'Takeaways cleared.']);
+            } else {
+                update_post_meta($post_id, '_atm_key_takeaways', $takeaways_array);
+                wp_send_json_success(['message' => 'Takeaways saved successfully.']);
+            }
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
     public function save_atm_chart() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key to use this feature.');

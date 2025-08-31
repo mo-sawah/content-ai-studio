@@ -7,6 +7,77 @@ if (!defined('ABSPATH')) {
 
 class ATM_Settings {
 
+    public function render_takeaways_settings_page() {
+        $options = $this->get_settings();
+        $article_models = ATM_API::get_article_models();
+        ?>
+        <div class="wrap atm-settings">
+            <div class="atm-header">
+                <h1>Key Takeaways Settings</h1>
+                <p class="atm-subtitle">Configure how AI generates and displays key takeaways for your articles.</p>
+            </div>
+
+            <?php if (isset($_GET['settings-updated'])) : ?>
+                <div id="message" class="updated notice is-dismissible">
+                    <p><strong>Settings saved successfully.</strong></p>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="admin-post.php">
+                <input type="hidden" name="action" value="atm_save_settings">
+                <?php wp_nonce_field('atm_settings_nonce'); ?>
+
+                <div class="atm-settings-card">
+                    <h2>⚙️ General Settings</h2>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">Enable Key Takeaways</th>
+                            <td>
+                                <select name="atm_takeaways_enabled" class="regular-text">
+                                    <option value="yes" <?php selected($options['takeaways_enabled'], 'yes'); ?>>Yes, display on posts by default</option>
+                                    <option value="no" <?php selected($options['takeaways_enabled'], 'no'); ?>>No, generate manually only</option>
+                                </select>
+                                <p class="description">If enabled, a "Key Takeaways" box will be automatically added to the end of posts where it has been generated.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Default Frontend Theme</th>
+                            <td>
+                                <select name="atm_takeaways_theme" class="regular-text">
+                                    <option value="light" <?php selected($options['takeaways_theme'], 'light'); ?>>Light Mode</option>
+                                    <option value="dark" <?php selected($options['takeaways_theme'], 'dark'); ?>>Dark Mode</option>
+                                </select>
+                                <p class="description">Choose the default appearance for the takeaways box on your website.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="atm-settings-card">
+                    <h2>🎯 AI Model</h2>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">Takeaways Model</th>
+                            <td>
+                                <select name="atm_takeaways_model" class="regular-text">
+                                    <?php foreach ($article_models as $value => $label) : ?>
+                                        <option value="<?php echo esc_attr($value); ?>" <?php selected($options['takeaways_model'], $value); ?>>
+                                            <?php echo esc_html($label); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <p class="description">Select the OpenRouter model to use for generating key takeaways. Faster models are recommended.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <?php submit_button('Save Settings', 'primary', 'submit', true, ['class' => 'atm-save-button']); ?>
+            </form>
+        </div>
+        <?php
+    }
+    
     private function render_license_section() {
         $license_data = ATM_Licensing::get_license_data();
         $is_active = ATM_Licensing::is_license_active();
@@ -203,6 +274,9 @@ class ATM_Settings {
     update_option('atm_google_youtube_api_key', sanitize_text_field($_POST['atm_google_youtube_api_key']));
     update_option('atm_web_search_results', intval($_POST['atm_web_search_results'])); // <-- ADD THIS
     update_option('atm_theme_subtitle_key', sanitize_text_field($_POST['atm_theme_subtitle_key']));
+    update_option('atm_takeaways_enabled', sanitize_text_field($_POST['atm_takeaways_enabled']));
+    update_option('atm_takeaways_theme', sanitize_text_field($_POST['atm_takeaways_theme']));
+    update_option('atm_takeaways_model', sanitize_text_field($_POST['atm_takeaways_model']));
     echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
 }
 
@@ -229,6 +303,10 @@ class ATM_Settings {
         'flux_model'       => get_option('atm_flux_model', 'flux-1-schnell'), // <-- FIX IS HERE
         'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
         'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
+        // Takeaways Settings
+        'takeaways_enabled' => get_option('atm_takeaways_enabled', 'yes'),
+        'takeaways_theme' => get_option('atm_takeaways_theme', 'light'),
+        'takeaways_model' => get_option('atm_takeaways_model', 'anthropic/claude-3-haiku'),
         'flux_models' => [
             'flux-1-schnell'        => 'FLUX 1 Schnell',
             'flux-1-dev'            => 'FLUX 1 Dev (Fast)',
