@@ -178,10 +178,21 @@ function CreativeForm() {
       setStatusMessage("✅ Article content inserted!");
 
       // ADD THIS
+      // Replace the existing subtitle handling section with this:
       if (contentResponse.data.subtitle) {
-        setStatusMessage(
-          "✅ Article content inserted! Saving post to apply subtitle..."
-        );
+        setStatusMessage("✅ Article content inserted! Setting subtitle...");
+
+        // Update the Block Editor meta field directly
+        if (typeof wp !== "undefined" && wp.data) {
+          // Use SmartMag's expected field
+          wp.data.dispatch("core/editor").editPost({
+            meta: {
+              _bunyad_sub_title: contentResponse.data.subtitle,
+            },
+          });
+        }
+
+        // Save the post to persist the changes
         await savePost();
         setStatusMessage("✅ Article and subtitle saved!");
       }
