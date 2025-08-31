@@ -92,7 +92,7 @@ class ATM_Frontend {
                             </div>
                             <div class="atm-control-buttons">
                                 <button class="atm-speed-btn" title="Playback Speed">1x</button>
-                                <button class="atm-volume-btn" title="Volume"><span class="atm-volume-icon">ðŸ”Š</span></button>
+                                <button class="atm-volume-btn" title="Volume"><span class="atm-volume-icon">🔊</span></button>
                                 <button class="atm-download-btn" data-download-url="<?php echo esc_url($podcast_url); ?>" title="Download Podcast"><img src="https://sawahsolutions.com/img-assets/down001.svg" class="atm-btn-icon" alt="Download" /> Download</button>
                             </div>
                         </div>
