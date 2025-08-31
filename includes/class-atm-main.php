@@ -170,7 +170,7 @@ class ATM_Main {
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-theme-subtitle-manager.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-frontend.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-licensing.php';
-        require_once ATM_PLUGIN_PATH . 'includes/class-atm-block-editor.php'; // ADD THIS LINE
+        // require_once ATM_PLUGIN_PATH . 'includes/class-atm-block-editor.php'; // ADD THIS LINE
     }
 
     private function init_hooks() {
@@ -178,7 +178,7 @@ class ATM_Main {
         $settings = new ATM_Settings();
         $ajax = new ATM_Ajax();
         $frontend = new ATM_Frontend();
-        $block_editor = new ATM_Block_Editor(); // ADD THIS LINE
+        // $block_editor = new ATM_Block_Editor(); // ADD THIS LINE
 
         // Admin hooks
         add_action('admin_menu', array($settings, 'add_admin_menu'));

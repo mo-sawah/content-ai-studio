@@ -177,46 +177,62 @@ function CreativeForm() {
       updateEditorContent(finalTitle, contentResponse.data.article_content);
       setStatusMessage("✅ Article content inserted!");
 
-      // Replace the subtitle handling section with this enhanced version:
+      // Replace your subtitle handling with this direct DOM approach:
       if (contentResponse.data.subtitle) {
         setStatusMessage("✅ Article content inserted! Setting subtitle...");
 
-        try {
-          // Method 1: Update Block Editor meta directly
-          if (typeof wp !== "undefined" && wp.data) {
-            const currentMeta =
-              wp.data.select("core/editor").getEditedPostAttribute("meta") ||
-              {};
-
-            wp.data.dispatch("core/editor").editPost({
-              meta: {
-                ...currentMeta,
-                _bunyad_sub_title: contentResponse.data.subtitle,
-                _atm_subtitle: contentResponse.data.subtitle, // Backup field
-              },
-            });
-
+        // Wait a moment for the page to fully load, then set subtitle
+        setTimeout(() => {
+          // Method 1: Find and fill SmartMag's subtitle input directly
+          const subtitleInput = document.querySelector(
+            'input[name="_bunyad_sub_title"]'
+          );
+          if (subtitleInput) {
+            subtitleInput.value = contentResponse.data.subtitle;
+            subtitleInput.dispatchEvent(new Event("input", { bubbles: true }));
+            subtitleInput.dispatchEvent(new Event("change", { bubbles: true }));
             console.log(
-              "ATM: Updated Block Editor meta with subtitle:",
+              "ATM: Set subtitle in SmartMag input field:",
               contentResponse.data.subtitle
             );
           }
 
-          // Method 2: Also try to update any visible form fields (for SmartMag's custom meta box)
-          const subtitleInputs = document.querySelectorAll(
-            'input[name="_bunyad_sub_title"], input[name*="bunyad_sub_title"]'
+          // Method 2: Also look for any subtitle field in Post Options
+          const postOptionsSubtitle = document.querySelector(
+            '#_bunyad_sub_title, input[id*="sub_title"], input[id*="subtitle"]'
           );
-          subtitleInputs.forEach((input) => {
-            input.value = contentResponse.data.subtitle;
-            // Trigger change event to notify SmartMag's scripts
-            input.dispatchEvent(new Event("change", { bubbles: true }));
-            console.log("ATM: Updated visible subtitle input field");
-          });
-        } catch (error) {
-          console.warn("ATM: Error setting subtitle:", error);
-        }
+          if (postOptionsSubtitle) {
+            postOptionsSubtitle.value = contentResponse.data.subtitle;
+            postOptionsSubtitle.dispatchEvent(
+              new Event("input", { bubbles: true })
+            );
+            postOptionsSubtitle.dispatchEvent(
+              new Event("change", { bubbles: true })
+            );
+            console.log("ATM: Set subtitle in Post Options field");
+          }
 
-        // Save the post to persist all changes
+          // Method 3: Try Block Editor meta as last resort (without breaking core)
+          if (typeof wp !== "undefined" && wp.data && wp.data.select) {
+            try {
+              const currentPost = wp.data
+                .select("core/editor")
+                .getCurrentPost();
+              if (currentPost && currentPost.type === "post") {
+                wp.data.dispatch("core/editor").editPost({
+                  meta: {
+                    _bunyad_sub_title: contentResponse.data.subtitle,
+                  },
+                });
+                console.log("ATM: Updated Block Editor meta safely");
+              }
+            } catch (error) {
+              console.log("ATM: Block Editor update skipped:", error.message);
+            }
+          }
+        }, 1000);
+
+        // Save the post
         await savePost();
         setStatusMessage("✅ Article and subtitle saved!");
       }
