@@ -38,13 +38,16 @@ class ATM_Ajax {
         try {
             $post_id = intval($_POST['post_id']);
             $takeaways = sanitize_textarea_field(stripslashes($_POST['takeaways']));
+            $theme = sanitize_text_field($_POST['theme']); // <-- ADD THIS LINE
 
             if (empty($post_id)) {
                 throw new Exception('Invalid Post ID.');
             }
             
-            // Save as post meta
+            // Save takeaways and theme as post meta
             update_post_meta($post_id, '_atm_key_takeaways', $takeaways);
+            update_post_meta($post_id, '_atm_takeaways_theme', $theme); // <-- ADD THIS LINE
+            
             wp_send_json_success(['message' => 'Takeaways saved successfully.']);
 
         } catch (Exception $e) {

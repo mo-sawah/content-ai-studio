@@ -387,55 +387,86 @@ body.atm-chart-theme-dark {
 }
 
 /* Add to assets/css/frontend.css */
+/* In assets/css/frontend.css */
+
+/* --- Key Takeaways Theming --- */
+.atm-takeaways-wrapper.atm-theme-dark {
+  --takeaways-bg: #2d3748;
+  --takeaways-border: #4a5568;
+  --takeaways-summary-text: #e2e8f0;
+  --takeaways-summary-icon: #8e2de2;
+  --takeaways-h4-text: #f8fafc;
+  --takeaways-li-text: #cbd5e1;
+}
+
+.atm-takeaways-wrapper.atm-theme-light {
+  --takeaways-bg: #f8fafc;
+  --takeaways-border: #e2e8f0;
+  --takeaways-summary-text: #1a202c;
+  --takeaways-summary-icon: #6b21a8;
+  --takeaways-h4-text: #1a202c;
+  --takeaways-li-text: #475569;
+}
+
 .atm-takeaways-wrapper {
-  background: #2d3748;
+  background: var(--takeaways-bg);
+  border: 1px solid var(--takeaways-border);
   border-radius: 12px;
   margin-bottom: 2em;
-  border: 1px solid #4a5568;
 }
+
 .atm-takeaways-summary {
   padding: 1rem 1.5rem;
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--takeaways-summary-text);
   cursor: pointer;
-  list-style: none; /* Hide default arrow */
+  list-style: none;
   display: flex;
-  justify-content: flex-start; /* MODIFICATION: Align summary to the left */
+  justify-content: flex-start;
   align-items: center;
-  gap: 0.5em; /* Add a small gap between icon and text */
+  gap: 0.5em;
 }
+
 .atm-takeaways-summary::-webkit-details-marker {
-  display: none; /* Hide default arrow for Chrome */
+  display: none;
 }
+
 .atm-takeaways-summary::after {
   content: "▼";
-  color: #8e2de2;
+  color: var(--takeaways-summary-icon);
   font-size: 12px;
   transition: transform 0.2s ease;
-  margin-left: auto; /* Pushes the arrow to the far right */
+  margin-left: auto;
 }
+
+.atm-takeaways-wrapper[open] > .atm-takeaways-summary {
+  border-bottom: 1px solid var(--takeaways-border);
+}
+
 .atm-takeaways-wrapper[open] > .atm-takeaways-summary::after {
   transform: rotate(180deg);
 }
-.atm-takeaways-wrapper[open] > .atm-takeaways-summary {
-  border-bottom: 1px solid #4a5568;
-}
+
 .atm-takeaways-content {
   padding: 1.5rem;
-  color: #cbd5e1;
 }
+
 .atm-takeaways-content h4 {
-  margin: 3px 0 1rem 0; /* MODIFICATION: Added margin-top */
-  color: #f8fafc;
+  margin: 5px 0 1rem 0 !important;
+  color: var(--takeaways-h4-text);
   font-size: 1.1em;
 }
+
 .atm-takeaways-content ul {
-  margin: 0 0 0 25px; /* MODIFICATION: Use margin-left instead of padding */
+  margin: 0 0 0 40px;
   padding: 0;
-  list-style-type: "✨"; /* Custom bullet */
+  list-style-type: "✨";
 }
+
 .atm-takeaways-content li {
   padding-left: 10px;
   margin-bottom: 0.75rem;
   line-height: 1.6;
+  font-size: 95% !important;
+  color: var(--takeaways-li-text);
 }

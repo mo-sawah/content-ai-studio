@@ -73,31 +73,36 @@ class ATM_Frontend {
             return $content;
         }
 
-        $takeaways_meta = get_post_meta(get_the_ID(), '_atm_key_takeaways', true);
+        $post_id = get_the_ID();
+        $takeaways_meta = get_post_meta($post_id, '_atm_key_takeaways', true);
 
         if (empty($takeaways_meta)) {
             return $content;
         }
 
-        // Convert the newline-separated string into an array of takeaways
+        // --- NEW: Get the saved theme, defaulting to dark ---
+        $theme = get_post_meta($post_id, '_atm_takeaways_theme', true);
+        if (empty($theme)) {
+            $theme = 'dark'; // Default to dark theme if not set
+        }
+        $theme_class = 'atm-theme-' . esc_attr($theme);
+        // --- END NEW ---
+
         $takeaways_list = array_filter(array_map('trim', explode("\n", $takeaways_meta)));
         
-        // Start building the HTML for the takeaways box
-        $html = '<details class="atm-takeaways-wrapper">';
+        // --- MODIFIED: Added the theme class to the wrapper ---
+        $html = '<details class="atm-takeaways-wrapper ' . $theme_class . '">';
         $html .= '<summary class="atm-takeaways-summary">✨ SHOW KEY TAKEAWAYS</summary>';
         $html .= '<div class="atm-takeaways-content">';
-        $html .= '<h4>🔑 Key Takeaways</h4>';
+        $html .= '<h4>🔑&nbsp;Key Takeaways</h4>';
         $html .= '<ul>';
-
         foreach ($takeaways_list as $takeaway) {
             $html .= '<li>' . esc_html($takeaway) . '</li>';
         }
-
         $html .= '</ul>';
         $html .= '</div>';
         $html .= '</details>';
 
-        // Prepend the takeaways box to the post content
         return $html . $content;
     }
 

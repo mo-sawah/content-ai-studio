@@ -4,30 +4,15 @@ import { Button, TextareaControl } from "@wordpress/components";
 import CustomDropdown from "./common/CustomDropdown";
 import CustomSpinner from "./common/CustomSpinner";
 
-// Helper function for AJAX calls
 const callAjax = (action, data) =>
   jQuery.ajax({
     url: atm_studio_data.ajax_url,
     type: "POST",
-    data: {
-      action,
-      nonce: atm_studio_data.nonce,
-      ...data,
-    },
+    data: { action, nonce: atm_studio_data.nonce, ...data },
   });
 
-// Helper function to get content from the editor
-const getEditorContent = () => {
-  const isBlockEditor = !!wp.data.select("core/block-editor");
-  if (isBlockEditor) {
-    return wp.data.select("core/editor").getEditedPostContent();
-  }
-  // Fallback for Classic Editor
-  if (typeof tinymce !== "undefined" && tinymce.get("content")) {
-    return tinymce.get("content").getContent();
-  }
-  return jQuery("#content").val();
-};
+const getEditorContent = () =>
+  wp.data.select("core/editor").getEditedPostContent();
 
 function KeyTakeawaysGenerator({ setActiveView }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +23,10 @@ function KeyTakeawaysGenerator({ setActiveView }) {
   const [articleModelLabel, setArticleModelLabel] =
     useState("Use Default Model");
 
-  // Model options derived from localized data
+  // --- NEW: State for theme selection ---
+  const [theme, setTheme] = useState("dark");
+  const [themeLabel, setThemeLabel] = useState("Dark");
+
   const modelOptions = [
     { label: "Use Default Model", value: "" },
     ...Object.entries(atm_studio_data.content_models).map(([value, label]) => ({
@@ -47,13 +35,18 @@ function KeyTakeawaysGenerator({ setActiveView }) {
     })),
   ];
 
+  // --- NEW: Options for the theme dropdown ---
+  const themeOptions = [
+    { label: "Dark", value: "dark" },
+    { label: "Light", value: "light" },
+  ];
+
   const handleGenerate = async () => {
     const content = getEditorContent();
     if (!content.trim()) {
       alert("Editor content is empty. Please write something first.");
       return;
     }
-
     setIsLoading(true);
     setStatusMessage("Generating takeaways from post content...");
     setTakeaways("");
@@ -63,7 +56,6 @@ function KeyTakeawaysGenerator({ setActiveView }) {
         content: content,
         model: articleModel,
       });
-
       if (response.success) {
         setTakeaways(response.data.takeaways);
         setStatusMessage(
@@ -86,7 +78,6 @@ function KeyTakeawaysGenerator({ setActiveView }) {
       alert("There are no takeaways to save.");
       return;
     }
-
     setIsSaving(true);
     setStatusMessage("Saving takeaways...");
     const postId = document
@@ -94,11 +85,12 @@ function KeyTakeawaysGenerator({ setActiveView }) {
       .getAttribute("data-post-id");
 
     try {
+      // --- MODIFIED: Send theme along with takeaways ---
       const response = await callAjax("save_key_takeaways", {
         post_id: postId,
         takeaways: takeaways,
+        theme: theme,
       });
-
       if (response.success) {
         setStatusMessage("✅ Takeaways saved!");
       } else {
@@ -141,17 +133,31 @@ function KeyTakeawaysGenerator({ setActiveView }) {
       </div>
 
       <div className="atm-form-container">
-        <CustomDropdown
-          label="AI Model"
-          text={articleModelLabel}
-          options={modelOptions}
-          // --- THIS IS THE FIX ---
-          onChange={(option) => {
-            setArticleModel(option.value);
-            setArticleModelLabel(option.label);
-          }}
-          disabled={isLoading || isSaving}
-        />
+        {/* --- NEW: Grid layout for dropdowns --- */}
+        <div className="atm-grid-2">
+          <CustomDropdown
+            label="AI Model"
+            text={articleModelLabel}
+            options={modelOptions}
+            onChange={(option) => {
+              setArticleModel(option.value);
+              setArticleModelLabel(option.label);
+            }}
+            disabled={isLoading || isSaving}
+          />
+          <CustomDropdown
+            label="Theme"
+            text={themeLabel}
+            options={themeOptions}
+            onChange={(option) => {
+              setTheme(option.value);
+              setThemeLabel(option.label);
+            }}
+            disabled={isLoading || isSaving}
+          />
+        </div>
+        {/* --- END NEW --- */}
+
         <Button
           isPrimary
           onClick={handleGenerate}

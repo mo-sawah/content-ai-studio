@@ -373,9 +373,10 @@ class ATM_API {
         $system_prompt = "You are an expert editor. Your task is to analyze the following article and extract the 5 most important key takeaways.
 
         CRITICAL RULES:
-        - Each takeaway must be a very concise sentence, ideally under 15 words.
+        - Each takeaway must be a very concise sentence, ideally under 12 words.
         - Your entire response MUST consist ONLY of the takeaways.
         - Each takeaway must be on a new line.
+        - DO NOT number the takeaways or use bullet points (e.g., '-', '*', '1.').
         - DO NOT include any introductory phrases like 'Here are the 5 most important key takeaways from the article:'. Your response must start directly with the first takeaway.";
         
         $model = !empty($model_override) ? $model_override : get_option('atm_content_model', 'anthropic/claude-3-haiku');
