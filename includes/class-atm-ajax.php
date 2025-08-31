@@ -371,7 +371,13 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             **Final Output Format:**
             Your entire output MUST be a single, valid JSON object with two keys:
             1. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
-            2. "content": The full article text, formatted using Markdown. **IMPORTANT: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.**';
+            2. "content": The full article text, formatted using Markdown. 
+            
+            **IMPORTANT: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.**
+            
+            **Content Rules:**
+            - The `content` field must NOT start with a title or any heading (like `# Heading`). It must begin directly with the first paragraph of the introduction.
+            - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.';
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
             if ($post) {
                 $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
@@ -422,6 +428,8 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
                 - **Length**: Aim for 800–1200 words.
                 - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+                - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
+                - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
 
                 **Final Output Format:**
                 Your entire output MUST be a single, valid JSON object with three keys:
@@ -527,6 +535,8 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
                 - **Length**: Aim for 800–1200 words.
                 - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+                - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
+                - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
 
                 **Final Output Format:**
                 Your entire output MUST be a single, valid JSON object with three keys:
