@@ -59,29 +59,25 @@ class ATM_Takeaways {
             if (!$takeaways_enabled) {
                 return $content;
             }
-
             $takeaways = get_post_meta(get_the_ID(), '_atm_key_takeaways', true);
             if (empty($takeaways)) {
                 return $content;
             }
-
             $theme = get_option('atm_takeaways_theme', 'light');
             $list_items = '';
             foreach ($takeaways as $item) {
                 $list_items .= '<li>' . esc_html($item) . '</li>';
             }
-
             $takeaways_html = '
             <div class="atm-takeaways-container akt-theme-' . esc_attr($theme) . '">
                 <div class="atm-takeaways-header">
                     <h4>🔑 Key Takeaways</h4>
+                    <button class="atm-takeaways-toggle">Show Key Takeaways <span class="atm-arrow">▼</span></button>
                 </div>
                 <div class="atm-takeaways-content">
                     <ul>' . $list_items . '</ul>
                 </div>
             </div>';
-
-            // Appends the takeaways to the end of the post content
             return $content . $takeaways_html;
         }
         return $content;

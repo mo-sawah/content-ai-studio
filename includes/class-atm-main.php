@@ -191,14 +191,16 @@ class ATM_Main {
         add_action('init', array($this, 'register_chart_post_type'));
         add_action('rest_api_init', array($this, 'register_chart_rest_routes'));
         add_action('init', array($this, 'register_shortcodes'));
+
+        // AJAX hooks
+        // ... (all your existing ajax hooks should be here)
         add_action('wp_ajax_generate_takeaways', array($ajax, 'generate_takeaways'));
         add_action('wp_ajax_save_takeaways', array($ajax, 'save_takeaways'));
 
-        // --- LICENSE CHECK ---
+        // License Check for Meta Box
         if (ATM_Licensing::is_license_active()) {
             add_action('add_meta_boxes', array($meta_box, 'add_meta_boxes'));
         }
-        // --- END CHECK ---
 
         // Frontend hooks
         add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'));
