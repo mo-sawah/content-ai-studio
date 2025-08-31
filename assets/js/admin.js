@@ -934,3 +934,91 @@ window.testRSSFeed = function (feedUrl, keyword = "") {
     },
   });
 };
+
+// --- ADD THIS ENTIRE BLOCK TO THE END OF admin.js ---
+jQuery(document).ready(function ($) {
+  // Only run this script on the main settings page
+  if (!$("#atm-detect-subtitle-key-btn").length) {
+    return;
+  }
+
+  $("#atm-detect-subtitle-key-btn").on("click", function () {
+    const button = $(this);
+    const statusEl = $("#atm-scan-status");
+    const inputEl = $("#atm_theme_subtitle_key_field");
+
+    button.prop("disabled", true).text("Scanning...");
+    statusEl.text("Loading editor in the background...");
+    inputEl.val("");
+
+    // Create a hidden iframe to load the post editor
+    const iframe = $("<iframe />", {
+      src: "post-new.php", // A new post page is a clean slate to scan
+      style:
+        "width:0; height:0; border:0; position:absolute; top: -9999px; left: -9999px;",
+    }).appendTo("body");
+
+    iframe.on("load", function () {
+      try {
+        const iframeDoc = iframe.contents();
+        let foundKey = "";
+
+        // Keywords to search for in labels
+        const keywords = [
+          "subtitle",
+          "subheading",
+          "tagline",
+          "secondary title",
+        ];
+
+        // Find all labels and check them
+        iframeDoc.find("label").each(function () {
+          const labelText = $(this).text().toLowerCase().trim();
+
+          // Check if any keyword exists in the label text
+          if (keywords.some((keyword) => labelText.includes(keyword))) {
+            const inputId = $(this).attr("for");
+            if (inputId) {
+              const inputField = iframeDoc.find("#" + inputId);
+              if (inputField.length) {
+                foundKey = inputField.attr("name");
+                return false; // Exit the loop once found
+              }
+            }
+          }
+        });
+
+        if (foundKey) {
+          // Sometimes the name is in a format like "kadence_custom_meta[_kadence_post_subtitle]"
+          // We need to extract the actual key.
+          const match = foundKey.match(/\[([^\]]+)\]/);
+          if (match && match[1]) {
+            foundKey = match[1];
+          }
+
+          inputEl.val(foundKey);
+          statusEl
+            .text("✅ Found potential key: " + foundKey)
+            .css("color", "#2f855a");
+        } else {
+          statusEl
+            .text(
+              "❌ No common subtitle field was found. Please check your theme's documentation and enter the key manually."
+            )
+            .css("color", "#9b2c2c");
+        }
+      } catch (e) {
+        console.error("Content AI Studio Scan Error:", e);
+        statusEl
+          .text(
+            "Error during scan. Please check the console and enter the key manually."
+          )
+          .css("color", "#9b2c2c");
+      } finally {
+        // Clean up
+        iframe.remove();
+        button.prop("disabled", false).text("Smart Scan");
+      }
+    });
+  });
+});

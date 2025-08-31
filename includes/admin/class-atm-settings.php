@@ -137,6 +137,17 @@ class ATM_Settings {
                                 <p class="description">Control the number of web search results used. Each search result costs $0.004, so 1 result = $0.004, 5 results = $0.02, 10 results = $0.04 per request.</p>
                             </td>
                         </tr>
+                        <tr>
+                        <th scope="row">Theme's Subtitle Field Key</th>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <input type="text" id="atm_theme_subtitle_key_field" name="atm_theme_subtitle_key" value="<?php echo esc_attr($options['theme_subtitle_key']); ?>" class="regular-text" style="flex-grow: 1;" />
+                                <button type="button" id="atm-detect-subtitle-key-btn" class="button">Smart Scan</button>
+                            </div>
+                            <span id="atm-scan-status" style="font-style: italic; font-size: 13px; color: #718096; display: block; margin-top: 8px;"></span>
+                            <p class="description">Optional. Click "Smart Scan" to try and auto-detect your theme's subtitle field, or enter its custom field name (meta key) manually.</p>
+                        </td>
+                    </tr>
                     </table>
                 </div>
                 <div class="atm-settings-card">
@@ -191,6 +202,7 @@ class ATM_Settings {
     update_option('atm_translation_model', sanitize_text_field($_POST['atm_translation_model']));
     update_option('atm_google_youtube_api_key', sanitize_text_field($_POST['atm_google_youtube_api_key']));
     update_option('atm_web_search_results', intval($_POST['atm_web_search_results'])); // <-- ADD THIS
+    update_option('atm_theme_subtitle_key', sanitize_text_field($_POST['atm_theme_subtitle_key']));
     echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
 }
 
@@ -203,7 +215,8 @@ class ATM_Settings {
         'elevenlabs_key'   => get_option('atm_elevenlabs_api_key', ''), // New
         'news_api_key'     => get_option('atm_news_api_key', ''),
         'gnews_api_key'    => get_option('atm_gnews_api_key', ''),
-            'web_search_results' => get_option('atm_web_search_results', 5), // <-- ADD THIS
+        'web_search_results' => get_option('atm_web_search_results', 5), // <-- ADD THIS
+        'theme_subtitle_key' => get_option('atm_theme_subtitle_key', ''),
         'rss_feeds'        => get_option('atm_rss_feeds', ''),
         'scrapingant_key'  => get_option('atm_scrapingant_api_key', ''),
         'guardian_api_key' => get_option('atm_guardian_api_key', ''),

@@ -106,6 +106,13 @@ class ATM_Frontend {
     }
 
     public function display_subtitle_before_content($content) {
+        // If a theme-specific key is set in options, do nothing and let the theme handle it.
+        $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
+        if (!empty($theme_subtitle_key)) {
+            return $content;
+        }
+
+        // Otherwise, proceed with our plugin's display logic.
         if (is_single() && in_the_loop() && is_main_query()) {
             $subtitle = get_post_meta(get_the_ID(), '_atm_subtitle', true);
             if (!empty($subtitle)) {
