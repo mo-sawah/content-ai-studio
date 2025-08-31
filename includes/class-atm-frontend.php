@@ -68,6 +68,39 @@ class ATM_Frontend {
         return $content;
     }
 
+    public function embed_takeaways_in_content($content) {
+        if (!is_single() || !in_the_loop() || !is_main_query()) {
+            return $content;
+        }
+
+        $takeaways_meta = get_post_meta(get_the_ID(), '_atm_key_takeaways', true);
+
+        if (empty($takeaways_meta)) {
+            return $content;
+        }
+
+        // Convert the newline-separated string into an array of takeaways
+        $takeaways_list = array_filter(array_map('trim', explode("\n", $takeaways_meta)));
+        
+        // Start building the HTML for the takeaways box
+        $html = '<details class="atm-takeaways-wrapper">';
+        $html .= '<summary class="atm-takeaways-summary">✨ SHOW KEY TAKEAWAYS</summary>';
+        $html .= '<div class="atm-takeaways-content">';
+        $html .= '<h4>🔑 Key Takeaways</h4>';
+        $html .= '<ul>';
+
+        foreach ($takeaways_list as $takeaway) {
+            $html .= '<li>' . esc_html($takeaway) . '</li>';
+        }
+
+        $html .= '</ul>';
+        $html .= '</div>';
+        $html .= '</details>';
+
+        // Prepend the takeaways box to the post content
+        return $html . $content;
+    }
+
     private function get_player_html($post, $podcast_url, $cover_image) {
         $site_name = get_bloginfo('name');
         ob_start();

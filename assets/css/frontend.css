@@ -385,3 +385,55 @@ body.atm-chart-theme-dark {
   border-bottom: 1px solid #eee;
   padding-bottom: 0.5em;
 }
+
+/* Add to assets/css/frontend.css */
+.atm-takeaways-wrapper {
+  background: #2d3748;
+  border-radius: 12px;
+  margin-bottom: 2em;
+  border: 1px solid #4a5568;
+}
+.atm-takeaways-summary {
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  cursor: pointer;
+  list-style: none; /* Hide default arrow */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.atm-takeaways-summary::-webkit-details-marker {
+  display: none; /* Hide default arrow for Chrome */
+}
+.atm-takeaways-summary::after {
+  content: "▼";
+  color: #8e2de2;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+.atm-takeaways-wrapper[open] > .atm-takeaways-summary::after {
+  transform: rotate(180deg);
+}
+.atm-takeaways-wrapper[open] > .atm-takeaways-summary {
+  border-bottom: 1px solid #4a5568;
+}
+.atm-takeaways-content {
+  padding: 1.5rem;
+  color: #cbd5e1;
+}
+.atm-takeaways-content h4 {
+  margin: 0 0 1rem 0;
+  color: #f8fafc;
+  font-size: 1.1em;
+}
+.atm-takeaways-content ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style-type: "✨"; /* Custom bullet */
+}
+.atm-takeaways-content li {
+  padding-left: 10px;
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}

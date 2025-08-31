@@ -6,6 +6,52 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    public function generate_key_takeaways() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 300);
+
+        try {
+            $content = wp_kses_post(stripslashes($_POST['content']));
+            $model_override = sanitize_text_field($_POST['model']);
+
+            if (empty($content)) {
+                throw new Exception('Editor content is empty.');
+            }
+
+            $takeaways = ATM_API::generate_takeaways_from_content($content, $model_override);
+            wp_send_json_success(['takeaways' => $takeaways]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function save_key_takeaways() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+
+        try {
+            $post_id = intval($_POST['post_id']);
+            $takeaways = sanitize_textarea_field(stripslashes($_POST['takeaways']));
+
+            if (empty($post_id)) {
+                throw new Exception('Invalid Post ID.');
+            }
+            
+            // Save as post meta
+            update_post_meta($post_id, '_atm_key_takeaways', $takeaways);
+            wp_send_json_success(['message' => 'Takeaways saved successfully.']);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
     public function save_atm_chart() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key to use this feature.');
@@ -211,6 +257,8 @@ public function translate_text() {
         add_action('wp_ajax_search_youtube', array($this, 'search_youtube'));
         add_action('wp_ajax_generate_chart_from_ai', array($this, 'generate_chart_from_ai'));
         add_action('wp_ajax_save_atm_chart', array($this, 'save_atm_chart'));
+        add_action('wp_ajax_generate_key_takeaways', array($this, 'generate_key_takeaways'));
+        add_action('wp_ajax_save_key_takeaways', array($this, 'save_key_takeaways'));
 
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));

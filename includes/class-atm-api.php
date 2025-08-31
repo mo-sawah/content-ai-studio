@@ -368,6 +368,24 @@ class ATM_API {
      * 
      */
 
+    public static function generate_takeaways_from_content($content, $model_override = '') {
+        $system_prompt = "You are an expert editor. Your task is to analyze the following article and extract the 5 most important key takeaways.
+        
+        Guidelines:
+        - Each takeaway should be a single, concise sentence.
+        - Focus on the most critical facts, conclusions, or advice presented in the text.
+        - Do not add any introductory text, titles, or bullet points.
+        - Return ONLY the takeaways, with each one on a new line.";
+        
+        $model = !empty($model_override) ? $model_override : get_option('atm_content_model', 'anthropic/claude-3-haiku');
+
+        return self::enhance_content_with_openrouter(
+            ['content' => $content],
+            $system_prompt,
+            $model
+        );
+    }
+    
     public static function generate_image_with_blockflow($prompt, $model_override = '', $size_override = '') {
     $api_key = get_option('atm_blockflow_api_key');
     if (empty($api_key)) {
