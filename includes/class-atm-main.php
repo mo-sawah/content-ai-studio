@@ -179,7 +179,7 @@ class ATM_Main {
         $settings = new ATM_Settings();
         $ajax = new ATM_Ajax();
         $frontend = new ATM_Frontend();
-        new ATM_Takeaways();
+        $takeaways = new ATM_Takeaways();
         // $block_editor = new ATM_Block_Editor(); // ADD THIS LINE
 
         // Admin hooks

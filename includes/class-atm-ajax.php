@@ -12,7 +12,8 @@ class ATM_Ajax {
         }
         check_ajax_referer('atm_nonce', 'nonce');
         try {
-            $post_id = intval($_POST['post_id']);
+            // FIX: Safely get the post_id and content from the AJAX request.
+            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
             $post_content = isset($_POST['content']) ? wp_strip_all_tags(stripslashes($_POST['content'])) : '';
 
             if (empty($post_content) || strlen($post_content) < 100) {
@@ -21,15 +22,26 @@ class ATM_Ajax {
 
             $model = get_option('atm_takeaways_model', 'anthropic/claude-3-haiku');
 
+            // FIX: Made the prompt stricter to prevent conversational text.
             $system_prompt = 'You are an expert editor. Your task is to read the following article and extract the 3 to 5 most important key takeaways. Each takeaway should be a single, concise sentence.
 
             **Final Output Format:**
-            Your entire output MUST be a single, valid JSON array of strings, where each string is one key takeaway.
+            Your entire output MUST be a single, valid JSON array of strings. Do NOT include any introductory text, pleasantries, or explanations. Your response must start with `[` and end with `]`.
             Example: ["Takeaway one is about this.", "Takeaway two covers this topic.", "Takeaway three highlights this conclusion."]'
             ;
 
             $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $post_content], $system_prompt, $model, true);
-            $result = json_decode($raw_response, true);
+
+            // Attempt to extract JSON from the response, even if there's leading text.
+            $json_string = '';
+            if (preg_match('/\[.*\]/s', $raw_response, $matches)) {
+                $json_string = $matches[0];
+            } else {
+                error_log('ATM Takeaways - No JSON array found in AI response: ' . $raw_response);
+                throw new Exception('The AI returned an invalid response format. Please try again.');
+            }
+
+            $result = json_decode($json_string, true);
 
             if (json_last_error() !== JSON_ERROR_NONE || !is_array($result)) {
                 error_log('ATM Takeaways - Invalid JSON from AI: ' . $raw_response);
