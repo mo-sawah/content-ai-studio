@@ -1,148 +1,52 @@
 <?php
-// Theme-aware subtitle system that respects original theme positions
-class ATM_Frontend {
+// /includes/class-atm-theme-subtitle-manager.php
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class ATM_Theme_Subtitle_Manager {
     
-    public function __construct() {
-        add_action('wp', array($this, 'init_theme_subtitle_hooks'));
-    }
-    
-    public function init_theme_subtitle_hooks() {
-        if (!is_single()) {
-            return;
+    /**
+     * Save subtitle to appropriate theme fields
+     */
+    public static function save_subtitle($post_id, $subtitle) {
+        if ($post_id <= 0 || empty($subtitle)) {
+            return false;
         }
         
         $theme = get_template();
+        $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
         
-        // Hook into specific themes at their proper subtitle locations
+        // Always save to our plugin's field as backup
+        update_post_meta($post_id, '_atm_subtitle', $subtitle);
+        
+        // Save to configured theme field if set
+        if (!empty($theme_subtitle_key)) {
+            update_post_meta($post_id, $theme_subtitle_key, $subtitle);
+            error_log("ATM Plugin: Saved subtitle to configured field: {$theme_subtitle_key}");
+        }
+        
+        // Auto-detect and save to theme-specific fields
         if (strpos($theme, 'smartmag') !== false) {
-            $this->init_smartmag_subtitle_hooks();
+            update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
+            error_log("ATM Plugin: Saved subtitle to SmartMag field: _bunyad_sub_title");
         } elseif (strpos($theme, 'newspaper') !== false) {
-            $this->init_newspaper_subtitle_hooks();
+            update_post_meta($post_id, '_td_subtitle', $subtitle);
         } elseif (strpos($theme, 'kadence') !== false) {
-            $this->init_kadence_subtitle_hooks();
-        } else {
-            // Generic theme support - try to detect common hooks
-            $this->init_generic_subtitle_hooks();
-        }
-    }
-    
-    private function init_smartmag_subtitle_hooks() {
-        // Hook into SmartMag's subtitle system
-        add_filter('bunyad_post_meta', array($this, 'provide_smartmag_subtitle'), 10, 2);
-        
-        // Alternative: Hook into the specific template location
-        add_action('bunyad_single_content_wrap', array($this, 'display_smartmag_subtitle'), 5);
-        
-        // Ensure SmartMag can access our subtitle via its meta system
-        add_filter('get_post_metadata', array($this, 'intercept_smartmag_subtitle_request'), 10, 4);
-    }
-    
-    public function provide_smartmag_subtitle($meta_value, $key) {
-        if ($key === '_bunyad_sub_title' && empty($meta_value)) {
-            $post_id = get_the_ID();
-            return $this->get_subtitle_for_post($post_id);
-        }
-        return $meta_value;
-    }
-    
-    public function intercept_smartmag_subtitle_request($value, $post_id, $meta_key, $single) {
-        if ($meta_key === '_bunyad_sub_title' && $single) {
-            $existing_value = get_post_meta($post_id, '_bunyad_sub_title', true);
-            if (empty($existing_value)) {
-                // Return our subtitle if SmartMag's field is empty
-                $our_subtitle = get_post_meta($post_id, '_atm_subtitle', true);
-                if (!empty($our_subtitle)) {
-                    return $our_subtitle;
-                }
-            }
-        }
-        return $value;
-    }
-    
-    public function display_smartmag_subtitle() {
-        $subtitle = $this->get_subtitle_for_post(get_the_ID());
-        if (!empty($subtitle)) {
-            // Use SmartMag's subtitle HTML structure
-            echo '<div class="post-subtitle">' . esc_html($subtitle) . '</div>';
-        }
-    }
-    
-    private function init_newspaper_subtitle_hooks() {
-        // Hook into Newspaper theme's subtitle display
-        add_filter('td_post_subtitle', array($this, 'provide_newspaper_subtitle'));
-    }
-    
-    public function provide_newspaper_subtitle($subtitle) {
-        if (empty($subtitle)) {
-            return $this->get_subtitle_for_post(get_the_ID());
-        }
-        return $subtitle;
-    }
-    
-    private function init_kadence_subtitle_hooks() {
-        // Hook into Kadence's subtitle system
-        add_filter('kadence_post_subtitle', array($this, 'provide_kadence_subtitle'));
-        add_action('kadence_single_before_inner_content', array($this, 'display_kadence_subtitle'), 5);
-    }
-    
-    public function provide_kadence_subtitle($subtitle) {
-        if (empty($subtitle)) {
-            return $this->get_subtitle_for_post(get_the_ID());
-        }
-        return $subtitle;
-    }
-    
-    public function display_kadence_subtitle() {
-        $subtitle = $this->get_subtitle_for_post(get_the_ID());
-        if (!empty($subtitle)) {
-            echo '<div class="entry-subtitle">' . esc_html($subtitle) . '</div>';
-        }
-    }
-    
-    private function init_generic_subtitle_hooks() {
-        // For themes without specific subtitle support, try common hook locations
-        $common_hooks = [
-            'genesis_entry_header',           // Genesis framework
-            'astra_entry_content_before',     // Astra theme  
-            'generate_after_entry_title',     // GeneratePress
-            'twentytwentyone_entry_header_after', // WordPress default themes
-        ];
-        
-        foreach ($common_hooks as $hook) {
-            if (has_action($hook)) {
-                add_action($hook, array($this, 'display_generic_subtitle'), 15);
-                break; // Only hook into one location
-            }
+            update_post_meta($post_id, '_kadence_post_subtitle', $subtitle);
+        } elseif (strpos($theme, 'genesis') !== false) {
+            update_post_meta($post_id, '_genesis_subtitle', $subtitle);
         }
         
-        // Fallback: Hook into template hierarchy
-        add_action('wp_head', array($this, 'add_subtitle_via_template_hooks'));
+        return true;
     }
     
-    public function add_subtitle_via_template_hooks() {
-        // Try to find where the theme outputs post titles and hook after that
-        add_filter('the_title', array($this, 'append_subtitle_to_title'), 10, 2);
-    }
-    
-    public function append_subtitle_to_title($title, $post_id) {
-        if (is_single() && in_the_loop() && is_main_query() && $post_id == get_the_ID()) {
-            $subtitle = $this->get_subtitle_for_post($post_id);
-            if (!empty($subtitle)) {
-                $title .= '<div class="post-subtitle atm-subtitle">' . esc_html($subtitle) . '</div>';
-            }
-        }
-        return $title;
-    }
-    
-    public function display_generic_subtitle() {
-        $subtitle = $this->get_subtitle_for_post(get_the_ID());
-        if (!empty($subtitle)) {
-            echo '<div class="post-subtitle entry-subtitle atm-subtitle">' . esc_html($subtitle) . '</div>';
-        }
-    }
-    
-    private function get_subtitle_for_post($post_id) {
-        // Priority: configured theme field > our field
+    /**
+     * Get subtitle from the most appropriate field
+     */
+    public static function get_subtitle($post_id) {
+        // Priority: configured theme field > theme-specific field > our field
         $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
         
         if (!empty($theme_subtitle_key)) {
@@ -152,58 +56,90 @@ class ATM_Frontend {
             }
         }
         
+        // Check theme-specific fields
+        $theme = get_template();
+        if (strpos($theme, 'smartmag') !== false) {
+            $subtitle = get_post_meta($post_id, '_bunyad_sub_title', true);
+            if (!empty($subtitle)) {
+                return $subtitle;
+            }
+        } elseif (strpos($theme, 'newspaper') !== false) {
+            $subtitle = get_post_meta($post_id, '_td_subtitle', true);
+            if (!empty($subtitle)) {
+                return $subtitle;
+            }
+        } elseif (strpos($theme, 'kadence') !== false) {
+            $subtitle = get_post_meta($post_id, '_kadence_post_subtitle', true);
+            if (!empty($subtitle)) {
+                return $subtitle;
+            }
+        }
+        
+        // Fallback to our field
         return get_post_meta($post_id, '_atm_subtitle', true);
     }
     
-    // Enhanced CSS that respects theme positioning
-    public function enqueue_subtitle_styles() {
-        if (is_single()) {
-            $theme = get_template();
-            $css = $this->get_theme_specific_subtitle_css($theme);
-            wp_add_inline_style('atm-frontend-style', $css);
+    /**
+     * Get the active subtitle key for a post
+     */
+    public static function get_active_subtitle_key($post_id) {
+        $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
+        
+        if (!empty($theme_subtitle_key)) {
+            $subtitle = get_post_meta($post_id, $theme_subtitle_key, true);
+            if (!empty($subtitle)) {
+                return $theme_subtitle_key;
+            }
         }
+        
+        // Check theme-specific fields
+        $theme = get_template();
+        if (strpos($theme, 'smartmag') !== false) {
+            $subtitle = get_post_meta($post_id, '_bunyad_sub_title', true);
+            if (!empty($subtitle)) {
+                return '_bunyad_sub_title';
+            }
+        } elseif (strpos($theme, 'newspaper') !== false) {
+            $subtitle = get_post_meta($post_id, '_td_subtitle', true);
+            if (!empty($subtitle)) {
+                return '_td_subtitle';
+            }
+        } elseif (strpos($theme, 'kadence') !== false) {
+            $subtitle = get_post_meta($post_id, '_kadence_post_subtitle', true);
+            if (!empty($subtitle)) {
+                return '_kadence_post_subtitle';
+            }
+        }
+        
+        // Fallback to our field
+        return '_atm_subtitle';
     }
     
-    private function get_theme_specific_subtitle_css($theme) {
-        $base_css = '';
+    /**
+     * Check if theme handles subtitles natively
+     */
+    public static function theme_handles_subtitle() {
+        $theme = get_template();
         
-        if (strpos($theme, 'smartmag') !== false) {
-            $base_css = '
-            .post-subtitle, .atm-subtitle {
-                font-size: 14px;
-                color: #7a7a7a;
-                margin: 8px 0 15px 0;
-                font-weight: 400;
-                line-height: 1.4;
-            }';
-        } elseif (strpos($theme, 'newspaper') !== false) {
-            $base_css = '
-            .td-post-subtitle, .atm-subtitle {
-                font-size: 14px;
-                color: #999;
-                margin-bottom: 20px;
-                font-style: italic;
-            }';
-        } else {
-            // Generic styling that adapts to most themes
-            $base_css = '
-            .post-subtitle, .entry-subtitle, .atm-subtitle {
-                font-size: 1.1em;
-                color: #666;
-                margin: 0.5rem 0 1rem 0;
-                font-weight: 400;
-                line-height: 1.4;
-                opacity: 0.9;
-            }
-            
-            @media (max-width: 768px) {
-                .post-subtitle, .entry-subtitle, .atm-subtitle {
-                    font-size: 1em;
-                    margin: 0.3rem 0 0.8rem 0;
+        $themes_with_subtitle_support = [
+            'smartmag' => 'bunyad_post_subtitle',
+            'newspaper' => 'td_subtitle', 
+            'kadence' => 'kadence_post_subtitle',
+            'genesis' => 'genesis_subtitle',
+            'astra' => 'astra_subtitle'
+        ];
+        
+        foreach ($themes_with_subtitle_support as $theme_name => $function_check) {
+            if (strpos($theme, $theme_name) !== false) {
+                // Check if theme function exists
+                if (function_exists($function_check) || 
+                    function_exists('get_' . $function_check) ||
+                    has_action('bunyad_single_content_wrap')) { // SmartMag specific
+                    return true;
                 }
-            }';
+            }
         }
         
-        return $base_css;
+        return false;
     }
 }
