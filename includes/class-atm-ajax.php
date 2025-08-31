@@ -358,32 +358,56 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             if (empty($article_title)) {
                 throw new Exception("Article title cannot be empty.");
             }
-            $system_prompt = '';
-            // Get all available writing styles
+
+            // MODIFIED: Updated prompt logic to request JSON with a subheadline and no H1 tags.
             $writing_styles = ATM_API::get_writing_styles();
+            $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
 
-            // Start with the prompt for the selected style, falling back to default if it's invalid
-            $system_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
-
-            // If the user provided a custom prompt, it overrides the selected style's prompt
             if (!empty($custom_prompt)) {
-                $system_prompt = $custom_prompt;
+                $base_prompt = $custom_prompt;
             }
 
-            // Now, replace shortcodes in whichever prompt was selected
+            $output_instructions = '
+    **Final Output Format:**
+    Your entire output MUST be a single, valid JSON object with two keys:
+    1. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
+    2. "content": The full article text, formatted using Markdown. **IMPORTANT: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.**';
+
+            $system_prompt = $base_prompt . "\n\n" . $output_instructions;
+
             if ($post) {
                 $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
             }
 
-            // Add word count instructions if applicable
             if ($word_count > 0) {
-                $system_prompt .= " The final article should be approximately " . $word_count . " words long. Ensure the content is detailed and comprehensive enough to meet this length requirement.";
+                $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
             }
-            $generated_content = ATM_API::enhance_content_with_openrouter(['content' => $article_title], $system_prompt, $model_override ?: get_option('atm_article_model'), false);
+
+            // MODIFIED: Switched to JSON mode and now parsing the response.
+            $raw_response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $article_title], 
+                $system_prompt, 
+                $model_override ?: get_option('atm_article_model'), 
+                true // Force JSON mode
+            );
+
+            $result = json_decode($raw_response, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+                error_log('ATM Plugin - Invalid JSON from Creative AI: ' . $raw_response);
+                throw new Exception('The AI returned an invalid response structure. Please try again.');
+            }
+
+            $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : '';
+            if ($post_id > 0 && !empty($subtitle)) {
+                update_post_meta($post_id, '_atm_subtitle', $subtitle);
+            }
+
             wp_send_json_success([
-    'article_title'   => $article_title,
-    'article_content' => $generated_content
-]);
+                'article_title'   => $article_title,
+                'article_content' => trim($result['content']),
+                'subtitle'        => $subtitle
+            ]);
+
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
@@ -406,23 +430,22 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             if (empty($news_context)) {
                 throw new Exception("No recent news found for the topic: '" . esc_html($topic) . "'. Please try a different keyword or source.");
             }
-            $system_prompt = 'You are a professional editor and content enhancer. Your task is to rewrite and expand upon the provided source article content. **Use your web search ability to find additional context, statistics, or related news to enrich the original text.**
 
-Follow these strict guidelines:
-- **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human. Your style should be similar to major news outlets like Reuters, Associated Press, or CBS News.
-- When citing a new source you found online, you MUST format it as a natural, contextual Markdown hyperlink.
-- **Originality**: Do not copy verbatim from the source snippets. You must rewrite, summarize, and humanize the content.
-- **Synthesis**: If multiple sources are provided, synthesize them into one cohesive article. Remove any duplicate or irrelevant details.
-- **Objectivity**: Avoid speculation or personal opinions unless they are explicitly cited in the provided data.
-- **Length**: Aim for 800–1200 words. If the source material is very limited, write as much as is naturally possible without adding filler or redundant information.
-- **SEO**: Naturally integrate relevant keywords from the source material. Avoid keyword stuffing.
-- **Readability**: Use short paragraphs, the active voice, and ensure a clear, logical flow.
+            // MODIFIED: System prompt now asks for "subheadline" and forbids H1s in the content.
+            $system_prompt = 'You are a professional news reporter and editor. Using the following raw content from news snippets, write a clear, engaging, and well-structured news article in English. **Use your web search ability to verify the information and add any missing context.**
 
-**Final Output Format:**
-Your entire output MUST be a single, valid JSON object with three keys:
-1. "headline": A concise, factual, and compelling headline for the new article.
-2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
-3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
+            Follow these strict guidelines:
+            - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
+            - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
+            - **Length**: Aim for 800–1200 words.
+            - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+
+            **Final Output Format:**
+            Your entire output MUST be a single, valid JSON object with three keys:
+            1. "headline": A concise, factual, and compelling headline for the new article.
+            2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
+            3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
+
             $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $news_context], $system_prompt, $model_override, true);
             $json_string = '';
             if (preg_match('/\{.*?\}/s', $raw_response, $matches)) {
@@ -435,11 +458,20 @@ Your entire output MUST be a single, valid JSON object with three keys:
                 error_log('ATM Plugin - Invalid JSON from AI: ' . $json_string);
                 throw new Exception('The AI returned an invalid response structure. Please try again.');
             }
-            $final_content = $result['content'];
-            if (!empty($result['subheadline'])) {
-                $final_content = '### ' . trim($result['subheadline']) . "\n\n" . $final_content;
+
+            // MODIFIED: Directly get subheadline from response and save it to post meta.
+            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+            $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : '';
+            if ($post_id > 0 && !empty($subtitle)) {
+                update_post_meta($post_id, '_atm_subtitle', $subtitle);
             }
-            wp_send_json_success(['article_title' => $result['headline'], 'article_content' => $final_content]);
+
+            wp_send_json_success([
+                'article_title'   => $result['headline'],
+                'article_content' => trim($result['content']),
+                'subtitle'        => $subtitle
+            ]);
+
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
@@ -512,22 +544,22 @@ Your entire output MUST be a single, valid JSON object with three keys:
             if (strlen($source_content) > 4000) {
                 $source_content = ATM_API::summarize_content_for_rewrite($source_content);
             }
+
+            // MODIFIED: System prompt now asks for "subheadline" and forbids H1s in the content.
             $system_prompt = 'You are a professional news reporter and editor. Using the following raw content from news snippets, write a clear, engaging, and well-structured news article in English. **Use your web search ability to verify the information and add any missing context.**
-            
 
-Follow these strict guidelines:
-- **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human. Your style should be similar to major news outlets like Reuters, Associated Press, or CBS News.
-- **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
-- **Objectivity**: Avoid speculation or personal opinions unless they are explicitly cited in the provided data.
-- **Length**: Aim for 800–1200 words. If the source material is very limited, write as much as is naturally possible without adding filler or redundant information.
-- **SEO**: Naturally integrate relevant keywords from the source material. Avoid keyword stuffing.
-- **Readability**: Use short paragraphs, the active voice, and ensure a clear, logical flow.
+            Follow these strict guidelines:
+            - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
+            - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
+            - **Length**: Aim for 800–1200 words.
+            - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
 
-**Final Output Format:**
-Your entire output MUST be a single, valid JSON object with three keys:
-1. "headline": A concise, factual, and compelling headline for the new article.
-2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
-3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
+            **Final Output Format:**
+            Your entire output MUST be a single, valid JSON object with three keys:
+            1. "headline": A concise, factual, and compelling headline for the new article.
+            2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
+            3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
+
             $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $source_content], $system_prompt, get_option('atm_article_model', 'openai/gpt-4o'), true);
             $json_string = '';
             if (preg_match('/\{.*?\}/s', $raw_response, $matches)) {
@@ -542,12 +574,13 @@ Your entire output MUST be a single, valid JSON object with three keys:
             }
             $headline = trim($result['headline']);
             $final_content = trim($result['content']);
-            if (!empty($result['subheadline'])) {
-                $final_content = '### ' . trim($result['subheadline']) . "\n\n" . $final_content;
+
+            // MODIFIED: Directly get subheadline from response and save it to post meta.
+            $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : '';
+            if ($post_id > 0 && !empty($subtitle)) {
+                update_post_meta($post_id, '_atm_subtitle', $subtitle);
             }
-            if (strpos(strtolower(substr($final_content, 0, 150)), strtolower($headline)) !== false) {
-                $final_content = preg_replace('/^#+\s*' . preg_quote($headline, '/') . '\s*/i', '', $final_content, 1);
-            }
+
             if (empty($headline) || empty($final_content)) {
                 throw new Exception('Generated title or content is empty.');
             }
@@ -556,7 +589,13 @@ Your entire output MUST be a single, valid JSON object with three keys:
                 $used_guids[] = $guid;
                 update_post_meta($post_id, '_atm_used_rss_guids', array_unique($used_guids));
             }
-            wp_send_json_success(['article_title' => $headline, 'article_content' => $final_content]);
+
+            wp_send_json_success([
+                'article_title'   => $headline,
+                'article_content' => $final_content,
+                'subtitle'        => $subtitle
+            ]);
+
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }

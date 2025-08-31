@@ -123,12 +123,18 @@ class ATM_Settings {
                             <th scope="row">Web Search Results</th>
                             <td>
                                 <select name="atm_web_search_results">
-                                    <option value="3" <?php selected($options['web_search_results'], '3'); ?>>3 Results (Balanced)</option>
-                                    <option value="5" <?php selected($options['web_search_results'], '5'); ?>>5 Results (Default)</option>
                                     <option value="1" <?php selected($options['web_search_results'], '1'); ?>>1 Result (Fastest & Cheapest)</option>
+                                    <option value="2" <?php selected($options['web_search_results'], '2'); ?>>2 Results</option>
+                                    <option value="3" <?php selected($options['web_search_results'], '3'); ?>>3 Results</option>
+                                    <option value="4" <?php selected($options['web_search_results'], '4'); ?>>4 Results</option>
+                                    <option value="5" <?php selected($options['web_search_results'], '5'); ?>>5 Results (Balanced)</option>
+                                    <option value="6" <?php selected($options['web_search_results'], '6'); ?>>6 Results</option>
+                                    <option value="7" <?php selected($options['web_search_results'], '7'); ?>>7 Results</option>
+                                    <option value="8" <?php selected($options['web_search_results'], '8'); ?>>8 Results</option>
+                                    <option value="9" <?php selected($options['web_search_results'], '9'); ?>>9 Results</option>
                                     <option value="10" <?php selected($options['web_search_results'], '10'); ?>>10 Results (Most Detailed)</option>
                                 </select>
-                                <p class="description">Control the number of web search results used. Fewer results are cheaper and faster but may be less comprehensive.</p>
+                                <p class="description">Control the number of web search results used. Each search result costs $0.004, so 1 result = $0.004, 5 results = $0.02, 10 results = $0.04 per request.</p>
                             </td>
                         </tr>
                     </table>

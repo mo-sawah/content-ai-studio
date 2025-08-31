@@ -104,4 +104,15 @@ class ATM_Frontend {
         <?php
         return ob_get_clean();
     }
+
+    public function display_subtitle_before_content($content) {
+        if (is_single() && in_the_loop() && is_main_query()) {
+            $subtitle = get_post_meta(get_the_ID(), '_atm_subtitle', true);
+            if (!empty($subtitle)) {
+                $subtitle_html = '<h2 class="atm-post-subtitle">' . esc_html($subtitle) . '</h2>';
+                return $subtitle_html . $content;
+            }
+        }
+        return $content;
+    }
 }

@@ -195,7 +195,7 @@ class ATM_Main {
 
         // Frontend hooks
         add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'));
-        add_filter('the_content', array($frontend, 'embed_podcast_in_content'));
+        add_filter('the_content', array($frontend, 'display_subtitle_before_content'), 11);
         add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
     }
     
