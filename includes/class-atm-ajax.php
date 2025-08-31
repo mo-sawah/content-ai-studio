@@ -347,19 +347,28 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             wp_send_json_error('Please activate your license key to use this feature.');
         }
         check_ajax_referer('atm_nonce', 'nonce');
+
         try {
             $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
             $post = get_post($post_id);
-            $article_title = sanitize_text_field($_POST['article_title']);
+            $article_title = isset($_POST['article_title']) ? sanitize_text_field($_POST['article_title']) : '';
+            $keyword = isset($_POST['keyword']) ? sanitize_text_field($_POST['keyword']) : '';
             $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
             $style_key = isset($_POST['writing_style']) ? sanitize_key($_POST['writing_style']) : 'default_seo';
             $custom_prompt = isset($_POST['custom_prompt']) ? wp_kses_post(stripslashes($_POST['custom_prompt'])) : '';
             $word_count = isset($_POST['word_count']) ? intval($_POST['word_count']) : 0;
-            if (empty($article_title)) {
-                throw new Exception("Article title cannot be empty.");
+
+            if (empty($article_title) && empty($keyword)) {
+                throw new Exception("Please provide a keyword or an article title.");
             }
 
-            // MODIFIED: Updated prompt logic to request JSON with a subheadline and no H1 tags.
+            // --- THIS IS THE FIX ---
+            // If the title is empty but a keyword was provided, generate a title first.
+            if (empty($article_title) && !empty($keyword)) {
+                $article_title = ATM_API::generate_title_from_keyword($keyword, $model_override);
+            }
+            // --- END OF FIX ---
+
             $writing_styles = ATM_API::get_writing_styles();
             $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
 
@@ -368,10 +377,10 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             }
 
             $output_instructions = '
-    **Final Output Format:**
-    Your entire output MUST be a single, valid JSON object with two keys:
-    1. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
-    2. "content": The full article text, formatted using Markdown. **IMPORTANT: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.**';
+            **Final Output Format:**
+            Your entire output MUST be a single, valid JSON object with two keys:
+            1. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
+            2. "content": The full article text, formatted using Markdown. **IMPORTANT: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.**';
 
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
 
@@ -383,7 +392,6 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
             }
 
-            // MODIFIED: Switched to JSON mode and now parsing the response.
             $raw_response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $article_title], 
                 $system_prompt, 
@@ -393,28 +401,20 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
 
             $result = json_decode($raw_response, true);
             if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
-                error_log('ATM Plugin - Invalid JSON from Creative AI: ' . $raw_response);
+                error_log('Content AI Studio - Invalid JSON from Creative AI: ' . $raw_response);
                 throw new Exception('The AI returned an invalid response structure. Please try again.');
             }
 
-            // Determine the subtitle from the AI response
-            // In your generate_article_content method, replace the subtitle saving with:
             $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : (isset($result['subtitle']) ? trim($result['subtitle']) : '');
-
             if ($post_id > 0 && !empty($subtitle)) {
-                // Save to SmartMag field
-                $smartmag_result = update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
-                error_log("ATM Plugin: Saved subtitle '{$subtitle}' to SmartMag field (_bunyad_sub_title) for post {$post_id}. Result: " . ($smartmag_result ? 'success' : 'failed'));
-                
-                // Also save to our backup field
-                $backup_result = update_post_meta($post_id, '_atm_subtitle', $subtitle);
-                error_log("ATM Plugin: Saved subtitle to backup field (_atm_subtitle). Result: " . ($backup_result ? 'success' : 'failed'));
-                
-                // Verify it was saved
-                $saved_smartmag = get_post_meta($post_id, '_bunyad_sub_title', true);
-                $saved_backup = get_post_meta($post_id, '_atm_subtitle', true);
-                error_log("ATM Plugin: Verification - SmartMag field: '{$saved_smartmag}', Backup field: '{$saved_backup}'");
+                ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle);
             }
+
+            wp_send_json_success([
+                'article_title'   => $article_title,
+                'article_content' => trim($result['content']),
+                'subtitle'        => $subtitle
+            ]);
 
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
