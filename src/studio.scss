@@ -1,0 +1,1226 @@
+/* --- Main Meta Box & Container --- */
+// This overrides the default WordPress padding for a cleaner look.
+#article-to-media .inside {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.atm-studio-container {
+    background-color: #121619; // Your new dark background color
+    color: #e2e8f0;
+    padding: 2rem;
+    border-radius: 8px;
+    margin: 15px;
+}
+
+.atm-studio-container h2 {
+    font-size: 35px !important;
+    font-weight: 600 !important;
+}
+
+/* --- Hub View --- */
+.atm-hub {
+    text-align: center;
+    padding: 2rem 1rem;
+
+    h2 {
+        font-size: 35px;   // Updated size
+        font-weight: 600;  // Updated weight
+        color: #ffffff;
+        margin: 0 0 8px;
+    }
+
+    .atm-hub-subtitle,
+    .atm-hub-footer {
+        font-size: 14px;
+        color: #a0aec0;
+        margin: 0;
+    }
+
+    .atm-hub-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin: 2.5rem 0;
+    }
+}
+
+/* --- Button Styles --- */
+.atm-studio-container .components-button.is-primary {
+    background: linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%);
+    color: #ffffff;      // Updated text color to white
+    font-size: 16px;      // Updated font size
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    height: auto;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;      // Ensures the pointer cursor appears on hover
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    &:disabled {
+        background: #4a5569;
+        transform: none;
+        box-shadow: none;
+        margin-bottom: calc(8px);
+    }
+}
+
+/* --- Secondary Button Styles --- */
+.atm-studio-container .components-button.is-secondary {
+    background-color: #4a5569;
+    color: #e2e8f0;
+    font-size: 16px;
+    font-weight: 600;
+    border: 1px solid #6b7280;
+    border-radius: 8px;
+    padding: 12px 20px;
+    height: auto;
+    min-height: 40px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+    justify-content: center;
+    margin-bottom: calc(8px);
+
+    &:hover:not(:disabled) {
+        background-color: #5a6478;
+        border-color: #7c8490;
+    }
+
+    &:focus:not(:disabled) {
+        background-color: #5a6478;
+        border-color: #8E2DE2;
+        box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3);
+        outline: none;
+    }
+
+    &:disabled {
+        background-color: #374151;
+        color: #9ca3af;
+        border-color: #4b5563;
+        cursor: not-allowed;
+        opacity: 0.7;
+        // Maintain consistent sizing even when disabled
+        min-height: 40px;
+        padding: 12px 20px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+}
+
+/* --- Modern Form Controls --- */
+.atm-studio-container {
+    // Target text inputs and textareas (keeping these for TextareaControl)
+    .components-text-control__input,
+    .components-textarea-control__input {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #4a5569;
+        border-radius: 6px;
+        padding: 10px 12px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: none !important;
+
+        &::placeholder {
+            color: #94a3b8;
+        }
+
+        &:focus {
+            border-color: #8E2DE2;
+            box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3) !important;
+            outline: none;
+        }
+    }
+
+    .components-base-control__label {
+        color: #a0aec0;
+        font-weight: 500;
+        margin-bottom: 8px !important;
+    }
+
+    .components-base-control__help {
+        color: #718096;
+    }
+}
+
+/* --- Custom Dropdown Styles --- */
+.atm-studio-container {
+    .atm-dropdown-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 1.25rem;
+        
+        .atm-dropdown-label {
+            color: #a0aec0;
+            font-weight: 500;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .atm-dropdown-help {
+            color: #718096;
+            font-size: 12px;
+            margin: 4px 0 0;
+            line-height: 1.4;
+        }
+    }
+
+    // Style the DropdownMenu trigger button
+    .atm-custom-dropdown {
+        // Make sure the dropdown container takes full width
+        width: 100% !important;
+        position: relative !important;
+        
+        .components-dropdown-menu__toggle {
+            background-color: #2d3748 !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #4a5569 !important;
+            border-radius: 6px !important;
+            padding: 10px 12px !important;
+            min-height: 40px !important;
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            text-align: left !important;
+            font-size: 14px !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+            
+            // Remove any default styling
+            box-shadow: none !important;
+            -webkit-box-shadow: none !important;
+            outline: none !important;
+            
+            // Fix the text content positioning
+            > span:first-child {
+                flex: 1 !important;
+                text-align: left !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+                margin-right: 8px !important;
+            }
+            
+            // Position the dropdown arrow on the right
+            .components-dropdown-menu__indicator,
+            .dashicon,
+            svg {
+                color: #a0aec0 !important;
+                flex-shrink: 0 !important;
+                margin-left: auto !important;
+                order: 2 !important;
+            }
+            
+            &:hover:not(:disabled) {
+                background-color: #374151 !important;
+                border-color: #6b7280 !important;
+            }
+            
+            &:focus {
+                border-color: #8E2DE2 !important;
+                box-shadow: 0 0 0 2px rgba(142, 45, 226, 0.3) !important;
+                outline: none !important;
+            }
+            
+            &:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+        }
+    }
+
+    // Style the dropdown menu popup
+    .components-dropdown-menu__popover {        
+        // Force the popover to position relative to the dropdown
+        &.components-popover {
+            position: absolute !important;
+            z-index: 999999 !important;
+        }
+        
+        .components-popover__content {
+            background-color: #2d3748 !important;
+            border: 1px solid #4a5569 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+            padding: 4px !important;
+            
+            // Style individual menu items
+            .components-menu-group {
+                .components-menu-item__button {
+                    color: #e2e8f0 !important;
+                    background-color: transparent !important;
+                    border: none !important;
+                    border-radius: 4px !important;
+                    padding: 10px 12px !important;
+                    font-size: 14px !important;
+                    text-align: left !important;
+                    width: 100% !important;
+                    transition: background-color 0.2s ease !important;
+                    white-space: nowrap !important;
+                    
+                    &:hover {
+                        background-color: #374151 !important;
+                        color: #ffffff !important;
+                    }
+                    
+                    &:focus {
+                        background-color: #8E2DE2 !important;
+                        color: #ffffff !important;
+                        outline: none !important;
+                        box-shadow: none !important;
+                    }
+                    
+                    // Remove any default WordPress styling
+                    box-shadow: none !important;
+                    -webkit-box-shadow: none !important;
+                }
+            }
+        }
+    }
+    
+    // More aggressive width matching - target the popover directly
+    &:has(.atm-custom-dropdown) .components-dropdown-menu__popover .components-popover__content,
+    .atm-custom-dropdown + .components-dropdown-menu__popover .components-popover__content {
+        min-width: var(--dropdown-width) !important;
+        width: var(--dropdown-width) !important;
+    }
+}
+
+/* --- Generator View Headers & Layout --- */
+.atm-generator-view {
+    .atm-view-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #4a5569;
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+
+        h3 {
+            margin: 0;
+            font-size: 20px;
+            color: #ffffff;
+        }
+    }
+
+    .atm-back-btn {
+        background: transparent;
+        border: 1px solid #718096;
+        border-radius: 50%;
+        cursor: pointer;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #e2e8f0;
+        padding: 0;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+
+        &:hover {
+            background-color: #4a5569;
+            border-color: #a0aec0;
+        }
+    }
+
+    .atm-form-container {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .atm-status-message {
+        color: #94a3b8;
+        font-style: italic;
+        text-align: center;
+        margin-top: 1rem;
+    }
+}
+
+// Grid layout for two-column dropdowns
+.atm-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Force dropdown popovers to match toggle width */
+.atm-popover .components-popover__content {
+  width: var(--atm-dropdown-width, auto) !important;
+  min-width: var(--atm-dropdown-width, auto) !important;
+}
+
+/* --- Speech to Text Modern Recording Styles --- */
+.atm-speech-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+.atm-recording-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* Record Button Container with Pulse Animation */
+.atm-record-button-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+    
+    /* Pulse rings - hidden by default */
+    .atm-pulse-ring {
+        position: absolute;
+        border: 3px solid #ef4444;
+        border-radius: 50%;
+        opacity: 0;
+        transform: scale(1);
+        pointer-events: none;
+    }
+
+    &.is-small {
+        width: 80px;
+        height: 80px;
+
+        .atm-record-button {
+            width: 50px;
+            height: 50px;
+
+            svg, .atm-mic-icon {
+                width: 20px;
+                height: 20px;
+            }
+        }
+        
+        .atm-pulse-ring-2 { height: 120%; width: 120%; }
+        .atm-pulse-ring-3 { height: 140%; width: 140%; }
+
+        // Adjust spinner size for the small button
+        .components-spinner {
+            width: 24px !important;
+            height: 24px !important;
+            svg {
+                width: 20px !important;
+                height: 20px !important;
+            }
+        }
+    }
+    
+    .atm-pulse-ring-1 {
+        width: 100%;
+        height: 100%;
+        animation-delay: 0s;
+    }
+    
+    .atm-pulse-ring-2 {
+        width: 110%;
+        height: 110%;
+        animation-delay: 0.5s;
+    }
+    
+    .atm-pulse-ring-3 {
+        width: 120%;
+        height: 120%;
+        animation-delay: 1s;
+    }
+    
+    /* Show and animate pulse rings when recording */
+    &.is-recording .atm-pulse-ring {
+        animation: atm-pulse 2s infinite;
+    }
+}
+
+/* Pulse animation keyframes */
+@keyframes atm-pulse {
+    0% {
+        transform: scale(0.9);
+        opacity: 1;
+    }
+    70% {
+        transform: scale(1.1);
+        opacity: 0.4;
+    }
+    100% {
+        transform: scale(1.2);
+        opacity: 0;
+    }
+}
+
+/* Main Record Button */
+.atm-record-button {
+    position: relative;
+    z-index: 10;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    
+    /* Default state - futuristic green gradient */
+    background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+    color: #ffffff;
+    
+    /* Hover effects */
+    &:hover:not(:disabled) {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    }
+    
+    &:active:not(:disabled) {
+        transform: translateY(0) scale(0.98);
+    }
+    
+    /* Recording state - red background */
+    &.is-recording {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        animation: atm-recording-pulse 1s infinite alternate;
+        
+        &:hover {
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+    }
+    
+    /* Transcribing state - processing */
+    &.is-transcribing {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        cursor: not-allowed;
+        
+        &:hover {
+            transform: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+    }
+    
+    /* Icon styling */
+    .atm-mic-icon,
+    svg {
+        width: 28px;
+        height: 28px;
+        transition: all 0.2s ease;
+    }
+    
+    /* Custom styling for the SVG microphone icon */
+    .atm-mic-icon {
+        filter: brightness(0) invert(1); /* Makes the SVG white */
+    }
+    
+    /* Stop icon (square) animation when recording */
+    &.is-recording svg {
+        animation: atm-stop-icon-pulse 2s infinite;
+    }
+
+    .components-spinner {
+        margin: 0 !important;
+        width: 28px !important;
+        height: 28px !important;
+        
+        /* Center the spinner properly */
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* Target the actual spinner SVG */
+    .components-spinner svg {
+        width: 24px !important;
+        height: 24px !important;
+        margin: 0 !important;
+    }
+}
+
+/* Recording pulse animation for the button */
+@keyframes atm-recording-pulse {
+    0% {
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+    100% {
+        box-shadow: 0 4px 25px rgba(239, 68, 68, 0.6), 0 0 0 4px rgba(239, 68, 68, 0.1);
+    }
+}
+
+/* Stop icon pulse animation */
+@keyframes atm-stop-icon-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Status Message */
+.atm-recording-status {
+    font-size: 16px;
+    font-weight: 500;
+    color: #e2e8f0;
+    margin: 0;
+    min-height: 24px;
+    
+    /* Different colors based on state */
+    .atm-record-button-wrapper.is-recording + & {
+        color: #fca5a5;
+    }
+    
+    .atm-record-button.is-transcribing ~ & {
+        color: #94a3b8;
+    }
+}
+
+/* Instructions Section */
+.atm-instructions {
+    max-width: 400px;
+    
+    p {
+        color: #94a3b8;
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 0;
+    }
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+    .atm-record-button-wrapper {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .atm-record-button {
+        width: 70px;
+        height: 70px;
+        
+        .atm-mic-icon,
+        svg {
+            width: 24px;
+            height: 24px;
+        }
+    }
+    
+    .atm-speech-container {
+        padding: 1.5rem;
+        gap: 1.5rem;
+    }
+}
+
+/* Additional visual enhancement - glow effect */
+.atm-record-button-wrapper.is-recording::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    animation: atm-glow-pulse 2s infinite;
+}
+
+@keyframes atm-glow-pulse {
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+}
+
+.atm-record-button .components-spinner {
+        margin: 0 !important;
+        width: 28px !important;
+        height: 28px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+.atm-record-button .components-spinner svg {
+        width: 24px !important;
+        height: 24px !important;
+        margin: 0 !important;
+    }
+
+/* --- Added for Translator UI --- */
+
+.atm-form-divider {
+    border: none;
+    border-top: 1px solid #4a5569;
+    margin: 1.5rem 0;
+}
+
+.atm-translator-full-editor {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    
+    span {
+        color: #a0aec0;
+        font-size: 14px;
+    }
+
+    .atm-dropdown-field {
+        flex: 1;
+        margin-bottom: 0;
+
+        .atm-dropdown-label {
+            display: none; // Hide the label as it's redundant here
+        }
+    }
+}
+
+.atm-translator-main-area {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+
+    @media (max-width: 960px) {
+        flex-direction: column;
+    }
+}
+
+.atm-translator-text-input {
+    flex: 1;
+    min-width: 0; // Prevents flexbox from overflowing
+}
+
+.atm-translator-recorder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: calc(8px);
+    
+    h4 {
+        margin: 0 0 0.5rem 0;
+        color: #a0aec0;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .atm-recording-status {
+        font-size: 13px;
+        min-height: 18px;
+    }
+}
+
+/* --- Translator UI Enhancements --- */
+
+.atm-form-divider {
+    border: none;
+    border-top: 1px solid #4a5569;
+    margin: 1.5rem 0;
+}
+
+.atm-translator-full-editor {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    
+    span {
+        color: #a0aec0;
+        font-size: 14px;
+    }
+
+    .atm-dropdown-field {
+        flex: 1;
+        margin-bottom: 0;
+
+        .atm-dropdown-label {
+            display: none;
+        }
+    }
+}
+
+.atm-translator-main-area {
+    display: flex;
+    gap: 1.5rem;
+    align-items: stretch; // This makes them equal height
+    margin-bottom: 1.25rem;
+
+    @media (max-width: 960px) {
+        flex-direction: column;
+    }
+}
+
+.atm-translator-text-input {
+    flex: 1;
+    min-width: 0;
+
+    // Remove the default label margin, since we handle it separately now
+    .components-base-control__label {
+        display: none;
+    }
+}
+
+.atm-translator-recorder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 30%; // Set the desired width
+    min-width: 200px; // Prevent it from getting too small
+    padding: 1rem;
+    background: #2d3748;
+    border-radius: 6px;
+    
+    @media (max-width: 960px) {
+        width: 100%;
+        padding: 1.5rem 1rem;
+    }
+
+    h4 {
+        margin: 0 0 0.5rem 0;
+        color: #a0aec0;
+        font-size: 13px;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    .atm-recording-status {
+        font-size: 13px;
+        min-height: 18px;
+    }
+}
+
+/* --- YouTube Video Search Feature --- */
+
+.atm-video-search-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+// Main form container for the search bar
+.atm-autocomplete-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch; // This is the key: makes all direct children the same height
+
+    // Makes the TextControl wrapper fill all available space
+    .components-base-control {
+        flex: 1;
+        margin-bottom: 0;
+    }
+}
+
+.atm-autocomplete-container {
+    // Ensure the input field fills its container vertically
+    .components-text-control__input {
+        min-height: 48px;
+        height: 100%;
+    }
+}
+
+// Shared styles for BOTH buttons to ensure they are identical squares
+.atm-search-button,
+.atm-filter-button {
+    width: 48px !important;
+    min-width: 48px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: auto !important; // Let the parent's "stretch" handle the height
+    border-radius: 8px !important;
+}
+
+// Specific style for the search button
+.atm-search-button {
+    background: #2d3748 !important;
+    border: 1px solid #4a5569 !important;
+
+    &:hover:not(:disabled) {
+        background-color: #374151 !important;
+        border-color: #6b7280 !important;
+    }
+}
+
+// Specific style for the filter button
+.atm-filter-button {
+    background-color: transparent !important;
+    border: 1px solid #4a5569 !important;
+    color: #a0aec0 !important;
+    transition: all .2s ease;
+
+    &:hover:not(:disabled) {
+        background-color: #2d3748 !important;
+        border-color: #6b7280 !important;
+        color: #ffffff !important;
+    }
+}
+
+// Styles for the custom SVG icon
+.atm-button-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(0.8); // Makes the icon a light gray
+    transition: filter .2s ease;
+}
+
+.atm-filter-button:hover:not(:disabled) .atm-button-icon {
+    filter: brightness(0) invert(1); // Makes the icon white on hover
+}
+
+.atm-suggestions-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: calc(48px * 2 + 1rem); // Account for both buttons + gap
+    background: #2d3748;
+    border: 1px solid #4a5569;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    margin: -8px 0 0 0;
+    padding: 4px;
+    list-style: none;
+    z-index: 1000;
+
+    li {
+        padding: 8px 12px;
+        margin: 0;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #e2e8f0;
+
+        &:hover {
+            background-color: #374151;
+        }
+    }
+}
+
+.atm-video-spinner-container {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.atm-video-results-list {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.atm-video-result-item {
+    display: flex;
+    gap: 1rem;
+    background-color: #2d3748;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #4a5569;
+
+    .atm-video-actions .components-button:not(.is-embed) {
+        color: #cbd5e1;
+        &:hover {
+            color: #ffffff;
+        }
+    }
+
+    .atm-video-actions .components-button.is-embed {
+        background-color: #e2e8f0 !important;
+        color: #121919 !important;
+        font-weight: 600;
+        height: 30px;
+        padding: 0 10px;
+        font-size: 13px;
+        &:hover {
+            background-color: #ffffff !important;
+        }
+    }
+    @media (max-width: 768px) {
+        flex-direction: column;
+    }
+}
+
+.atm-video-thumbnail {
+    flex-shrink: 0;
+    width: 160px;
+    img {
+        width: 100%;
+        height: auto;
+        border-radius: 6px;
+        display: block;
+        height: 120px;
+        object-fit: cover;
+    }
+    @media (max-width: 768px) {
+        width: 100%;
+    }
+}
+
+.atm-video-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.atm-video-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+.atm-video-description {
+    font-size: 13px;
+    color: #a0aec0;
+    margin: 0;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.atm-video-meta {
+    font-size: 12px;
+    color: #718096;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.atm-video-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+    align-items: center;
+
+    // --- ADD THIS NEW RULE ---
+    .components-button.is-secondary {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important; // Adjust padding for a link-like feel
+        color: #cbd5e1; // Set a consistent text color
+
+        &:hover {
+            color: #ffffff;
+        }
+    }
+}
+
+/* --- Specific Filter Button and Modal Styles --- */
+
+.atm-button-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(0.8);
+    transition: filter .2s ease;
+}
+
+.atm-filter-button:hover:not(:disabled) .atm-button-icon {
+    filter: brightness(0) invert(1);
+}
+
+.atm-filter-modal .components-modal__content {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+// More aggressive selector to fix label colors
+body.wp-admin .atm-filter-modal .components-base-control__label {
+    color: #a0aec0 !important;
+    font-size: 12px !important;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 4px !important;
+}
+
+.atm-filter-modal .components-modal__header {
+    background: #2d3748;
+    border-bottom: 1px solid #4a5569;
+}
+
+.atm-filter-modal .components-modal__header h1 {
+    color: #ffffff;
+}
+
+.atm-filter-modal .components-modal__header .components-button {
+    color: #e2e8f0 !important;
+}
+
+/* --- AI Chart Generator --- */
+
+.atm-chart-preview-container {
+    background-color: #ffffff;
+    border: 1px solid #4a5569;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    min-height: 420px; // Ensure it has a height even when empty
+}
+
+.atm-chart-actions {
+    margin-top: 1rem;
+    text-align: center;
+
+    p {
+        font-size: 13px;
+        color: #a0aec0;
+        font-style: italic;
+    }
+}
+
+// Find the existing .atm-chart-actions rule and add to it
+.atm-chart-actions {
+    margin-top: 1rem;
+    text-align: center;
+    display: grid;
+    gap: 1rem;
+
+    p {
+        font-size: 13px;
+        color: #a0aec0;
+        font-style: italic;
+        margin: 0;
+    }
+}
+
+// Add this new rule for the shortcode display
+.atm-shortcode-display {
+    margin-top: 1rem;
+    text-align: left;
+
+    .components-base-control__label {
+        display: none;
+    }
+    
+    input[type="text"] {
+        text-align: center;
+        background-color: #1a202c !important;
+        font-family: monospace;
+        font-size: 14px;
+        cursor: copy;
+    }
+}
+
+
+/* --- FIX for Loading Button Alignment --- */
+.atm-studio-container .components-button {
+  &:has(.components-spinner) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+}
+
+/* --- Custom Spinner Animation --- */
+@keyframes atm-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.atm-custom-spinner {
+  width: 20px;
+  height: 20px;
+  animation: atm-spin 1s linear infinite;
+  filter: invert(100%) sepia(0%) saturate(7483%) hue-rotate(256deg) brightness(100%) contrast(100%);
+}
+
+/* --- RSS Results Enhancement --- */
+.atm-rss-thumbnail-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #374151; // A slightly lighter dark shade
+
+  .dashicons-rss {
+    font-size: 48px;
+    color: #718096;
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* --- Universal Thumbnail Styles --- */
+.atm-video-thumbnail {
+    flex-shrink: 0;
+    width: 160px; /* Base width for larger screens */
+    height: 150px; /* Enforce a 16:9 aspect ratio */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    overflow: hidden; /* Ensures image corners are rounded */
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Ensures image fills the container */
+    }
+
+    @media (max-width: 768px) {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9; /* Modern way to maintain aspect ratio */
+    }
+}
+
+/* --- RSS Placeholder Specific Styles --- */
+.atm-rss-thumbnail-placeholder {
+    background-color: #374151;
+
+    .dashicons-rss {
+        font-size: 48px;
+        color: #718096;
+        width: 48px;
+        height: 48px;
+    }
+}
+
+/* --- My Styles --- */
+.atm-video-search-container .components-button.is-primary {
+    margin-bottom: calc(8px);
+}
+
+.atm-video-search-container .components-button.is-secondary {
+    box-shadow: unset;
+    outline: 0;
+}
+
+.atm-video-result-item .atm-video-actions .components-button:not(.is-embed) {
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.atm-video-result-item .atm-video-actions .components-button.is-primary {
+    background: #d7d7d7 !important;
+}

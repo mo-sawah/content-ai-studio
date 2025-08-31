@@ -1,38 +1,472 @@
-.atm-wrapper { margin-bottom: 2em; }
-.atm-modern-player { background: linear-gradient(135deg, #1e293b, #334155); border: 1px solid #475569; border-radius: 16px; padding: 20px 24px; margin: 0; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); max-width: 100%; color: white; }
-.atm-player-container { display: flex; align-items: center; gap: 24px; }
-.atm-player-cover { position: relative; flex-shrink: 0; }
-.atm-cover-image { width: 140px; height: 140px; border-radius: 12px; object-fit: cover; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); }
-.atm-play-button { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 56px; height: 56px; background: #131a29; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; opacity: 1 !important; backdrop-filter: blur(10px); }
-.atm-play-button:hover { background: #131a29; transform: translate(-50%, -50%) scale(1.1); }
-.atm-play-button.playing { background: #131a29; }
-.atm-play-svg-icon { width: 22px; height: 22px; filter: brightness(0) invert(1); }
-.atm-play-icon { display: block; } .atm-pause-icon { display: none; }
-.atm-play-button.playing .atm-play-icon { display: none; }
-.atm-play-button.playing .atm-pause-icon { display: block; }
-.atm-player-info { flex: 1; min-width: 0; }
-.atm-episode-title { margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: #f8fafc !important; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.atm-podcast-name { margin: 0 0 24px 0; color: #94a3b8; font-size: 14px; font-weight: 500; }
-.atm-progress-bar { width: 100%; height: 8px; background: #475569; border-radius: 4px; cursor: pointer; overflow: hidden; position: relative; }
-.atm-progress-bar:hover { height: 10px; }
-.atm-progress-fill { height: 100%; background: #131a29; border-radius: 4px; width: 0%; transition: width 0.1s ease; position: relative; }
-.atm-progress-fill::after { content: ""; position: absolute; right: -2px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: #131a29; border-radius: 50%; opacity: 0; transition: opacity 0.2s ease; }
-.atm-progress-bar:hover .atm-progress-fill::after { opacity: 1; }
-.atm-time-display { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px; color: #94a3b8; font-weight: 500; font-family: "SF Mono", Monaco, monospace; }
-.atm-control-buttons { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
-.atm-speed-btn, .atm-volume-btn, .atm-download-btn { background: rgba(71, 85, 105, 0.8); border: 1px solid #64748b; border-radius: 50px; padding: 1px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: #f8fafc; display: flex; align-items: center; gap: 6px; }
-.atm-speed-btn:hover, .atm-volume-btn:hover { background: rgba(19, 26, 41, 0.2); border-color: #131a29; transform: translateY(-1px); }
-.atm-download-btn { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
-.atm-download-btn:hover { background: rgba(59, 130, 246, 0.3); border-color: #2563eb; }
-.atm-volume-icon { font-size: 14px; line-height: 1; }
-.atm-btn-icon { width: 14px; height: 14px; filter: brightness(0) invert(1); }
-@media (max-width: 700px) {
-    .atm-modern-player { padding: 20px; }
-    .atm-player-container { flex-direction: column; text-align: center; gap: 16px; }
-    .atm-cover-image { width: 180px; height: 180px; }
-    .atm-play-button { width: 64px; height: 64px; }
-    .atm-episode-title { font-size: 18px; white-space: normal; margin-top: 5px !important; }
-    .atm-control-buttons { justify-content: center; }
+.atm-wrapper {
+  margin-bottom: 2em;
 }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-.atm-loading { animation: pulse 1.5s ease-in-out infinite; }
+.atm-modern-player {
+  background: linear-gradient(135deg, #1e293b, #334155);
+  border: 1px solid #475569;
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin: 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  max-width: 100%;
+  color: white;
+}
+.atm-player-container {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.atm-player-cover {
+  position: relative;
+  flex-shrink: 0;
+}
+.atm-cover-image {
+  width: 140px;
+  height: 140px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.atm-play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  height: 56px;
+  background: #131a29;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  opacity: 1 !important;
+  backdrop-filter: blur(10px);
+}
+.atm-play-button:hover {
+  background: #131a29;
+  transform: translate(-50%, -50%) scale(1.1);
+}
+.atm-play-button.playing {
+  background: #131a29;
+}
+.atm-play-svg-icon {
+  width: 22px;
+  height: 22px;
+  filter: brightness(0) invert(1);
+}
+.atm-play-icon {
+  display: block;
+}
+.atm-pause-icon {
+  display: none;
+}
+.atm-play-button.playing .atm-play-icon {
+  display: none;
+}
+.atm-play-button.playing .atm-pause-icon {
+  display: block;
+}
+.atm-player-info {
+  flex: 1;
+  min-width: 0;
+}
+.atm-episode-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f8fafc !important;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.atm-podcast-name {
+  margin: 0 0 24px 0;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+}
+.atm-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #475569;
+  border-radius: 4px;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+}
+.atm-progress-bar:hover {
+  height: 10px;
+}
+.atm-progress-fill {
+  height: 100%;
+  background: #131a29;
+  border-radius: 4px;
+  width: 0%;
+  transition: width 0.1s ease;
+  position: relative;
+}
+.atm-progress-fill::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background: #131a29;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.atm-progress-bar:hover .atm-progress-fill::after {
+  opacity: 1;
+}
+.atm-time-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 500;
+  font-family: "SF Mono", Monaco, monospace;
+}
+.atm-control-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+}
+.atm-speed-btn,
+.atm-volume-btn,
+.atm-download-btn {
+  background: rgba(71, 85, 105, 0.8);
+  border: 1px solid #64748b;
+  border-radius: 50px;
+  padding: 1px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.atm-speed-btn:hover,
+.atm-volume-btn:hover {
+  background: rgba(19, 26, 41, 0.2);
+  border-color: #131a29;
+  transform: translateY(-1px);
+}
+.atm-download-btn {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+}
+.atm-download-btn:hover {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: #2563eb;
+}
+.atm-volume-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.atm-btn-icon {
+  width: 14px;
+  height: 14px;
+  filter: brightness(0) invert(1);
+}
+@media (max-width: 700px) {
+  .atm-modern-player {
+    padding: 20px;
+  }
+  .atm-player-container {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+  .atm-cover-image {
+    width: 180px;
+    height: 180px;
+  }
+  .atm-play-button {
+    width: 64px;
+    height: 64px;
+  }
+  .atm-episode-title {
+    font-size: 18px;
+    white-space: normal;
+    margin-top: 5px !important;
+  }
+  .atm-control-buttons {
+    justify-content: center;
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.atm-loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* --- Frontend Chart Styles --- */
+
+/* Theming Variables */
+body.atm-chart-theme-light {
+  --atm-chart-bg-color: #ffffff;
+  --atm-chart-text-color: #333333;
+  --atm-chart-border-color: #e0e0e0;
+  --atm-chart-toggle-bg: #f0f0f0;
+  --atm-chart-toggle-color: #666666;
+  --atm-chart-grid-line-color: #eeeeee; /* Light grid lines */
+  --atm-chart-axis-label-color: #666666; /* Darker labels */
+  --atm-chart-legend-color: #333333; /* Dark legend text */
+  --atm-chart-data-zoom-handle-color: #c9c9c9; /* Handle color */
+  --atm-chart-data-zoom-mask-color: rgba(220, 220, 220, 0.4); /* Mask color */
+}
+
+body.atm-chart-theme-dark {
+  --atm-chart-bg-color: #2b2d30; /* Dark background */
+  --atm-chart-text-color: #e0e0e0; /* Light text */
+  --atm-chart-border-color: #444444;
+  --atm-chart-toggle-bg: #3c3e41;
+  --atm-chart-toggle-color: #ffffff;
+  --atm-chart-grid-line-color: #3c3c3c; /* Darker grid lines for contrast */
+  --atm-chart-axis-label-color: #cccccc; /* Lighter labels */
+  --atm-chart-legend-color: #e0e0e0; /* Light legend text */
+  --atm-chart-data-zoom-handle-color: #555555; /* Handle color */
+  --atm-chart-data-zoom-mask-color: rgba(60, 60, 60, 0.4); /* Mask color */
+}
+
+/* General Chart Container Styles */
+.atm-chart-wrapper {
+  position: relative;
+  background-color: var(--atm-chart-bg-color);
+  border: 1px solid var(--atm-chart-border-color);
+  border-radius: 8px;
+  padding: 20px; /* Enhanced padding for modern look */
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.atm-chart-wrapper h2.atm-chart-title {
+  /* Style for chart titles if you add them */
+  color: var(--atm-chart-text-color);
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.8em;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.atm-chart {
+  width: 100%;
+  height: 400px; /* Default height */
+}
+
+/* Theme Toggle Button Styles */
+.atm-theme-toggle {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: var(--atm-chart-toggle-bg);
+  color: var(--atm-chart-toggle-color);
+  border: none;
+  border-radius: 50%; /* Make it perfectly round */
+  width: 7px;
+  height: 40px;
+  max-width: 40px; /* Ensure it's not squashed */
+  max-height: 40px; /* Ensure it's not squashed */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Enhanced shadow */
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  z-index: 10;
+}
+
+.atm-theme-toggle:hover {
+  transform: translateY(-2px); /* Slightly more pronounced lift on hover */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Deeper shadow on hover */
+}
+
+.atm-theme-toggle .dashicons {
+  line-height: 1; /* Center Dashicon vertically */
+}
+
+/* ECharts Tooltip (global styling for better dark/light compatibility) */
+.echarts-tooltip {
+  background-color: var(--atm-chart-bg-color) !important;
+  border: 1px solid var(--atm-chart-border-color) !important;
+  color: var(--atm-chart-text-color) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.echarts-tooltip h4 {
+  color: var(--atm-chart-text-color) !important;
+  margin-top: 0;
+  margin-bottom: 5px;
+  font-size: 1.1em;
+}
+.echarts-tooltip p {
+  color: var(--atm-chart-text-color) !important;
+  margin: 0;
+}
+
+/* ECharts Common Text/Element Styling for Theming */
+.atm-chart-wrapper .echarts-for-react,
+.atm-chart-wrapper .ec-charts {
+  color: var(--atm-chart-text-color); /* Fallback for main chart area text */
+}
+
+/* Tooltip text color */
+.ec-tooltip {
+  background-color: var(--atm-chart-bg-color) !important;
+  border-color: var(--atm-chart-border-color) !important;
+  color: var(--atm-chart-text-color) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+.ec-tooltip .ec-tooltip-title {
+  color: var(--atm-chart-text-color) !important;
+}
+.ec-tooltip .ec-tooltip-content {
+  color: var(--atm-chart-text-color) !important;
+}
+
+/* Legend text color */
+.ec-legend-item text {
+  fill: var(--atm-chart-legend-color) !important;
+}
+
+/* Axis label text color */
+.ec-axis-label text {
+  fill: var(--atm-chart-axis-label-color) !important;
+}
+
+/* DataZoom Handle and Mask */
+.ec-datazoom-handle {
+  fill: var(--atm-chart-data-zoom-handle-color) !important;
+  stroke: var(--atm-chart-data-zoom-handle-color) !important;
+}
+.ec-datazoom-mask {
+  fill: var(--atm-chart-data-zoom-mask-color) !important;
+}
+
+/* Subtitle Styling */
+.atm-post-subtitle {
+  font-size: 1.4em;
+  font-weight: 400;
+  color: #555555;
+  margin-top: 0;
+  margin-bottom: 1em;
+  line-height: 1.3;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5em;
+}
+
+/* Add to assets/css/frontend.css */
+/* In assets/css/frontend.css */
+
+/* --- Key Takeaways Theming --- */
+.atm-takeaways-wrapper.atm-theme-dark {
+  --takeaways-bg: #2d3748;
+  --takeaways-border: #4a5568;
+  --takeaways-summary-text: #e2e8f0;
+  --takeaways-summary-icon: #8e2de2;
+  --takeaways-h4-text: #f8fafc;
+  --takeaways-li-text: #cbd5e1;
+}
+
+.atm-takeaways-wrapper.atm-theme-light {
+  --takeaways-bg: #f8fafc;
+  --takeaways-border: #e2e8f0;
+  --takeaways-summary-text: #1a202c;
+  --takeaways-summary-icon: #6b21a8;
+  --takeaways-h4-text: #1a202c;
+  --takeaways-li-text: #475569;
+}
+
+.atm-takeaways-wrapper {
+  background: var(--takeaways-bg);
+  border: 1px solid var(--takeaways-border);
+  border-radius: 12px;
+  margin-bottom: 2em;
+}
+
+.atm-takeaways-summary {
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  color: var(--takeaways-summary-text);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.atm-takeaways-summary::-webkit-details-marker {
+  display: none;
+}
+
+.atm-takeaways-summary::after {
+  content: "▼";
+  color: var(--takeaways-summary-icon);
+  font-size: 12px;
+  transition: transform 0.2s ease;
+  margin-left: auto;
+}
+
+.atm-takeaways-wrapper[open] > .atm-takeaways-summary {
+  border-bottom: 1px solid var(--takeaways-border);
+}
+
+.atm-takeaways-wrapper[open] > .atm-takeaways-summary::after {
+  transform: rotate(180deg);
+}
+
+.atm-takeaways-content {
+  padding: 1.5rem;
+}
+
+.atm-takeaways-content h4 {
+  margin: 5px 0 1rem 0 !important;
+  color: var(--takeaways-h4-text) !important;
+  font-size: 1.1em;
+}
+
+.atm-takeaways-content ul {
+  margin: 0 0 0 40px;
+  padding: 0;
+  list-style-type: "✨";
+}
+
+.atm-takeaways-content li {
+  padding-left: 10px;
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+  font-size: 95% !important;
+  color: var(--takeaways-li-text);
+}

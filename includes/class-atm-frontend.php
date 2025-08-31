@@ -9,6 +9,7 @@ class ATM_Frontend {
 
     public function enqueue_frontend_scripts() {
         if (is_single()) {
+            // Enqueue the main player script and style on all single posts
             wp_enqueue_script(
                 'atm-frontend-script',
                 ATM_PLUGIN_URL . 'assets/js/frontend.js',
@@ -20,9 +21,30 @@ class ATM_Frontend {
             wp_enqueue_style(
                 'atm-frontend-style',
                 ATM_PLUGIN_URL . 'assets/css/frontend.css',
-                array(),
+                array('dashicons'), // Add dashicons as a dependency for the toggle button
                 ATM_VERSION
             );
+
+            // --- NEW CHART SCRIPT LOGIC ---
+            // Check if the current post content has our chart shortcode
+            global $post;
+            if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'atm_chart')) {
+                // Only load chart scripts if the shortcode exists
+                wp_enqueue_script(
+                    'atm-frontend-charts',
+                    ATM_PLUGIN_URL . 'assets/js/frontend-charts.js',
+                    array('wp-api-fetch'),
+                    ATM_VERSION,
+                    true
+                );
+                
+                // Pass data for the REST API and theme
+                wp_localize_script('atm-frontend-charts', 'atm_charts_data', [
+                    'nonce'          => wp_create_nonce('wp_rest'),
+                    'chart_api_base' => rest_url('atm/v1/charts/'),
+                    'theme_mode'     => 'light'
+                ]);
+            }
         }
     }
     
@@ -44,6 +66,44 @@ class ATM_Frontend {
         }
         
         return $content;
+    }
+
+    public function embed_takeaways_in_content($content) {
+        if (!is_single() || !in_the_loop() || !is_main_query()) {
+            return $content;
+        }
+
+        $post_id = get_the_ID();
+        $takeaways_meta = get_post_meta($post_id, '_atm_key_takeaways', true);
+
+        if (empty($takeaways_meta)) {
+            return $content;
+        }
+
+        // --- NEW: Get the saved theme, defaulting to dark ---
+        $theme = get_post_meta($post_id, '_atm_takeaways_theme', true);
+        if (empty($theme)) {
+            $theme = 'dark'; // Default to dark theme if not set
+        }
+        $theme_class = 'atm-theme-' . esc_attr($theme);
+        // --- END NEW ---
+
+        $takeaways_list = array_filter(array_map('trim', explode("\n", $takeaways_meta)));
+        
+        // --- MODIFIED: Added the theme class to the wrapper ---
+        $html = '<details class="atm-takeaways-wrapper ' . $theme_class . '">';
+        $html .= '<summary class="atm-takeaways-summary">✨ SHOW KEY TAKEAWAYS</summary>';
+        $html .= '<div class="atm-takeaways-content">';
+        $html .= '<h4>🔑&nbsp; Key Takeaways</h4>';
+        $html .= '<ul>';
+        foreach ($takeaways_list as $takeaway) {
+            $html .= '<li>' . esc_html($takeaway) . '</li>';
+        }
+        $html .= '</ul>';
+        $html .= '</div>';
+        $html .= '</details>';
+
+        return $html . $content;
     }
 
     private function get_player_html($post, $podcast_url, $cover_image) {

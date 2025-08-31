@@ -6,7 +6,68 @@ if (!defined('ABSPATH')) {
 }
 
 class ATM_Main {
+    
+    public function register_shortcodes() {
+        add_shortcode('atm_chart', array($this, 'render_chart_shortcode'));
+    }
 
+    // --- ADD THIS NEW FUNCTION to handle shortcode rendering ---
+    public function render_chart_shortcode($atts) {
+        $atts = shortcode_atts(array('id' => 0), $atts, 'atm_chart');
+        if (!intval($atts['id'])) {
+            return '';
+        }
+
+        return sprintf(
+            '<div id="atm-chart-wrapper-%1$s" class="atm-chart-wrapper">
+                <div class="atm-chart" id="atm-chart-%1$s"></div>
+            </div>',
+            esc_attr($atts['id'])
+        );
+    }
+    
+    public function register_chart_post_type() {
+        $args = array(
+            'public'              => false,
+            'show_ui'             => false,
+            'show_in_menu'        => false,
+            'show_in_admin_bar'   => false,
+            'show_in_nav_menus'   => false,
+            'can_export'          => true,
+            'has_archive'         => false,
+            'exclude_from_search' => true,
+            'publicly_queryable'  => false,
+            'capability_type'     => 'post',
+            'show_in_rest'        => true, // Important for REST API
+            'rest_base'           => 'charts',
+            'supports'            => array('title', 'custom-fields'),
+        );
+        register_post_type('atm_chart', $args);
+    }
+
+    // --- ADD THIS NEW FUNCTION to register the REST routes ---
+    public function register_chart_rest_routes() {
+        // This route will handle getting chart data for the frontend
+        register_rest_route('atm/v1', '/charts/(?P<id>\d+)', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_chart_data'),
+            'permission_callback' => '__return_true', // Publicly viewable
+        ));
+    }
+
+    // --- ADD THIS NEW FUNCTION to handle the REST callback ---
+    public function get_chart_data($request) {
+        $post_id = $request['id'];
+        $chart_config = get_post_meta($post_id, '_atm_chart_config', true);
+
+        if (empty($chart_config)) {
+            return new WP_Error('no_config', 'Chart configuration not found.', array('status' => 404));
+        }
+
+        // The config is stored as a JSON string, so we decode it
+        return new WP_REST_Response(json_decode($chart_config), 200);
+    }
+    
     public function register_rest_routes() {
         register_rest_route('atm/v1', '/generate-inline-image', array(
             'methods' => 'POST',
@@ -91,16 +152,25 @@ class ATM_Main {
         $this->init_hooks();
     }
 
+    public function add_module_type_to_script($tag, $handle, $src) {
+        if ('atm-frontend-charts' === $handle) {
+            $tag = '<script type="module" src="' . esc_url($src) . '" id="' . $handle . '-js"></script>';
+        }
+        return $tag;
+    }
+
     private function load_dependencies() {
         // Admin-related files
         require_once ATM_PLUGIN_PATH . 'includes/admin/class-atm-meta-box.php';
         require_once ATM_PLUGIN_PATH . 'includes/admin/class-atm-settings.php';
-        
+
         // Core logic files
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-ajax.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-api.php';
+        require_once ATM_PLUGIN_PATH . 'includes/class-atm-theme-subtitle-manager.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-frontend.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-licensing.php';
+        // require_once ATM_PLUGIN_PATH . 'includes/class-atm-block-editor.php'; // ADD THIS LINE
     }
 
     private function init_hooks() {
@@ -108,6 +178,7 @@ class ATM_Main {
         $settings = new ATM_Settings();
         $ajax = new ATM_Ajax();
         $frontend = new ATM_Frontend();
+        // $block_editor = new ATM_Block_Editor(); // ADD THIS LINE
 
         // Admin hooks
         add_action('admin_menu', array($settings, 'add_admin_menu'));
@@ -115,6 +186,9 @@ class ATM_Main {
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('admin_head', array($this, 'register_tinymce_button'));
         add_action('rest_api_init', array($this, 'register_rest_routes'));
+        add_action('init', array($this, 'register_chart_post_type'));
+        add_action('rest_api_init', array($this, 'register_chart_rest_routes'));
+        add_action('init', array($this, 'register_shortcodes'));
 
         // --- LICENSE CHECK ---
         if (ATM_Licensing::is_license_active()) {
@@ -124,77 +198,126 @@ class ATM_Main {
 
         // Frontend hooks
         add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'));
+        add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
+        add_filter('the_content', array($frontend, 'embed_takeaways_in_content'));
         add_filter('the_content', array($frontend, 'embed_podcast_in_content'));
     }
     
     public function enqueue_admin_scripts($hook) {
-        $screen = get_current_screen();
-        $is_plugin_page = false;
-        if ($screen) {
-            if ($screen->id === 'toplevel_page_content-ai-studio' || strpos($screen->id, 'ai-studio_page_') === 0) {
-                 $is_plugin_page = true;
-            }
+    $screen = get_current_screen();
+    $is_plugin_page = false;
+    if ($screen) {
+        if ($screen->id === 'toplevel_page_content-ai-studio' || strpos($screen->id, 'ai-studio_page_') === 0) {
+             $is_plugin_page = true;
         }
-        
-        if ($hook !== 'post.php' && $hook !== 'post-new.php' && !$is_plugin_page) {
-            return;
-        }
-        
-        wp_enqueue_media();
-
-        // Register the 'marked' library from a CDN
-        wp_register_script(
-            'marked-library',
-            'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
-            array(),
-            '4.0.12',
-            true
-        );
-
-        // Enqueue the new Gutenberg sidebar script
-        $script_asset_path = ATM_PLUGIN_PATH . 'build/index.asset.php';
-        if (file_exists($script_asset_path)) {
-            $script_asset = require($script_asset_path);
-            wp_enqueue_script(
-                'atm-gutenberg-sidebar',
-                ATM_PLUGIN_URL . 'build/index.js',
-                $script_asset['dependencies'],
-                $script_asset['version'],
-                true
-            );
-            $style_path = ATM_PLUGIN_PATH . 'build/index.css';
-if (file_exists($style_path)) {
-    wp_enqueue_style(
-        'atm-gutenberg-sidebar-style',
-        ATM_PLUGIN_URL . 'build/index.css',
-        array(),
-        $script_asset['version']
-    );
-}
-        }
-
-        // The admin script for the meta box, with the corrected dependencies
-        $dependencies = array('jquery', 'wp-blocks', 'wp-data', 'wp-element', 'wp-editor', 'wp-components', 'marked-library');
-        wp_enqueue_script(
-            'atm-admin-script',
-            ATM_PLUGIN_URL . 'assets/js/admin.js',
-            $dependencies,
-            ATM_VERSION,
-            true
-        );
-        
-        wp_enqueue_style(
-            'atm-admin-style',
-            ATM_PLUGIN_URL . 'assets/css/admin.css',
-            array(),
-            ATM_VERSION
-        );
-        
-        wp_localize_script('atm-admin-script', 'atm_ajax', array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('atm_nonce')
-        ));
     }
+
+    if ($hook !== 'post.php' && $hook !== 'post-new.php' && !$is_plugin_page) {
+        return;
+    }
+
+    wp_enqueue_media();
+
+    // Register the 'marked' library from a CDN
+    wp_register_script(
+        'marked-library',
+        'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
+        array(),
+        '4.0.12',
+        true
+    );
+
+    // Enqueue the Gutenberg sidebar script
+    $script_asset_path = ATM_PLUGIN_PATH . 'build/index.asset.php';
+    if (file_exists($script_asset_path)) {
+        $script_asset = require($script_asset_path);
+        wp_enqueue_script(
+            'atm-gutenberg-sidebar',
+            ATM_PLUGIN_URL . 'build/index.js',
+            $script_asset['dependencies'],
+            $script_asset['version'],
+            true
+        );
+        $style_path = ATM_PLUGIN_PATH . 'build/index.css';
+        if (file_exists($style_path)) {
+            wp_enqueue_style(
+                'atm-gutenberg-sidebar-style',
+                ATM_PLUGIN_URL . 'build/index.css',
+                array(),
+                $script_asset['version']
+            );
+        }
+    }
+
+    // Enqueue the new Studio App for the meta box
+    $studio_asset_path = ATM_PLUGIN_PATH . 'build/studio.asset.php';
+    if (file_exists($studio_asset_path)) {
+        $studio_asset = require($studio_asset_path);
+        wp_enqueue_script(
+            'atm-studio-app',
+            ATM_PLUGIN_URL . 'build/studio.js',
+            $studio_asset['dependencies'],
+            $studio_asset['version'],
+            true
+        );
+        // Also enqueue the corresponding stylesheet
+        $studio_style_path = ATM_PLUGIN_PATH . 'build/studio.css';
+        if (file_exists($studio_style_path)) {
+            wp_enqueue_style(
+                'atm-studio-style',
+                ATM_PLUGIN_URL . 'build/studio.css',
+                array(),
+                $studio_asset['version']
+            );
+        }
+    }
+
+    // The old admin script (can be removed later, but keep for now)
+    $dependencies = array('jquery', 'wp-blocks', 'wp-data', 'wp-element', 'wp-editor', 'wp-components', 'marked-library');
+    wp_enqueue_script(
+        'atm-admin-script',
+        ATM_PLUGIN_URL . 'assets/js/admin.js',
+        $dependencies,
+        ATM_VERSION,
+        true
+    );
+
+    wp_enqueue_style(
+        'atm-admin-style',
+        ATM_PLUGIN_URL . 'assets/css/admin.css',
+        array(),
+        ATM_VERSION
+    );
+
+    // --- THIS IS THE NEW PART ---
+    // Pass data to both the old admin.js and the new studio.js
+    $settings_class = new ATM_Settings();
+    $settings = $settings_class->get_settings();
+    $api_class = new ATM_API();
+    $writing_styles = $api_class->get_writing_styles();
+
+    $localized_data = array(
+    'ajax_url' => admin_url('admin-ajax.php'),
+    'nonce' => wp_create_nonce('atm_nonce'),
+    'article_models' => $settings['article_models'],
+    'content_models' => $settings['content_models'],
+    'plugin_url' => ATM_PLUGIN_URL, // New
+    'writing_styles' => $writing_styles,
+    'image_provider' => $settings['image_provider'],
+    'audio_provider' => $settings['audio_provider'], // New
+    'tts_voices' => ['alloy' => 'Alloy', 'echo' => 'Echo', 'fable' => 'Fable', 'onyx' => 'Onyx', 'nova' => 'Nova', 'shimmer' => 'Shimmer'],
+    'elevenlabs_voices' => ATM_API::get_elevenlabs_voices(), // New
+);
+
+$post_id = get_the_ID();
+if ($post_id) {
+    $localized_data['existing_podcast_url'] = get_post_meta($post_id, '_atm_podcast_url', true);
+    $localized_data['existing_podcast_script'] = get_post_meta($post_id, '_atm_podcast_script', true);
+}
+
+    wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
+    wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data); // Pass data to our React app
+}
 
     public function register_tinymce_button() {
         // Check if the user can edit posts and is using the rich text editor

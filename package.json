@@ -1,13 +1,21 @@
 {
   "name": "article-to-media",
-  "version": "1.2.2",
+  "version": "1.6.146",
   "private": true,
   "scripts": {
-    "build": "wp-scripts build",
-    "start": "wp-scripts start",
-    "zip": "wp-scripts plugin-zip"
+    "build": "wp-scripts build src/index.js src/studio.js",
+    "start": "wp-scripts start src/index.js src/studio.js",
+    "zip": "wp-scripts plugin-zip",
+    "postversion": "node version-sync.js"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^27.9.0"
+    "@prettier/plugin-php": "^0.24.0",
+    "@wordpress/scripts": "^27.9.0",
+    "prettier": "^3.6.2"
+  },
+  "dependencies": {
+    "@wordpress/components": "^30.2.0",
+    "@wordpress/element": "^6.29.0",
+    "@wordpress/icons": "^10.29.0"
   }
 }

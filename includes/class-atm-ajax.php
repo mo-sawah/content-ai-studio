@@ -6,521 +6,170 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
-    public function generate_podcast_script() {
-    check_ajax_referer('atm_nonce', 'nonce');
-    try {
-        $article_content = wp_strip_all_tags(stripslashes($_POST['content']));
-        $language = sanitize_text_field($_POST['language']);
-
-        if (empty($article_content)) {
-            throw new Exception("Article content is empty. Please write your article first.");
-        }
-
-        // A much more detailed, language-specific prompt to ensure a longer, higher-quality script.
-        $system_prompt = "You are an expert podcast host creating a script for an episode of '[podcast_name]'.
-
-        **CRITICAL INSTRUCTION: You MUST write the entire podcast script in " . $language . ".**
-
-        Your task is to transform the provided article into a dynamic, engaging, and conversational podcast script that is at least 3 minutes long, but ideally 4-5 minutes.
-
-        **Persona & Style:**
-        - You are insightful, curious, and knowledgeable.
-        - Your tone should be conversational and authoritative, like a professional host who connects deeply with the audience.
-        - Speak in a natural, human way — not like you’re reading a formal document.
-
-        **Required Script Structure (Follow this flow precisely):**
-        1.  **Hook (20-30 seconds):** Start with a compelling question, a surprising fact, or a bold statement from the article to instantly grab the listener's attention.
-        2.  **Introduction (45-60 seconds):** Welcome listeners to '[podcast_name]'. Briefly introduce the topic using the article title: '[article_title]'. Elaborate on why this topic is important and relevant to the listener right now.
-        3.  **Main Discussion (At least 3 minutes):** Break the article's core message into 3-4 distinct talking points. For each point:
-            - First, clearly summarize the idea from the article.
-            - **Then, you MUST add your own detailed analysis and expansion.** This is crucial for meeting the length requirement. Discuss the implications, offer a fresh perspective, provide real-world examples, or connect it to broader trends.
-            - Use conversational transitions like 'Now, let's dive into...', 'What's fascinating about this is...', or 'But if we consider the bigger picture...'.
-        4.  **Conclusion (30-45 seconds):** Recap the key takeaways in a concise, engaging way. End with a final, thought-provoking insight that leaves the listener with something valuable.
-        5.  **Closing (20 seconds — use this exact wording, translated into " . $language . "):** 'That’s all the time we have for today on ''[podcast_name]''. Thanks for tuning in. For more content, visit [site_url].'
-
-        **Final Output Rules:**
-        - **NO** headings, labels (like 'Hook:' or 'Host:'), or stage directions.
-        - Provide **ONLY** the raw, speakable script.
-        - Ensure the script is long enough to naturally last for at least 3 minutes of speaking time.
-
-        Now, transform the following article into your complete podcast script.";
-
-        // We need to replace shortcodes *after* generating the script, so we pass the template.
-        $post = get_post(intval($_POST['post_id']));
-        $final_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
-
-        $generated_script = ATM_API::enhance_content_with_openrouter(
-            ['content' => $article_content], 
-            $final_prompt,
-            get_option('atm_content_model', 'anthropic/claude-3-haiku')
-        );
-
-        wp_send_json_success(['script' => $generated_script]);
-
-    } catch (Exception $e) {
-        wp_send_json_error($e->getMessage());
-    }
-}
-
-    public function generate_default_podcast_prompt() {
-    check_ajax_referer('atm_nonce', 'nonce');
-    try {
-        $article_content = wp_strip_all_tags(stripslashes($_POST['content']));
-
-        if (empty($article_content)) {
-            throw new Exception("Article content is empty. Please write some content first.");
-        }
-
-        // A prompt to the AI to detect the language and return the default prompt in that language.
-        $system_prompt = "Analyze the following article content to determine its primary language. Then, return the complete default podcast prompt provided below, translated into that detected language. Return ONLY the translated prompt text, with no extra commentary or explanations.\n\n---DEFAULT PROMPT START---\n" . $_POST['default_prompt'] . "\n---DEFAULT PROMPT END---";
-
-        $generated_prompt = ATM_API::enhance_content_with_openrouter(
-            ['content' => $article_content], 
-            $system_prompt, 
-            'anthropic/claude-3-haiku' // Use a fast and cheap model for this task
-        );
-
-        wp_send_json_success(['prompt' => $generated_prompt]);
-
-    } catch (Exception $e) {
-        wp_send_json_error($e->getMessage());
-    }
-}
-    
-    public function __construct() {
-        add_action('wp_ajax_generate_podcast', array($this, 'generate_podcast'));
-        add_action('wp_ajax_preview_tts_voice', array($this, 'preview_tts_voice'));
-        add_action('wp_ajax_upload_podcast_image', array($this, 'upload_podcast_image'));
-        add_action('wp_ajax_generate_default_podcast_prompt', array($this, 'generate_default_podcast_prompt'));
-        add_action('wp_ajax_generate_podcast_script', array($this, 'generate_podcast_script'));
-        
-        // Actions for the "Creative Article" workflow
-        add_action('wp_ajax_generate_article_title', array($this, 'generate_article_title'));
-        add_action('wp_ajax_generate_article_content', array($this, 'generate_article_content'));
-
-        add_action('wp_ajax_generate_featured_image', array($this, 'generate_featured_image'));
-        
-        // Action for the "Latest News Article" workflow
-        add_action('wp_ajax_generate_news_article', array($this, 'generate_news_article'));
-
-        // Enhanced RSS actions
-        add_action('wp_ajax_fetch_rss_articles', array($this, 'fetch_rss_articles'));
-        add_action('wp_ajax_generate_article_from_rss', array($this, 'generate_article_from_rss'));
-        add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));
-        
-        // New action for inline image generation
-        add_action('wp_ajax_generate_inline_image', array($this, 'generate_inline_image'));
-    }
-
-    private function get_language_name($code) {
-        $languages = [
-            'en' => 'English', 'ar' => 'Arabic', 'zh' => 'Chinese', 'hi' => 'Hindi',
-            'es' => 'Spanish', 'fr' => 'French', 'de' => 'German', 'ru' => 'Russian',
-            'pt' => 'Portuguese', 'ja' => 'Japanese'
-        ];
-        return $languages[$code] ?? 'English';
-    }
-
-    /**
-     * Handles the "Creative Article" title generation.
-     */
-    public function generate_article_title() {
-        // --- LICENSE CHECK ---
+    public function generate_key_takeaways() {
         if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
+            wp_send_json_error('Please activate your license key.');
         }
-        // --- END CHECK ---
-
         check_ajax_referer('atm_nonce', 'nonce');
-        try {
-            $keyword = sanitize_text_field($_POST['keyword']);
-            $title_input = sanitize_text_field($_POST['title']);
-            $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
+        @ini_set('max_execution_time', 300);
 
-            $topic = !empty($title_input) ? 'the article title: "' . $title_input . '"' : 'the keyword: "' . $keyword . '"';
-            if (empty($topic)) {
-                throw new Exception("Please provide a keyword or title.");
+        try {
+            $content = wp_kses_post(stripslashes($_POST['content']));
+            $model_override = sanitize_text_field($_POST['model']);
+
+            if (empty($content)) {
+                throw new Exception('Editor content is empty.');
             }
 
-            $system_prompt = 'You are an expert SEO content writer. Your task is to generate a single, compelling, SEO-friendly title for an article based on the provided topic. Do not provide any explanation, quotation marks, or any other text. Just the title itself.';
-
-            $generated_title = ATM_API::enhance_content_with_openrouter(
-                ['content' => $topic], 
-                $system_prompt, 
-                $model_override ?: get_option('atm_article_model')
-            );
-
-            $cleaned_title = trim($generated_title, " \t\n\r\0\x0B\"");
-
-            wp_send_json_success(['article_title' => $cleaned_title]);
+            $takeaways = ATM_API::generate_takeaways_from_content($content, $model_override);
+            wp_send_json_success(['takeaways' => $takeaways]);
 
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
     }
 
-    /**
-     * Handles the "Creative Article" content generation.
-     */
-    public function generate_article_content() {
-        // --- LICENSE CHECK ---
+    public function save_key_takeaways() {
         if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
+            wp_send_json_error('Please activate your license key.');
         }
-        // --- END CHECK ---
-
         check_ajax_referer('atm_nonce', 'nonce');
-        try {
-            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-            $post = get_post($post_id);
 
-            $article_title = sanitize_text_field($_POST['article_title']);
-            $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
-            $style_key = isset($_POST['writing_style']) ? sanitize_key($_POST['writing_style']) : 'default_seo';
-            $custom_prompt = isset($_POST['custom_prompt']) ? wp_kses_post(stripslashes($_POST['custom_prompt'])) : '';
-            $word_count = isset($_POST['word_count']) ? intval($_POST['word_count']) : 0;
-
-            if (empty($article_title)) {
-                throw new Exception("Article title cannot be empty.");
-            }
-
-            $system_prompt = '';
-
-            if (!empty($custom_prompt) && $post) {
-                $system_prompt = ATM_API::replace_prompt_shortcodes($custom_prompt, $post);
-            } else {
-                $writing_styles = ATM_API::get_writing_styles();
-                $system_prompt = isset($writing_styles[$style_key]) 
-                    ? $writing_styles[$style_key]['prompt'] 
-                    : $writing_styles['default_seo']['prompt'];
-            }
-
-            if ($word_count > 0) {
-                $system_prompt .= " The final article should be approximately " . $word_count . " words long. Ensure the content is detailed and comprehensive enough to meet this length requirement.";
-            }
-
-            $generated_content = ATM_API::enhance_content_with_openrouter(
-                ['content' => $article_title], 
-                $system_prompt, 
-                $model_override ?: get_option('atm_article_model')
-            );
-
-            wp_send_json_success(['article_content' => $generated_content]);
-
-        } catch (Exception $e) {
-            wp_send_json_error($e->getMessage());
-        }
-    }
-    
-    /**
-     * Handles the "Latest News Article" generation.
-     */
-    public function generate_news_article() {
-    if (!ATM_Licensing::is_license_active()) {
-        wp_send_json_error('Please activate your license key to use this feature.');
-    }
-
-    check_ajax_referer('atm_nonce', 'nonce');
-    try {
-        $topic = sanitize_text_field($_POST['topic']);
-        $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : get_option('atm_article_model');
-        $force_fresh = isset($_POST['force_fresh']) && $_POST['force_fresh'] === 'true';
-        $news_source = isset($_POST['news_source']) ? sanitize_key($_POST['news_source']) : 'newsapi';
-
-        if (empty($topic)) {
-            throw new Exception("Please provide a topic for the news article.");
-        }
-
-        $news_context = ATM_API::fetch_news($topic, $news_source, $force_fresh);
-        if (empty($news_context)) {
-            throw new Exception("No recent news found for the topic: '" . esc_html($topic) . "'. Please try a different keyword or source.");
-        }
-
-        // *** USING YOUR PROVIDED PROMPT ***
-        $system_prompt = 'You are a professional news reporter and editor. Using the following raw content from news snippets, write a clear, engaging, and well-structured news article in English.
-
-Follow these strict guidelines:
-- **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human. Your style should be similar to major news outlets like Reuters, Associated Press, or CBS News.
-- **Originality**: Do not copy verbatim from the source snippets. You must rewrite, summarize, and humanize the content.
-- **Synthesis**: If multiple sources are provided, synthesize them into one cohesive article. Remove any duplicate or irrelevant details.
-- **Objectivity**: Avoid speculation or personal opinions unless they are explicitly cited in the provided data.
-- **Length**: Aim for 800–1200 words. If the source material is very limited, write as much as is naturally possible without adding filler or redundant information.
-- **SEO**: Naturally integrate relevant keywords from the source material. Avoid keyword stuffing.
-- **Readability**: Use short paragraphs, the active voice, and ensure a clear, logical flow.
-
-**Final Output Format:**
-Your entire output MUST be a single, valid JSON object with three keys:
-1. "headline": A concise, factual, and compelling headline for the new article.
-2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
-3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
-
-        $raw_response = ATM_API::enhance_content_with_openrouter(
-            ['content' => $news_context], 
-            $system_prompt, 
-            $model_override, 
-            true
-        );
-
-        $json_string = '';
-        if (preg_match('/\{.*?\}/s', $raw_response, $matches)) {
-            $json_string = $matches[0];
-        } else {
-            throw new Exception('The AI returned a non-JSON response. Please try again.');
-        }
-
-        $result = json_decode($json_string, true);
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
-            error_log('ATM Plugin - Invalid JSON from AI: ' . $json_string);
-            throw new Exception('The AI returned an invalid response structure. Please try again.');
-        }
-
-        $final_content = $result['content'];
-        if (!empty($result['subheadline'])) {
-            $final_content = '### ' . trim($result['subheadline']) . "\n\n" . $final_content;
-        }
-
-        wp_send_json_success([
-            'article_title' => $result['headline'],
-            'article_content' => $final_content
-        ]);
-
-    } catch (Exception $e) {
-        wp_send_json_error($e->getMessage());
-    }
-}
-
-    public function fetch_rss_articles() {
-        check_ajax_referer('atm_nonce', 'nonce');
-        try {
-            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-            $keyword = isset($_POST['keyword']) ? sanitize_text_field($_POST['keyword']) : '';
-            $use_scraping = isset($_POST['use_scraping']) && $_POST['use_scraping'] === 'true';
-            $rss_feeds_string = get_option('atm_rss_feeds', '');
-
-            if (empty($rss_feeds_string)) {
-                throw new Exception('No RSS feeds configured in settings.');
-            }
-
-            if ($use_scraping) {
-                $articles = ATM_API::search_rss_feeds($rss_feeds_string, $keyword, true);
-            } else {
-                $articles = ATM_API::parse_rss_feeds($rss_feeds_string, $post_id, $keyword);
-            }
-            
-            if (empty($articles) && !empty($keyword)) {
-                error_log('ATM RSS: No articles found for keyword "' . $keyword . '" in ' . count(explode("\n", $rss_feeds_string)) . ' feeds');
-            }
-            
-            wp_send_json_success($articles);
-
-        } catch (Exception $e) {
-            wp_send_json_error($e->getMessage());
-        }
-    }
-
-    public function test_rss_feed() {
-        check_ajax_referer('atm_nonce', 'nonce');
-        try {
-            $feed_url = esc_url_raw($_POST['feed_url']);
-            $keyword = sanitize_text_field($_POST['keyword'] ?? '');
-            
-            if (empty($feed_url)) {
-                throw new Exception('Feed URL is required.');
-            }
-            
-            $articles = ATM_RSS_Parser::parse_rss_feeds_advanced($feed_url, 0, $keyword);
-            
-            wp_send_json_success([
-                'articles' => $articles,
-                'total_found' => count($articles),
-                'feed_url' => $feed_url,
-                'keyword' => $keyword
-            ]);
-
-        } catch (Exception $e) {
-            wp_send_json_error($e->getMessage());
-        }
-    }
-
-    public function generate_article_from_rss() {
-    if (!ATM_Licensing::is_license_active()) {
-        wp_send_json_error('Please activate your license key to use this feature.');
-    }
-
-    check_ajax_referer('atm_nonce', 'nonce');
-    try {
-        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-        $url = esc_url_raw($_POST['article_url']);
-        $guid = sanitize_text_field($_POST['article_guid']);
-        $use_full_content = isset($_POST['use_full_content']) && $_POST['use_full_content'] === 'true';
-
-        $final_url = ATM_API::resolve_redirect_url($url);
-        
-        $source_content = '';
-        
-        if ($use_full_content) {
-            try {
-                $source_content = ATM_API::fetch_full_article_content($final_url);
-            } catch (Exception $e) {
-                error_log('ATM RSS: Scraping failed, falling back to RSS content: ' . $e->getMessage());
-            }
-        }
-        
-        if (empty($source_content) && isset($_POST['rss_content'])) {
-            $source_content = wp_kses_post(stripslashes($_POST['rss_content']));
-        }
-        
-        if (empty($source_content)) {
-            throw new Exception('Could not extract sufficient content from the source article.');
-        }
-
-        if (strlen($source_content) > 4000) {
-            $source_content = ATM_API::summarize_content_for_rewrite($source_content);
-        }
-
-        // *** USING YOUR PROMPT, ADAPTED SLIGHTLY FOR A SINGLE SOURCE ARTICLE ***
-        $system_prompt = 'You are a professional news reporter and editor. Using the following source article content, write a clear, engaging, and well-structured new article in English.
-
-Follow these strict guidelines:
-- **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human. Your style should be similar to major news outlets like Reuters, Associated Press, or CBS News.
-- **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
-- **Objectivity**: Avoid speculation or personal opinions unless they are explicitly cited in the provided data.
-- **Length**: Aim for 800–1200 words. If the source material is very limited, write as much as is naturally possible without adding filler or redundant information.
-- **SEO**: Naturally integrate relevant keywords from the source material. Avoid keyword stuffing.
-- **Readability**: Use short paragraphs, the active voice, and ensure a clear, logical flow.
-
-**Final Output Format:**
-Your entire output MUST be a single, valid JSON object with three keys:
-1. "headline": A concise, factual, and compelling headline for the new article.
-2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
-3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
-        
-        $raw_response = ATM_API::enhance_content_with_openrouter(
-            ['content' => $source_content], 
-            $system_prompt, 
-            get_option('atm_article_model', 'openai/gpt-4o'),
-            true
-        );
-
-        $json_string = '';
-        if (preg_match('/\{.*?\}/s', $raw_response, $matches)) {
-            $json_string = $matches[0];
-        } else {
-            throw new Exception('The AI returned a non-JSON response. Please try again.');
-        }
-
-        $result = json_decode($json_string, true);
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
-            error_log('ATM Plugin - Invalid JSON from AI: ' . $json_string);
-            throw new Exception('The AI returned an invalid response structure. Please try again.');
-        }
-
-        $headline = trim($result['headline']);
-        $final_content = trim($result['content']);
-
-        if (!empty($result['subheadline'])) {
-            $final_content = '### ' . trim($result['subheadline']) . "\n\n" . $final_content;
-        }
-
-        if (strpos(strtolower(substr($final_content, 0, 150)), strtolower($headline)) !== false) {
-            $final_content = preg_replace('/^#+\s*' . preg_quote($headline, '/') . '\s*/i', '', $final_content, 1);
-        }
-
-        if (empty($headline) || empty($final_content)) {
-            throw new Exception('Generated title or content is empty.');
-        }
-
-        if ($post_id > 0) {
-            $used_guids = get_post_meta($post_id, '_atm_used_rss_guids', true) ?: [];
-            $used_guids[] = $guid;
-            update_post_meta($post_id, '_atm_used_rss_guids', array_unique($used_guids));
-        }
-
-        wp_send_json_success([
-            'article_title'   => $headline,
-            'article_content' => $final_content
-        ]);
-
-    } catch (Exception $e) {
-        wp_send_json_error($e->getMessage());
-    }
-}
-
-    public function generate_featured_image() {
-    if (!ATM_Licensing::is_license_active()) {
-        wp_send_json_error('Please activate your license key to use this feature.');
-    }
-
-    check_ajax_referer('atm_nonce', 'nonce');
-    try {
-        $post_id = intval($_POST['post_id']);
-        $prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : '';
-
-        if (empty($prompt)) {
-            $post = get_post($post_id);
-            if (!$post) throw new Exception("Post not found.");
-            $title = $post->post_title;
-            $excerpt = wp_strip_all_tags(mb_substr($post->post_content, 0, 300) . '...');
-            $prompt = "A high-resolution, photorealistic featured image for a blog post titled \"{$title}\". The article discusses: \"{$excerpt}\". The image should be professional, visually compelling, and directly relevant to the main subject of the article. Use cinematic lighting and a 16:9 aspect ratio.";
-        } else {
-            $post = get_post($post_id);
-            $prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
-        }
-
-        $image_url = ATM_API::generate_image_with_openai($prompt);
-        $attachment_id = $this->set_image_from_url($image_url, $post_id);
-
-        if (is_wp_error($attachment_id)) {
-            throw new Exception($attachment_id->get_error_message());
-        }
-
-        // Set the featured image
-        set_post_thumbnail($post_id, $attachment_id);
-
-        // Get the HTML for the featured image box content
-        $thumbnail_html = _wp_post_thumbnail_html($attachment_id, $post_id);
-
-        wp_send_json_success([
-            'attachment_id' => $attachment_id,
-            'html' => $thumbnail_html
-        ]);
-
-    } catch (Exception $e) {
-        wp_send_json_error($e->getMessage());
-    }
-}
-
-    public function generate_inline_image() {
-        // --- LICENSE CHECK ---
-        if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
-        }
-        // --- END CHECK ---
-
-        check_ajax_referer('atm_nonce', 'nonce');
         try {
             $post_id = intval($_POST['post_id']);
-            $prompt = sanitize_textarea_field($_POST['prompt']);
+            $takeaways = sanitize_textarea_field(stripslashes($_POST['takeaways']));
+            $theme = sanitize_text_field($_POST['theme']); // <-- ADD THIS LINE
 
+            if (empty($post_id)) {
+                throw new Exception('Invalid Post ID.');
+            }
+            
+            // Save takeaways and theme as post meta
+            update_post_meta($post_id, '_atm_key_takeaways', $takeaways);
+            update_post_meta($post_id, '_atm_takeaways_theme', $theme); // <-- ADD THIS LINE
+            
+            wp_send_json_success(['message' => 'Takeaways saved successfully.']);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
+    public function save_atm_chart() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+
+        try {
+            $chart_title = sanitize_text_field($_POST['title']);
+            $chart_config = wp_kses_post(stripslashes($_POST['chart_config']));
+            $chart_id = isset($_POST['chart_id']) ? intval($_POST['chart_id']) : 0;
+
+            if (empty($chart_title) || empty($chart_config)) {
+                throw new Exception('Chart title and configuration are required.');
+            }
+
+            $post_data = array(
+                'post_title'  => $chart_title,
+                'post_type'   => 'atm_chart',
+                'post_status' => 'publish',
+            );
+
+            if ($chart_id > 0) {
+                $post_data['ID'] = $chart_id;
+                $new_chart_id = wp_update_post($post_data);
+            } else {
+                $new_chart_id = wp_insert_post($post_data);
+            }
+
+            if (is_wp_error($new_chart_id)) {
+                throw new Exception($new_chart_id->get_error_message());
+            }
+
+            update_post_meta($new_chart_id, '_atm_chart_config', $chart_config);
+
+            wp_send_json_success(['chart_id' => $new_chart_id]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
+    public function generate_chart_from_ai() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 300);
+
+        try {
+            $prompt = sanitize_textarea_field(stripslashes($_POST['prompt']));
             if (empty($prompt)) {
-                throw new Exception("Prompt cannot be empty.");
+                throw new Exception('Prompt cannot be empty.');
+            }
+            
+            $chart_config_json = ATM_API::generate_chart_config_from_prompt($prompt);
+            
+            wp_send_json_success(['chart_config' => $chart_config_json]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }    
+
+    public function get_youtube_suggestions() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $query = sanitize_text_field($_POST['query']);
+            $suggestions = ATM_API::get_youtube_autocomplete_suggestions($query);
+            wp_send_json_success($suggestions);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function search_youtube() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $query = sanitize_text_field($_POST['query']);
+            $filters = isset($_POST['filters']) ? (array) $_POST['filters'] : [];
+            $results = ATM_API::search_youtube_videos($query);
+            wp_send_json_success($results);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+
+    public function translate_editor_content() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+
+        check_ajax_referer('atm_nonce', 'nonce');
+        
+        // --- ADD THIS LINE ---
+        @ini_set('max_execution_time', 300); // Allow up to 5 minutes for translation
+
+        try {
+            if (empty($_POST['title']) || empty($_POST['content']) || empty($_POST['target_language'])) {
+                throw new Exception('Title, content, and target language are required.');
             }
 
-            $post = get_post($post_id);
-            $processed_prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
-            
-            $image_url = ATM_API::generate_image_with_openai($processed_prompt);
-            
-            $attachment_id = $this->set_image_from_url($image_url, $post_id);
-            if (is_wp_error($attachment_id)) {
-                throw new Exception($attachment_id->get_error_message());
-            }
+            $title = sanitize_text_field(stripslashes($_POST['title']));
+            // Use a more permissive sanitization for content to preserve HTML/Markdown
+            $content = wp_kses_post(stripslashes($_POST['content']));
+            $target_language = sanitize_text_field($_POST['target_language']);
 
-            $image_data = wp_get_attachment_image_src($attachment_id, 'large');
+            $translation_result = ATM_API::translate_document($title, $content, $target_language);
 
             wp_send_json_success([
-                'url' => $image_data[0],
-                'alt' => $prompt
+                'translated_title' => $translation_result['translated_title'],
+                'translated_content' => $translation_result['translated_content']
             ]);
 
         } catch (Exception $e) {
@@ -528,58 +177,54 @@ Your entire output MUST be a single, valid JSON object with three keys:
         }
     }
     
-    public function generate_podcast() {
-        // --- LICENSE CHECK ---
+    public function transcribe_audio() {
+    if (!ATM_Licensing::is_license_active()) {
+        wp_send_json_error('Please activate your license key to use this feature.');
+    }
+
+    check_ajax_referer('atm_nonce', 'nonce');
+
+    try {
+        if (!isset($_FILES['audio_file'])) {
+            throw new Exception('No audio file was received.');
+        }
+
+        $file = $_FILES['audio_file'];
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception('File upload error: ' . $file['error']);
+        }
+        
+        // Prompt logic has been removed.
+        
+        // Pass only the file to the API method.
+        $transcript = ATM_API::transcribe_audio_with_whisper($file['tmp_name']);
+        wp_send_json_success(['transcript' => $transcript]);
+
+    } catch (Exception $e) {
+        wp_send_json_error($e->getMessage());
+    }
+}
+
+public function translate_text() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key to use this feature.');
         }
-        // --- END CHECK ---
 
         check_ajax_referer('atm_nonce', 'nonce');
-        
-        $post_id = intval($_POST['post_id']);
-        $script = isset($_POST['script']) ? wp_kses_post(stripslashes($_POST['script'])) : '';
-        
-        if (empty($script)) {
-            throw new Exception('The Podcast Script cannot be empty. Please generate a script first.');
-        }
-        
-        update_post_meta($post_id, '_atm_podcast_status', 'generating');
-        
-        try {
-            $per_post_voice = sanitize_text_field($_POST['voice']);
-            $available_voices = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
-            $final_voice = '';
 
-            if (!empty($per_post_voice)) {
-                $final_voice = ($per_post_voice === 'random') ? $available_voices[array_rand($available_voices)] : $per_post_voice;
-            } else {
-                $default_voice = get_option('atm_voice_selection', 'alloy');
-                $final_voice = ($default_voice === 'random') ? $available_voices[array_rand($available_voices)] : $default_voice;
+        try {
+            if (empty($_POST['source_text']) || empty($_POST['target_language'])) {
+                throw new Exception('Source text and target language are required.');
             }
-            
-            $podcast_url = ATM_API::generate_audio_with_openai_tts($script, $post_id, $final_voice);
-            
-            update_post_meta($post_id, '_atm_podcast_url', $podcast_url);
-            update_post_meta($post_id, '_atm_podcast_status', 'completed');
-            
-            wp_send_json_success(['message' => 'Podcast generated successfully!', 'podcast_url' => $podcast_url]);
-            
-        } catch (Exception $e) {
-            update_post_meta($post_id, '_atm_podcast_status', 'failed');
-            error_log('Content AI Studio Error: ' . $e->getMessage());
-            wp_send_json_error($e->getMessage());
-        }
-    }
 
-    public function preview_tts_voice() {
-        check_ajax_referer('atm_nonce', 'nonce');
-        $voice = sanitize_text_field($_POST['voice']);
-        $sample_text = "Hello, this is a preview of the selected voice.";
+            $source_text = sanitize_textarea_field(stripslashes($_POST['source_text']));
+            $target_language = sanitize_text_field($_POST['target_language']);
 
-        try {
-            $audio_content = ATM_API::generate_audio_with_openai_tts($sample_text, 0, $voice, true);
-            wp_send_json_success(['audio_data' => base64_encode($audio_content)]);
+            $translated_text = ATM_API::translate_text($source_text, $target_language);
+
+            wp_send_json_success(['translated_text' => $translated_text]);
+
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
@@ -597,28 +242,521 @@ Your entire output MUST be a single, valid JSON object with three keys:
         }
     }
     
+    public function __construct() {
+        // Core Actions for the React App & other features
+        add_action('wp_ajax_generate_article_title', array($this, 'generate_article_title'));
+        add_action('wp_ajax_generate_article_content', array($this, 'generate_article_content'));
+        add_action('wp_ajax_generate_news_article', array($this, 'generate_news_article'));
+        add_action('wp_ajax_fetch_rss_articles', array($this, 'fetch_rss_articles'));
+        add_action('wp_ajax_generate_article_from_rss', array($this, 'generate_article_from_rss'));
+        add_action('wp_ajax_generate_featured_image', array($this, 'generate_featured_image'));
+        add_action('wp_ajax_generate_podcast_script', array($this, 'generate_podcast_script'));
+        add_action('wp_ajax_generate_podcast', array($this, 'generate_podcast'));
+        add_action('wp_ajax_upload_podcast_image', array($this, 'upload_podcast_image'));
+        add_action('wp_ajax_transcribe_audio', array($this, 'transcribe_audio'));
+        add_action('wp_ajax_translate_text', array($this, 'translate_text'));
+        add_action('wp_ajax_translate_editor_content', array($this, 'translate_editor_content'));
+        add_action('wp_ajax_get_youtube_suggestions', array($this, 'get_youtube_suggestions'));
+        add_action('wp_ajax_search_youtube', array($this, 'search_youtube'));
+        add_action('wp_ajax_generate_chart_from_ai', array($this, 'generate_chart_from_ai'));
+        add_action('wp_ajax_save_atm_chart', array($this, 'save_atm_chart'));
+        add_action('wp_ajax_generate_key_takeaways', array($this, 'generate_key_takeaways'));
+        add_action('wp_ajax_save_key_takeaways', array($this, 'save_key_takeaways'));
+
+        // Helper/Legacy Actions
+        add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));
+        add_action('wp_ajax_generate_inline_image', array($this, 'generate_inline_image'));
+    }
+
+    public function generate_podcast_script() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $article_content = wp_strip_all_tags(stripslashes($_POST['content']));
+            $language = sanitize_text_field($_POST['language']);
+
+            if (empty($article_content)) {
+                throw new Exception("Article content is empty. Please write your article first.");
+            }
+
+            // Fetches the master prompt from the central API class, avoiding duplication.
+            $system_prompt = ATM_API::get_default_master_prompt();
+
+            // Inject the language instruction into the master prompt
+            $system_prompt = "**CRITICAL INSTRUCTION: You MUST write the entire podcast script in " . $language . ".**\n\n" . $system_prompt;
+
+            $post = get_post(intval($_POST['post_id']));
+            $final_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
+$final_prompt .= ' Use your web search ability to verify facts and add any recent developments to make the podcast as up-to-date as possible.';
+
+            $generated_script = ATM_API::enhance_content_with_openrouter(
+                ['content' => $article_content],
+                $final_prompt,
+                get_option('atm_content_model', 'anthropic/claude-3-haiku')
+            );
+
+            wp_send_json_success(['script' => $generated_script]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function generate_podcast() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 600);
+
+        try {
+            $post_id = intval($_POST['post_id']);
+            $script = isset($_POST['script']) ? wp_kses_post(stripslashes($_POST['script'])) : '';
+            $voice = sanitize_text_field($_POST['voice']);
+            $provider = sanitize_text_field($_POST['provider']);
+            
+            if (empty($script)) throw new Exception('The Podcast Script cannot be empty.');
+
+            $max_chunk_size = ($provider === 'elevenlabs') ? 4500 : 4000;
+            $script_chunks = [];
+            $current_chunk = '';
+
+            $sentences = preg_split('/(?<=[.?!])\s+/', $script, -1, PREG_SPLIT_NO_EMPTY);
+            foreach ($sentences as $sentence) {
+                if (strlen($current_chunk) + strlen($sentence) + 1 > $max_chunk_size) {
+                    $script_chunks[] = $current_chunk;
+                    $current_chunk = $sentence;
+                } else {
+                    $current_chunk .= ' ' . $sentence;
+                }
+            }
+            if (!empty($current_chunk)) {
+                $script_chunks[] = trim($current_chunk);
+            }
+
+            $final_audio_content = '';
+            $final_audio_content .= base64_decode('SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGllbmRhcmQgTG9wZXogaW4gT25lVHJpY2sBTQuelleAAAAANFaAAAAAAAAAAAAAAAAAAAAD/8AAAAAAAADw==');
+
+            foreach ($script_chunks as $chunk) {
+                $audio_chunk_content = null;
+                if ($provider === 'elevenlabs') {
+                    $audio_chunk_content = ATM_API::generate_audio_with_elevenlabs(trim($chunk), $voice);
+                } else { // Default to OpenAI
+                    $audio_chunk_content = ATM_API::generate_audio_with_openai_tts(trim($chunk), $voice);
+                }
+                $final_audio_content .= $audio_chunk_content;
+            }
+
+            $upload_dir = wp_upload_dir();
+            $podcast_dir = $upload_dir['basedir'] . '/podcasts';
+            if (!file_exists($podcast_dir)) wp_mkdir_p($podcast_dir);
+            $filename = 'podcast-' . $post_id . '-' . time() . '.mp3';
+            $filepath = $podcast_dir . '/' . $filename;
+            if (!file_put_contents($filepath, $final_audio_content)) {
+                throw new Exception('Failed to save the final audio file.');
+            }
+            $podcast_url = $upload_dir['baseurl'] . '/podcasts/' . $filename;
+            update_post_meta($post_id, '_atm_podcast_url', $podcast_url);
+            update_post_meta($post_id, '_atm_podcast_script', $script);
+            
+            wp_send_json_success(['message' => 'Podcast generated successfully!', 'podcast_url' => $podcast_url]);
+            
+        } catch (Exception $e) {
+            error_log('Content AI Studio Error: ' . $e->getMessage());
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
+    public function generate_article_title() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $keyword = sanitize_text_field($_POST['keyword']);
+            $title_input = sanitize_text_field($_POST['title']);
+            $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
+            $topic = !empty($title_input) ? 'the article title: "' . $title_input . '"' : 'the keyword: "' . $keyword . '"';
+            if (empty($topic)) {
+                throw new Exception("Please provide a keyword or title.");
+            }
+            $system_prompt = 'You are an expert SEO content writer. Use your web search ability to understand the current context and popular phrasing for the given topic. Your task is to generate a single, compelling, SEO-friendly title. Return only the title itself, with no extra text or quotation marks.';
+            $generated_title = ATM_API::enhance_content_with_openrouter(['content' => $topic], $system_prompt, $model_override ?: get_option('atm_article_model'));
+            $cleaned_title = trim($generated_title, " \t\n\r\0\x0B\"");
+            wp_send_json_success(['article_title' => $cleaned_title]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function generate_article_content() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+            $post = get_post($post_id);
+            $article_title = isset($_POST['article_title']) ? sanitize_text_field($_POST['article_title']) : '';
+            $keyword = isset($_POST['keyword']) ? sanitize_text_field($_POST['keyword']) : '';
+            $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
+            $style_key = isset($_POST['writing_style']) ? sanitize_key($_POST['writing_style']) : 'default_seo';
+            $custom_prompt = isset($_POST['custom_prompt']) ? wp_kses_post(stripslashes($_POST['custom_prompt'])) : '';
+            $word_count = isset($_POST['word_count']) ? intval($_POST['word_count']) : 0;
+            if (empty($article_title) && empty($keyword)) {
+                throw new Exception("Please provide a keyword or an article title.");
+            }
+            if (empty($article_title) && !empty($keyword)) {
+                $article_title = ATM_API::generate_title_from_keyword($keyword, $model_override);
+            }
+            $writing_styles = ATM_API::get_writing_styles();
+            $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
+            if (!empty($custom_prompt)) {
+                $base_prompt = $custom_prompt;
+            }
+            $output_instructions = '
+            **Final Output Format:**
+            Your entire output MUST be a single, valid JSON object with two keys:
+            1. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
+            2. "content": The full article text, formatted using Markdown. 
+            
+            **IMPORTANT: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.**
+            
+            **Content Rules:**
+            - The `content` field must NOT start with a title or any heading (like `# Heading`). It must begin directly with the first paragraph of the introduction.
+            - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.';
+            $system_prompt = $base_prompt . "\n\n" . $output_instructions;
+            if ($post) {
+                $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
+            }
+            if ($word_count > 0) {
+                $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
+            }
+            $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $article_title], $system_prompt, $model_override ?: get_option('atm_article_model'), true);
+            $result = json_decode($raw_response, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+                error_log('Content AI Studio - Invalid JSON from Creative AI: ' . $raw_response);
+                throw new Exception('The AI returned an invalid response structure. Please try again.');
+            }
+            $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : (isset($result['subtitle']) ? trim($result['subtitle']) : '');
+            $original_content = trim($result['content']);
+            $final_content = $original_content;
+            if ($post_id > 0 && !empty($subtitle)) {
+                $final_content = ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle, $original_content);
+            }
+            wp_send_json_success(['article_title' => $article_title, 'article_content' => $final_content, 'subtitle' => $subtitle]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function generate_news_article() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+            $topic = sanitize_text_field($_POST['topic']);
+            $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : get_option('atm_article_model');
+            $force_fresh = isset($_POST['force_fresh']) && $_POST['force_fresh'] === 'true';
+            $news_source = isset($_POST['news_source']) ? sanitize_key($_POST['news_source']) : 'newsapi';
+            if (empty($topic)) {
+                throw new Exception("Please provide a topic for the news article.");
+            }
+            $news_context = ATM_API::fetch_news($topic, $news_source, $force_fresh);
+            if (empty($news_context)) {
+                throw new Exception("No recent news found for the topic: '" . esc_html($topic) . "'. Please try a different keyword or source.");
+            }
+            $system_prompt = 'You are a professional news reporter and editor. Using the following raw content from news snippets, write a clear, engaging, and well-structured news article in English. **Use your web search ability to verify the information and add any missing context.**
+
+                Follow these strict guidelines:
+                - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
+                - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
+                - **Length**: Aim for 800–1200 words.
+                - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+                - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
+                - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
+
+                **Final Output Format:**
+                Your entire output MUST be a single, valid JSON object with three keys:
+                1. "headline": A concise, factual, and compelling headline for the new article.
+                2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
+                3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.'; // The long prompt text remains the same
+            $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $news_context], $system_prompt, $model_override, true);
+            $json_string = '';
+            if (preg_match('/\{.*?\}/s', $raw_response, $matches)) {
+                $json_string = $matches[0];
+            } else {
+                throw new Exception('The AI returned a non-JSON response. Please try again.');
+            }
+            $result = json_decode($json_string, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
+                error_log('ATM Plugin - Invalid JSON from AI: ' . $json_string);
+                throw new Exception('The AI returned an invalid response structure. Please try again.');
+            }
+            $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : '';
+            $original_content = trim($result['content']);
+            $final_content = $original_content;
+            if ($post_id > 0 && !empty($subtitle)) {
+                $final_content = ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle, $original_content);
+            }
+            wp_send_json_success(['article_title' => $result['headline'], 'article_content' => $final_content, 'subtitle' => $subtitle]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function fetch_rss_articles() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+            $keyword = isset($_POST['keyword']) ? sanitize_text_field($_POST['keyword']) : '';
+            $use_scraping = isset($_POST['use_scraping']) && $_POST['use_scraping'] === 'true';
+            $rss_feeds_string = get_option('atm_rss_feeds', '');
+            if (empty($rss_feeds_string)) {
+                throw new Exception('No RSS feeds configured in settings.');
+            }
+            if ($use_scraping) {
+                $articles = ATM_API::search_rss_feeds($rss_feeds_string, $keyword, true);
+            } else {
+                $articles = ATM_API::parse_rss_feeds($rss_feeds_string, $post_id, $keyword);
+            }
+            if (empty($articles) && !empty($keyword)) {
+                error_log('ATM RSS: No articles found for keyword "' . $keyword . '" in ' . count(explode("\n", $rss_feeds_string)) . ' feeds');
+            }
+            wp_send_json_success($articles);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function test_rss_feed() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $feed_url = esc_url_raw($_POST['feed_url']);
+            $keyword = sanitize_text_field($_POST['keyword'] ?? '');
+            if (empty($feed_url)) {
+                throw new Exception('Feed URL is required.');
+            }
+            $articles = ATM_RSS_Parser::parse_rss_feeds_advanced($feed_url, 0, $keyword);
+            wp_send_json_success(['articles' => $articles, 'total_found' => count($articles), 'feed_url' => $feed_url, 'keyword' => $keyword]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function generate_article_from_rss() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+            $url = esc_url_raw($_POST['article_url']);
+            $guid = sanitize_text_field($_POST['article_guid']);
+            $use_full_content = isset($_POST['use_full_content']) && $_POST['use_full_content'] === 'true';
+            // ... (rest of the content fetching logic remains the same)
+            $final_url = ATM_API::resolve_redirect_url($url);
+            $source_content = '';
+            if ($use_full_content) {
+                try {
+                    $source_content = ATM_API::fetch_full_article_content($final_url);
+                } catch (Exception $e) {
+                    error_log('ATM RSS: Scraping failed, falling back to RSS content: ' . $e->getMessage());
+                }
+            }
+            if (empty($source_content) && isset($_POST['rss_content'])) {
+                $source_content = wp_kses_post(stripslashes($_POST['rss_content']));
+            }
+            if (empty($source_content)) {
+                throw new Exception('Could not extract sufficient content from the source article.');
+            }
+            if (strlen($source_content) > 4000) {
+                $source_content = ATM_API::summarize_content_for_rewrite($source_content);
+            }
+            $system_prompt = 'You are a professional news reporter and editor. Using the following raw content from news snippets, write a clear, engaging, and well-structured news article in English. **Use your web search ability to verify the information and add any missing context.**
+
+                Follow these strict guidelines:
+                - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
+                - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
+                - **Length**: Aim for 800–1200 words.
+                - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+                - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
+                - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
+
+                **Final Output Format:**
+                Your entire output MUST be a single, valid JSON object with three keys:
+                1. "headline": A concise, factual, and compelling headline for the new article.
+                2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
+                3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.'; // The long prompt text remains the same
+            $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $source_content], $system_prompt, get_option('atm_article_model', 'openai/gpt-4o'), true);
+            $json_string = '';
+            if (preg_match('/\{.*?\}/s', $raw_response, $matches)) {
+                $json_string = $matches[0];
+            } else {
+                throw new Exception('The AI returned a non-JSON response. Please try again.');
+            }
+            $result = json_decode($json_string, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
+                error_log('ATM Plugin - Invalid JSON from AI: ' . $json_string);
+                throw new Exception('The AI returned an invalid response structure. Please try again.');
+            }
+            $headline = trim($result['headline']);
+            $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : '';
+            $original_content = trim($result['content']);
+            $final_content = $original_content;
+            if ($post_id > 0 && !empty($subtitle)) {
+                $final_content = ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle, $original_content);
+            }
+            if (empty($headline) || empty($final_content)) {
+                throw new Exception('Generated title or content is empty.');
+            }
+            if ($post_id > 0) {
+                $used_guids = get_post_meta($post_id, '_atm_used_rss_guids', true) ?: [];
+                $used_guids[] = $guid;
+                update_post_meta($post_id, '_atm_used_rss_guids', array_unique($used_guids));
+            }
+            wp_send_json_success(['article_title' => $headline, 'article_content' => $final_content, 'subtitle' => $subtitle]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function generate_featured_image() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 300);
+        try {
+            $post_id = intval($_POST['post_id']);
+            $prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : ''; // This now comes directly from the user
+            $size_override = isset($_POST['size']) ? sanitize_text_field($_POST['size']) : '';
+            $quality_override = isset($_POST['quality']) ? sanitize_text_field($_POST['quality']) : '';
+            $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
+
+            $post = get_post($post_id);
+            if (!$post) {
+                throw new Exception("Post not found.");
+            }
+
+            if (empty(trim($prompt))) {
+                throw new Exception('Image prompt cannot be empty.');
+            }
+
+            // We use the prompt directly, replacing any shortcodes it might contain
+            $final_prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
+
+            $provider = !empty($provider_override) ? $provider_override : get_option('atm_image_provider', 'openai');
+            $image_data = null;
+            $is_url = false;
+
+            switch ($provider) {
+                case 'google':
+                    $image_data = ATM_API::generate_image_with_google_imagen($final_prompt, $size_override);
+                    $is_url = false;
+                    break;
+                case 'blockflow':
+                    $image_data = ATM_API::generate_image_with_blockflow($final_prompt, '', $size_override);
+                    $is_url = false;
+                    break;
+                case 'openai':
+                default:
+                    $image_data = ATM_API::generate_image_with_openai($final_prompt, $size_override, $quality_override);
+                    $is_url = true;
+                    break;
+            }
+
+            if ($is_url) {
+                $attachment_id = $this->set_image_from_url($image_data, $post_id);
+            } else {
+                $attachment_id = $this->set_image_from_data($image_data, $post_id, $final_prompt);
+            }
+
+            if (is_wp_error($attachment_id)) {
+                throw new Exception($attachment_id->get_error_message());
+            }
+
+            set_post_thumbnail($post_id, $attachment_id);
+            $thumbnail_html = _wp_post_thumbnail_html($attachment_id, $post_id);
+
+            // We no longer need to send back the prompt since the user wrote it.
+            wp_send_json_success(['attachment_id' => $attachment_id, 'html' => $thumbnail_html]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function generate_inline_image() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $post_id = intval($_POST['post_id']);
+            $prompt = sanitize_textarea_field($_POST['prompt']);
+            if (empty($prompt)) {
+                throw new Exception("Prompt cannot be empty.");
+            }
+            $post = get_post($post_id);
+            $processed_prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
+            $image_url = ATM_API::generate_image_with_openai($processed_prompt);
+            $attachment_id = $this->set_image_from_url($image_url, $post_id);
+            if (is_wp_error($attachment_id)) {
+                throw new Exception($attachment_id->get_error_message());
+            }
+            $image_data = wp_get_attachment_image_src($attachment_id, 'large');
+            wp_send_json_success(['url' => $image_data[0], 'alt' => $prompt]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
     public function set_image_from_url($url, $post_id) {
         require_once(ABSPATH . 'wp-admin/includes/media.php');
         require_once(ABSPATH . 'wp-admin/includes/file.php');
         require_once(ABSPATH . 'wp-admin/includes/image.php');
-        
         $tmp = download_url($url);
         if (is_wp_error($tmp)) {
             return $tmp;
         }
-
         $file_array = array();
         preg_match('/[^\?]+\.(jpg|jpe|jpeg|gif|png)/i', $url, $matches);
         $file_array['name'] = basename($matches[0]);
         $file_array['tmp_name'] = $tmp;
-
         $id = media_handle_sideload($file_array, $post_id);
-
         if (is_wp_error($id)) {
             @unlink($file_array['tmp_name']);
             return $id;
         }
-
         return $id;
+    }
+
+    public function set_image_from_data($image_data, $post_id, $prompt) {
+        require_once(ABSPATH . 'wp-admin/includes/media.php');
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+        $upload_dir = wp_upload_dir();
+        $filename = 'ai-image-' . $post_id . '-' . time() . '.png';
+        $filepath = $upload_dir['path'] . '/' . $filename;
+        file_put_contents($filepath, $image_data);
+        $filetype = wp_check_filetype($filename, null);
+        $attachment = array(
+            'guid'           => $upload_dir['url'] . '/' . basename($filepath),
+            'post_mime_type' => $filetype['type'],
+            'post_title'     => sanitize_text_field($prompt),
+            'post_content'   => '',
+            'post_status'    => 'inherit'
+        );
+        $attach_id = wp_insert_attachment($attachment, $filepath, $post_id);
+        $attach_data = wp_generate_attachment_metadata($attach_id, $filepath);
+        wp_update_attachment_metadata($attach_id, $attach_data);
+        return $attach_id;
     }
 }
