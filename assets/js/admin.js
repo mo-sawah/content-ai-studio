@@ -1035,3 +1035,85 @@ jQuery(document).ready(function ($) {
     });
   });
 });
+
+jQuery(document).ready(function ($) {
+  if (!$("#atm-detect-subtitle-key-btn").length) {
+    return;
+  }
+  $("#atm-detect-subtitle-key-btn").on("click", function () {
+    const button = $(this);
+    const statusEl = $("#atm-scan-status");
+    const inputEl = $("#atm_theme_subtitle_key_field");
+    button.prop("disabled", true).text("Scanning...");
+    statusEl.text("Loading editor in the background...");
+    inputEl.val("");
+    const iframe = $("<iframe />", {
+      src: "post-new.php",
+      style:
+        "width:0; height:0; border:0; position:absolute; top: -9999px; left: -9999px;",
+    }).appendTo("body");
+    iframe.on("load", function () {
+      try {
+        const iframeDoc = iframe.contents();
+        let foundKey = "";
+        const keywords = [
+          "subtitle",
+          "sub heading",
+          "sub-heading",
+          "sub_heading",
+          "subheading",
+          "tagline",
+          "secondary title",
+          "alt title",
+          "alternative title",
+          "sub title",
+          "small title",
+          "headline",
+          "subheadline",
+          "sub-headline",
+          "short description",
+          "lead",
+          "intro",
+          "kicker",
+        ];
+        iframeDoc.find("label").each(function () {
+          const labelText = $(this).text().toLowerCase().trim();
+          if (keywords.some((keyword) => labelText.includes(keyword))) {
+            const inputId = $(this).attr("for");
+            if (inputId) {
+              const inputField = iframeDoc.find("#" + inputId);
+              if (inputField.length) {
+                foundKey = inputField.attr("name");
+                return false;
+              }
+            }
+          }
+        });
+        if (foundKey) {
+          const match = foundKey.match(/\[([^\]]+)\]/);
+          if (match && match[1]) {
+            foundKey = match[1];
+          }
+          inputEl.val(foundKey);
+          statusEl
+            .text("✅ Found potential key: " + foundKey)
+            .css("color", "#2f855a");
+        } else {
+          statusEl
+            .text(
+              "❌ No common subtitle field was found. Please enter the key manually."
+            )
+            .css("color", "#9b2c2c");
+        }
+      } catch (e) {
+        console.error("Content AI Studio Scan Error:", e);
+        statusEl
+          .text("Error during scan. Please enter the key manually.")
+          .css("color", "#9b2c2c");
+      } finally {
+        iframe.remove();
+        button.prop("disabled", false).text("Smart Scan");
+      }
+    });
+  });
+});
