@@ -935,7 +935,6 @@ window.testRSSFeed = function (feedUrl, keyword = "") {
   });
 };
 
-// --- ADD THIS ENTIRE BLOCK TO THE END OF admin.js ---
 jQuery(document).ready(function ($) {
   // Only run this script on the main settings page
   if (!$("#atm-detect-subtitle-key-btn").length) {
@@ -953,7 +952,7 @@ jQuery(document).ready(function ($) {
 
     // Create a hidden iframe to load the post editor
     const iframe = $("<iframe />", {
-      src: "post-new.php", // A new post page is a clean slate to scan
+      src: "post-new.php",
       style:
         "width:0; height:0; border:0; position:absolute; top: -9999px; left: -9999px;",
     }).appendTo("body");
@@ -963,12 +962,26 @@ jQuery(document).ready(function ($) {
         const iframeDoc = iframe.contents();
         let foundKey = "";
 
-        // Keywords to search for in labels
+        // --- MODIFIED: Expanded keyword list for better detection ---
         const keywords = [
           "subtitle",
+          "sub heading",
+          "sub-heading",
+          "sub_heading",
           "subheading",
           "tagline",
           "secondary title",
+          "alt title",
+          "alternative title",
+          "sub title", // spaced version
+          "small title",
+          "headline",
+          "subheadline",
+          "sub-headline",
+          "short description",
+          "lead", // journalism/press style
+          "intro", // intro line under main title
+          "kicker", // used in news/blog themes
         ];
 
         // Find all labels and check them
