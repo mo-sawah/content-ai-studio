@@ -167,6 +167,7 @@ class ATM_Main {
         // Core logic files
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-ajax.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-api.php';
+        require_once ATM_PLUGIN_PATH . 'includes/class-atm-theme-subtitle-manager.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-frontend.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-licensing.php';
     }

@@ -397,11 +397,10 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 throw new Exception('The AI returned an invalid response structure. Please try again.');
             }
 
+            // REPLACE WITH THIS BLOCK
             $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : (isset($result['subtitle']) ? trim($result['subtitle']) : '');
             if ($post_id > 0 && !empty($subtitle)) {
-                $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
-                $meta_key = !empty($theme_subtitle_key) ? $theme_subtitle_key : '_atm_subtitle';
-                update_post_meta($post_id, $meta_key, $subtitle);
+                ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle);
             }
 
             wp_send_json_success([
@@ -463,11 +462,10 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
 
             // MODIFIED: Directly get subheadline from response and save it to post meta.
             $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+            // REPLACE WITH THIS BLOCK
             $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : (isset($result['subtitle']) ? trim($result['subtitle']) : '');
             if ($post_id > 0 && !empty($subtitle)) {
-                $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
-                $meta_key = !empty($theme_subtitle_key) ? $theme_subtitle_key : '_atm_subtitle';
-                update_post_meta($post_id, $meta_key, $subtitle);
+                ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle);
             }
 
             wp_send_json_success([
@@ -580,11 +578,10 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             $final_content = trim($result['content']);
 
             // MODIFIED: Directly get subheadline from response and save it to post meta.
+            // REPLACE WITH THIS BLOCK
             $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : (isset($result['subtitle']) ? trim($result['subtitle']) : '');
             if ($post_id > 0 && !empty($subtitle)) {
-                $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
-                $meta_key = !empty($theme_subtitle_key) ? $theme_subtitle_key : '_atm_subtitle';
-                update_post_meta($post_id, $meta_key, $subtitle);
+                ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle);
             }
 
             if (empty($headline) || empty($final_content)) {
