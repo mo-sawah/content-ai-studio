@@ -474,11 +474,23 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
 
             // Use the new manager to save it
             if ($post_id > 0 && !empty($subtitle)) {
-                ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle);
+                // Save to SmartMag field
+                $smartmag_result = update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
+                error_log("ATM Plugin: Saved subtitle '{$subtitle}' to SmartMag field (_bunyad_sub_title) for post {$post_id}. Result: " . ($smartmag_result ? 'success' : 'failed'));
+                
+                // Also save to our backup field
+                $backup_result = update_post_meta($post_id, '_atm_subtitle', $subtitle);
+                error_log("ATM Plugin: Saved subtitle to backup field (_atm_subtitle). Result: " . ($backup_result ? 'success' : 'failed'));
+                
+                // Verify it was saved
+                $saved_smartmag = get_post_meta($post_id, '_bunyad_sub_title', true);
+                $saved_backup = get_post_meta($post_id, '_atm_subtitle', true);
+                error_log("ATM Plugin: Verification - SmartMag field: '{$saved_smartmag}', Backup field: '{$saved_backup}'");
             }
 
+            // ADD THIS - the missing response that's causing the error:
             wp_send_json_success([
-                'article_title'   => $result['headline'],
+                'article_title'   => $article_title,
                 'article_content' => trim($result['content']),
                 'subtitle'        => $subtitle
             ]);
