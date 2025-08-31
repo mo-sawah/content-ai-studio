@@ -13,7 +13,7 @@ class ATM_Ajax {
         check_ajax_referer('atm_nonce', 'nonce');
         try {
             $post_id = intval($_POST['post_id']);
-            $post_content = wp_strip_all_tags(get_post_field('post_content', $post_id));
+            $post_content = isset($_POST['content']) ? wp_strip_all_tags(stripslashes($_POST['content'])) : '';
 
             if (empty($post_content) || strlen($post_content) < 100) {
                 throw new Exception('Post content is too short to generate takeaways.');

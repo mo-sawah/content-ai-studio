@@ -183,7 +183,7 @@ class ATM_Main {
         // $block_editor = new ATM_Block_Editor(); // ADD THIS LINE
 
         // Admin hooks
-        add_action('admin_menu', array($settings, 'add_admin_menu'));
+        add_action('admin_menu', array($settings, 'add_menu_pages'), 5);
         add_action('add_meta_boxes', array($meta_box, 'add_meta_boxes'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('admin_head', array($this, 'register_tinymce_button'));

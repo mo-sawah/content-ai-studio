@@ -1,4 +1,5 @@
 import { useState, useEffect } from "@wordpress/element";
+import { useSelect } from "@wordpress/data"; // <-- FIX #2a
 import { Button, TextareaControl } from "@wordpress/components";
 import CustomSpinner from "./common/CustomSpinner";
 
@@ -15,6 +16,10 @@ function TakeawaysGenerator({ setActiveView }) {
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const postId = atm_studio_data.post_id;
+  const postContent = useSelect(
+    (select) => select("core/editor").getEditedPostContent(),
+    []
+  ); // <-- FIX #2b
 
   useEffect(() => {
     const existingTakeaways = atm_studio_data.existing_takeaways || [];
@@ -25,8 +30,10 @@ function TakeawaysGenerator({ setActiveView }) {
     setIsLoading(true);
     setStatusMessage("Generating key takeaways...");
     try {
+      // FIX #2c: Send the current editor content
       const response = await callAjax("generate_takeaways", {
         post_id: postId,
+        content: postContent,
       });
       if (response.success) {
         setTakeaways(response.data.takeaways.join("\n"));
@@ -89,8 +96,9 @@ function TakeawaysGenerator({ setActiveView }) {
         <h3>Key Takeaways</h3>
       </div>
       <div className="atm-form-container">
+        {/* FIX #3: Changed isSecondary to isPrimary */}
         <Button
-          isSecondary
+          isPrimary
           onClick={handleGenerate}
           disabled={isLoading || isSaving}
         >
@@ -110,7 +118,12 @@ function TakeawaysGenerator({ setActiveView }) {
           rows="8"
           disabled={isLoading || isSaving}
         />
-        <Button isPrimary onClick={handleSave} disabled={isSaving || isLoading}>
+        {/* FIX #4: Added !takeaways.trim() to disabled check */}
+        <Button
+          isSecondary
+          onClick={handleSave}
+          disabled={isSaving || isLoading || !takeaways.trim()}
+        >
           {isSaving ? (
             <>
               <CustomSpinner /> Saving...
