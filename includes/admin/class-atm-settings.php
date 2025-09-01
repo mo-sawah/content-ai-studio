@@ -40,10 +40,90 @@ class ATM_Settings {
 
         add_menu_page('Content AI Studio', 'AI Studio', 'manage_options', 'content-ai-studio', array($this, 'render_settings_page'), $icon_svg, 25);
         add_submenu_page('content-ai-studio', 'Settings', 'Settings', 'manage_options', 'content-ai-studio', array($this, 'render_settings_page'));
+        add_submenu_page('content-ai-studio', 'Automatic', 'Automatic', 'manage_options', 'content-ai-studio-automatic', array($this, 'render_automatic_page'));
         add_submenu_page('content-ai-studio', 'About Content AI Studio', 'About', 'manage_options', 'content-ai-studio-about', array($this, 'render_about_page'));
         add_submenu_page('content-ai-studio', 'Support', 'Support', 'manage_options', 'content-ai-studio-support', array($this, 'render_support_page'));
     }
 
+    public function render_automatic_page() {
+        // This function will decide whether to show the list or the add/edit form
+        $action = $_GET['action'] ?? 'list';
+        $campaign_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+        echo '<div class="wrap atm-settings">';
+        
+        if ('edit' === $action || 'add' === $action) {
+            $this->render_campaign_form($campaign_id);
+        } else {
+            $this->render_campaigns_list();
+        }
+
+        echo '</div>';
+    }
+
+    // Add these two new functions to class-atm-settings.php
+
+    private function render_campaigns_list() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'content_ai_campaigns';
+        $campaigns = $wpdb->get_results("SELECT * FROM $table_name ORDER BY id DESC");
+        ?>
+        <div class="atm-header">
+            <h1>⚙️ Automatic Campaigns</h1>
+            <p class="atm-subtitle">Create and manage automated content generation schedules.</p>
+        </div>
+        <a href="?page=content-ai-studio-automatic&action=add" class="page-title-action">Add New Campaign</a>
+        
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th>Keyword</th>
+                    <th>Frequency</th>
+                    <th>Next Run</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($campaigns as $campaign): ?>
+                    <tr>
+                        <td><strong><?php echo esc_html($campaign->keyword); ?></strong></td>
+                        <td>Every <?php echo esc_html($campaign->frequency_value . ' ' . $campaign->frequency_unit); ?>(s)</td>
+                        <td><?php echo esc_html(wp_next_scheduled('atm_run_campaign_' . $campaign->id, [$campaign->id]) ? date('Y-m-d H:i:s', wp_next_scheduled('atm_run_campaign_' . $campaign->id, [$campaign->id])) : 'Not Scheduled'); ?></td>
+                        <td><?php echo $campaign->is_active ? 'Active' : 'Paused'; ?></td>
+                        <td>
+                            <a href="?page=content-ai-studio-automatic&action=edit&id=<?php echo $campaign->id; ?>">Edit</a> | 
+                            <a href="#" class="atm-delete-campaign" data-id="<?php echo $campaign->id; ?>">Delete</a> | 
+                            <a href="#" class="atm-run-campaign" data-id="<?php echo $campaign->id; ?>">Run Now</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php
+    }
+
+    private function render_campaign_form($campaign_id) {
+        // This is a simplified example. You would fetch the campaign data if editing
+        // and populate the fields. For the dropdowns, you'd use functions like:
+        // wp_dropdown_categories(), wp_dropdown_users()
+        ?>
+        <div class="atm-header"><h1><?php echo $campaign_id ? 'Edit' : 'Add New'; ?> Campaign</h1></div>
+        <form method="post" id="atm-campaign-form">
+            <div class="atm-settings-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                </div>
+
+            <div class="atm-settings-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                </div>
+
+            <div style="display:flex; gap: 1rem;">
+                </div>
+
+            <?php submit_button($campaign_id ? 'Update Campaign' : 'Publish Campaign'); ?>
+        </form>
+        <?php
+    }
+    
     public function render_about_page() {
         ?>
         <div class="wrap atm-settings atm-about-page">

@@ -336,6 +336,34 @@ if ($post_id) {
         });
     }
 
+    public static function create_campaigns_table() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'content_ai_campaigns';
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            keyword varchar(255) NOT NULL,
+            country varchar(100) DEFAULT '' NOT NULL,
+            article_type varchar(50) NOT NULL,
+            custom_prompt longtext,
+            generate_image tinyint(1) DEFAULT 0 NOT NULL,
+            category_id bigint(20) unsigned NOT NULL,
+            author_id bigint(20) unsigned NOT NULL,
+            post_status varchar(20) DEFAULT 'draft' NOT NULL,
+            frequency_value int(11) NOT NULL,
+            frequency_unit varchar(10) NOT NULL,
+            is_active tinyint(1) DEFAULT 1 NOT NULL,
+            last_run datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+            next_run datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY  (id)
+        ) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+    }
+
     public static function activate() {
         $dirs = [
             'css' => ATM_PLUGIN_PATH . 'assets/css',
@@ -346,5 +374,6 @@ if ($post_id) {
                 wp_mkdir_p($dir);
             }
         }
+        self::create_campaigns_table();
     }
 }

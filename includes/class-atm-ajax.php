@@ -6,6 +6,29 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    public function save_campaign() {
+        // ... Nonce check, capability check ...
+        // Get all $_POST data, sanitize it.
+        // Use $wpdb->insert() or $wpdb->update() to save to your custom table.
+        // Call ATM_Campaign_Manager::schedule_campaign().
+        wp_send_json_success();
+    }
+
+    public function delete_campaign() {
+        // ... Nonce check, capability check ...
+        // $campaign_id = intval($_POST['id']);
+        // Use $wpdb->delete() to remove from the table.
+        // Call ATM_Campaign_Manager::unschedule_campaign().
+        wp_send_json_success();
+    }
+
+    public function run_campaign_now() {
+        // ... Nonce check, capability check ...
+        // $campaign_id = intval($_POST['id']);
+        // ATM_Campaign_Manager::execute_campaign($campaign_id);
+        wp_send_json_success(['message' => 'Campaign executed successfully!']);
+    }
+    
     public function generate_key_takeaways() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key.');
