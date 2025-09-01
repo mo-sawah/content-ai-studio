@@ -177,7 +177,7 @@ class ATM_Settings {
                     </div>
                     <div class="form-group">
                         <label for="atm-author">Author</label>
-                        <?php wp_dropdown_users(['name' => 'author_id', 'id' => 'atm-author', 'selected' => $data->author_id, 'who' => 'authors']); ?>
+                        <?php wp_dropdown_users(['name' => 'author_id', 'id' => 'atm-author', 'selected' => $data->author_id, 'capability' => 'edit_posts']); ?>
                     </div>
                     <div class="form-group">
                         <label for="atm-post-status">Post Status</label>

@@ -7,26 +7,70 @@ if (!defined('ABSPATH')) {
 class ATM_Ajax {
 
     public function save_campaign() {
-        // ... Nonce check, capability check ...
-        // Get all $_POST data, sanitize it.
-        // Use $wpdb->insert() or $wpdb->update() to save to your custom table.
-        // Call ATM_Campaign_Manager::schedule_campaign().
-        wp_send_json_success();
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permission denied.');
+        }
+        check_ajax_referer('atm_save_campaign_nonce', 'nonce');
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'content_ai_campaigns';
+
+        $campaign_id = isset($_POST['campaign_id']) ? intval($_POST['campaign_id']) : 0;
+
+        $data = [
+            'keyword' => sanitize_text_field($_POST['keyword']),
+            'country' => sanitize_text_field($_POST['country']),
+            'article_type' => sanitize_text_field($_POST['article_type']),
+            'custom_prompt' => wp_kses_post(stripslashes($_POST['custom_prompt'])),
+            'generate_image' => isset($_POST['generate_image']) ? 1 : 0,
+            'category_id' => intval($_POST['category_id']),
+            'author_id' => intval($_POST['author_id']),
+            'post_status' => sanitize_text_field($_POST['post_status']),
+            'frequency_value' => intval($_POST['frequency_value']),
+            'frequency_unit' => sanitize_text_field($_POST['frequency_unit']),
+        ];
+
+        if ($campaign_id > 0) {
+            $wpdb->update($table_name, $data, ['id' => $campaign_id]);
+        } else {
+            $wpdb->insert($table_name, $data);
+            $campaign_id = $wpdb->insert_id;
+        }
+
+        // Reschedule the cron job
+        ATM_Campaign_Manager::unschedule_campaign($campaign_id);
+        $interval_seconds = $data['frequency_value'] * constant(strtoupper($data['frequency_unit']) . '_IN_SECONDS');
+        ATM_Campaign_Manager::schedule_campaign($campaign_id, $interval_seconds);
+
+        wp_send_json_success(['message' => 'Campaign saved successfully!', 'redirect_url' => admin_url('admin.php?page=content-ai-studio-automatic')]);
     }
 
+    // Find the empty delete_campaign function and replace it with this:
     public function delete_campaign() {
-        // ... Nonce check, capability check ...
-        // $campaign_id = intval($_POST['id']);
-        // Use $wpdb->delete() to remove from the table.
-        // Call ATM_Campaign_Manager::unschedule_campaign().
-        wp_send_json_success();
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permission denied.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'content_ai_campaigns';
+        $campaign_id = intval($_POST['id']);
+
+        ATM_Campaign_Manager::unschedule_campaign($campaign_id);
+        $wpdb->delete($table_name, ['id' => $campaign_id]);
+
+        wp_send_json_success(['message' => 'Campaign deleted.']);
     }
 
+    // Find the empty run_campaign_now function and replace it with this:
     public function run_campaign_now() {
-        // ... Nonce check, capability check ...
-        // $campaign_id = intval($_POST['id']);
-        // ATM_Campaign_Manager::execute_campaign($campaign_id);
-        wp_send_json_success(['message' => 'Campaign executed successfully!']);
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permission denied.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        $campaign_id = intval($_POST['id']);
+
+        ATM_Campaign_Manager::execute_campaign($campaign_id);
+        
+        wp_send_json_success(['message' => 'Campaign executed successfully! A new article is being generated.']);
     }
     
     public function generate_key_takeaways() {

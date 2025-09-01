@@ -1117,3 +1117,116 @@ jQuery(document).ready(function ($) {
     });
   });
 });
+
+// Campaign Code
+
+jQuery(document).ready(function ($) {
+  // Only run this code on our campaign page
+  if (!$("#atm-campaign-form").length && !$(".atm-delete-campaign").length) {
+    return;
+  }
+
+  // Handle Campaign Form Submission
+  $("#atm-campaign-form").on("submit", function (e) {
+    e.preventDefault();
+
+    const button = $("#atm-save-campaign-btn");
+    const originalText = button.val();
+    button.val("Saving...").prop("disabled", true);
+
+    const formData = $(this).serialize();
+
+    $.ajax({
+      url: atm_ajax.ajax_url,
+      type: "POST",
+      data: formData, // The form data is already serialized
+      success: function (response) {
+        if (response.success) {
+          // Redirect to the campaign list on success
+          window.location.href = response.data.redirect_url;
+        } else {
+          alert("Error: " + response.data);
+          button.val(originalText).prop("disabled", false);
+        }
+      },
+      error: function () {
+        alert("An unknown error occurred.");
+        button.val(originalText).prop("disabled", false);
+      },
+    });
+  });
+
+  // Handle "Delete" action from the list table
+  $(".atm-delete-campaign").on("click", function (e) {
+    e.preventDefault();
+
+    if (
+      !confirm(
+        "Are you sure you want to delete this campaign? This cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    const link = $(this);
+    const campaignId = link.data("id");
+    const row = link.closest("tr");
+
+    $.ajax({
+      url: atm_ajax.ajax_url,
+      type: "POST",
+      data: {
+        action: "delete_campaign",
+        id: campaignId,
+        nonce: atm_ajax.nonce,
+      },
+      success: function (response) {
+        if (response.success) {
+          row.fadeOut(300, function () {
+            $(this).remove();
+          });
+        } else {
+          alert("Error: " + response.data);
+        }
+      },
+    });
+  });
+
+  // Handle "Run Now" action from both the list and edit pages
+  $(document).on("click", ".atm-run-campaign, #atm-run-now-btn", function (e) {
+    e.preventDefault();
+
+    const button = $(this);
+    const campaignId = button.data("id");
+    const statusEl = $("#atm-run-now-status");
+
+    button.prop("disabled", true);
+    statusEl.text("Running...");
+
+    $.ajax({
+      url: atm_ajax.ajax_url,
+      type: "POST",
+      data: {
+        action: "run_campaign_now",
+        id: campaignId,
+        nonce: atm_ajax.nonce,
+      },
+      success: function (response) {
+        if (response.success) {
+          statusEl.text("✅ " + response.data.message);
+        } else {
+          statusEl.text("❌ Error: " + response.data);
+        }
+      },
+      error: function () {
+        statusEl.text("❌ An unknown error occurred.");
+      },
+      complete: function () {
+        setTimeout(function () {
+          button.prop("disabled", false);
+          statusEl.text("");
+        }, 5000);
+      },
+    });
+  });
+});
