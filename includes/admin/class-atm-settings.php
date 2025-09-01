@@ -104,22 +104,117 @@ class ATM_Settings {
     }
 
     private function render_campaign_form($campaign_id) {
-        // This is a simplified example. You would fetch the campaign data if editing
-        // and populate the fields. For the dropdowns, you'd use functions like:
-        // wp_dropdown_categories(), wp_dropdown_users()
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'content_ai_campaigns';
+        $campaign = null;
+        $is_editing = $campaign_id > 0;
+
+        if ($is_editing) {
+            $campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
+        }
+
+        // Set default values for a new campaign
+        $defaults = [
+            'keyword' => '', 'country' => '', 'article_type' => 'Informative',
+            'custom_prompt' => ATM_API::get_default_article_prompt(),
+            'generate_image' => 0, 'category_id' => get_option('default_category'),
+            'author_id' => get_current_user_id(), 'post_status' => 'draft',
+            'frequency_value' => 1, 'frequency_unit' => 'day'
+        ];
+
+        // Merge campaign data with defaults
+        $data = (object) wp_parse_args($campaign, $defaults);
         ?>
-        <div class="atm-header"><h1><?php echo $campaign_id ? 'Edit' : 'Add New'; ?> Campaign</h1></div>
+        <div class="atm-header">
+            <h1><?php echo $is_editing ? 'Edit Campaign' : 'Add New Campaign'; ?></h1>
+            <?php if ($is_editing): ?>
+                <a href="?page=content-ai-studio-automatic" class="page-title-action">Add New</a>
+            <?php endif; ?>
+        </div>
         <form method="post" id="atm-campaign-form">
-            <div class="atm-settings-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+            <input type="hidden" name="action" value="atm_save_campaign">
+            <input type="hidden" name="campaign_id" value="<?php echo esc_attr($campaign_id); ?>">
+            <?php wp_nonce_field('atm_save_campaign_nonce'); ?>
+
+            <div class="atm-settings-card">
+                <h2>Campaign Details</h2>
+                <div class="atm-settings-grid" style="grid-template-columns: 1fr 1fr 1fr; align-items: end;">
+                    <div class="form-group">
+                        <label for="atm-keyword">Keyword</label>
+                        <input type="text" id="atm-keyword" name="keyword" value="<?php echo esc_attr($data->keyword); ?>" class="regular-text" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="atm-country">Country</label>
+                        <input type="text" id="atm-country" name="country" value="<?php echo esc_attr($data->country); ?>" class="regular-text" placeholder="e.g., United States">
+                    </div>
+                    <div class="form-group">
+                        <label for="atm-article-type">Article Type</label>
+                        <select id="atm-article-type" name="article_type">
+                            <?php $types = ['News', 'Informative', 'Review', 'How-To', 'Opinion', 'Tutorial', 'Listicle']; ?>
+                            <?php foreach($types as $type): ?>
+                                <option value="<?php echo esc_attr($type); ?>" <?php selected($data->article_type, $type); ?>><?php echo esc_html($type); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
 
-            <div class="atm-settings-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label for="atm-custom-prompt">Custom Prompt (Optional)</label>
+                    <textarea id="atm-custom-prompt" name="custom_prompt" rows="8"><?php echo esc_textarea($data->custom_prompt); ?></textarea>
+                    <p class="description">This prompt will be used to generate the article. The keyword, country, and article type will be automatically included.</p>
                 </div>
+            </div>
 
-            <div style="display:flex; gap: 1rem;">
+            <div class="atm-settings-card">
+                <h2>Post Settings</h2>
+                <div class="form-group">
+                    <label><input type="checkbox" name="generate_image" value="1" <?php checked($data->generate_image, 1); ?>> Generate Featured Image</label>
                 </div>
-
-            <?php submit_button($campaign_id ? 'Update Campaign' : 'Publish Campaign'); ?>
+                <div class="atm-settings-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-top: 1.5rem; align-items: end;">
+                    <div class="form-group">
+                        <label for="atm-category">Default Category</label>
+                        <?php wp_dropdown_categories(['name' => 'category_id', 'id' => 'atm-category', 'selected' => $data->category_id, 'show_option_none' => 'Select Category', 'option_none_value' => '0', 'hide_empty' => 0, 'class' => '']); ?>
+                    </div>
+                    <div class="form-group">
+                        <label for="atm-author">Author</label>
+                        <?php wp_dropdown_users(['name' => 'author_id', 'id' => 'atm-author', 'selected' => $data->author_id, 'who' => 'authors']); ?>
+                    </div>
+                    <div class="form-group">
+                        <label for="atm-post-status">Post Status</label>
+                        <select id="atm-post-status" name="post_status">
+                            <option value="draft" <?php selected($data->post_status, 'draft'); ?>>Draft</option>
+                            <option value="pending" <?php selected($data->post_status, 'pending'); ?>>Pending Review</option>
+                            <option value="publish" <?php selected($data->post_status, 'publish'); ?>>Publish</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="atm-settings-card">
+                <h2>Schedule</h2>
+                <div style="display: flex; gap: 1rem; align-items: end;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="atm-frequency-value">Run Every</label>
+                        <input type="number" id="atm-frequency-value" name="frequency_value" value="<?php echo esc_attr($data->frequency_value); ?>" min="1" style="width: 100px;">
+                    </div>
+                    <div class="form-group" style="flex: 2;">
+                        <select id="atm-frequency-unit" name="frequency_unit">
+                            <option value="minute" <?php selected($data->frequency_unit, 'minute'); ?>>Minute(s)</option>
+                            <option value="hour" <?php selected($data->frequency_unit, 'hour'); ?>>Hour(s)</option>
+                            <option value="day" <?php selected($data->frequency_unit, 'day'); ?>>Day(s)</option>
+                            <option value="week" <?php selected($data->frequency_unit, 'week'); ?>>Week(s)</option>
+                            <option value="month" <?php selected($data->frequency_unit, 'month'); ?>>Month(s)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <?php submit_button($is_editing ? 'Update Campaign' : 'Publish Campaign', 'primary', 'submit', false, ['id' => 'atm-save-campaign-btn']); ?>
+            
+            <?php if ($is_editing): ?>
+                <button type="button" class="button button-secondary" id="atm-run-now-btn" data-id="<?php echo $campaign_id; ?>">Generate Article</button>
+                <span id="atm-run-now-status" style="margin-left: 10px; font-style: italic;"></span>
+            <?php endif; ?>
         </form>
         <?php
     }
