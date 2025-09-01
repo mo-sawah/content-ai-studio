@@ -1,60 +1,74 @@
-// Create new file: includes/class-atm-campaign-manager.php
+<?php
+// in includes/class-atm-campaign-manager.php
+
+if (!defined('ABSPATH')) {
+    exit;
+}
 
 class ATM_Campaign_Manager {
 
     public function __construct() {
-        // Add custom cron schedules
-        add_filter('cron_schedules', array($this, 'add_custom_cron_schedules'));
+        // This is the single hook that will run periodically
+        add_action('atm_run_due_campaigns', array($this, 'execute_due_campaigns'));
     }
     
-    // Allows for schedules like "every 5 minutes" or "every 2 hours"
-    public function add_custom_cron_schedules($schedules) {
-        // You can add more intervals here as needed
-        $schedules['atm_1_minute'] = array('interval' => 60, 'display' => 'Every Minute');
-        $schedules['atm_5_minutes'] = array('interval' => 300, 'display' => 'Every 5 Minutes');
-        return $schedules;
-    }
-
-    public static function schedule_campaign($campaign_id, $interval_seconds) {
-        $hook_name = 'atm_run_campaign_' . $campaign_id;
-        if (!wp_next_scheduled($hook_name, array($campaign_id))) {
-            wp_schedule_event(time(), 'atm_custom_' . $interval_seconds, $hook_name, array($campaign_id));
+    // Schedule our main cron job if it's not already scheduled
+    public static function schedule_main_cron() {
+        if (!wp_next_scheduled('atm_run_due_campaigns')) {
+            // Runs every 5 minutes.
+            wp_schedule_event(time(), 'five_minutes', 'atm_run_due_campaigns');
         }
     }
 
-    public static function unschedule_campaign($campaign_id) {
-        wp_clear_scheduled_hook('atm_run_campaign_' . $campaign_id, array($campaign_id));
+    // This is the function that gets executed by the cron job
+    public function execute_due_campaigns() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'content_ai_campaigns';
+
+        // Find all active campaigns that are due to run
+        $campaigns_to_run = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM $table_name WHERE is_active = 1 AND next_run <= %s",
+                current_time('mysql', 1) // Use GMT time
+            )
+        );
+
+        foreach ($campaigns_to_run as $campaign) {
+            // Use a try-catch block so one failed campaign doesn't stop others
+            try {
+                self::execute_campaign($campaign->id);
+            } catch (Exception $e) {
+                error_log('Content AI Campaign Error (ID: ' . $campaign->id . '): ' . $e->getMessage());
+            }
+        }
     }
 
+    // The core logic for running a single campaign
     public static function execute_campaign($campaign_id) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'content_ai_campaigns';
         $campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
-
         if (!$campaign) return;
 
-        // 1. De-duplication: Get recent titles to avoid repeats
-        $recent_posts = get_posts(['post_type' => 'post', 'posts_per_page' => 100, 'orderby' => 'date', 'order' => 'DESC']);
-        $existing_titles = wp_list_pluck($recent_posts, 'post_title');
+        // De-duplication Logic: Check if a post with the exact keyword as a title already exists
+        if (post_exists($campaign->keyword)) {
+            error_log('ATM Campaign ' . $campaign_id . ': Aborted. An article with the title "' . $campaign->keyword . '" already exists.');
+            // Update next_run time even if we abort, to prevent it from running constantly
+            self::update_next_run_time($campaign_id, $campaign->frequency_value, $campaign->frequency_unit);
+            return;
+        }
         
-        // 2. Construct the prompt
-        $system_prompt = "You are an expert content creator specializing in '{$campaign->article_type}' articles for a target audience in '{$campaign->country}'. Your task is to generate a complete, high-quality article about '{$campaign->keyword}'.
-        
-        CRITICAL: The title you generate must be unique and not similar to any of the following existing titles: " . implode(', ', $existing_titles) . "
-        
-        " . ($campaign->custom_prompt ?: ATM_API::get_default_article_prompt());
+        $system_prompt = "You are an expert content creator specializing in '{$campaign->article_type}' articles for a target audience in '{$campaign->country}'. Your task is to generate a complete, high-quality article about '{$campaign->keyword}'. " . ($campaign->custom_prompt ?: ATM_API::get_default_article_prompt());
 
-        // 3. Generate content using existing API method
         $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $campaign->keyword], $system_prompt, '', true);
         $article_data = json_decode($generated_json, true);
 
         if (!$article_data || empty($article_data['title']) || post_exists($article_data['title'])) {
-             // Abort if title is empty or already exists
-            error_log('ATM Campaign ' . $campaign_id . ': Aborted due to duplicate or empty title.');
+            error_log('ATM Campaign ' . $campaign_id . ': Aborted due to duplicate or empty title from AI.');
+            self::update_next_run_time($campaign_id, $campaign->frequency_value, $campaign->frequency_unit);
             return;
         }
 
-        // 4. Create the new post
         $post_data = [
             'post_title'    => wp_strip_all_tags($article_data['title']),
             'post_content'  => $article_data['content'],
@@ -64,24 +78,35 @@ class ATM_Campaign_Manager {
         ];
         $post_id = wp_insert_post($post_data);
         
-        if ($post_id && !empty($article_data['subheadline'])) {
-            ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $article_data['subheadline'], '');
-        }
-
-        // 5. Generate featured image if enabled
-        if ($post_id && $campaign->generate_image) {
-            // This reuses the logic from your AJAX handler
-            $ajax_handler = new ATM_Ajax();
-            $image_prompt = ATM_API::get_default_image_prompt();
-            $processed_prompt = ATM_API::replace_prompt_shortcodes($image_prompt, get_post($post_id));
-            $image_url = ATM_API::generate_image_with_openai($processed_prompt);
-            $attachment_id = $ajax_handler->set_image_from_url($image_url, $post_id);
-            if (!is_wp_error($attachment_id)) {
-                set_post_thumbnail($post_id, $attachment_id);
+        if ($post_id && !is_wp_error($post_id)) {
+            if (!empty($article_data['subheadline'])) {
+                ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $article_data['subheadline'], '');
             }
+
+            if ($campaign->generate_image) {
+                $ajax_handler = new ATM_Ajax();
+                $image_prompt = ATM_API::get_default_image_prompt();
+                $processed_prompt = ATM_API::replace_prompt_shortcodes($image_prompt, get_post($post_id));
+                $image_url = ATM_API::generate_image_with_openai($processed_prompt);
+                $attachment_id = $ajax_handler->set_image_from_url($image_url, $post_id);
+                if (!is_wp_error($attachment_id)) {
+                    set_post_thumbnail($post_id, $attachment_id);
+                }
+            }
+            
+            // Update the last_run and calculate the next run time
+            $wpdb->update($table_name, ['last_run' => current_time('mysql', 1)], ['id' => $campaign_id]);
+            self::update_next_run_time($campaign_id, $campaign->frequency_value, $campaign->frequency_unit);
         }
-        
-        // 6. Update campaign run times
-        $wpdb->update($table_name, ['last_run' => current_time('mysql')], ['id' => $campaign_id]);
+    }
+
+    // Helper function to update the next run time
+    private static function update_next_run_time($campaign_id, $value, $unit) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'content_ai_campaigns';
+        $interval_string = "+$value $unit";
+        $next_run_timestamp = strtotime($interval_string, current_time('timestamp', 1));
+        $next_run_mysql = date('Y-m-d H:i:s', $next_run_timestamp);
+        $wpdb->update($table_name, ['next_run' => $next_run_mysql], ['id' => $campaign_id]);
     }
 }

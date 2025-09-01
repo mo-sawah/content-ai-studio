@@ -17,29 +17,35 @@ class ATM_Ajax {
         $campaign_id = isset($_POST['campaign_id']) ? intval($_POST['campaign_id']) : 0;
 
         $data = [
-            'keyword' => sanitize_text_field($_POST['keyword']),
-            'country' => sanitize_text_field($_POST['country']),
-            'article_type' => sanitize_text_field($_POST['article_type']),
-            'custom_prompt' => wp_kses_post(stripslashes($_POST['custom_prompt'])),
-            'generate_image' => isset($_POST['generate_image']) ? 1 : 0,
-            'category_id' => intval($_POST['category_id']),
-            'author_id' => intval($_POST['author_id']),
-            'post_status' => sanitize_text_field($_POST['post_status']),
-            'frequency_value' => intval($_POST['frequency_value']),
-            'frequency_unit' => sanitize_text_field($_POST['frequency_unit']),
+            'keyword'          => sanitize_text_field($_POST['keyword']),
+            'country'          => sanitize_text_field($_POST['country']),
+            'article_type'     => sanitize_text_field($_POST['article_type']),
+            'custom_prompt'    => wp_kses_post(stripslashes($_POST['custom_prompt'])),
+            'generate_image'   => isset($_POST['generate_image']) ? 1 : 0,
+            'category_id'      => intval($_POST['category_id']),
+            'author_id'        => intval($_POST['author_id']),
+            'post_status'      => sanitize_text_field($_POST['post_status']),
+            'frequency_value'  => intval($_POST['frequency_value']),
+            'frequency_unit'   => sanitize_text_field($_POST['frequency_unit']),
         ];
 
-        if ($campaign_id > 0) {
-            $wpdb->update($table_name, $data, ['id' => $campaign_id]);
-        } else {
+        $is_new = $campaign_id === 0;
+
+        if ($is_new) {
             $wpdb->insert($table_name, $data);
             $campaign_id = $wpdb->insert_id;
+        } else {
+            $wpdb->update($table_name, $data, ['id' => $campaign_id]);
         }
+        
+        // Set the next_run time
+        $interval_string = "+{$data['frequency_value']} {$data['frequency_unit']}";
+        // If it's a new campaign, schedule it to run in 5 mins. Otherwise, respect the new interval from now.
+        $start_time = current_time('timestamp', 1);
+        $next_run_timestamp = strtotime($interval_string, $start_time);
+        $next_run_mysql = date('Y-m-d H:i:s', $next_run_timestamp);
 
-        // Reschedule the cron job
-        ATM_Campaign_Manager::unschedule_campaign($campaign_id);
-        $interval_seconds = $data['frequency_value'] * constant(strtoupper($data['frequency_unit']) . '_IN_SECONDS');
-        ATM_Campaign_Manager::schedule_campaign($campaign_id, $interval_seconds);
+        $wpdb->update($table_name, ['next_run' => $next_run_mysql], ['id' => $campaign_id]);
 
         wp_send_json_success(['message' => 'Campaign saved successfully!', 'redirect_url' => admin_url('admin.php?page=content-ai-studio-automatic')]);
     }

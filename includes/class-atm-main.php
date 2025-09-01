@@ -170,6 +170,7 @@ class ATM_Main {
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-theme-subtitle-manager.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-frontend.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-licensing.php';
+        require_once ATM_PLUGIN_PATH . 'includes/class-atm-campaign-manager.php';
         // require_once ATM_PLUGIN_PATH . 'includes/class-atm-block-editor.php'; // ADD THIS LINE
     }
 
@@ -178,6 +179,7 @@ class ATM_Main {
         $settings = new ATM_Settings();
         $ajax = new ATM_Ajax();
         $frontend = new ATM_Frontend();
+        $campaign_manager = new ATM_Campaign_Manager();
         // $block_editor = new ATM_Block_Editor(); // ADD THIS LINE
 
         // Admin hooks
@@ -201,6 +203,9 @@ class ATM_Main {
         add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
         add_filter('the_content', array($frontend, 'embed_takeaways_in_content'));
         add_filter('the_content', array($frontend, 'embed_podcast_in_content'));
+
+        // Campaign manager hooks
+        ATM_Campaign_Manager::schedule_main_cron();
     }
     
     public function enqueue_admin_scripts($hook) {
