@@ -1150,8 +1150,9 @@ jQuery(document).ready(function ($) {
       data: data, // Send the data object
       success: function (response) {
         if (response.success) {
-          // Redirect to the campaign list on success
-          window.location.href = response.data.redirect_url;
+          // Instead of redirecting, just show a success message and reload.
+          alert("Campaign saved successfully!");
+          location.reload();
         } else {
           alert("Error: " + response.data);
           button.val(originalText).prop("disabled", false);

@@ -368,7 +368,45 @@ class ATM_API {
      * 
      */
 
-    
+    public static function extract_article_links_from_html($html_content, $base_url) {
+        $system_prompt = "You are a web scraping expert. Analyze the following HTML content from the base URL `{$base_url}`. Your task is to extract all the hyperlinks (`<a>` tags) that appear to lead to individual news articles.
+
+        CRITICAL RULES:
+        1.  Return ONLY a newline-separated list of the absolute URLs.
+        2.  If you find relative URLs (e.g., '/politics/story'), convert them to absolute URLs using the base URL.
+        3.  Ignore links to categories, author pages, advertisements, social media, or the homepage.";
+
+        $ai_response = self::enhance_content_with_openrouter(
+            ['content' => $html_content],
+            $system_prompt,
+            'anthropic/claude-3-haiku', // Fast model
+            false, false // No JSON mode, no web search needed
+        );
+
+        $urls = array_filter(explode("\n", trim($ai_response)));
+        return array_map('trim', $urls);
+    }
+
+    public static function find_news_sources_for_keywords($keywords_string) {
+        $system_prompt = "You are an expert news researcher. For the given comma-separated keywords, your task is to find the top 10 most authoritative and relevant online news sources.
+
+        CRITICAL INSTRUCTIONS:
+        1.  For each keyword, ALWAYS include the Google News search results page URL first.
+        2.  Find homepages or specific category/topic pages (e.g., `https://www.reuters.com/world/europe/` not a specific article).
+        3.  Return ONLY a newline-separated list of the URLs. Do not include any other text, titles, or explanations.";
+
+        $ai_response = self::enhance_content_with_openrouter(
+            ['content' => $keywords_string],
+            $system_prompt,
+            'anthropic/claude-3-haiku', // Use a fast model
+            false,
+            true // Enable web search
+        );
+
+        // Clean up the response to ensure it's just a list of URLs
+        $urls = array_filter(explode("\n", trim($ai_response)));
+        return array_map('trim', $urls);
+    }
     
     public static function generate_takeaways_from_content($content, $model_override = '') {
         // --- PROMPT IS UPDATED FOR CONCISENESS AND TO PREVENT INTRODUCTORY TEXT ---

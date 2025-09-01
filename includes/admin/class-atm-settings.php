@@ -115,11 +115,14 @@ class ATM_Settings {
 
         // Set default values for a new campaign
         $defaults = [
-            'keyword' => '', 'country' => '', 'article_type' => 'Informative',
-            'custom_prompt' => ATM_API::get_default_article_prompt(),
-            'generate_image' => 0, 'category_id' => get_option('default_category'),
-            'author_id' => get_current_user_id(), 'post_status' => 'draft',
-            'frequency_value' => 1, 'frequency_unit' => 'day'
+        'keyword' => '', 'country' => '', 'article_type' => 'Informative',
+        'custom_prompt' => ATM_API::get_default_article_prompt(),
+        'generate_image' => 0, 'category_id' => get_option('default_category'),
+        'author_id' => get_current_user_id(), 'post_status' => 'draft',
+        'frequency_value' => 1, 'frequency_unit' => 'day',
+        'source_keywords' => '',           // <-- Add this
+        'source_urls' => '',               // <-- Add this
+        'strict_keyword_matching' => 1     // <-- Add this
         ];
 
         // Merge campaign data with defaults
@@ -162,6 +165,33 @@ class ATM_Settings {
                     <p class="description">This prompt will be used to generate the article. The keyword, country, and article type will be automatically included.</p>
                 </div>
             </div>
+
+            <div class="atm-settings-card">
+            <h2>📰 Sources</h2>
+            <div class="form-group">
+                <label for="atm-source-keywords">Source Keywords</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="text" id="atm-source-keywords" name="source_keywords" value="<?php echo esc_attr($data->source_keywords ?? ''); ?>" class="regular-text" style="flex-grow: 1;" placeholder="us politics, tech reviews, etc.">
+                    
+                    <?php // This button will submit the form to save and trigger the source finding logic ?>
+                    <button type="submit" name="find_sources" value="1" class="button button-secondary">Find Sources</button>
+                </div>
+                <p class="description">Enter comma-separated keywords. The AI will find the top 10 most relevant news source pages for each. Google News is always included.</p>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label for="atm-source-urls">Source URLs (one per line)</label>
+                <textarea id="atm-source-urls" name="source_urls" rows="10"><?php echo esc_textarea($data->source_urls ?? ''); ?></textarea>
+                <p class="description">The AI will crawl these pages to find the latest articles. You can add, edit, or remove URLs.</p>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label>
+                    <input type="checkbox" name="strict_keyword_matching" value="1" <?php checked($data->strict_keyword_matching ?? 1, 1); ?>>
+                    <strong>Strict Keyword Matching:</strong> Only use articles from these sources if their title contains one of your main keywords.
+                </label>
+            </div>
+        </div>
 
             <div class="atm-settings-card">
                 <h2>Post Settings</h2>

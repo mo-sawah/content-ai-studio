@@ -37,6 +37,19 @@ class ATM_Ajax {
         } else {
             $wpdb->update($table_name, $data, ['id' => $campaign_id]);
         }
+
+        // --- NEW LOGIC for Find Sources button ---
+        if (isset($_POST['find_sources']) && $_POST['find_sources'] == '1') {
+            $keywords = sanitize_text_field($_POST['source_keywords']);
+            if (!empty($keywords)) {
+                $found_urls = ATM_API::find_news_sources_for_keywords($keywords);
+                // Append new sources to existing ones, avoiding duplicates
+                $existing_urls = isset($_POST['source_urls']) ? array_filter(explode("\n", $_POST['source_urls'])) : [];
+                $all_urls = array_unique(array_merge($existing_urls, $found_urls));
+                $data['source_urls'] = implode("\n", $all_urls);
+            }
+        }
+        // --- END NEW LOGIC ---
         
         // Set the next_run time
         $interval_string = "+{$data['frequency_value']} {$data['frequency_unit']}";

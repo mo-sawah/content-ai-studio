@@ -344,10 +344,12 @@ if ($post_id) {
 
     public static function create_campaigns_table() {
         global $wpdb;
-        $table_name = $wpdb->prefix . 'content_ai_campaigns';
         $charset_collate = $wpdb->get_charset_collate();
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
-        $sql = "CREATE TABLE $table_name (
+        // 1. Update the Campaigns Table
+        $table_name_campaigns = $wpdb->prefix . 'content_ai_campaigns';
+        $sql_campaigns = "CREATE TABLE $table_name_campaigns (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
             keyword varchar(255) NOT NULL,
             country varchar(100) DEFAULT '' NOT NULL,
@@ -359,15 +361,28 @@ if ($post_id) {
             post_status varchar(20) DEFAULT 'draft' NOT NULL,
             frequency_value int(11) NOT NULL,
             frequency_unit varchar(10) NOT NULL,
+            source_keywords text,
+            source_urls longtext,
+            strict_keyword_matching tinyint(1) DEFAULT 1 NOT NULL,
             is_active tinyint(1) DEFAULT 1 NOT NULL,
             last_run datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
             next_run datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
             PRIMARY KEY  (id)
         ) $charset_collate;";
+        dbDelta($sql_campaigns);
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        // 2. Create the New Table for Used Links
+        $table_name_used_links = $wpdb->prefix . 'content_ai_used_links';
+        $sql_used_links = "CREATE TABLE $table_name_used_links (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            campaign_id mediumint(9) NOT NULL,
+            url_hash char(32) NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY campaign_url (campaign_id, url_hash)
+        ) $charset_collate;";
+        dbDelta($sql_used_links);
     }
 
     public static function activate() {
