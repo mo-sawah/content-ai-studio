@@ -79,51 +79,97 @@ class ATM_Campaign_Manager {
      */
 
     private static function _execute_news_campaign($campaign) {
-        // Use the news API instead of Google News RSS to get better content
-        $news_context = ATM_API::fetch_news($campaign->keyword, 'newsapi', true); // Force fresh results
+        $current_date = date('F j, Y');
+        $current_time = date('g:i A T');
         
-        if (empty($news_context)) {
-            error_log('ATM News Campaign '.$campaign->id.': No recent news found for "'.$campaign->keyword.'" from NewsAPI.');
+        // Direct Google search approach - no need to use fetch_news method
+        $search_prompt = "You are a news research assistant with access to current web search. Your task is to search for the most recent and newsworthy stories related to '{$campaign->keyword}' that happened in the last 24-48 hours.
+
+        SEARCH INSTRUCTIONS:
+        1. Search Google for breaking news, recent developments, or current events about '{$campaign->keyword}'
+        2. Look specifically for stories from the past 24-48 hours
+        3. Focus on significant events, incidents, policy changes, or developments  
+        4. Prioritize stories from reputable news sources (Reuters, AP, BBC, CNN, NBC, Fox News, NPR, etc.)
+        5. Today is {$current_date} at {$current_time} - find the most current stories
+
+        Search queries to try:
+        - '{$campaign->keyword} news today'
+        - '{$campaign->keyword} breaking news'
+        - 'latest {$campaign->keyword} news'
+
+        After your web search research, identify the MOST NEWSWORTHY and RECENT story and provide:
+        1. A clear headline of what happened
+        2. When it happened (specific date/time if available)
+        3. Where it happened (location)
+        4. Key people, organizations, or entities involved
+        5. Why it's significant or newsworthy
+        6. 2-3 URLs from credible news sources reporting this story
+
+        If you cannot find any specific recent news events about '{$campaign->keyword}', respond with 'NO_RECENT_NEWS_FOUND'.";
+
+        // First, use AI with web search to find recent news
+        $news_research = ATM_API::enhance_content_with_openrouter(
+            ['content' => "Research recent news about: {$campaign->keyword}"], 
+            $search_prompt, 
+            '', // Use default model
+            false // Not JSON mode
+        );
+
+        if (strpos($news_research, 'NO_RECENT_NEWS_FOUND') !== false) {
+            error_log('ATM News Campaign '.$campaign->id.': No recent news found for "'.$campaign->keyword.'" via web search.');
             return;
         }
 
-        $current_date = date('F j, Y');
-        
-        $writer_prompt = "You are a breaking news journalist writing for an audience in {$campaign->country}. Today is {$current_date}. 
+        // Now use the research to write the article
+        $writer_prompt = "You are a professional breaking news journalist writing for an audience in {$campaign->country}. Today is {$current_date} at {$current_time}.
 
-        CRITICAL INSTRUCTIONS:
-        1. Analyze the provided news snippets and identify the MOST RECENT and SIGNIFICANT news story related to '{$campaign->keyword}'
-        2. Focus on ONE specific, current event - not a general overview of the topic
-        3. Use your web search ability to find the latest developments and verify all facts
-        4. Write about what's happening RIGHT NOW, not general information about the topic
+        Based on the news research provided, write a comprehensive breaking news article about the specific recent event that was found.
 
-        ARTICLE REQUIREMENTS:
-        - Focus on a specific breaking news event, incident, or development
-        - Lead with the most newsworthy aspect (what happened, when, where, who)
-        - Include timeline of events and latest updates
-        - Add context about why this story matters
-        - Reference other recent related events if relevant
+        CRITICAL REQUIREMENTS:
+        1. Focus on the SPECIFIC recent event from the research - not a general topic overview
+        2. Write in breaking news style with a strong lead paragraph answering: Who, What, When, Where, Why
+        3. Use your web search to verify facts and get additional current details about this specific story
+        4. Include direct quotes from officials, witnesses, or official statements when available
+        5. Provide background context but keep focus on the breaking news story
+        6. Add timeline of events and latest updates available
+
+        ARTICLE STRUCTURE:
+        - Lead: What happened, when, where, who involved (first paragraph)
+        - Details: How it happened, specific circumstances
+        - Context: Background information and why this matters
+        - Updates: Latest developments and current status
+        - Impact: Implications and what happens next
 
         RESPONSE FORMAT (MANDATORY):
         Return a single, valid JSON object with keys: 'title', 'subheadline', 'content'.
-        - 'title': a specific, newsworthy headline about the current event (not generic)
+        - 'title': specific, newsworthy headline about the current event (include key details)
         - 'subheadline': one sentence with crucial breaking news context
-        - 'content': clean HTML content (800-1000 words) that starts with a breaking news lead paragraph. Use journalistic structure: who, what, when, where, why. Include 3-4 subheadings (<h2>/<h3>) and 2-3 external links to current news sources. No 'Conclusion' heading.
-        
-        CONSTRAINTS:
-        - Write at least 800 words about the SPECIFIC current event
-        - Start with breaking news format: 'Location - Date: [Breaking news lead]'
-        - Focus on recent developments and current implications
-        - Include quotes from officials, witnesses, or experts when available
-        - Add background context but keep focus on current story";
+        - 'content': clean HTML content (800-1200 words) starting with breaking news lead. Include 3-4 subheadings (<h2>/<h3>) and multiple external links to current news sources using <a href=\"URL\">descriptive text</a>. No 'Conclusion' heading.
 
-        $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $news_context . "\n\nTODAY'S DATE: " . $current_date], $writer_prompt, '', true);
+        QUALITY STANDARDS:
+        - Minimum 800 words of substantial reporting
+        - Include at least 3-4 external links to current news sources
+        - Use journalistic attribution (\"according to X\", \"officials said\", etc.)
+        - Include specific times, dates, locations, and names
+        - Reference the most current information available
+        - End with latest updates or expected developments";
+
+        $generated_json = ATM_API::enhance_content_with_openrouter(
+            ['content' => $news_research], 
+            $writer_prompt, 
+            '', // Use default model  
+            true // JSON mode
+        );
+
         $data = json_decode($generated_json, true);
         
         if (!self::_validate_news_article_json($data)) {
-            error_log('ATM News Campaign '.$campaign->id.': Writer returned invalid JSON: ' . $generated_json);
+            error_log('ATM News Campaign '.$campaign->id.': Writer returned invalid JSON. Raw response: ' . substr($generated_json, 0, 500));
             return;
         }
+        
+        // Log successful article creation for debugging
+        error_log('ATM News Campaign '.$campaign->id.': Successfully generated article: "' . $data['title'] . '"');
         
         self::_create_post_from_ai_data($campaign, $data);
     }

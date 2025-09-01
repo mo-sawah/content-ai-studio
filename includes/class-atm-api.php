@@ -368,6 +368,8 @@ class ATM_API {
      * 
      */
 
+    
+    
     public static function generate_takeaways_from_content($content, $model_override = '') {
         // --- PROMPT IS UPDATED FOR CONCISENESS AND TO PREVENT INTRODUCTORY TEXT ---
         $system_prompt = "You are an expert editor. Your task is to analyze the following article and extract the 5 most important key takeaways.
