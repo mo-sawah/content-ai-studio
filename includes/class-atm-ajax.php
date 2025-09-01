@@ -335,7 +335,11 @@ public function translate_text() {
         add_action('wp_ajax_save_atm_chart', array($this, 'save_atm_chart'));
         add_action('wp_ajax_generate_key_takeaways', array($this, 'generate_key_takeaways'));
         add_action('wp_ajax_save_key_takeaways', array($this, 'save_key_takeaways'));
-        add_action('wp_ajax_save_campaign', array($this, 'save_campaign'));
+
+        // Campaign Management Actions
+        add_action('wp_ajax_atm_save_campaign', array($this, 'save_campaign'));
+        add_action('wp_ajax_atm_delete_campaign', array($this, 'delete_campaign'));
+        add_action('wp_ajax_atm_run_campaign_now', array($this, 'run_campaign_now'));
 
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));
