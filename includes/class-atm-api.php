@@ -1418,19 +1418,21 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
     }
 
     public static function get_default_article_prompt() {
-        return 'You are an expert SEO content writer. Your task is to generate a complete article based on the provided topic.
+        return 'You are an expert content creator specializing in [article_type] articles for a target audience in [country]. Your task is to generate a complete, high-quality article about the topic "[keyword]".
 
-The output MUST be a single, valid JSON object. This JSON object must have two keys:
-1. "title": A string containing a compelling, SEO-friendly title for the article.
-2. "content": A string containing the full article content, formatted using Markdown.
+    The output MUST be a single, valid JSON object. This JSON object must have three keys:
+    1. "title": A compelling, SEO-friendly title for the article.
+    2. "subheadline": An engaging one-sentence subtitle that complements the main title.
+    3. "content": A string containing the full article content, formatted using clean HTML.
 
-The article content must be well-structured, using Markdown for:
-- Headings (##) and subheadings (###).
-- Bulleted or numbered lists where appropriate.
-- Bold text (**) for emphasis on key terms.
-- Hyperlinks in the format `[link text](URL)`. You should include at least one relevant external link.
+    CRITICAL CONTENT RULES:
+    - The `content` must begin directly with the first paragraph (the introduction), NOT with a heading.
+    - Do NOT include a final heading like <h2>Conclusion</h2>. The article should end with the concluding paragraph itself.
+    - Structure the article with appropriate <h2> and <h3> headings. Do not use <h1>.
+    - Include at least one relevant external link using <a href="...">...</a>.
+    - Your entire response must be ONLY the valid JSON object itself.
 
-Do not include any text, explanations, or markdown code fences outside of the JSON object. Your entire response must be only the JSON object itself.';
+    Do not include any text, explanations, or markdown code fences outside of the JSON object. Your entire response must be only the JSON object itself, starting with { and ending with }. The `content` must NOT contain any top-level <h1> headings.';
     }
 
     public static function get_writing_styles() {

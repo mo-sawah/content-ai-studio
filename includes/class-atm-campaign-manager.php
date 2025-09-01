@@ -58,7 +58,18 @@ class ATM_Campaign_Manager {
             return;
         }
         
-        $system_prompt = "You are an expert content creator specializing in '{$campaign->article_type}' articles for a target audience in '{$campaign->country}'. Your task is to generate a complete, high-quality article about '{$campaign->keyword}'. " . ($campaign->custom_prompt ?: ATM_API::get_default_article_prompt());
+        // Get the base prompt (either custom or default)
+$base_prompt = $campaign->custom_prompt ?: ATM_API::get_default_article_prompt();
+
+// Define the placeholders and their values
+$replacements = [
+    '[article_type]' => $campaign->article_type,
+    '[country]'      => $campaign->country,
+    '[keyword]'      => $campaign->keyword,
+];
+
+// Replace the placeholders in the prompt
+$system_prompt = str_replace(array_keys($replacements), array_values($replacements), $base_prompt);
 
         $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $campaign->keyword], $system_prompt, '', true);
         $article_data = json_decode($generated_json, true);
