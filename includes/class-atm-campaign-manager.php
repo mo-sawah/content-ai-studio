@@ -79,58 +79,60 @@ class ATM_Campaign_Manager {
      */
 
     private static function _execute_news_campaign($campaign) {
-        $articles = self::_fetch_recent_google_news($campaign->keyword, $campaign->country, 12, 36);
-        if (empty($articles)) {
-            error_log('ATM News Campaign '.$campaign->id.': No recent reputable articles found for "'.$campaign->keyword.'".');
+        // Use the news API instead of Google News RSS to get better content
+        $news_context = ATM_API::fetch_news($campaign->keyword, 'newsapi', false);
+        
+        if (empty($news_context)) {
+            error_log('ATM News Campaign '.$campaign->id.': No recent news found for "'.$campaign->keyword.'" from NewsAPI.');
             return;
         }
-        
-        $best_article = self::_pick_best_article($articles, $campaign->keyword);
-        $sources_payload = [['url' => $best_article['url'], 'outlet' => $best_article['source'], 'headline' => $best_article['title'], 'published_at' => gmdate('c', $best_article['timestamp'])]];
-        $writer_prompt = "You are a professional journalist writing for an audience in {$campaign->country}. Write a complete, factual, and objective news article using ONLY the sources provided in the JSON below. Do not use memory or outside knowledge. If the sources are insufficient, say so.
+
+        $writer_prompt = "You are a professional journalist writing for an audience in {$campaign->country}. Write a comprehensive, factual, and objective news article about '{$campaign->keyword}' using the latest news information provided. Use your web search ability to verify facts and add additional context.
 
         RESPONSE FORMAT (MANDATORY):
-        Return a single, valid JSON object with keys: 'title', 'subheadline', 'content', 'sources'.
-        - 'title': a clear, SEO-safe headline derived from the provided source.
-        - 'subheadline': one sentence adding crucial context (no clickbait).
-        - 'content': clean HTML that starts with an opening paragraph (no H1). Use short paragraphs, include 1-2 brief quotes with attribution, add 2-3 subheadings (<h2>/<h3>), and link the first mention of each outlet to its URL. No 'Conclusion' heading.
-        - 'sources': the array you used (as provided), unchanged except for corrected outlet names if needed.
+        Return a single, valid JSON object with keys: 'title', 'subheadline', 'content'.
+        - 'title': a clear, SEO-safe headline that captures the main story
+        - 'subheadline': one sentence adding crucial context (no clickbait)
+        - 'content': clean HTML content (800-1000 words) that starts with an opening paragraph (no H1). Use short paragraphs, include relevant quotes and facts, add 3-4 subheadings (<h2>/<h3>), and include at least 2-3 external links to reputable news sources using proper <a href=\"URL\">text</a> format. No 'Conclusion' heading.
         
         CONSTRAINTS:
-        - Keep the article fully grounded in the provided sources; do not invent details.
-        - Include publish time and outlet in the first paragraph (e.g., 'Reuters - Sept. 1, 2025').
-        - If you cannot confidently write the article from the provided source, respond with:
-          {\"title\":\"\",\"subheadline\":\"\",\"content\":\"\",\"sources\":[]}";
-        $content_payload = json_encode(['sources' => $sources_payload, 'focus'   => $campaign->keyword, 'country' => $campaign->country], JSON_UNESCAPED_SLASHES);
-        $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $content_payload], $writer_prompt, '', true, false);
+        - Write at least 800 words
+        - Include publish time and source attribution in the first paragraph
+        - Add external links to reputable sources (BBC, Reuters, CNN, etc.) when referencing facts
+        - Use proper journalistic structure: lead paragraph, supporting details, quotes, background context
+        - Make the article comprehensive and informative, not just a brief summary";
+
+        $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $news_context], $writer_prompt, '', true);
         $data = json_decode($generated_json, true);
-        if (!self::_validate_article_json($data, $sources_payload)) {
-            error_log('ATM News Campaign '.$campaign->id.': Writer returned invalid or ungrounded JSON.');
+        
+        if (!self::_validate_news_article_json($data)) {
+            error_log('ATM News Campaign '.$campaign->id.': Writer returned invalid JSON: ' . $generated_json);
             return;
         }
+        
         self::_create_post_from_ai_data($campaign, $data);
     }
     
     private static function _execute_review_campaign($campaign) {
-        $system_prompt = "You are an expert product reviewer. Your task is to write a comprehensive, unbiased review of '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find features, specifications, pricing, user opinions, pros, and cons. Structure the article with clear headings for each section (e.g., Key Features, Performance, Pros, Cons, Final Verdict). The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading.";
+        $system_prompt = "You are an expert product reviewer. Your task is to write a comprehensive, unbiased review of '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find features, specifications, pricing, user opinions, pros, and cons. Structure the article with clear headings for each section (e.g., Key Features, Performance, Pros, Cons, Final Verdict). The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading. Write at least 800 words.";
         $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $campaign->keyword], $system_prompt, '', true);
         self::_create_post_from_ai_data($campaign, $generated_json);
     }
 
     private static function _execute_how_to_campaign($campaign) {
-        $system_prompt = "You are a technical writer creating a clear, step-by-step guide on '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find the most accurate and easy-to-follow steps. Structure the article with an introduction, a 'What You'll Need' section (if applicable), and then the steps using an ordered list (<ol>). The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading.";
+        $system_prompt = "You are a technical writer creating a clear, step-by-step guide on '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find the most accurate and easy-to-follow steps. Structure the article with an introduction, a 'What You'll Need' section (if applicable), and then the steps using an ordered list (<ol>). The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading. Write at least 800 words.";
         $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $campaign->keyword], $system_prompt, '', true);
         self::_create_post_from_ai_data($campaign, $generated_json);
     }
 
     private static function _execute_listicle_campaign($campaign) {
-        $system_prompt = "You are a popular blogger creating a listicle article about '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find interesting and relevant items for the list. The title should be in a listicle format (e.g., 'Top 7...' or '5 Ways to...'). Structure the article with an engaging introduction, followed by numbered headings (e.g., <h2>1. First Item</h2>) for each point in the list. The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading.";
+        $system_prompt = "You are a popular blogger creating a listicle article about '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find interesting and relevant items for the list. The title should be in a listicle format (e.g., 'Top 7...' or '5 Ways to...'). Structure the article with an engaging introduction, followed by numbered headings (e.g., <h2>1. First Item</h2>) for each point in the list. The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading. Write at least 800 words.";
         $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $campaign->keyword], $system_prompt, '', true);
         self::_create_post_from_ai_data($campaign, $generated_json);
     }
     
     private static function _execute_opinion_campaign($campaign) {
-        $system_prompt = "You are an opinionated columnist with deep expertise on topics for an audience in {$campaign->country}. Your task is to write a persuasive opinion piece on '{$campaign->keyword}'. Use web search to understand the topic and form a strong, well-supported argument. Structure the article with a clear thesis, several supporting paragraphs with evidence or examples, acknowledge a counter-argument, and end with a strong concluding statement. The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading.";
+        $system_prompt = "You are an opinionated columnist with deep expertise on topics for an audience in {$campaign->country}. Your task is to write a persuasive opinion piece on '{$campaign->keyword}'. Use web search to understand the topic and form a strong, well-supported argument. Structure the article with a clear thesis, several supporting paragraphs with evidence or examples, acknowledge a counter-argument, and end with a strong concluding statement. The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading. Write at least 800 words.";
         $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $campaign->keyword], $system_prompt, '', true);
         self::_create_post_from_ai_data($campaign, $generated_json);
     }
@@ -157,8 +159,8 @@ class ATM_Campaign_Manager {
             return;
         }
 
-        $Parsedown = new Parsedown();
-        $html_content = $Parsedown->text($article_data['content']);
+        // Don't use Parsedown since content is already HTML
+        $html_content = $article_data['content'];
 
         $post_data = [
             'post_title'    => wp_strip_all_tags($article_data['title']),
@@ -183,122 +185,18 @@ class ATM_Campaign_Manager {
                     set_post_thumbnail($post_id, $attachment_id);
                 }
             }
+            
+            error_log('ATM Campaign ' . $campaign->id . ': Successfully created post ID ' . $post_id . ' with title: ' . $article_data['title']);
         }
     }
 
     private static function _fetch_recent_google_news($query, $country, $limit = 10, $max_age_hours = 36) {
-        $codes = self::_google_codes($country);
-        $rss_url = "https://news.google.com/rss/search?q=" . rawurlencode($query) . "&hl={$codes['hl']}&gl={$codes['gl']}&ceid={$codes['ceid']}";
-        
-        $response = wp_remote_get($rss_url, [
-            'timeout' => 20,
-            'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'headers' => [
-                'Accept' => 'application/rss+xml, application/xml, text/xml',
-                'Accept-Language' => 'en-US,en;q=0.9',
-                'Cache-Control' => 'no-cache'
-            ]
-        ]);
-        
-        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
-            error_log('ATM: Failed to fetch Google News RSS');
-            return [];
-        }
-        
-        $xml_content = wp_remote_retrieve_body($response);
-        if (empty($xml_content)) {
-            return [];
-        }
-        
-        libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($xml_content);
-        if ($xml === false || !isset($xml->channel->item)) {
-            return [];
-        }
-        
-        $items = $xml->channel->item;
-        $now = time();
-        $out = [];
-        
-        foreach ($items as $item) {
-            $ts = (int) strtotime($item->pubDate);
-            if ($ts <= 0 || ($now - $ts) > ($max_age_hours * 3600)) continue;
-            
-            // Extract the actual news URL from the title and description
-            $title = trim((string)$item->title);
-            $description = (string)$item->description;
-            
-            // Try to extract the source from the title (format: "Title - Source")
-            $source = '';
-            $clean_title = $title;
-            if (preg_match('/^(.*?)\s*-\s*([^-]+)$/', $title, $matches)) {
-                $clean_title = trim($matches[1]);
-                $potential_source = trim($matches[2]);
-                
-                // Check if this looks like a news source
-                foreach (self::$NEWS_WHITELIST as $trusted_source) {
-                    if (stripos($potential_source, $trusted_source) !== false || 
-                        stripos($trusted_source, strtolower($potential_source)) !== false) {
-                        $source = $potential_source;
-                        break;
-                    }
-                }
-                
-                // Additional common news sources not in whitelist
-                $common_sources = ['CNN', 'ESPN', 'ABC7', 'WCVB', 'Syracuse.com', 'New York Post'];
-                foreach ($common_sources as $common) {
-                    if (stripos($potential_source, $common) !== false) {
-                        $source = $potential_source;
-                        break;
-                    }
-                }
-            }
-            
-            // If we couldn't extract a source, skip this item
-            if (empty($source)) continue;
-            
-            // Create a dummy URL based on the source for validation
-            $domain = strtolower(str_replace([' ', '.'], ['', '.'], $source));
-            if (!str_contains($domain, '.')) {
-                $domain .= '.com';
-            }
-            
-            // Validate against our whitelist
-            $is_reputable = false;
-            foreach (self::$NEWS_WHITELIST as $trusted) {
-                if (str_contains($domain, $trusted) || str_contains($trusted, $domain)) {
-                    $is_reputable = true;
-                    break;
-                }
-            }
-            
-            if (!$is_reputable) continue;
-            
-            $out[] = [
-                'title' => $clean_title,
-                'url' => 'https://' . $domain, // Placeholder URL
-                'source' => $source,
-                'timestamp' => $ts
-            ];
-        }
-        
-        usort($out, function($a, $b){ return $b['timestamp'] <=> $a['timestamp']; });
-        
-        $seen = []; 
-        $dedup = [];
-        foreach ($out as $row) {
-            $key = strtolower($row['source'] . '|' . mb_strtolower($row['title']));
-            if (isset($seen[$key])) continue;
-            $seen[$key] = true;
-            $dedup[] = $row;
-            if (count($dedup) >= $limit) break;
-        }
-        
-        return $dedup;
+        // This function is now deprecated in favor of using NewsAPI directly
+        // Keeping it for backward compatibility but not using it for news campaigns
+        return [];
     }
 
     private static function _resolve_gnews_url($link) {
-        // This function is no longer needed since we're extracting info from RSS directly
         return null;
     }
 
@@ -315,24 +213,7 @@ class ATM_Campaign_Manager {
     }
 
     private static function _pick_best_article(array $articles, string $keyword) {
-        $now = time();
-        $best = null; 
-        $bestScore = -INF;
-        $kw = mb_strtolower($keyword);
-        
-        foreach ($articles as $a) {
-            $age_hours = max(1, ($now - $a['timestamp']) / 3600);
-            $recency = 100 / $age_hours;
-            $overlap = similar_text(mb_strtolower($a['title']), $kw, $pct) ? $pct : 0;
-            $score = $recency + ($overlap * 0.6);
-            
-            if ($score > $bestScore) { 
-                $bestScore = $score; 
-                $best = $a; 
-            }
-        }
-        
-        return $best ?? $articles[0];
+        return $articles[0] ?? null;
     }
 
     private static function _google_codes($country) {
@@ -348,15 +229,12 @@ class ATM_Campaign_Manager {
         return $map[$country] ?? ['hl'=>'en-US','gl'=>'US','ceid'=>'US:en'];
     }
 
-    private static function _validate_article_json($data, $sources_expected) {
+    private static function _validate_news_article_json($data) {
         if (!is_array($data)) return false;
-        foreach (['title','subheadline','content','sources'] as $k) {
+        foreach (['title','subheadline','content'] as $k) {
             if (!array_key_exists($k, $data)) return false;
         }
-        if (!is_array($data['sources']) || count($data['sources']) < 1) return false;
-        
-        // Since we're not using real URLs anymore, just validate that sources exist
-        return !empty($data['title']) && !empty($data['content']);
+        return !empty($data['title']) && !empty($data['content']) && strlen(strip_tags($data['content'])) > 500;
     }
     
     private static function update_next_run_time($campaign_id, $value, $unit) {
