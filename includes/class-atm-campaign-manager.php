@@ -80,29 +80,44 @@ class ATM_Campaign_Manager {
 
     private static function _execute_news_campaign($campaign) {
         // Use the news API instead of Google News RSS to get better content
-        $news_context = ATM_API::fetch_news($campaign->keyword, 'newsapi', false);
+        $news_context = ATM_API::fetch_news($campaign->keyword, 'newsapi', true); // Force fresh results
         
         if (empty($news_context)) {
             error_log('ATM News Campaign '.$campaign->id.': No recent news found for "'.$campaign->keyword.'" from NewsAPI.');
             return;
         }
 
-        $writer_prompt = "You are a professional journalist writing for an audience in {$campaign->country}. Write a comprehensive, factual, and objective news article about '{$campaign->keyword}' using the latest news information provided. Use your web search ability to verify facts and add additional context.
+        $current_date = date('F j, Y');
+        
+        $writer_prompt = "You are a breaking news journalist writing for an audience in {$campaign->country}. Today is {$current_date}. 
+
+        CRITICAL INSTRUCTIONS:
+        1. Analyze the provided news snippets and identify the MOST RECENT and SIGNIFICANT news story related to '{$campaign->keyword}'
+        2. Focus on ONE specific, current event - not a general overview of the topic
+        3. Use your web search ability to find the latest developments and verify all facts
+        4. Write about what's happening RIGHT NOW, not general information about the topic
+
+        ARTICLE REQUIREMENTS:
+        - Focus on a specific breaking news event, incident, or development
+        - Lead with the most newsworthy aspect (what happened, when, where, who)
+        - Include timeline of events and latest updates
+        - Add context about why this story matters
+        - Reference other recent related events if relevant
 
         RESPONSE FORMAT (MANDATORY):
         Return a single, valid JSON object with keys: 'title', 'subheadline', 'content'.
-        - 'title': a clear, SEO-safe headline that captures the main story
-        - 'subheadline': one sentence adding crucial context (no clickbait)
-        - 'content': clean HTML content (800-1000 words) that starts with an opening paragraph (no H1). Use short paragraphs, include relevant quotes and facts, add 3-4 subheadings (<h2>/<h3>), and include at least 2-3 external links to reputable news sources using proper <a href=\"URL\">text</a> format. No 'Conclusion' heading.
+        - 'title': a specific, newsworthy headline about the current event (not generic)
+        - 'subheadline': one sentence with crucial breaking news context
+        - 'content': clean HTML content (800-1000 words) that starts with a breaking news lead paragraph. Use journalistic structure: who, what, when, where, why. Include 3-4 subheadings (<h2>/<h3>) and 2-3 external links to current news sources. No 'Conclusion' heading.
         
         CONSTRAINTS:
-        - Write at least 800 words
-        - Include publish time and source attribution in the first paragraph
-        - Add external links to reputable sources (BBC, Reuters, CNN, etc.) when referencing facts
-        - Use proper journalistic structure: lead paragraph, supporting details, quotes, background context
-        - Make the article comprehensive and informative, not just a brief summary";
+        - Write at least 800 words about the SPECIFIC current event
+        - Start with breaking news format: 'Location - Date: [Breaking news lead]'
+        - Focus on recent developments and current implications
+        - Include quotes from officials, witnesses, or experts when available
+        - Add background context but keep focus on current story";
 
-        $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $news_context], $writer_prompt, '', true);
+        $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $news_context . "\n\nTODAY'S DATE: " . $current_date], $writer_prompt, '', true);
         $data = json_decode($generated_json, true);
         
         if (!self::_validate_news_article_json($data)) {
