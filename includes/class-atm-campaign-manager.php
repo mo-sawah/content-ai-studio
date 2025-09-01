@@ -205,27 +205,63 @@ class ATM_Campaign_Manager {
         }
     }
 
+    // In includes/class-atm-campaign-manager.php
+
+    /** Fetch Google News RSS results, filter by age and whitelist, return array of [title,url,source,timestamp] */
     private static function _fetch_recent_google_news($query, $country, $limit = 10, $max_age_hours = 36) {
-        include_once ABSPATH . WPINC . '/feed.php';
+        // This function no longer uses the WP feed cache (fetch_feed)
         $codes = self::_google_codes($country);
         $rss_url = "https://news.google.com/rss/search?q=" . rawurlencode($query) . "&hl={$codes['hl']}&gl={$codes['gl']}&ceid={$codes['ceid']}";
-        $feed = fetch_feed($rss_url);
-        if (is_wp_error($feed)) return [];
+
+        // Use wp_remote_get for a direct, uncached request
+        $response = wp_remote_get($rss_url, ['timeout' => 20]);
         
-        $items = $feed->get_items(0, $limit * 2);
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+            error_log('ATM News Campaign: Failed to fetch Google News RSS feed. URL: ' . $rss_url);
+            return [];
+        }
+
+        $xml_content = wp_remote_retrieve_body($response);
+        if (empty($xml_content)) {
+            return [];
+        }
+        
+        // Suppress errors for potentially malformed feeds and parse the XML
+        libxml_use_internal_errors(true);
+        $xml = simplexml_load_string($xml_content);
+        if ($xml === false || !isset($xml->channel->item)) {
+            error_log('ATM News Campaign: Failed to parse Google News RSS XML.');
+            return [];
+        }
+
+        $items = $xml->channel->item;
         $now = time();
         $out = [];
+
         foreach ($items as $item) {
-            $ts = (int) $item->get_date('U');
+            $ts = (int) strtotime($item->pubDate);
             if ($ts <= 0 || ($now - $ts) > ($max_age_hours * 3600)) continue;
-            $url = self::_resolve_gnews_url($item->get_link());
+
+            $url = self::_resolve_gnews_url((string)$item->link);
             if (!$url) continue;
+
             $host = parse_url($url, PHP_URL_HOST);
             if (!$host || !self::_is_reputable_domain($host)) continue;
-            $out[] = ['title' => trim($item->get_title()), 'url' => $url, 'source' => self::_clean_host($host), 'timestamp' => $ts];
+
+            $out[] = [
+                'title'     => trim((string)$item->title),
+                'url'       => $url,
+                'source'    => self::_clean_host($host),
+                'timestamp' => $ts
+            ];
         }
+
+        // Sort newest first
         usort($out, function($a, $b){ return $b['timestamp'] <=> $a['timestamp']; });
-        $seen = []; $dedup = [];
+
+        // Deduplicate by host+title
+        $seen = [];
+        $dedup = [];
         foreach ($out as $row) {
             $key = strtolower($row['source'] . '|' . mb_strtolower($row['title']));
             if (isset($seen[$key])) continue;
@@ -233,8 +269,9 @@ class ATM_Campaign_Manager {
             $dedup[] = $row;
             if (count($dedup) >= $limit) break;
         }
+        
         return $dedup;
-    }
+}
 
     private static function _resolve_gnews_url($link) {
         $url = $link;
