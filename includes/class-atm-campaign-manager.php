@@ -76,17 +76,50 @@ class ATM_Campaign_Manager {
      */
 
     private static function _execute_news_campaign($campaign) {
-        $news_context = ATM_API::fetch_news($campaign->keyword, 'newsapi', true);
-        if (empty($news_context)) {
-            error_log('ATM News Campaign ' . $campaign->id . ': No recent news found for "' . $campaign->keyword . '". Skipping run.');
+        // --- STEP 1: AI-powered Topic Discovery ---
+        // This prompt instructs a fast AI to act as a research assistant.
+        $topic_discovery_prompt = "You are a news research assistant. Your task is to find the single most significant and recent news story (from the last 48 hours) related to '{$campaign->keyword}' in '{$campaign->country}'.
+
+        CRITICAL INSTRUCTIONS:
+        - You MUST restrict your web search to reputable, major news sources (e.g., Google News, Reuters, Associated Press, BBC News, NYTimes, etc.).
+        - Analyze the search results and identify the most newsworthy event.
+        - Your ONLY output should be a single, specific, and compelling headline for a news article about that event. Do not write the article, just the headline.";
+
+        // Use a fast, cost-effective model for the research task.
+        $specific_headline = ATM_API::enhance_content_with_openrouter(
+            ['content' => $campaign->keyword], 
+            $topic_discovery_prompt, 
+            'anthropic/claude-3-haiku', // Fast model for discovery
+            false, 
+            true // Web search is ENABLED for this step
+        );
+
+        if (empty($specific_headline) || strlen($specific_headline) > 200) {
+            error_log('ATM News Campaign ' . $campaign->id . ': AI failed to identify a specific topic for "' . $campaign->keyword . '".');
             return;
         }
-
-        $system_prompt = "You are a professional journalist for an audience in {$campaign->country}. Your task is to write a clear, objective news article about '{$campaign->keyword}' using the provided LATEST NEWS SNIPPETS as your primary source. Verify facts and add any missing context. The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading.";
         
-        $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $news_context], $system_prompt, '', true, false);
+        // --- STEP 2: Focused Article Generation ---
+        // This prompt instructs a powerful AI to write the full article on the specific topic found in Step 1.
+        $writer_prompt = "You are a professional journalist writing for an audience in {$campaign->country}. Your task is to write a complete, factual, and objective news article for the following headline: \"{$specific_headline}\".
+
+        CRITICAL INSTRUCTIONS:
+        - Use your web search ability to gather detailed facts, quotes, and context related ONLY to this specific headline.
+        - Your entire response MUST be a single, valid JSON object with three keys: 'title', 'subheadline', and 'content'.
+        - Use the provided headline as the value for the 'title' key in your JSON response.
+        - The 'content' must be in clean HTML, start directly with an introductory paragraph (not a heading), and have no 'Conclusion' heading.";
+        
+        // Use the campaign's selected model (or default) for the main writing task.
+        $generated_json = ATM_API::enhance_content_with_openrouter(
+            ['content' => $specific_headline], 
+            $writer_prompt, 
+            '', // Use default high-quality article model
+            true // JSON mode is required
+        );
+
+        // --- STEP 3: Create the Post ---
         self::_create_post_from_ai_data($campaign, $generated_json);
-    }
+}
     
     private static function _execute_review_campaign($campaign) {
         $system_prompt = "You are an expert product reviewer. Your task is to write a comprehensive, unbiased review of '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find features, specifications, pricing, user opinions, pros, and cons. Structure the article with clear headings for each section (e.g., Key Features, Performance, Pros, Cons, Final Verdict). The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading.";
@@ -146,9 +179,16 @@ class ATM_Campaign_Manager {
             return;
         }
 
+        // --- THIS IS THE FIX FOR FORMATTING ---
+        // 1. Initialize the Markdown parser
+        $Parsedown = new Parsedown();
+        // 2. Convert the AI's content (which might be Markdown) to HTML
+        $html_content = $Parsedown->text($article_data['content']);
+        // --- END FIX ---
+
         $post_data = [
             'post_title'    => wp_strip_all_tags($article_data['title']),
-            'post_content'  => wp_kses_post($article_data['content']),
+            'post_content'  => wp_slash($html_content), // Use the converted HTML and wp_slash for safety
             'post_status'   => $campaign->post_status,
             'post_author'   => $campaign->author_id,
             'post_category' => array($campaign->category_id)
@@ -159,7 +199,6 @@ class ATM_Campaign_Manager {
             if (!empty($article_data['subheadline'])) {
                 ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $article_data['subheadline'], '');
             }
-
             if ($campaign->generate_image) {
                 $ajax_handler = new ATM_Ajax();
                 $image_prompt = ATM_API::get_default_image_prompt();

@@ -171,6 +171,7 @@ class ATM_Main {
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-frontend.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-licensing.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-campaign-manager.php';
+        require_once ATM_PLUGIN_PATH . 'includes/lib/Parsedown.php';
         // require_once ATM_PLUGIN_PATH . 'includes/class-atm-block-editor.php'; // ADD THIS LINE
     }
 
