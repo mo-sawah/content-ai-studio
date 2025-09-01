@@ -1165,6 +1165,7 @@ jQuery(document).ready(function ($) {
   });
 
   // Handle "Delete" action from the list table
+  // Handle "Delete" action from the list table
   $(".atm-delete-campaign").on("click", function (e) {
     e.preventDefault();
 
@@ -1184,7 +1185,7 @@ jQuery(document).ready(function ($) {
       url: atm_ajax.ajax_url,
       type: "POST",
       data: {
-        action: "delete_campaign",
+        action: "atm_delete_campaign", // This line is now correct
         id: campaignId,
         nonce: atm_ajax.nonce,
       },
@@ -1215,7 +1216,7 @@ jQuery(document).ready(function ($) {
       url: atm_ajax.ajax_url,
       type: "POST",
       data: {
-        action: "run_campaign_now",
+        action: "atm_run_campaign_now",
         id: campaignId,
         nonce: atm_ajax.nonce,
       },
