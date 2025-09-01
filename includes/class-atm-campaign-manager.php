@@ -64,7 +64,7 @@ class ATM_Campaign_Manager {
             case 'Opinion':
                 self::_execute_opinion_campaign($campaign);
                 break;
-            default:
+            default: // Catches 'Informative' and any others
                 self::_execute_default_campaign($campaign);
                 break;
         }
@@ -78,29 +78,13 @@ class ATM_Campaign_Manager {
      */
 
     private static function _execute_news_campaign($campaign) {
-        // --- STEP 1: Deterministic Retrieval from Google News RSS ---
-        $articles = self::_fetch_recent_google_news(
-            $campaign->keyword,
-            $campaign->country,
-            12,  // pull up to 12 items
-            36   // max age in hours
-        );
-
+        $articles = self::_fetch_recent_google_news($campaign->keyword, $campaign->country, 12, 36);
         if (empty($articles)) {
             error_log('ATM News Campaign '.$campaign->id.': No recent reputable articles found for "'.$campaign->keyword.'".');
             return;
         }
-
         $best_article = self::_pick_best_article($articles, $campaign->keyword);
-
-        // --- STEP 2: Constrained Article Generation ---
-        $sources_payload = [[
-            'url'          => $best_article['url'],
-            'outlet'       => $best_article['source'],
-            'headline'     => $best_article['title'],
-            'published_at' => gmdate('c', $best_article['timestamp'])
-        ]];
-
+        $sources_payload = [['url' => $best_article['url'], 'outlet' => $best_article['source'], 'headline' => $best_article['title'], 'published_at' => gmdate('c', $best_article['timestamp'])]];
         $writer_prompt = "You are a professional journalist writing for an audience in {$campaign->country}. Write a complete, factual, and objective news article using ONLY the sources provided in the JSON below. Do not use memory or outside knowledge. If the sources are insufficient, say so.
 
         RESPONSE FORMAT (MANDATORY):
@@ -115,51 +99,36 @@ class ATM_Campaign_Manager {
         - Include publish time and outlet in the first paragraph (e.g., 'Reuters — Sept. 1, 2025').
         - If you cannot confidently write the article from the provided source, respond with:
           {\"title\":\"\",\"subheadline\":\"\",\"content\":\"\",\"sources\":[]}";
-
-        $content_payload = json_encode([
-            'sources' => $sources_payload,
-            'focus'   => $campaign->keyword,
-            'country' => $campaign->country
-        ], JSON_UNESCAPED_SLASHES);
-
-        $generated_json = ATM_API::enhance_content_with_openrouter(
-            ['content' => $content_payload],
-            $writer_prompt,
-            '',      // default high-quality model
-            true,    // JSON mode ON
-            false    // web search OFF
-        );
-
+        $content_payload = json_encode(['sources' => $sources_payload, 'focus'   => $campaign->keyword, 'country' => $campaign->country], JSON_UNESCAPED_SLASHES);
+        $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $content_payload], $writer_prompt, '', true, false);
         $data = json_decode($generated_json, true);
         if (!self::_validate_article_json($data, $sources_payload)) {
             error_log('ATM News Campaign '.$campaign->id.': Writer returned invalid or ungrounded JSON.');
             return;
         }
-
-        // --- STEP 3: Create the Post ---
         self::_create_post_from_ai_data($campaign, $data);
     }
-
+    
     private static function _execute_review_campaign($campaign) {
-        $system_prompt = "You are an expert product reviewer... (Your existing prompt here)"; // Retaining other handlers for completeness
+        $system_prompt = "You are an expert product reviewer. Your task is to write a comprehensive, unbiased review of '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find features, specifications, pricing, user opinions, pros, and cons. Structure the article with clear headings for each section (e.g., Key Features, Performance, Pros, Cons, Final Verdict). The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading.";
         $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $campaign->keyword], $system_prompt, '', true);
         self::_create_post_from_ai_data($campaign, $generated_json);
     }
 
     private static function _execute_how_to_campaign($campaign) {
-        $system_prompt = "You are a technical writer creating a guide... (Your existing prompt here)";
+        $system_prompt = "You are a technical writer creating a clear, step-by-step guide on '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find the most accurate and easy-to-follow steps. Structure the article with an introduction, a 'What You'll Need' section (if applicable), and then the steps using an ordered list (<ol>). The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading.";
         $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $campaign->keyword], $system_prompt, '', true);
         self::_create_post_from_ai_data($campaign, $generated_json);
     }
 
     private static function _execute_listicle_campaign($campaign) {
-        $system_prompt = "You are a popular blogger creating a listicle... (Your existing prompt here)";
+        $system_prompt = "You are a popular blogger creating a listicle article about '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find interesting and relevant items for the list. The title should be in a listicle format (e.g., 'Top 7...' or '5 Ways to...'). Structure the article with an engaging introduction, followed by numbered headings (e.g., <h2>1. First Item</h2>) for each point in the list. The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading.";
         $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $campaign->keyword], $system_prompt, '', true);
         self::_create_post_from_ai_data($campaign, $generated_json);
     }
     
     private static function _execute_opinion_campaign($campaign) {
-        $system_prompt = "You are an opinionated columnist... (Your existing prompt here)";
+        $system_prompt = "You are an opinionated columnist with deep expertise on topics for an audience in {$campaign->country}. Your task is to write a persuasive opinion piece on '{$campaign->keyword}'. Use web search to understand the topic and form a strong, well-supported argument. Structure the article with a clear thesis, several supporting paragraphs with evidence or examples, acknowledge a counter-argument, and end with a strong concluding statement. The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading.";
         $generated_json = ATM_API::enhance_content_with_openrouter(['content' => $campaign->keyword], $system_prompt, '', true);
         self::_create_post_from_ai_data($campaign, $generated_json);
     }
@@ -185,8 +154,10 @@ class ATM_Campaign_Manager {
             error_log('ATM Campaign ' . $campaign->id . ': Aborted due to invalid data or duplicate title from AI.');
             return;
         }
+
         $Parsedown = new Parsedown();
         $html_content = $Parsedown->text($article_data['content']);
+
         $post_data = [
             'post_title'    => wp_strip_all_tags($article_data['title']),
             'post_content'  => wp_slash($html_content),
@@ -195,73 +166,48 @@ class ATM_Campaign_Manager {
             'post_category' => array($campaign->category_id)
         ];
         $post_id = wp_insert_post($post_data);
+        
         if ($post_id && !is_wp_error($post_id)) {
             if (!empty($article_data['subheadline'])) {
                 ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $article_data['subheadline'], '');
             }
             if ($campaign->generate_image) {
-                // ... (image generation logic)
+                $ajax_handler = new ATM_Ajax();
+                $image_prompt = ATM_API::get_default_image_prompt();
+                $processed_prompt = ATM_API::replace_prompt_shortcodes($image_prompt, get_post($post_id));
+                $image_url = ATM_API::generate_image_with_openai($processed_prompt);
+                $attachment_id = $ajax_handler->set_image_from_url($image_url, $post_id);
+                if (!is_wp_error($attachment_id)) {
+                    set_post_thumbnail($post_id, $attachment_id);
+                }
             }
         }
     }
 
-    // In includes/class-atm-campaign-manager.php
-
-    /** Fetch Google News RSS results, filter by age and whitelist, return array of [title,url,source,timestamp] */
     private static function _fetch_recent_google_news($query, $country, $limit = 10, $max_age_hours = 36) {
-        // This function no longer uses the WP feed cache (fetch_feed)
         $codes = self::_google_codes($country);
         $rss_url = "https://news.google.com/rss/search?q=" . rawurlencode($query) . "&hl={$codes['hl']}&gl={$codes['gl']}&ceid={$codes['ceid']}";
-
-        // Use wp_remote_get for a direct, uncached request
         $response = wp_remote_get($rss_url, ['timeout' => 20]);
-        
-        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
-            error_log('ATM News Campaign: Failed to fetch Google News RSS feed. URL: ' . $rss_url);
-            return [];
-        }
-
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) { return []; }
         $xml_content = wp_remote_retrieve_body($response);
-        if (empty($xml_content)) {
-            return [];
-        }
-        
-        // Suppress errors for potentially malformed feeds and parse the XML
+        if (empty($xml_content)) { return []; }
         libxml_use_internal_errors(true);
         $xml = simplexml_load_string($xml_content);
-        if ($xml === false || !isset($xml->channel->item)) {
-            error_log('ATM News Campaign: Failed to parse Google News RSS XML.');
-            return [];
-        }
-
+        if ($xml === false || !isset($xml->channel->item)) { return []; }
         $items = $xml->channel->item;
         $now = time();
         $out = [];
-
         foreach ($items as $item) {
             $ts = (int) strtotime($item->pubDate);
             if ($ts <= 0 || ($now - $ts) > ($max_age_hours * 3600)) continue;
-
             $url = self::_resolve_gnews_url((string)$item->link);
             if (!$url) continue;
-
             $host = parse_url($url, PHP_URL_HOST);
             if (!$host || !self::_is_reputable_domain($host)) continue;
-
-            $out[] = [
-                'title'     => trim((string)$item->title),
-                'url'       => $url,
-                'source'    => self::_clean_host($host),
-                'timestamp' => $ts
-            ];
+            $out[] = ['title' => trim((string)$item->title), 'url' => $url, 'source' => self::_clean_host($host), 'timestamp' => $ts];
         }
-
-        // Sort newest first
         usort($out, function($a, $b){ return $b['timestamp'] <=> $a['timestamp']; });
-
-        // Deduplicate by host+title
-        $seen = [];
-        $dedup = [];
+        $seen = []; $dedup = [];
         foreach ($out as $row) {
             $key = strtolower($row['source'] . '|' . mb_strtolower($row['title']));
             if (isset($seen[$key])) continue;
@@ -269,18 +215,17 @@ class ATM_Campaign_Manager {
             $dedup[] = $row;
             if (count($dedup) >= $limit) break;
         }
-        
         return $dedup;
-}
+    }
 
     private static function _resolve_gnews_url($link) {
-        $url = $link;
-        $parts = parse_url($link);
-        if (!empty($parts['query'])) {
-            parse_str($parts['query'], $qs);
-            if (!empty($qs['url'])) $url = $qs['url'];
+        $response = wp_remote_head($link, ['redirection' => 0, 'timeout' => 15]);
+        if (is_wp_error($response)) { return null; }
+        $final_url = wp_remote_retrieve_header($response, 'location');
+        if (empty($final_url) || !is_string($final_url)) {
+            return filter_var($link, FILTER_VALIDATE_URL) ? $link : null;
         }
-        return filter_var($url, FILTER_VALIDATE_URL) ? $url : null;
+        return filter_var($final_url, FILTER_VALIDATE_URL) ? $final_url : null;
     }
 
     private static function _is_reputable_domain($host) {
