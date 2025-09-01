@@ -78,101 +78,329 @@ class ATM_Campaign_Manager {
      * --- SPECIALIZED CAMPAIGN HANDLERS ---
      */
 
-    private static function _execute_news_campaign($campaign) {
-        $current_date = date('F j, Y');
-        $current_time = date('g:i A T');
-        
-        // Direct Google search approach - no need to use fetch_news method
-        $search_prompt = "You are a news research assistant with access to current web search. Your task is to search for the most recent and newsworthy stories related to '{$campaign->keyword}' that happened in the last 24-48 hours.
+private static function _execute_news_campaign($campaign) {
+    global $wpdb;
+    $current_date = date('F j, Y');
+    
+    // Step 1: Analyze recent coverage to understand what's been covered
+    $recent_coverage = self::_analyze_recent_coverage($campaign->keyword);
+    
+    // Step 2: Intelligent search strategy based on keyword type and recent coverage
+    $search_strategy = self::_generate_smart_search_strategy($campaign->keyword, $recent_coverage);
+    
+    $search_prompt = "You are an expert news researcher with access to current web search. Find a SPECIFIC, RECENT news story about '{$campaign->keyword}' from the last 24-48 hours that is genuinely NEW and different from recent coverage.
 
-        SEARCH INSTRUCTIONS:
-        1. Search Google for breaking news, recent developments, or current events about '{$campaign->keyword}'
-        2. Look specifically for stories from the past 24-48 hours
-        3. Focus on significant events, incidents, policy changes, or developments  
-        4. Prioritize stories from reputable news sources (Reuters, AP, BBC, CNN, NBC, Fox News, NPR, etc.)
-        5. Today is {$current_date} at {$current_time} - find the most current stories
+    RECENT COVERAGE TO AVOID DUPLICATING:
+    {$recent_coverage['summary']}
 
-        Search queries to try:
-        - '{$campaign->keyword} news today'
-        - '{$campaign->keyword} breaking news'
-        - 'latest {$campaign->keyword} news'
+    SEARCH STRATEGY: {$search_strategy['approach']}
+    
+    CRITICAL REQUIREMENTS:
+    1. Find news about a SPECIFIC EVENT, INCIDENT, or DEVELOPMENT (not general updates)
+    2. The event must be substantially different from recent coverage
+    3. Look for: {$search_strategy['focus_areas']}
+    4. Use these search queries: {$search_strategy['search_queries']}
+    
+    EVALUATION CRITERIA:
+    - Is this a NEW event/incident (not continuation of previously covered story)?
+    - Does it involve different people, locations, or circumstances?
+    - Is there a clear news angle (what specifically happened)?
+    
+    YOUR RESPONSE FORMAT:
+    If you find a genuinely NEW story, provide:
+    1. SPECIFIC EVENT: What exactly happened (in one sentence)
+    2. UNIQUENESS: Why this is different from recent coverage
+    3. NEWS ANGLE: The specific newsworthy element
+    4. KEY DETAILS: Who, what, when, where involved
+    5. SOURCE URLS: 2-3 credible news sources
+    
+    If you cannot find a genuinely NEW story that's different from recent coverage, respond with: 'NO_UNIQUE_EVENT_FOUND'";
 
-        After your web search research, identify the MOST NEWSWORTHY and RECENT story and provide:
-        1. A clear headline of what happened
-        2. When it happened (specific date/time if available)
-        3. Where it happened (location)
-        4. Key people, organizations, or entities involved
-        5. Why it's significant or newsworthy
-        6. 2-3 URLs from credible news sources reporting this story
+    // Search for unique news
+    $news_research = ATM_API::enhance_content_with_openrouter(
+        ['content' => "Find unique recent news: {$campaign->keyword}"], 
+        $search_prompt, 
+        '', 
+        false
+    );
 
-        If you cannot find any specific recent news events about '{$campaign->keyword}', respond with 'NO_RECENT_NEWS_FOUND'.";
-
-        // First, use AI with web search to find recent news
-        $news_research = ATM_API::enhance_content_with_openrouter(
-            ['content' => "Research recent news about: {$campaign->keyword}"], 
-            $search_prompt, 
-            '', // Use default model
-            false // Not JSON mode
-        );
-
-        if (strpos($news_research, 'NO_RECENT_NEWS_FOUND') !== false) {
-            error_log('ATM News Campaign '.$campaign->id.': No recent news found for "'.$campaign->keyword.'" via web search.');
-            return;
-        }
-
-        // Now use the research to write the article
-        $writer_prompt = "You are a professional breaking news journalist writing for an audience in {$campaign->country}. Today is {$current_date} at {$current_time}.
-
-        Based on the news research provided, write a comprehensive breaking news article about the specific recent event that was found.
-
-        CRITICAL REQUIREMENTS:
-        1. Focus on the SPECIFIC recent event from the research - not a general topic overview
-        2. Write in breaking news style with a strong lead paragraph answering: Who, What, When, Where, Why
-        3. Use your web search to verify facts and get additional current details about this specific story
-        4. Include direct quotes from officials, witnesses, or official statements when available
-        5. Provide background context but keep focus on the breaking news story
-        6. Add timeline of events and latest updates available
-
-        ARTICLE STRUCTURE:
-        - Lead: What happened, when, where, who involved (first paragraph)
-        - Details: How it happened, specific circumstances
-        - Context: Background information and why this matters
-        - Updates: Latest developments and current status
-        - Impact: Implications and what happens next
-
-        RESPONSE FORMAT (MANDATORY):
-        Return a single, valid JSON object with keys: 'title', 'subheadline', 'content'.
-        - 'title': specific, newsworthy headline about the current event (include key details)
-        - 'subheadline': one sentence with crucial breaking news context
-        - 'content': clean HTML content (800-1200 words) starting with breaking news lead. Include 3-4 subheadings (<h2>/<h3>) and multiple external links to current news sources using <a href=\"URL\">descriptive text</a>. No 'Conclusion' heading.
-
-        QUALITY STANDARDS:
-        - Minimum 800 words of substantial reporting
-        - Include at least 3-4 external links to current news sources
-        - Use journalistic attribution (\"according to X\", \"officials said\", etc.)
-        - Include specific times, dates, locations, and names
-        - Reference the most current information available
-        - End with latest updates or expected developments";
-
-        $generated_json = ATM_API::enhance_content_with_openrouter(
-            ['content' => $news_research], 
-            $writer_prompt, 
-            '', // Use default model  
-            true // JSON mode
-        );
-
-        $data = json_decode($generated_json, true);
-        
-        if (!self::_validate_news_article_json($data)) {
-            error_log('ATM News Campaign '.$campaign->id.': Writer returned invalid JSON. Raw response: ' . substr($generated_json, 0, 500));
-            return;
-        }
-        
-        // Log successful article creation for debugging
-        error_log('ATM News Campaign '.$campaign->id.': Successfully generated article: "' . $data['title'] . '"');
-        
-        self::_create_post_from_ai_data($campaign, $data);
+    if (strpos($news_research, 'NO_UNIQUE_EVENT_FOUND') !== false) {
+        error_log('ATM News Campaign '.$campaign->id.': No unique events found for "'.$campaign->keyword.'"');
+        return;
     }
+
+    // Step 3: Validate uniqueness using AI-powered duplicate detection
+    $uniqueness_check = self::_validate_story_uniqueness($news_research, $campaign->keyword, $recent_coverage);
+    
+    if (!$uniqueness_check['is_unique']) {
+        error_log('ATM News Campaign '.$campaign->id.': Story failed uniqueness validation: ' . $uniqueness_check['reason']);
+        return;
+    }
+
+    // Step 4: Generate article with smart duplicate prevention
+    $writer_prompt = "You are a professional news journalist. Write a comprehensive news article about the SPECIFIC EVENT described in the research.
+
+    CRITICAL: This must be about the SPECIFIC EVENT ONLY, not a general overview of the topic.
+
+    EVENT FOCUS: Write about what specifically happened, when, where, and why it matters.
+
+    ARTICLE REQUIREMENTS:
+    - Focus on the specific incident/event/development
+    - Include timeline of what occurred
+    - Add relevant background context (but keep focus on the new event)
+    - Use proper journalistic structure
+    - Include natural contextual links (not news outlet names in links)
+
+    RESPONSE FORMAT: JSON with 'title', 'subheadline', 'content' (800+ words)";
+
+    $generated_json = ATM_API::enhance_content_with_openrouter(
+        ['content' => $news_research], 
+        $writer_prompt, 
+        '', 
+        true
+    );
+
+    $data = json_decode($generated_json, true);
+    
+    if (!self::_validate_news_article_json($data)) {
+        error_log('ATM News Campaign '.$campaign->id.': Invalid article generated');
+        return;
+    }
+
+    // Step 5: Final duplicate check and store event signature
+    if (self::_is_duplicate_event($data['title'], $campaign->keyword)) {
+        error_log('ATM News Campaign '.$campaign->id.': Final duplicate check failed');
+        return;
+    }
+
+    // Store event signature for future duplicate prevention
+    self::_store_event_signature($campaign->keyword, $data['title'], $uniqueness_check['event_signature']);
+    
+    self::_create_post_from_ai_data($campaign, $data);
+}
+
+// Analyze what's been recently covered for this keyword
+private static function _analyze_recent_coverage($keyword) {
+    global $wpdb;
+    
+    // Get recent posts for this keyword (last 14 days)
+    $recent_posts = $wpdb->get_results($wpdb->prepare(
+        "SELECT post_title, post_content, post_date 
+         FROM {$wpdb->posts} 
+         WHERE post_status = 'publish' 
+         AND post_date > DATE_SUB(NOW(), INTERVAL 14 DAY)
+         AND (post_title LIKE %s OR post_content LIKE %s)
+         ORDER BY post_date DESC 
+         LIMIT 10",
+        '%' . $wpdb->esc_like($keyword) . '%',
+        '%' . $wpdb->esc_like($keyword) . '%'
+    ));
+
+    if (empty($recent_posts)) {
+        return ['summary' => 'No recent coverage found.', 'events' => []];
+    }
+
+    // Use AI to analyze what's been covered
+    $titles_and_dates = [];
+    foreach ($recent_posts as $post) {
+        $titles_and_dates[] = date('M j', strtotime($post->post_date)) . ": " . $post->post_title;
+    }
+    
+    $coverage_text = implode("\n", $titles_and_dates);
+    
+    $analysis_prompt = "Analyze this recent news coverage about '{$keyword}' and summarize what types of events/stories have been covered. Focus on identifying specific events, incidents, or developments that were reported.
+
+Recent coverage:
+{$coverage_text}
+
+Provide a brief summary of what's been covered so we can avoid duplicating these stories.";
+
+    $coverage_summary = ATM_API::enhance_content_with_openrouter(
+        ['content' => $coverage_text],
+        $analysis_prompt,
+        'anthropic/claude-3-haiku', // Fast model for analysis
+        false
+    );
+
+    return [
+        'summary' => $coverage_summary,
+        'events' => wp_list_pluck($recent_posts, 'post_title'),
+        'count' => count($recent_posts)
+    ];
+}
+
+// Generate smart search strategy based on keyword type
+private static function _generate_smart_search_strategy($keyword, $recent_coverage) {
+    $keyword_lower = strtolower($keyword);
+    
+    // Detect keyword category
+    $strategies = [
+        // People (politicians, celebrities, etc.)
+        'person' => [
+            'detect' => function($kw) {
+                $person_indicators = ['trump', 'biden', 'taylor swift', 'elon musk'];
+                return str_word_count($kw) <= 3 && 
+                       (ctype_upper($kw[0]) || in_array(strtolower($kw), $person_indicators));
+            },
+            'focus_areas' => 'specific actions, statements, appearances, legal developments, business moves',
+            'search_queries' => [
+                "$keyword latest news today",
+                "$keyword statement announcement",
+                "$keyword court case legal",
+                "$keyword business deal meeting"
+            ]
+        ],
+        
+        // Locations (cities, countries)
+        'location' => [
+            'detect' => function($kw) {
+                $location_indicators = ['new york', 'california', 'texas', 'florida', 'vegas', 'miami'];
+                return in_array(strtolower($kw), $location_indicators) || 
+                       preg_match('/\b(city|county|state)\b/i', $kw);
+            },
+            'focus_areas' => 'local incidents, government decisions, business openings/closings, crime events, infrastructure',
+            'search_queries' => [
+                "$keyword incident today",
+                "$keyword government announcement", 
+                "$keyword crime arrest",
+                "$keyword business opening"
+            ]
+        ],
+        
+        // Ongoing conflicts/issues
+        'ongoing_issue' => [
+            'detect' => function($kw) {
+                $issue_indicators = ['war', 'conflict', 'crisis', 'global warming', 'climate'];
+                return str_contains(strtolower($kw), 'war') || 
+                       array_intersect(explode(' ', strtolower($kw)), $issue_indicators);
+            },
+            'focus_areas' => 'specific incidents, new developments, policy changes, major events within the broader issue',
+            'search_queries' => [
+                "$keyword incident attack today",
+                "$keyword policy announcement",
+                "$keyword breakthrough development",
+                "$keyword major event"
+            ]
+        ],
+        
+        // Industries/topics
+        'industry' => [
+            'detect' => function($kw) {
+                $industry_indicators = ['tech', 'ai', 'crypto', 'fitness', 'hiphop', 'music', 'sports'];
+                return in_array(strtolower($kw), $industry_indicators) || 
+                       str_word_count($kw) == 1;
+            },
+            'focus_areas' => 'product launches, company news, industry changes, notable achievements, controversies',
+            'search_queries' => [
+                "$keyword company announcement",
+                "$keyword product launch",
+                "$keyword controversy news",
+                "$keyword achievement breakthrough"
+            ]
+        ]
+    ];
+
+    // Determine category
+    foreach ($strategies as $type => $strategy) {
+        if ($strategy['detect']($keyword_lower)) {
+            return [
+                'approach' => "Focus on finding specific recent {$type}-related events",
+                'focus_areas' => $strategy['focus_areas'],
+                'search_queries' => implode(', ', $strategy['search_queries'])
+            ];
+        }
+    }
+
+    // Default strategy
+    return [
+        'approach' => 'Look for specific recent developments or events',
+        'focus_areas' => 'breaking news, announcements, incidents, developments',
+        'search_queries' => "$keyword news today, $keyword breaking news, latest $keyword updates"
+    ];
+}
+
+// Validate story uniqueness using AI
+private static function _validate_story_uniqueness($news_research, $keyword, $recent_coverage) {
+    if ($recent_coverage['count'] == 0) {
+        return ['is_unique' => true, 'event_signature' => md5($news_research)];
+    }
+
+    $validation_prompt = "You are a news editor checking for duplicate stories. 
+
+NEW STORY RESEARCH:
+{$news_research}
+
+RECENT COVERAGE TO COMPARE AGAINST:
+{$recent_coverage['summary']}
+
+ANALYSIS REQUIRED:
+1. Is this new story about a DIFFERENT specific event/incident?
+2. Or is it just a continuation/update of something already covered?
+
+For ongoing topics (like wars, politics), multiple related but separate events can be unique.
+Example: 'Attack on City A' vs 'Attack on City B' = UNIQUE
+Example: 'Attack casualties 50' vs 'Attack casualties now 75' = DUPLICATE UPDATE
+
+Respond with: UNIQUE or DUPLICATE
+If DUPLICATE, explain why.";
+
+    $validation = ATM_API::enhance_content_with_openrouter(
+        ['content' => $validation_prompt],
+        "Determine if this is a unique news story.",
+        'anthropic/claude-3-haiku',
+        false
+    );
+
+    $is_unique = stripos($validation, 'UNIQUE') !== false && stripos($validation, 'DUPLICATE') === false;
+    
+    return [
+        'is_unique' => $is_unique,
+        'reason' => $validation,
+        'event_signature' => md5($news_research . date('Y-m-d'))
+    ];
+}
+
+// Store event signature to prevent future duplicates
+private static function _store_event_signature($keyword, $title, $signature) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'atm_used_topics';
+    
+    // Create table if it doesn't exist
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") != $table_name) {
+        $wpdb->query("CREATE TABLE {$table_name} (
+            id int AUTO_INCREMENT PRIMARY KEY,
+            keyword varchar(255),
+            title varchar(500),
+            event_signature varchar(64),
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            INDEX(keyword, created_at)
+        )");
+    }
+    
+    $wpdb->insert($table_name, [
+        'keyword' => $keyword,
+        'title' => $title,
+        'event_signature' => $signature,
+        'created_at' => current_time('mysql')
+    ]);
+}
+
+// Final duplicate check
+private static function _is_duplicate_event($title, $keyword) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'atm_used_topics';
+    
+    // Check if very similar title exists in last 7 days
+    $similar = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$table_name} 
+         WHERE keyword = %s 
+         AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)
+         AND SOUNDEX(title) = SOUNDEX(%s)",
+        $keyword, $title
+    ));
+    
+    return $similar > 0;
+}
     
     private static function _execute_review_campaign($campaign) {
         $system_prompt = "You are an expert product reviewer. Your task is to write a comprehensive, unbiased review of '{$campaign->keyword}' for an audience in {$campaign->country}. Use web search to find features, specifications, pricing, user opinions, pros, and cons. Structure the article with clear headings for each section (e.g., Key Features, Performance, Pros, Cons, Final Verdict). The final output MUST be a valid JSON object with 'title', 'subheadline', and HTML 'content' keys. The content must start with a paragraph, not a heading, and have no 'Conclusion' heading. Write at least 800 words.";
