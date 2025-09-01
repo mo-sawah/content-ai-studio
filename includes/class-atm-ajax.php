@@ -10,7 +10,7 @@ class ATM_Ajax {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied.');
         }
-        check_ajax_referer('atm_save_campaign_nonce', '_wpnonce');
+        check_ajax_referer('atm_nonce', 'nonce');
         global $wpdb;
         $table_name = $wpdb->prefix . 'content_ai_campaigns';
 

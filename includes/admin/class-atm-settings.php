@@ -134,8 +134,6 @@ class ATM_Settings {
         <form method="post" id="atm-campaign-form">
             <input type="hidden" name="action" value="atm_save_campaign">
             <input type="hidden" name="campaign_id" value="<?php echo esc_attr($campaign_id); ?>">
-            <?php wp_nonce_field('atm_save_campaign_nonce'); ?>
-
             <div class="atm-settings-card">
                 <h2>Campaign Details</h2>
                 <div class="atm-settings-grid" style="grid-template-columns: 1fr 1fr 1fr; align-items: end;">

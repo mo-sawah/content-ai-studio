@@ -1134,12 +1134,20 @@ jQuery(document).ready(function ($) {
     const originalText = button.val();
     button.val("Saving...").prop("disabled", true);
 
-    const formData = $(this).serialize();
+    // Manually gather form data into an object
+    const formData = $(this).serializeArray();
+    const data = {};
+    $.map(formData, function (n, i) {
+      data[n["name"]] = n["value"];
+    });
+
+    // Manually add the global nonce
+    data.nonce = atm_ajax.nonce;
 
     $.ajax({
       url: atm_ajax.ajax_url,
       type: "POST",
-      data: formData, // The form data is already serialized
+      data: data, // Send the data object
       success: function (response) {
         if (response.success) {
           // Redirect to the campaign list on success
