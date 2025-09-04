@@ -17,7 +17,7 @@ function WelcomeHub({ setActiveView }) {
           />
         </svg>
       ),
-      gradient: "bg-gradient-to-r from-blue-500 to-purple-600",
+      gradient: "from-blue-500 to-purple-600",
       onClick: () => setActiveView("articles"),
     },
     {
@@ -34,7 +34,7 @@ function WelcomeHub({ setActiveView }) {
           />
         </svg>
       ),
-      gradient: "bg-gradient-to-r from-green-500 to-teal-600",
+      gradient: "from-green-500 to-teal-600",
       onClick: () => setActiveView("images"),
     },
     {
@@ -51,7 +51,7 @@ function WelcomeHub({ setActiveView }) {
           />
         </svg>
       ),
-      gradient: "bg-gradient-to-r from-orange-500 to-red-600",
+      gradient: "from-orange-500 to-red-600",
       onClick: () => setActiveView("podcast"),
     },
     {
@@ -68,7 +68,7 @@ function WelcomeHub({ setActiveView }) {
           />
         </svg>
       ),
-      gradient: "bg-gradient-to-r from-pink-500 to-purple-600",
+      gradient: "from-pink-500 to-purple-600",
       onClick: () => setActiveView("takeaways"),
     },
     {
@@ -85,7 +85,7 @@ function WelcomeHub({ setActiveView }) {
           />
         </svg>
       ),
-      gradient: "bg-gradient-to-r from-indigo-500 to-blue-600",
+      gradient: "from-indigo-500 to-blue-600",
       onClick: () => setActiveView("speech"),
     },
     {
@@ -102,7 +102,7 @@ function WelcomeHub({ setActiveView }) {
           />
         </svg>
       ),
-      gradient: "bg-gradient-to-r from-cyan-500 to-teal-600",
+      gradient: "from-cyan-500 to-teal-600",
       onClick: () => setActiveView("translate"),
     },
     {
@@ -119,7 +119,7 @@ function WelcomeHub({ setActiveView }) {
           />
         </svg>
       ),
-      gradient: "bg-gradient-to-r from-red-500 to-pink-600",
+      gradient: "from-red-500 to-pink-600",
       onClick: () => setActiveView("video"),
     },
     {
@@ -136,7 +136,7 @@ function WelcomeHub({ setActiveView }) {
           />
         </svg>
       ),
-      gradient: "bg-gradient-to-r from-emerald-500 to-green-600",
+      gradient: "from-emerald-500 to-green-600",
       onClick: () => setActiveView("charts"),
     },
   ];
@@ -159,7 +159,9 @@ function WelcomeHub({ setActiveView }) {
             className="atm-quick-action-card"
             onClick={action.onClick}
           >
-            <div className={`atm-action-icon ${action.gradient}`}>
+            <div
+              className={`atm-action-icon bg-gradient-to-r ${action.gradient}`}
+            >
               {action.icon}
             </div>
             <h3>{action.title}</h3>
