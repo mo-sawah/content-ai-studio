@@ -1317,6 +1317,110 @@ body .atm-studio-container {
     }
 }
 
+/* --- High Specificity Form Overrides --- */
+body.wp-admin .atm-studio-container,
+body.wp-admin .atm-content-body {
+    input[type="text"],
+    input[type="email"],
+    input[type="url"],
+    textarea,
+    .components-text-control__input,
+    .components-textarea-control__input {
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 8px !important;
+        padding: 12px 16px !important;
+        font-size: 14px !important;
+        min-height: 44px !important;
+        transition: all 0.2s ease !important;
+        box-shadow: none !important;
+        width: 100% !important;
+        font-family: inherit !important;
+
+        &:focus {
+            border-color: #8b5cf6 !important;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1) !important;
+            outline: none !important;
+        }
+
+        &::placeholder {
+            color: #9ca3af !important;
+        }
+    }
+
+    .components-button {
+        &.is-primary {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+            color: #ffffff !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 12px 24px !important;
+            height: auto !important;
+            min-height: 44px !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+            justify-content: center !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            box-shadow: none !important;
+            text-decoration: none !important;
+
+            &:hover:not(:disabled) {
+                transform: translateY(-1px) !important;
+                box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4) !important;
+                background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+            }
+
+            &:disabled {
+                background: #9ca3af !important;
+                transform: none !important;
+                box-shadow: none !important;
+                opacity: 0.7 !important;
+                cursor: not-allowed !important;
+            }
+        }
+
+        &.is-secondary {
+            background: #f1f5f9 !important;
+            color: #475569 !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            padding: 12px 24px !important;
+            height: auto !important;
+            min-height: 44px !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+            box-shadow: none !important;
+            text-decoration: none !important;
+
+            &:hover:not(:disabled) {
+                background: #e2e8f0 !important;
+                border-color: #cbd5e1 !important;
+                transform: translateY(-1px) !important;
+            }
+        }
+    }
+
+    .components-base-control__label {
+        color: #374151 !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .components-base-control__help {
+        color: #6b7280 !important;
+        font-size: 13px !important;
+        margin-top: 6px !important;
+    }
+}
+
 /* --- Custom Spinner Animation --- */
 .atm-custom-spinner {
     width: 20px;
