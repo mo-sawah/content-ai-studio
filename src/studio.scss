@@ -1109,7 +1109,7 @@
 
 /* --- Welcome Hub Styles --- */
 .atm-hub-welcome {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
     text-align: center;
 }
@@ -1118,40 +1118,51 @@
     margin-bottom: 48px;
 }
 
-.atm-welcome-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 24px;
-    padding: 16px;
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);
-}
-
 .atm-welcome-header h2 {
-    font-size: 28px;
+    font-size: 42px;
     font-weight: 700;
     color: #1e293b;
-    margin: 0 0 16px 0;
+    margin: 0 0 24px 0;
+    line-height: 1.2;
 }
 
 .atm-welcome-header p {
-    font-size: 16px;
+    font-size: 18px;
     color: #64748b;
     line-height: 1.6;
-    max-width: 600px;
+    max-width: 700px;
     margin: 0 auto;
 }
 
 /* --- Quick Actions Grid --- */
 .atm-quick-actions {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 24px;
     margin-bottom: 48px;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1024px) {
+    .atm-quick-actions {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+@media (max-width: 640px) {
+    .atm-quick-actions {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .atm-welcome-header h2 {
+        font-size: 32px;
+    }
+    
+    .atm-welcome-header p {
+        font-size: 16px;
+    }
 }
 
 .atm-quick-action-card {
@@ -1162,6 +1173,11 @@
     cursor: pointer;
     transition: all 0.3s ease;
     text-align: center;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 
     &:hover {
         transform: translateY(-4px);
@@ -1171,26 +1187,26 @@
 }
 
 .atm-action-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 16px;
+    margin: 0 auto 20px;
     color: white;
 }
 
 .atm-action-icon svg {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
 }
 
 .atm-quick-action-card h3 {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
     color: #1e293b;
-    margin: 0 0 8px 0;
+    margin: 0 0 12px 0;
 }
 
 .atm-quick-action-card p {

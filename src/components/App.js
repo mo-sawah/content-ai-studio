@@ -107,7 +107,15 @@ function App() {
                                 className={`atm-nav-item ${activeView === item.id ? 'active' : ''}`}
                                 onClick={() => setActiveView(item.id)}
                             >
-                                <span className="atm-nav-icon">{item.icon}</span>
+                                <span 
+                                    className="atm-nav-icon" 
+                                    style={{ 
+                                        color: activeView === item.id ? item.color : 'rgba(255, 255, 255, 0.6)',
+                                        transition: 'color 0.2s ease'
+                                    }}
+                                >
+                                    {item.icon}
+                                </span>
                                 {item.label}
                             </button>
                         ))}
