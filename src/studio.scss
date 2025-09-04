@@ -200,6 +200,7 @@
     padding: 24px !important;
     border: 1px solid #e2e8f0 !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    margin-bottom: 24px !important;
 }
 
 .atm-form-divider {
@@ -554,6 +555,537 @@
     margin: 0;
 }
 
+/* --- Speech to Text Styles --- */
+.atm-speech-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    text-align: center;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.atm-recording-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.atm-record-button-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+
+    .atm-pulse-ring {
+        position: absolute;
+        border: 3px solid #ef4444;
+        border-radius: 50%;
+        opacity: 0;
+        transform: scale(1);
+        pointer-events: none;
+    }
+
+    &.is-small {
+        width: 80px;
+        height: 80px;
+
+        .atm-record-button {
+            width: 50px;
+            height: 50px;
+
+            svg,
+            .atm-mic-icon {
+                width: 20px;
+                height: 20px;
+            }
+        }
+    }
+
+    .atm-pulse-ring-1 {
+        width: 100%;
+        height: 100%;
+        animation-delay: 0s;
+    }
+
+    .atm-pulse-ring-2 {
+        width: 110%;
+        height: 110%;
+        animation-delay: 0.5s;
+    }
+
+    .atm-pulse-ring-3 {
+        width: 120%;
+        height: 120%;
+        animation-delay: 1s;
+    }
+
+    &.is-recording .atm-pulse-ring {
+        animation: atm-pulse 2s infinite;
+    }
+}
+
+.atm-record-button {
+    position: relative;
+    z-index: 10;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    }
+
+    &.is-recording {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        animation: atm-recording-pulse 1s infinite alternate;
+    }
+
+    &.is-transcribing {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        cursor: not-allowed;
+    }
+
+    .atm-mic-icon,
+    svg {
+        width: 28px;
+        height: 28px;
+        transition: all 0.2s ease;
+    }
+
+    .atm-mic-icon {
+        filter: brightness(0) invert(1);
+    }
+
+    .components-spinner {
+        margin: 0 !important;
+        width: 28px !important;
+        height: 28px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        svg {
+            width: 24px !important;
+            height: 24px !important;
+            margin: 0 !important;
+        }
+    }
+}
+
+.atm-recording-status {
+    font-size: 16px;
+    font-weight: 500;
+    color: #374151;
+    margin: 0;
+    min-height: 24px;
+}
+
+.atm-instructions {
+    max-width: 400px;
+
+    p {
+        color: #6b7280;
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 0;
+    }
+}
+
+/* --- Translator UI Styles --- */
+.atm-translator-full-editor {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    span {
+        color: #6b7280;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .atm-dropdown-field {
+        flex: 1;
+        margin-bottom: 0;
+
+        .atm-dropdown-label {
+            display: none;
+        }
+    }
+}
+
+.atm-translator-main-area {
+    display: flex;
+    gap: 1.5rem;
+    align-items: stretch;
+    margin-bottom: 1.25rem;
+
+    @media (max-width: 960px) {
+        flex-direction: column;
+    }
+}
+
+.atm-translator-text-input {
+    flex: 1;
+    min-width: 0;
+
+    .components-base-control__label {
+        color: #374151 !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        margin-bottom: 8px !important;
+    }
+}
+
+.atm-translator-recorder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 30%;
+    min-width: 200px;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+
+    @media (max-width: 960px) {
+        width: 100%;
+        padding: 1.5rem 1rem;
+    }
+
+    h4 {
+        margin: 0 0 0.5rem 0;
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    .atm-recording-status {
+        font-size: 13px;
+        min-height: 18px;
+        color: #6b7280;
+    }
+}
+
+/* --- YouTube Video Search Styles --- */
+.atm-video-search-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.atm-autocomplete-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+
+    .components-base-control {
+        flex: 1;
+        margin-bottom: 0;
+    }
+}
+
+.atm-autocomplete-container {
+    .components-text-control__input {
+        min-height: 48px;
+        height: 100%;
+    }
+}
+
+.atm-search-button,
+.atm-filter-button {
+    width: 48px !important;
+    min-width: 48px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: auto !important;
+    border-radius: 8px !important;
+}
+
+.atm-search-button {
+    background: #8b5cf6 !important;
+    border: 1px solid #8b5cf6 !important;
+    color: white !important;
+
+    &:hover:not(:disabled) {
+        background: #7c3aed !important;
+        border-color: #7c3aed !important;
+    }
+}
+
+.atm-filter-button {
+    background-color: transparent !important;
+    border: 1px solid #d1d5db !important;
+    color: #6b7280 !important;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+        background-color: #f3f4f6 !important;
+        border-color: #9ca3af !important;
+        color: #374151 !important;
+    }
+}
+
+.atm-button-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(0.5);
+    transition: filter 0.2s ease;
+}
+
+.atm-filter-button:hover:not(:disabled) .atm-button-icon {
+    filter: brightness(0) invert(0.3);
+}
+
+.atm-suggestions-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: calc(48px * 2 + 1rem);
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    margin: -1px 0 0 0;
+    padding: 4px;
+    list-style: none;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+    li {
+        padding: 8px 12px;
+        margin: 0;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #1e293b;
+
+        &:hover {
+            background-color: #f3f4f6;
+        }
+    }
+}
+
+.atm-video-spinner-container {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.atm-video-results-list {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.atm-video-result-item {
+    display: flex;
+    gap: 1rem;
+    background-color: #ffffff;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+    }
+}
+
+.atm-video-thumbnail {
+    flex-shrink: 0;
+    width: 160px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    overflow: hidden;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    @media (max-width: 768px) {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+    }
+}
+
+.atm-rss-thumbnail-placeholder {
+    background-color: #f3f4f6;
+
+    .dashicons-rss {
+        font-size: 48px;
+        color: #9ca3af;
+        width: 48px;
+        height: 48px;
+    }
+}
+
+.atm-video-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.atm-video-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.atm-video-description {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+}
+
+.atm-video-meta {
+    font-size: 12px;
+    color: #9ca3af;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.atm-video-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+    align-items: center;
+
+    .components-button.is-secondary {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 4px 8px !important;
+        color: #6b7280 !important;
+        font-size: 12px !important;
+        text-decoration: underline;
+
+        &:hover {
+            color: #374151 !important;
+        }
+    }
+
+    .components-button.is-embed {
+        background-color: #8b5cf6 !important;
+        color: #ffffff !important;
+        font-weight: 600;
+        height: 32px;
+        padding: 0 12px;
+        font-size: 12px;
+        border-radius: 6px;
+        
+        &:hover {
+            background-color: #7c3aed !important;
+        }
+    }
+}
+
+/* --- Chart Generator Styles --- */
+.atm-chart-preview-container {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    min-height: 420px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.atm-chart-actions {
+    margin-top: 1rem;
+    text-align: center;
+    display: grid;
+    gap: 1rem;
+
+    p {
+        font-size: 13px;
+        color: #6b7280;
+        font-style: italic;
+        margin: 0;
+    }
+}
+
+.atm-shortcode-display {
+    margin-top: 1rem;
+    text-align: left;
+
+    .components-base-control__label {
+        display: none;
+    }
+
+    input[type="text"] {
+        text-align: center;
+        background-color: #f8fafc !important;
+        font-family: monospace;
+        font-size: 14px;
+        cursor: copy;
+        border: 1px solid #e2e8f0 !important;
+    }
+}
+
+/* --- Filter Modal Styles --- */
+.atm-filter-modal .components-modal__content {
+    background: #ffffff;
+    color: #1e293b;
+}
+
+.atm-filter-modal .components-modal__header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.atm-filter-modal .components-modal__header h1 {
+    color: #1e293b;
+}
+
+.atm-filter-modal .components-modal__header .components-button {
+    color: #6b7280 !important;
+}
+
+.atm-filter-modal .components-base-control__label {
+    color: #374151 !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    margin-bottom: 8px !important;
+}
+
 /* --- Welcome Hub Styles --- */
 .atm-hub-welcome {
     max-width: 800px;
@@ -647,6 +1179,135 @@
     line-height: 1.5;
 }
 
+/* --- Stats Section --- */
+.atm-welcome-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    margin-bottom: 48px;
+    padding: 32px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.atm-stat-item {
+    text-align: center;
+}
+
+.atm-stat-number {
+    font-size: 36px;
+    font-weight: 700;
+    color: #8b5cf6;
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.atm-stat-label {
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* --- Welcome Footer --- */
+.atm-welcome-footer {
+    padding: 24px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.atm-welcome-footer p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.atm-welcome-footer .components-button {
+    color: #8b5cf6 !important;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0 !important;
+    height: auto !important;
+
+    &:hover {
+        color: #7c3aed !important;
+        text-decoration: underline;
+    }
+}
+
+/* --- Gradient Helper Classes --- */
+.bg-gradient-to-r.from-blue-500.to-purple-600 {
+    background: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%);
+}
+
+.bg-gradient-to-r.from-green-500.to-teal-600 {
+    background: linear-gradient(135deg, #10b981 0%, #0d9488 100%);
+}
+
+.bg-gradient-to-r.from-orange-500.to-red-600 {
+    background: linear-gradient(135deg, #f97316 0%, #dc2626 100%);
+}
+
+.bg-gradient-to-r.from-pink-500.to-purple-600 {
+    background: linear-gradient(135deg, #ec4899 0%, #9333ea 100%);
+}
+
+/* --- Animation Keyframes --- */
+@keyframes atm-pulse {
+    0% {
+        transform: scale(0.9);
+        opacity: 1;
+    }
+    70% {
+        transform: scale(1.1);
+        opacity: 0.4;
+    }
+    100% {
+        transform: scale(1.2);
+        opacity: 0;
+    }
+}
+
+@keyframes atm-recording-pulse {
+    0% {
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+    100% {
+        box-shadow: 0 4px 25px rgba(239, 68, 68, 0.6), 0 0 0 4px rgba(239, 68, 68, 0.1);
+    }
+}
+
+@keyframes atm-stop-icon-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes atm-glow-pulse {
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+}
+
+@keyframes atm-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* --- Force dropdown width matching --- */
 body .atm-studio-container {
     .components-dropdown-menu__popover.components-popover .components-popover__content {
@@ -654,6 +1315,28 @@ body .atm-studio-container {
         min-width: var(--atm-dropdown-width, 200px) !important;
         max-width: var(--atm-dropdown-width, 200px) !important;
     }
+}
+
+/* --- Custom Spinner Animation --- */
+.atm-custom-spinner {
+    width: 20px;
+    height: 20px;
+    animation: atm-spin 1s linear infinite;
+    filter: invert(100%) sepia(0%) saturate(7483%) hue-rotate(256deg) brightness(100%) contrast(100%);
+}
+
+/* --- Additional Speech to Text Enhancements --- */
+.atm-record-button-wrapper.is-recording::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    animation: atm-glow-pulse 2s infinite;
 }
 
 /* --- Responsive Design --- */
@@ -690,5 +1373,32 @@ body .atm-studio-container {
 
     .atm-welcome-header p {
         font-size: 14px;
+    }
+
+    .atm-welcome-stats {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding: 24px;
+    }
+
+    .atm-record-button-wrapper {
+        width: 100px;
+        height: 100px;
+    }
+
+    .atm-record-button {
+        width: 70px;
+        height: 70px;
+
+        .atm-mic-icon,
+        svg {
+            width: 24px;
+            height: 24px;
+        }
+    }
+
+    .atm-speech-container {
+        padding: 1.5rem;
+        gap: 1.5rem;
     }
 }
