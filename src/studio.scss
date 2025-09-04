@@ -1644,3 +1644,173 @@ body.wp-admin .atm-content-body {
 .atm-nav-item.active .atm-nav-icon {
     color: inherit !important; /* This allows the JavaScript inline style to work */
 }
+
+/* Add this CSS to your studio.scss file - append to the end */
+
+/* --- Fix Button Margins for ALL Button Types --- */
+body.wp-admin .atm-studio-container,
+body.wp-admin .atm-content-body {
+    .components-button {
+        margin: 10px 0 !important;
+        
+        &:first-child {
+            margin-top: 0 !important;
+        }
+        
+        &:last-child {
+            margin-bottom: 0 !important;
+        }
+    }
+    
+    /* Also target any buttons that might not have components-button class */
+    button {
+        margin: 10px 0 !important;
+        
+        &:first-child {
+            margin-top: 0 !important;
+        }
+        
+        &:last-child {
+            margin-bottom: 0 !important;
+        }
+    }
+}
+
+/* --- Override Welcome Header Title Size --- */
+.atm-welcome-header h2 {
+    font-size: 48px !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    margin: 0 0 24px 0 !important;
+    line-height: 1.2 !important;
+}
+
+/* Mobile responsive for title */
+@media (max-width: 640px) {
+    .atm-welcome-header h2 {
+        font-size: 36px !important;
+    }
+}
+
+/* --- Ensure Sidebar Icons Display Properly --- */
+.atm-nav-icon svg {
+    width: 20px !important;
+    height: 20px !important;
+    display: block !important;
+}
+
+/* --- Active Nav Item Color Override --- */
+.atm-nav-item.active .atm-nav-icon {
+    color: inherit !important; /* This allows the JavaScript inline style to work */
+}
+
+/* --- FIX GRADIENT BACKGROUNDS FOR WELCOME CARDS --- */
+/* These gradient classes need to be defined for the backgrounds to work */
+.bg-gradient-to-r {
+    background-image: linear-gradient(to right, var(--tw-gradient-stops)) !important;
+}
+
+.from-blue-500 {
+    --tw-gradient-from: #3b82f6 !important;
+    --tw-gradient-to: rgb(59 130 246 / 0) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.to-purple-600 {
+    --tw-gradient-to: #9333ea !important;
+}
+
+.from-green-500 {
+    --tw-gradient-from: #10b981 !important;
+    --tw-gradient-to: rgb(16 185 129 / 0) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.to-teal-600 {
+    --tw-gradient-to: #0d9488 !important;
+}
+
+.from-orange-500 {
+    --tw-gradient-from: #f97316 !important;
+    --tw-gradient-to: rgb(249 115 22 / 0) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.to-red-600 {
+    --tw-gradient-to: #dc2626 !important;
+}
+
+.from-pink-500 {
+    --tw-gradient-from: #ec4899 !important;
+    --tw-gradient-to: rgb(236 72 153 / 0) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.from-indigo-500 {
+    --tw-gradient-from: #6366f1 !important;
+    --tw-gradient-to: rgb(99 102 241 / 0) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.to-blue-600 {
+    --tw-gradient-to: #2563eb !important;
+}
+
+.from-cyan-500 {
+    --tw-gradient-from: #06b6d4 !important;
+    --tw-gradient-to: rgb(6 182 212 / 0) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.from-red-500 {
+    --tw-gradient-from: #ef4444 !important;
+    --tw-gradient-to: rgb(239 68 68 / 0) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.to-pink-600 {
+    --tw-gradient-to: #db2777 !important;
+}
+
+.from-emerald-500 {
+    --tw-gradient-from: #10b981 !important;
+    --tw-gradient-to: rgb(16 185 129 / 0) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.to-green-600 {
+    --tw-gradient-to: #16a34a !important;
+}
+
+/* Apply the actual gradients - fallback method */
+.atm-action-icon.bg-gradient-to-r.from-blue-500.to-purple-600 {
+    background: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%) !important;
+}
+
+.atm-action-icon.bg-gradient-to-r.from-green-500.to-teal-600 {
+    background: linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important;
+}
+
+.atm-action-icon.bg-gradient-to-r.from-orange-500.to-red-600 {
+    background: linear-gradient(135deg, #f97316 0%, #dc2626 100%) !important;
+}
+
+.atm-action-icon.bg-gradient-to-r.from-pink-500.to-purple-600 {
+    background: linear-gradient(135deg, #ec4899 0%, #9333ea 100%) !important;
+}
+
+.atm-action-icon.bg-gradient-to-r.from-indigo-500.to-blue-600 {
+    background: linear-gradient(135deg, #6366f1 0%, #2563eb 100%) !important;
+}
+
+.atm-action-icon.bg-gradient-to-r.from-cyan-500.to-teal-600 {
+    background: linear-gradient(135deg, #06b6d4 0%, #0d9488 100%) !important;
+}
+
+.atm-action-icon.bg-gradient-to-r.from-red-500.to-pink-600 {
+    background: linear-gradient(135deg, #ef4444 0%, #db2777 100%) !important;
+}
+
+.atm-action-icon.bg-gradient-to-r.from-emerald-500.to-green-600 {
+    background: linear-gradient(135deg, #10b981 0%, #16a34a 100%) !important;
+}
