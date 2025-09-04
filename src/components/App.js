@@ -1,5 +1,4 @@
 import { useState, useEffect } from "@wordpress/element";
-import { Button } from "@wordpress/components";
 import ArticleGenerator from "./ArticleGenerator";
 import ImageGenerator from "./ImageGenerator";
 import PodcastGenerator from "./PodcastGenerator";
@@ -245,15 +244,14 @@ function App() {
           <div key={sectionIndex} className="atm-nav-section">
             <div className="atm-nav-section-title">{section.section}</div>
             {section.items.map((item) => (
-              <Button
+              <button
                 key={item.id}
                 className={`atm-nav-item ${activeView === item.id ? "active" : ""}`}
                 onClick={() => setActiveView(item.id)}
-                variant="tertiary"
               >
                 <span className="atm-nav-icon">{item.icon}</span>
                 {item.label}
-              </Button>
+              </button>
             ))}
           </div>
         ))}

@@ -1,3 +1,177 @@
+/* --- NEW LAYOUT STYLES - Add to TOP of studio.scss --- */
+
+/* Override existing container */
+.atm-studio-container {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+}
+
+/* Main layout wrapper */
+.atm-studio-wrapper {
+  display: flex;
+  min-height: 70vh;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+/* Sidebar */
+.atm-sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+  color: white;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.atm-sidebar-header {
+  padding: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.atm-sidebar-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: white;
+}
+
+.atm-sidebar-header p {
+  font-size: 14px;
+  opacity: 0.7;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.atm-nav-section {
+  padding: 16px 0;
+}
+
+.atm-nav-section-title {
+  padding: 0 24px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.6;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.atm-nav-item {
+  display: flex !important;
+  align-items: center;
+  padding: 12px 24px !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: none !important;
+  background: none !important;
+  width: 100%;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  justify-content: flex-start !important;
+  text-align: left;
+}
+
+.atm-nav-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  transform: none !important;
+}
+
+.atm-nav-item.active {
+  background: rgba(139, 92, 246, 0.2) !important;
+  color: white !important;
+  border-right: 3px solid #8b5cf6 !important;
+}
+
+.atm-nav-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+/* Main content area */
+.atm-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.atm-content-header {
+  background: white;
+  padding: 24px 32px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.atm-content-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.atm-content-subtitle {
+  color: #64748b;
+  font-size: 14px;
+  margin: 0;
+}
+
+.atm-content-body {
+  flex: 1;
+  padding: 32px;
+  background: #f8fafc;
+  overflow-y: auto;
+}
+
+/* Hide back buttons since we have sidebar navigation */
+.atm-generator-view .atm-view-header {
+  display: none;
+}
+
+/* Ensure existing content works in new layout */
+.atm-generator-view .atm-form-container {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Button overrides for new style */
+.atm-studio-container .components-button.is-primary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+
+.atm-studio-container .components-button.is-primary:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .atm-studio-wrapper {
+    flex-direction: column;
+  }
+
+  .atm-sidebar {
+    width: 100%;
+    order: 2;
+  }
+}
+
 /* --- Main Meta Box & Container --- */
 // This overrides the default WordPress padding for a cleaner look.
 #article-to-media .inside {
