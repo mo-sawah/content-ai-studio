@@ -347,7 +347,7 @@ if ($post_id) {
         $charset_collate = $wpdb->get_charset_collate();
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
-        // 1. Update the Campaigns Table
+        // 1. Update the Campaigns Table Schema
         $table_name_campaigns = $wpdb->prefix . 'content_ai_campaigns';
         $sql_campaigns = "CREATE TABLE $table_name_campaigns (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
@@ -372,7 +372,7 @@ if ($post_id) {
         ) $charset_collate;";
         dbDelta($sql_campaigns);
 
-        // 2. Create the New Table for Used Links
+        // 2. Create the New Table for Tracking Used Links
         $table_name_used_links = $wpdb->prefix . 'content_ai_used_links';
         $sql_used_links = "CREATE TABLE $table_name_used_links (
             id bigint(20) NOT NULL AUTO_INCREMENT,
