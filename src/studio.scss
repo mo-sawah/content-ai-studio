@@ -824,6 +824,7 @@
     justify-content: center !important;
     height: auto !important;
     border-radius: 8px !important;
+    margin-bottom: 0 !important;
 }
 
 .atm-search-button {
@@ -834,6 +835,13 @@
     &:hover:not(:disabled) {
         background: #7c3aed !important;
         border-color: #7c3aed !important;
+    }
+
+    svg {
+        width: 20px !important;
+        height: 20px !important;
+        fill: currentColor !important;
+        color: white !important;
     }
 }
 
@@ -848,17 +856,30 @@
         border-color: #9ca3af !important;
         color: #374151 !important;
     }
+
+    svg {
+        width: 20px !important;
+        height: 20px !important;
+        fill: currentColor !important;
+    }
 }
 
 .atm-button-icon {
-    width: 20px;
-    height: 20px;
-    filter: brightness(0) invert(0.5);
-    transition: filter 0.2s ease;
+    width: 20px !important;
+    height: 20px !important;
+    display: block !important;
 }
 
-.atm-filter-button:hover:not(:disabled) .atm-button-icon {
-    filter: brightness(0) invert(0.3);
+/* Ensure SVG icons show properly */
+.atm-search-button svg,
+.atm-filter-button svg,
+.atm-search-button .atm-button-icon,
+.atm-filter-button .atm-button-icon {
+    width: 20px !important;
+    height: 20px !important;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+    display: block !important;
 }
 
 .atm-suggestions-list {
