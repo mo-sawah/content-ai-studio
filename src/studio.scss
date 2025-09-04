@@ -1543,3 +1543,45 @@ body.wp-admin .atm-content-body {
         gap: 1.5rem;
     }
 }
+
+/* Add this CSS to your studio.scss file - append to the end */
+
+/* --- Fix Button Margins --- */
+body.wp-admin .atm-studio-container,
+body.wp-admin .atm-content-body {
+    .components-button {
+        margin-bottom: 16px !important;
+        
+        &:last-child {
+            margin-bottom: 0 !important;
+        }
+    }
+}
+
+/* --- Override Welcome Header Title Size --- */
+.atm-welcome-header h2 {
+    font-size: 48px !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    margin: 0 0 24px 0 !important;
+    line-height: 1.2 !important;
+}
+
+/* Mobile responsive for title */
+@media (max-width: 640px) {
+    .atm-welcome-header h2 {
+        font-size: 36px !important;
+    }
+}
+
+/* --- Ensure Sidebar Icons Display Properly --- */
+.atm-nav-icon svg {
+    width: 20px !important;
+    height: 20px !important;
+    display: block !important;
+}
+
+/* --- Active Nav Item Color Override --- */
+.atm-nav-item.active .atm-nav-icon {
+    color: inherit !important; /* This allows the JavaScript inline style to work */
+}
