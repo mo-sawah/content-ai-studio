@@ -1,14 +1,14 @@
 // src/components/CreativeForm.js
-import { useState, useRef } from "@wordpress/element";
+import { useState, useRef, useEffect } from "@wordpress/element";
 import { useDispatch, useSelect } from "@wordpress/data";
 import {
   Button,
   TextControl,
   TextareaControl,
   CheckboxControl,
+  Spinner,
   DropdownMenu,
 } from "@wordpress/components";
-import CustomSpinner from "./common/CustomSpinner";
 import { chevronDown } from "@wordpress/icons";
 
 const callAjax = (action, data) =>
@@ -17,6 +17,7 @@ const callAjax = (action, data) =>
     type: "POST",
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
+
 const updateEditorContent = (title, markdownContent) => {
   const isBlockEditor = document.body.classList.contains("block-editor-page");
   const htmlContent = window.marked
@@ -65,12 +66,11 @@ function CreativeForm() {
   const [wordCountLabel, setWordCountLabel] = useState("Default");
   const [customPrompt, setCustomPrompt] = useState("");
   const [generateImage, setGenerateImage] = useState(false);
-  const [imagePrompt, setImagePrompt] = useState(""); // <-- ADD THIS
 
   const { savePost } = useDispatch("core/editor");
   const isSaving = useSelect((select) => select("core/editor").isSavingPost());
 
-  // Custom dropdown component
+  // Custom dropdown component with proper width matching
   const CustomDropdown = ({
     label,
     text,
@@ -80,6 +80,16 @@ function CreativeForm() {
     helpText,
   }) => {
     const dropdownRef = useRef(null);
+
+    useEffect(() => {
+      if (dropdownRef.current) {
+        const width = dropdownRef.current.offsetWidth;
+        document.documentElement.style.setProperty(
+          "--atm-dropdown-width",
+          width + "px"
+        );
+      }
+    }, [text]);
 
     return (
       <div className="atm-dropdown-field" ref={dropdownRef}>
@@ -97,10 +107,14 @@ function CreativeForm() {
           disabled={disabled}
           popoverProps={{
             className: "atm-popover",
-            style: {
-              "--atm-dropdown-width": dropdownRef.current?.offsetWidth
-                ? dropdownRef.current.offsetWidth + "px"
-                : "auto",
+            onMount: () => {
+              if (dropdownRef.current) {
+                const width = dropdownRef.current.offsetWidth;
+                document.documentElement.style.setProperty(
+                  "--atm-dropdown-width",
+                  width + "px"
+                );
+              }
             },
           }}
         />
@@ -130,21 +144,26 @@ function CreativeForm() {
   ];
 
   // Set initial writing style label
-  if (!writingStyleLabel && styleOptions.length > 0) {
-    const defaultStyle = styleOptions.find(
-      (option) => option.value === writingStyle
-    );
-    if (defaultStyle) {
-      setWritingStyleLabel(defaultStyle.label);
+  useEffect(() => {
+    if (!writingStyleLabel && styleOptions.length > 0) {
+      const defaultStyle = styleOptions.find(
+        (option) => option.value === writingStyle
+      );
+      if (defaultStyle) {
+        setWritingStyleLabel(defaultStyle.label);
+      }
     }
-  }
+  }, [styleOptions, writingStyle, writingStyleLabel]);
 
   const handleGenerate = async () => {
     setIsLoading(true);
+    setStatusMessage("");
+
     const postId = document
       .getElementById("atm-studio-root")
       .getAttribute("data-post-id");
     const topic = title || keyword;
+
     if (!topic) {
       alert("Please provide a keyword or an article title.");
       setIsLoading(false);
@@ -153,13 +172,18 @@ function CreativeForm() {
 
     try {
       let finalTitle = title;
+
       if (!finalTitle && keyword) {
         setStatusMessage("Generating compelling title...");
         const titleResponse = await callAjax("generate_article_title", {
           keyword,
           model: articleModel,
         });
-        if (!titleResponse.success) throw new Error(titleResponse.data);
+
+        if (!titleResponse.success) {
+          throw new Error(titleResponse.data);
+        }
+
         finalTitle = titleResponse.data.article_title;
       }
 
@@ -172,70 +196,13 @@ function CreativeForm() {
         custom_prompt: customPrompt,
         word_count: wordCount,
       });
-      if (!contentResponse.success) throw new Error(contentResponse.data);
+
+      if (!contentResponse.success) {
+        throw new Error(contentResponse.data);
+      }
 
       updateEditorContent(finalTitle, contentResponse.data.article_content);
       setStatusMessage("✅ Article content inserted!");
-
-      // Replace your subtitle handling with this direct DOM approach:
-      if (contentResponse.data.subtitle) {
-        setStatusMessage("✅ Article content inserted! Setting subtitle...");
-
-        // Wait a moment for the page to fully load, then set subtitle
-        setTimeout(() => {
-          // Method 1: Find and fill SmartMag's subtitle input directly
-          const subtitleInput = document.querySelector(
-            'input[name="_bunyad_sub_title"]'
-          );
-          if (subtitleInput) {
-            subtitleInput.value = contentResponse.data.subtitle;
-            subtitleInput.dispatchEvent(new Event("input", { bubbles: true }));
-            subtitleInput.dispatchEvent(new Event("change", { bubbles: true }));
-            console.log(
-              "ATM: Set subtitle in SmartMag input field:",
-              contentResponse.data.subtitle
-            );
-          }
-
-          // Method 2: Also look for any subtitle field in Post Options
-          const postOptionsSubtitle = document.querySelector(
-            '#_bunyad_sub_title, input[id*="sub_title"], input[id*="subtitle"]'
-          );
-          if (postOptionsSubtitle) {
-            postOptionsSubtitle.value = contentResponse.data.subtitle;
-            postOptionsSubtitle.dispatchEvent(
-              new Event("input", { bubbles: true })
-            );
-            postOptionsSubtitle.dispatchEvent(
-              new Event("change", { bubbles: true })
-            );
-            console.log("ATM: Set subtitle in Post Options field");
-          }
-
-          // Method 3: Try Block Editor meta as last resort (without breaking core)
-          if (typeof wp !== "undefined" && wp.data && wp.data.select) {
-            try {
-              const currentPost = wp.data
-                .select("core/editor")
-                .getCurrentPost();
-              if (currentPost && currentPost.type === "post") {
-                wp.data.dispatch("core/editor").editPost({
-                  meta: {
-                    _bunyad_sub_title: contentResponse.data.subtitle,
-                  },
-                });
-                console.log("ATM: Updated Block Editor meta safely");
-              }
-            } catch (error) {
-              console.log("ATM: Block Editor update skipped:", error.message);
-            }
-          }
-        }, 1000);
-
-        // Save the post
-        await savePost();
-        setStatusMessage("✅ Article and subtitle saved!");
-      }
 
       if (generateImage) {
         setStatusMessage("Saving post...");
@@ -244,7 +211,7 @@ function CreativeForm() {
         setStatusMessage("Generating featured image...");
         const imageResponse = await callAjax("generate_featured_image", {
           post_id: postId,
-          prompt: imagePrompt,
+          prompt: "",
         });
 
         if (!imageResponse.success) {
@@ -252,50 +219,43 @@ function CreativeForm() {
             "Article was generated and saved, but the image failed: " +
               imageResponse.data
           );
+          setStatusMessage("✅ Article generated! (Image generation failed)");
         } else {
-          // --- ADD THESE LINES ---
-          if (imageResponse.data.generated_prompt) {
-            console.log("--- AI-Generated Image Prompt (Creative Article) ---");
-            console.log(imageResponse.data.generated_prompt);
-          }
-          // --- END ---
-
-          setStatusMessage("✅ All done! Reloading to show new image...");
-          setTimeout(() => window.location.reload(), 2500);
-          return;
+          setStatusMessage("✅ All done! Featured image generated.");
         }
       }
-
-      setIsLoading(false);
-      setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      const errorMessage = error.message || "An unknown error occurred.";
-      setStatusMessage(`Error: ${errorMessage}`);
+      console.error("Generation error:", error);
+      alert("Error: " + error.message);
+      setStatusMessage("❌ Generation failed. Please try again.");
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="atm-form-container">
+    <div className="atm-creative-form">
+      <TextControl
+        label="Keyword"
+        placeholder="e.g., AI in digital marketing"
+        value={keyword}
+        onChange={setKeyword}
+        disabled={isLoading || isSaving}
+        help="The main topic or keyword for your article"
+      />
+
+      <TextControl
+        label="Article Title (Optional)"
+        placeholder="Leave empty to auto-generate"
+        value={title}
+        onChange={setTitle}
+        disabled={isLoading || isSaving}
+        help="Provide a specific title or let AI generate one from your keyword"
+      />
+
       <div className="atm-grid-2">
-        <TextControl
-          label="Keyword"
-          value={keyword}
-          onChange={setKeyword}
-          placeholder="e.g., AI in digital marketing"
-          disabled={isLoading || isSaving}
-        />
-        <TextControl
-          label="or Article Title"
-          value={title}
-          onChange={setTitle}
-          placeholder="e.g., 5 Ways AI is Revolutionizing Marketing"
-          disabled={isLoading || isSaving}
-        />
-      </div>
-      <div className="atm-grid-3">
         <CustomDropdown
-          label="Article Model"
+          label="AI Model"
           text={articleModelLabel}
           options={modelOptions}
           onChange={(option) => {
@@ -304,12 +264,10 @@ function CreativeForm() {
           }}
           disabled={isLoading || isSaving}
         />
+
         <CustomDropdown
           label="Writing Style"
-          text={
-            writingStyleLabel ||
-            (styleOptions[0] ? styleOptions[0].label : "Loading...")
-          }
+          text={writingStyleLabel}
           options={styleOptions}
           onChange={(option) => {
             setWritingStyle(option.value);
@@ -317,52 +275,34 @@ function CreativeForm() {
           }}
           disabled={isLoading || isSaving}
         />
-        <CustomDropdown
-          label="Article Length"
-          text={wordCountLabel}
-          options={lengthOptions}
-          onChange={(option) => {
-            setWordCount(option.value);
-            setWordCountLabel(option.label);
-          }}
-          disabled={isLoading || isSaving}
-        />
       </div>
-      <TextareaControl
-        label="Custom Prompt (Optional)"
-        value={customPrompt}
-        onChange={setCustomPrompt}
-        placeholder="Leave empty to use the selected Writing Style. If you write a prompt here, it will be used instead."
-        rows="6"
-        disabled={isLoading || isSaving}
-      />
-      <CheckboxControl
-        label="Also generate a featured image"
-        checked={generateImage}
-        onChange={(isChecked) => {
-          setGenerateImage(isChecked);
-          if (isChecked) {
-            // Pre-fill the prompt when the box is checked
-            const defaultPrompt = `Create a highly photorealistic image that visually represents the following article title in the most accurate and engaging way:\n\n"{{article_title}}"\n\nGuidelines:\n- Style: photorealistic, ultra-realistic, natural lighting\n- Composition: clear, well-framed subject that directly illustrates the article title\n- Avoid: text, logos, watermarks, artistic/cartoon styles\n- Aspect ratio: 16:9 (suitable for a featured article image)\n- Quality: high-resolution, detailed textures, realistic colors`;
-            const finalTitle = title || keyword; // Use title if available, fallback to keyword
-            setImagePrompt(
-              defaultPrompt.replace("{{article_title}}", finalTitle)
-            );
-          }
+
+      <CustomDropdown
+        label="Word Count"
+        text={wordCountLabel}
+        options={lengthOptions}
+        onChange={(option) => {
+          setWordCount(option.value);
+          setWordCountLabel(option.label);
         }}
         disabled={isLoading || isSaving}
       />
 
-      {generateImage && (
-        <TextareaControl
-          label="Featured Image Prompt"
-          help="This prompt will be used to generate the image. You can edit it as needed."
-          value={imagePrompt}
-          onChange={setImagePrompt}
-          rows={8}
-          disabled={isLoading || isSaving}
-        />
-      )}
+      <TextareaControl
+        label="Custom Prompt (Optional)"
+        placeholder="Leave empty to use the selected Writing Style. If you write a prompt here, it will be used instead."
+        value={customPrompt}
+        onChange={setCustomPrompt}
+        rows={6}
+        disabled={isLoading || isSaving}
+      />
+
+      <CheckboxControl
+        label="Also generate a featured image"
+        checked={generateImage}
+        onChange={setGenerateImage}
+        disabled={isLoading || isSaving}
+      />
 
       <Button
         isPrimary
@@ -371,13 +311,41 @@ function CreativeForm() {
       >
         {isLoading || isSaving ? (
           <>
-            <CustomSpinner /> Generating...
+            <Spinner />
+            Generating...
           </>
         ) : (
-          "Generate Creative Article"
+          <>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z"
+                fill="currentColor"
+              />
+            </svg>
+            Generate Creative Article
+          </>
         )}
       </Button>
-      {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
+
+      {statusMessage && (
+        <p
+          className={`atm-status-message ${
+            statusMessage.includes("✅")
+              ? "success"
+              : statusMessage.includes("❌")
+                ? "error"
+                : "info"
+          }`}
+        >
+          {statusMessage}
+        </p>
+      )}
     </div>
   );
 }
