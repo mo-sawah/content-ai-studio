@@ -368,6 +368,82 @@ class ATM_API {
      * 
      */
 
+    // --- NEW: MULTIPAGE ARTICLE FUNCTIONS ---
+    public static function generate_multipage_title($keyword, $page_count, $model_override) {
+        $system_prompt = "You are an expert SEO content strategist. Your task is to generate a single, compelling, SEO-friendly title for a {$page_count}-page article about '{$keyword}'. The title should be catchy and clearly indicate that the content is a comprehensive, multi-part guide. Return only the title itself, with no extra text or quotation marks.";
+        
+        $model = !empty($model_override) ? $model_override : get_option('atm_article_model', 'openai/gpt-4o');
+        
+        $generated_title = self::enhance_content_with_openrouter(['content' => $keyword], $system_prompt, $model, false, true);
+        
+        return trim($generated_title, " \t\n\r\0\x0B\"");
+    }
+    
+    public static function generate_multipage_outline($params) {
+        extract($params); // Extracts variables like $article_title, $page_count, etc.
+
+        $subheadline_instruction = $include_subheadlines ? "Each page's content plan should include a list of 3-5 relevant subheadlines (H2s and H3s)." : "";
+
+        $system_prompt = "You are an expert content architect. Your task is to create a logical and comprehensive outline for a {$page_count}-page article titled '{$article_title}'.
+        
+        CRITICAL INSTRUCTIONS:
+        1. Your entire response MUST be a single, valid JSON object.
+        2. The JSON object must contain one key: `pages`.
+        3. The `pages` key must be an array of exactly {$page_count} objects.
+        4. Each object in the `pages` array must have three keys:
+           - `title`: A short, engaging title for that specific page/chapter.
+           - `slug`: A URL-friendly slug for that page title (e.g., 'understanding-the-basics').
+           - `content_plan`: A detailed 2-3 sentence plan outlining the specific topics, questions, and points to be covered on that page. {$subheadline_instruction}
+        
+        Do not include any text, explanations, or markdown code fences outside of the JSON object.";
+
+        $model = !empty($model) ? $model : get_option('atm_article_model', 'openai/gpt-4o');
+        
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $article_title],
+            $system_prompt,
+            $model,
+            true, // json_mode
+            $enable_web_search
+        );
+        
+        $result = json_decode($raw_response, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['pages']) || !is_array($result['pages'])) {
+            error_log('Content AI Studio - Invalid JSON from Multipage Outline API: ' . $raw_response);
+            throw new Exception('The AI returned an invalid outline structure. Please try again.');
+        }
+
+        return $result;
+    }
+    
+    public static function generate_multipage_content($params) {
+        extract($params); // Extracts variables
+
+        $writing_styles = self::get_writing_styles();
+        $base_prompt = !empty($custom_prompt) 
+            ? $custom_prompt 
+            : ($writing_styles[$writing_style]['prompt'] ?? $writing_styles['default_seo']['prompt']);
+
+        $user_content = "Please write page {$page_number} of a {$total_pages}-page article titled '{$article_title}'. Follow the content plan for this page precisely.\n\n" .
+                      "**This Page's Title:** {$page_outline['title']}\n" .
+                      "**Content Plan for this Page:**\n{$page_outline['content_plan']}\n\n" .
+                      "**Instructions:**\n" .
+                      "- Write approximately {$words_per_page} words.\n" .
+                      "- The entire response should be ONLY the article content for this specific page, formatted in Markdown.\n" .
+                      "- Do NOT repeat the main article title or this page's title within the content. Start directly with the first paragraph.";
+        
+        $model = !empty($model) ? $model : get_option('atm_article_model', 'openai/gpt-4o');
+
+        return self::enhance_content_with_openrouter(
+            ['content' => $user_content],
+            $base_prompt,
+            $model,
+            false, // not json_mode
+            $enable_web_search
+        );
+    }
+    // --- END NEW ---
+
     public static function extract_article_links_from_html($html_content, $base_url) {
         $system_prompt = "You are a web scraping expert. Analyze the following HTML content from the base URL `{$base_url}`. Your task is to extract all the hyperlinks (`<a>` tags) that appear to lead to individual news articles.
 

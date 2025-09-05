@@ -1814,3 +1814,52 @@ body.wp-admin .atm-content-body {
 .atm-action-icon.bg-gradient-to-r.from-emerald-500.to-green-600 {
     background: linear-gradient(135deg, #10b981 0%, #16a34a 100%) !important;
 }
+
+/* --- Multipage Article Form Styles --- */
+.atm-form-section {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+
+    .atm-section-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1e293b;
+        margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: white;
+        border-radius: 12px 12px 0 0;
+    }
+}
+
+.atm-form-actions {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Style for WordPress RangeControl */
+.atm-form-container .components-range-control {
+    .components-range-control__track {
+        background-color: #d1d5db;
+        height: 6px;
+    }
+    .components-range-control__progress {
+        background: #8b5cf6 !important;
+        height: 6px;
+    }
+    .components-range-control__thumb {
+        background: #8b5cf6;
+        border: 2px solid white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        width: 20px;
+        height: 20px;
+
+        &:focus {
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+        }
+    }
+}

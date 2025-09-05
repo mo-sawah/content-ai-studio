@@ -6,6 +6,142 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    // --- NEW: MULTIPAGE ARTICLE FUNCTIONS ---
+    public function generate_multipage_title() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $keyword = sanitize_text_field($_POST['keyword']);
+            $page_count = intval($_POST['page_count']);
+            $model = sanitize_text_field($_POST['model']);
+            $title = ATM_API::generate_multipage_title($keyword, $page_count, $model);
+            wp_send_json_success(['article_title' => $title]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function generate_multipage_outline() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $params = [
+                'article_title' => sanitize_text_field($_POST['article_title']),
+                'page_count' => intval($_POST['page_count']),
+                'model' => sanitize_text_field($_POST['model']),
+                'writing_style' => sanitize_text_field($_POST['writing_style']),
+                'include_subheadlines' => filter_var($_POST['include_subheadlines'], FILTER_VALIDATE_BOOLEAN),
+                'enable_web_search' => filter_var($_POST['enable_web_search'], FILTER_VALIDATE_BOOLEAN),
+            ];
+            $outline = ATM_API::generate_multipage_outline($params);
+            wp_send_json_success(['outline' => $outline]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
+    public function generate_multipage_content() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+             $params = [
+                'article_title' => sanitize_text_field($_POST['article_title']),
+                'page_number' => intval($_POST['page_number']),
+                'total_pages' => intval($_POST['total_pages']),
+                'page_outline' => wp_kses_post_deep($_POST['page_outline']),
+                'words_per_page' => intval($_POST['words_per_page']),
+                'model' => sanitize_text_field($_POST['model']),
+                'writing_style' => sanitize_text_field($_POST['writing_style']),
+                'custom_prompt' => wp_kses_post(stripslashes($_POST['custom_prompt'])),
+                'include_subheadlines' => filter_var($_POST['include_subheadlines'], FILTER_VALIDATE_BOOLEAN),
+                'enable_web_search' => filter_var($_POST['enable_web_search'], FILTER_VALIDATE_BOOLEAN),
+            ];
+            $content = ATM_API::generate_multipage_content($params);
+            wp_send_json_success(['page_content' => $content]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function create_multipage_article() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $post_id = intval($_POST['post_id']);
+            $main_title = sanitize_text_field($_POST['main_title']);
+            $pages_data = $_POST['pages'];
+            $nav_style = sanitize_key($_POST['navigation_style']);
+
+            if (!$post_id || empty($main_title) || empty($pages_data)) {
+                throw new Exception('Missing required data for multipage creation.');
+            }
+
+            $page_ids = [$post_id];
+            $page_links = [get_permalink($post_id)];
+            $page_titles = [$main_title];
+            
+            // Start from index 1 to create child pages
+            for ($i = 1; $i < count($pages_data); $i++) {
+                $page = $pages_data[$i];
+                $child_post_id = wp_insert_post([
+                    'post_title' => sanitize_text_field($page['title']),
+                    'post_content' => '', // Content will be added later with navigation
+                    'post_status' => 'draft',
+                    'post_parent' => $post_id,
+                    'post_type' => 'post',
+                    'post_name' => sanitize_title($page['slug']),
+                ]);
+
+                if (!is_wp_error($child_post_id)) {
+                    $page_ids[] = $child_post_id;
+                    $page_links[] = get_permalink($child_post_id);
+                    $page_titles[] = sanitize_text_field($page['title']);
+                }
+            }
+            
+            $main_content = '';
+            // Now, update all posts with content and navigation
+            $Parsedown = new Parsedown();
+            foreach ($page_ids as $index => $current_post_id) {
+                $content = $Parsedown->text($pages_data[$index]['content']);
+                $navigation_html = $this->build_navigation_html($index, $page_links, $page_titles, $nav_style);
+                $final_content = $content . $navigation_html;
+
+                wp_update_post([
+                    'ID' => $current_post_id,
+                    'post_content' => $final_content,
+                ]);
+                
+                if($index === 0) {
+                    $main_content = $final_content;
+                }
+            }
+
+            wp_send_json_success(['message' => 'Multipage article created.', 'main_content' => $main_content]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
+    private function build_navigation_html($current_index, $links, $titles, $style) {
+        $total_pages = count($links);
+        if ($total_pages <= 1) return '';
+
+        $prev_index = $current_index - 1;
+        $next_index = $current_index + 1;
+
+        $prev_link = ($prev_index >= 0) ? '<a href="' . esc_url($links[$prev_index]) . '" class="atm-nav-prev">&laquo; Previous: ' . esc_html($titles[$prev_index]) . '</a>' : '<span class="atm-nav-placeholder"></span>';
+        $next_link = ($next_index < $total_pages) ? '<a href="' . esc_url($links[$next_index]) . '" class="atm-nav-next">Next: ' . esc_html($titles[$next_index]) . ' &raquo;</a>' : '<span class="atm-nav-placeholder"></span>';
+        $page_indicator = '<span class="atm-nav-indicator">Page ' . ($current_index + 1) . ' of ' . $total_pages . '</span>';
+        
+        $html = '<nav class="atm-multipage-nav ' . esc_attr($style) . '">';
+        if ($style === 'classic') {
+            $html .= $prev_link . $page_indicator . $next_link;
+        } else { // modern
+            $html .= $prev_link . $next_link;
+        }
+        $html .= '</nav>';
+        
+        return $html;
+    }
+
     public function save_campaign() {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied.');
@@ -348,6 +484,13 @@ public function translate_text() {
         add_action('wp_ajax_save_atm_chart', array($this, 'save_atm_chart'));
         add_action('wp_ajax_generate_key_takeaways', array($this, 'generate_key_takeaways'));
         add_action('wp_ajax_save_key_takeaways', array($this, 'save_key_takeaways'));
+
+                // --- NEW MULTIPAGE ACTIONS ---
+        add_action('wp_ajax_generate_multipage_title', array($this, 'generate_multipage_title'));
+        add_action('wp_ajax_generate_multipage_outline', array($this, 'generate_multipage_outline'));
+        add_action('wp_ajax_generate_multipage_content', array($this, 'generate_multipage_content'));
+        add_action('wp_ajax_create_multipage_article', array($this, 'create_multipage_article'));
+        // --- END NEW ---
 
         // Campaign Management Actions
         add_action('wp_ajax_atm_save_campaign', array($this, 'save_campaign'));

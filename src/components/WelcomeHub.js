@@ -20,6 +20,29 @@ function WelcomeHub({ setActiveView }) {
       gradient: "from-blue-500 to-purple-600",
       onClick: () => setActiveView("articles"),
     },
+    // --- NEW: Multipage Articles card added here ---
+    {
+      id: "multipage",
+      title: "Multipage Articles",
+      description: "Create comprehensive, multi-part guides",
+      icon: (
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 002-2V7a2 2 0 00-2-2H9a2 2 0 00-2 2v12a2 2 0 002 2h10z"
+          ></path>
+        </svg>
+      ),
+      gradient: "from-yellow-500 to-amber-600",
+      onClick: () => setActiveView("multipage"),
+    },
     {
       id: "images",
       title: "Generate Images",
@@ -172,7 +195,7 @@ function WelcomeHub({ setActiveView }) {
 
       <div className="atm-welcome-stats">
         <div className="atm-stat-item">
-          <div className="atm-stat-number">8</div>
+          <div className="atm-stat-number">9</div>
           <div className="atm-stat-label">AI Tools</div>
         </div>
         <div className="atm-stat-item">

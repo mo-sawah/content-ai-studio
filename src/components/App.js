@@ -9,6 +9,7 @@ import SpeechToText from './SpeechToText';
 import Translator from './Translator';
 import VideoSearch from './VideoSearch';
 import ChartGenerator from './ChartGenerator';
+import MultipageArticlesForm from './MultipageArticlesForm'; // --- NEW: Import Multipage component
 
 function App() {
     const [activeView, setActiveView] = useState('hub');
@@ -26,6 +27,17 @@ function App() {
                         </svg>
                     ),
                     color: '#6366f1'
+                },
+                // --- NEW: Add Multipage Articles to sidebar ---
+                {
+                    id: 'multipage',
+                    label: 'Multipage Articles',
+                    icon: (
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 002-2V7a2 2 0 00-2-2H9a2 2 0 00-2 2v12a2 2 0 002 2h10z"></path>
+                        </svg>
+                    ),
+                    color: '#f59e0b' // amber-500
                 },
                 { 
                     id: 'images', 
@@ -112,6 +124,8 @@ function App() {
                 return <WelcomeHub setActiveView={setActiveView} />;
             case 'articles':
                 return <ArticleGenerator setActiveView={setActiveView} />;
+            case 'multipage': // --- NEW: Add routing for the component
+                return <MultipageArticlesForm setActiveView={setActiveView} />;
             case 'images':
                 return <ImageGenerator setActiveView={setActiveView} />;
             case 'podcast':
@@ -135,6 +149,7 @@ function App() {
         const titles = {
             hub: 'AI Studio',
             articles: 'Generate Articles',
+            multipage: 'Generate Multipage Article', // --- NEW
             images: 'Generate Images',
             podcast: 'Generate Podcast',
             takeaways: 'Key Takeaways',
@@ -150,6 +165,7 @@ function App() {
         const subtitles = {
             hub: 'Content Creation Suite',
             articles: 'Create high-quality content with AI assistance',
+            multipage: 'Create comprehensive, multi-part guides with AI', // --- NEW
             images: 'Generate stunning visuals powered by AI',
             podcast: 'Turn content into engaging audio experiences',
             takeaways: 'Extract key insights from your content',
@@ -163,7 +179,6 @@ function App() {
 
     return (
         <div className="atm-studio-wrapper">
-            {/* Sidebar Navigation */}
             <div className="atm-sidebar">
                 <div className="atm-sidebar-header">
                     <h2>AI Studio</h2>
@@ -195,17 +210,13 @@ function App() {
                 ))}
             </div>
 
-            {/* Main Content Area */}
             <div className="atm-main-content">
-                {/* Content Header - only show for non-hub views */}
                 {activeView !== 'hub' && (
                     <div className="atm-content-header">
                         <h1 className="atm-content-title">{getPageTitle()}</h1>
                         <p className="atm-content-subtitle">{getPageSubtitle()}</p>
                     </div>
                 )}
-
-                {/* Content Body */}
                 <div className="atm-content-body">
                     {renderActiveView()}
                 </div>

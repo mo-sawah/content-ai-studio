@@ -470,3 +470,62 @@ body.atm-chart-theme-dark {
   font-size: 95% !important;
   color: var(--takeaways-li-text);
 }
+
+/* --- NEW: Multipage Navigation Styles --- */
+.atm-multipage-nav {
+  margin: 2.5em 0 1.5em;
+  padding-top: 1.5em;
+  border-top: 2px solid #e2e8f0;
+}
+
+/* Modern Style (Default) */
+.atm-multipage-nav.modern {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.atm-multipage-nav.modern a {
+  text-decoration: none;
+  color: #475569;
+  font-size: 1.1em;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+.atm-multipage-nav.modern a:hover {
+  color: #1e293b;
+}
+.atm-multipage-nav.modern .atm-nav-prev {
+  text-align: left;
+}
+.atm-multipage-nav.modern .atm-nav-next {
+  text-align: right;
+}
+.atm-multipage-nav .atm-nav-placeholder {
+  width: 45%; /* Ensure layout stays consistent */
+}
+
+/* Classic Style */
+.atm-multipage-nav.classic {
+  text-align: center;
+  font-size: 1.1em;
+  font-weight: 500;
+}
+.atm-multipage-nav.classic a {
+  text-decoration: underline;
+  color: #4f46e5;
+}
+.atm-multipage-nav.classic a:hover {
+  color: #312e81;
+}
+.atm-multipage-nav.classic .atm-nav-indicator {
+  margin: 0 1.5em;
+  color: #64748b;
+}
+.atm-multipage-nav.classic .atm-nav-prev {
+  margin-right: 1em;
+}
+.atm-multipage-nav.classic .atm-nav-next {
+  margin-left: 1em;
+}
