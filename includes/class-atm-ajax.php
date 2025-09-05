@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
-    // --- NEW: MULTIPAGE ARTICLE FUNCTIONS ---
+   // --- NEW: MULTIPAGE ARTICLE FUNCTIONS ---
     public function generate_multipage_title() {
         check_ajax_referer('atm_nonce', 'nonce');
         try {
@@ -59,87 +59,64 @@ class ATM_Ajax {
             wp_send_json_error($e->getMessage());
         }
     }
-
+    
     public function create_multipage_article() {
         check_ajax_referer('atm_nonce', 'nonce');
         try {
             $post_id = intval($_POST['post_id']);
             $main_title = sanitize_text_field($_POST['main_title']);
-            $pages_data = $_POST['pages'];
-            $nav_style = sanitize_key($_POST['navigation_style']);
+            $pages_data = $_POST['pages']; // This comes from React, should be clean
 
             if (!$post_id || empty($main_title) || empty($pages_data)) {
                 throw new Exception('Missing required data for multipage creation.');
             }
-
-            $page_ids = [$post_id];
-            $page_links = [get_permalink($post_id)];
-            $page_titles = [$main_title];
             
-            // Start from index 1 to create child pages
-            for ($i = 1; $i < count($pages_data); $i++) {
-                $page = $pages_data[$i];
-                $child_post_id = wp_insert_post([
-                    'post_title' => sanitize_text_field($page['title']),
-                    'post_content' => '', // Content will be added later with navigation
-                    'post_status' => 'draft',
-                    'post_parent' => $post_id,
-                    'post_type' => 'post',
-                    'post_name' => sanitize_title($page['slug']),
-                ]);
-
-                if (!is_wp_error($child_post_id)) {
-                    $page_ids[] = $child_post_id;
-                    $page_links[] = get_permalink($child_post_id);
-                    $page_titles[] = sanitize_text_field($page['title']);
-                }
-            }
-            
-            $main_content = '';
-            // Now, update all posts with content and navigation
+            // Sanitize the pages data
+            $sanitized_pages = [];
             $Parsedown = new Parsedown();
-            foreach ($page_ids as $index => $current_post_id) {
-                $content = $Parsedown->text($pages_data[$index]['content']);
-                $navigation_html = $this->build_navigation_html($index, $page_links, $page_titles, $nav_style);
-                $final_content = $content . $navigation_html;
-
-                wp_update_post([
-                    'ID' => $current_post_id,
-                    'post_content' => $final_content,
-                ]);
-                
-                if($index === 0) {
-                    $main_content = $final_content;
-                }
+            foreach ($pages_data as $page) {
+                $sanitized_pages[] = [
+                    'title' => sanitize_text_field($page['title']),
+                    'content_html' => wp_kses_post($Parsedown->text($page['content']))
+                ];
             }
 
-            wp_send_json_success(['message' => 'Multipage article created.', 'main_content' => $main_content]);
+            // Save all pages data to a single post meta field
+            update_post_meta($post_id, '_atm_multipage_data', $sanitized_pages);
+
+            // Prepare the content for the editor, which is just the shortcode
+            $editor_content = '[atm_multipage_article]';
+
+            wp_send_json_success(['message' => 'Multipage article data saved.', 'editor_content' => $editor_content]);
 
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
     }
-    
-    private function build_navigation_html($current_index, $links, $titles, $style) {
-        $total_pages = count($links);
-        if ($total_pages <= 1) return '';
 
-        $prev_index = $current_index - 1;
-        $next_index = $current_index + 1;
+    // New AJAX handler for fetching page content on the frontend
+    public function get_multipage_page_content() {
+        check_ajax_referer('atm_multipage_nonce', 'nonce');
+        try {
+            $post_id = intval($_POST['post_id']);
+            $page_index = intval($_POST['page_index']);
 
-        $prev_link = ($prev_index >= 0) ? '<a href="' . esc_url($links[$prev_index]) . '" class="atm-nav-prev">&laquo; Previous: ' . esc_html($titles[$prev_index]) . '</a>' : '<span class="atm-nav-placeholder"></span>';
-        $next_link = ($next_index < $total_pages) ? '<a href="' . esc_url($links[$next_index]) . '" class="atm-nav-next">Next: ' . esc_html($titles[$next_index]) . ' &raquo;</a>' : '<span class="atm-nav-placeholder"></span>';
-        $page_indicator = '<span class="atm-nav-indicator">Page ' . ($current_index + 1) . ' of ' . $total_pages . '</span>';
-        
-        $html = '<nav class="atm-multipage-nav ' . esc_attr($style) . '">';
-        if ($style === 'classic') {
-            $html .= $prev_link . $page_indicator . $next_link;
-        } else { // modern
-            $html .= $prev_link . $next_link;
+            if (!$post_id) {
+                throw new Exception('Invalid post ID.');
+            }
+
+            $multipage_data = get_post_meta($post_id, '_atm_multipage_data', true);
+
+            if (empty($multipage_data) || !isset($multipage_data[$page_index])) {
+                throw new Exception('Page data not found.');
+            }
+            
+            // Send back the pre-rendered HTML content for the requested page
+            wp_send_json_success(['html_content' => $multipage_data[$page_index]['content_html']]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
         }
-        $html .= '</nav>';
-        
-        return $html;
     }
 
     public function save_campaign() {
@@ -485,12 +462,13 @@ public function translate_text() {
         add_action('wp_ajax_generate_key_takeaways', array($this, 'generate_key_takeaways'));
         add_action('wp_ajax_save_key_takeaways', array($this, 'save_key_takeaways'));
 
-                // --- NEW MULTIPAGE ACTIONS ---
+        // --- MULTIPAGE ACTIONS ---
         add_action('wp_ajax_generate_multipage_title', array($this, 'generate_multipage_title'));
         add_action('wp_ajax_generate_multipage_outline', array($this, 'generate_multipage_outline'));
         add_action('wp_ajax_generate_multipage_content', array($this, 'generate_multipage_content'));
         add_action('wp_ajax_create_multipage_article', array($this, 'create_multipage_article'));
-        // --- END NEW ---
+        add_action('wp_ajax_get_multipage_page_content', array($this, 'get_multipage_page_content')); // New AJAX action for frontend
+        // --- END ---
 
         // Campaign Management Actions
         add_action('wp_ajax_atm_save_campaign', array($this, 'save_campaign'));

@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 
 class ATM_Frontend {
 
+    
     public function enqueue_frontend_scripts() {
         if (is_single()) {
             // Enqueue the main player script and style on all single posts
@@ -43,6 +44,16 @@ class ATM_Frontend {
                     'nonce'          => wp_create_nonce('wp_rest'),
                     'chart_api_base' => rest_url('atm/v1/charts/'),
                     'theme_mode'     => 'light'
+                ]);
+            }
+
+            // --- NEW: Conditionally enqueue multipage script ---
+            if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'atm_multipage_article')) {
+                wp_enqueue_script('atm-frontend-multipage', ATM_PLUGIN_URL . 'assets/js/frontend-multipage.js', ['jquery'], ATM_VERSION, true);
+                // Pass data needed for AJAX calls
+                wp_localize_script('atm-frontend-multipage', 'atm_multipage_data', [
+                    'ajax_url' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('atm_multipage_nonce'),
                 ]);
             }
         }

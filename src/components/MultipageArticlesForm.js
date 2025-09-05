@@ -1,5 +1,5 @@
 // src/components/MultipageArticlesForm.js
-import { useState } from "@wordpress/element";
+import { useState, useRef, useEffect } from "@wordpress/element";
 import { useDispatch, useSelect } from "@wordpress/data";
 import {
   Button,
@@ -19,28 +19,24 @@ const callAjax = (action, data) =>
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
 
-const updateEditorContent = (title, markdownContent) => {
+const updateEditorContent = (title, content) => {
   const isBlockEditor = !!wp.data.select("core/block-editor");
-  const htmlContent = window.marked
-    ? window.marked.parse(markdownContent)
-    : markdownContent;
 
   if (isBlockEditor) {
     wp.data.dispatch("core/editor").editPost({ title });
-    const blocks = wp.blocks.parse(htmlContent);
+    const blocks = wp.blocks.parse(content);
     wp.data.dispatch("core/block-editor").resetBlocks(blocks);
   } else {
     jQuery("#title").val(title).trigger("blur");
     if (window.tinymce?.get("content")) {
-      window.tinymce.get("content").setContent(htmlContent);
+      window.tinymce.get("content").setContent(content);
     } else {
-      jQuery("#content").val(htmlContent);
+      jQuery("#content").val(content);
     }
   }
 };
 
 function MultipageArticlesForm({ setActiveView }) {
-  // Receive setActiveView prop
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [keyword, setKeyword] = useState("");
@@ -58,11 +54,6 @@ function MultipageArticlesForm({ setActiveView }) {
   const [generateImage, setGenerateImage] = useState(false);
   const [enableWebSearch, setEnableWebSearch] = useState(true);
   const [includeSubheadlines, setIncludeSubheadlines] = useState(true);
-  const [navigationStyle, setNavigationStyle] = useState("modern");
-  const [navigationStyleLabel, setNavigationStyleLabel] =
-    useState("Modern Navigation");
-
-  const [generatedPages, setGeneratedPages] = useState([]);
 
   const { savePost } = useDispatch("core/editor");
   const isSaving = useSelect((select) => select("core/editor").isSavingPost());
@@ -79,15 +70,9 @@ function MultipageArticlesForm({ setActiveView }) {
     ([value, { label }]) => ({ label, value })
   );
 
-  const navigationOptions = [
-    { label: "Modern Navigation", value: "modern" },
-    { label: "Classic Pagination", value: "classic" },
-  ];
-
   const handleGenerate = async () => {
     setIsLoading(true);
     setStatusMessage("");
-    setGeneratedPages([]);
 
     const postId = document
       .getElementById("atm-studio-root")
@@ -117,11 +102,8 @@ function MultipageArticlesForm({ setActiveView }) {
 
       setStatusMessage("Planning article structure...");
       const outlineResponse = await callAjax("generate_multipage_outline", {
-        post_id: postId,
         article_title: finalTitle,
-        keyword: keyword,
         page_count: pageCount,
-        words_per_page: wordsPerPage,
         model: articleModel,
         writing_style: writingStyle,
         include_subheadlines: includeSubheadlines,
@@ -135,11 +117,10 @@ function MultipageArticlesForm({ setActiveView }) {
       for (let i = 0; i < pageCount; i++) {
         setStatusMessage(`Writing page ${i + 1} of ${pageCount}...`);
         const pageResponse = await callAjax("generate_multipage_content", {
-          post_id: postId,
           article_title: finalTitle,
           page_number: i + 1,
-          page_outline: outline.pages[i],
           total_pages: pageCount,
+          page_outline: outline.pages[i],
           words_per_page: wordsPerPage,
           model: articleModel,
           writing_style: writingStyle,
@@ -151,27 +132,24 @@ function MultipageArticlesForm({ setActiveView }) {
         pages.push({
           title: outline.pages[i].title,
           content: pageResponse.data.page_content,
-          slug: outline.pages[i].slug,
         });
       }
 
-      setGeneratedPages(pages);
-      setStatusMessage("Creating posts and navigation...");
+      setStatusMessage("Saving content and inserting shortcode...");
 
       const multipageResponse = await callAjax("create_multipage_article", {
         post_id: postId,
         main_title: finalTitle,
         pages: pages,
-        navigation_style: navigationStyle,
       });
       if (!multipageResponse.success) throw new Error(multipageResponse.data);
 
-      updateEditorContent(finalTitle, multipageResponse.data.main_content);
+      updateEditorContent(finalTitle, multipageResponse.data.editor_content);
       setStatusMessage("✅ Multipage article created successfully!");
 
       if (generateImage) {
         setStatusMessage(
-          "✅ Multipage article created! Saving post to generate image..."
+          "✅ Article created! Saving post to generate image..."
         );
         await savePost();
         setStatusMessage("Generating featured image...");
@@ -184,8 +162,7 @@ function MultipageArticlesForm({ setActiveView }) {
             "Article created, but image failed: " + imageResponse.data
           );
         }
-        setStatusMessage("✅ All done! Reloading to show image...");
-        setTimeout(() => window.location.reload(), 1500);
+        setStatusMessage("✅ All done! Featured image has been set.");
       }
     } catch (error) {
       console.error("Generation error:", error);
@@ -196,7 +173,6 @@ function MultipageArticlesForm({ setActiveView }) {
   };
 
   return (
-    // --- NEW: Added wrapper and header ---
     <div className="atm-generator-view">
       <div className="atm-view-header">
         <button
@@ -276,26 +252,17 @@ function MultipageArticlesForm({ setActiveView }) {
               max={10}
               disabled={isLoading || isSaving}
             />
+            {/* --- UPDATED: RangeControl for word count --- */}
             <RangeControl
               label={`Words per Page: ~${wordsPerPage}`}
               value={wordsPerPage}
               onChange={setWordsPerPage}
-              min={300}
+              min={100}
               max={1500}
               step={50}
               disabled={isLoading || isSaving}
             />
           </div>
-          <CustomDropdown
-            label="Frontend Navigation Style"
-            text={navigationStyleLabel}
-            options={navigationOptions}
-            onChange={(option) => {
-              setNavigationStyle(option.value);
-              setNavigationStyleLabel(option.label);
-            }}
-            disabled={isLoading || isSaving}
-          />
         </div>
 
         <div className="atm-form-section">
@@ -347,7 +314,13 @@ function MultipageArticlesForm({ setActiveView }) {
             )}
           </Button>
         </div>
-        {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
+        {statusMessage && (
+          <p
+            className={`atm-status-message ${statusMessage.includes("✅") ? "success" : statusMessage.includes("❌") ? "error" : "info"}`}
+          >
+            {statusMessage}
+          </p>
+        )}
       </div>
     </div>
   );

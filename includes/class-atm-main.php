@@ -7,8 +7,39 @@ if (!defined('ABSPATH')) {
 
 class ATM_Main {
     
+    // --- NEW: Function to render the multipage shortcode on the frontend ---
+    public function render_multipage_shortcode($atts) {
+        $post_id = get_the_ID();
+        $multipage_data = get_post_meta($post_id, '_atm_multipage_data', true);
+
+        if (empty($multipage_data) || !is_array($multipage_data)) {
+            return '<!-- Multipage data not found -->';
+        }
+
+        $total_pages = count($multipage_data);
+        ob_start();
+        ?>
+        <div class="atm-multipage-container" data-post-id="<?php echo esc_attr($post_id); ?>">
+            <div class="atm-multipage-content">
+                <?php echo $multipage_data[0]['content_html']; // Output the first page's content ?>
+            </div>
+            <nav class="atm-multipage-ajax-nav">
+                <div class="atm-nav-numbers">
+                    <?php for ($i = 0; $i < $total_pages; $i++): ?>
+                        <button class="atm-nav-number <?php echo ($i === 0) ? 'active' : ''; ?>" data-page-index="<?php echo esc_attr($i); ?>">
+                            <?php echo esc_html($i + 1); ?>
+                        </button>
+                    <?php endfor; ?>
+                </div>
+            </nav>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+    
     public function register_shortcodes() {
         add_shortcode('atm_chart', array($this, 'render_chart_shortcode'));
+        add_shortcode('atm_multipage_article', array($this, 'render_multipage_shortcode'));
     }
 
     // --- ADD THIS NEW FUNCTION to handle shortcode rendering ---
@@ -192,6 +223,7 @@ class ATM_Main {
         add_action('init', array($this, 'register_chart_post_type'));
         add_action('rest_api_init', array($this, 'register_chart_rest_routes'));
         add_action('init', array($this, 'register_shortcodes'));
+        
 
         // --- LICENSE CHECK ---
         if (ATM_Licensing::is_license_active()) {
