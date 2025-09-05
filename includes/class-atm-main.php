@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 class ATM_Main {
     
-    // --- NEW: Function to render the multipage shortcode on the frontend ---
+    // --- UPDATED to generate the new navigation structure ---
     public function render_multipage_shortcode($atts) {
         $post_id = get_the_ID();
         $multipage_data = get_post_meta($post_id, '_atm_multipage_data', true);
@@ -17,20 +17,33 @@ class ATM_Main {
         }
 
         $total_pages = count($multipage_data);
+        $current_page = 0; // Always starts at 0 for the initial load
+
         ob_start();
         ?>
         <div class="atm-multipage-container" data-post-id="<?php echo esc_attr($post_id); ?>">
             <div class="atm-multipage-content">
                 <?php echo $multipage_data[0]['content_html']; // Output the first page's content ?>
             </div>
-            <nav class="atm-multipage-ajax-nav">
-                <div class="atm-nav-numbers">
+            
+            <nav class="atm-post-navigation">
+                <button class="atm-nav-item prev" data-page-index="<?php echo $current_page - 1; ?>" <?php disabled($current_page, 0); ?>>
+                    <span class="arrow">←</span>
+                    <span class="text">Previous</span>
+                </button>
+                
+                <div class="atm-nav-pages">
                     <?php for ($i = 0; $i < $total_pages; $i++): ?>
-                        <button class="atm-nav-number <?php echo ($i === 0) ? 'active' : ''; ?>" data-page-index="<?php echo esc_attr($i); ?>">
+                        <button class="atm-page-number <?php echo ($i === $current_page) ? 'active' : ''; ?>" data-page-index="<?php echo esc_attr($i); ?>">
                             <?php echo esc_html($i + 1); ?>
                         </button>
                     <?php endfor; ?>
                 </div>
+                
+                <button class="atm-nav-item next" data-page-index="<?php echo $current_page + 1; ?>" <?php disabled($current_page, $total_pages - 1); ?>>
+                    <span class="text">Next</span>
+                    <span class="arrow">→</span>
+                </button>
             </nav>
         </div>
         <?php

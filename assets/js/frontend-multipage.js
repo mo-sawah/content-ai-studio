@@ -1,61 +1,100 @@
 jQuery(document).ready(function ($) {
-  // Find each multipage container on the page (in case of multiple shortcodes)
-  $(".atm-multipage-container").each(function () {
-    const container = $(this);
-    const contentArea = container.find(".atm-multipage-content");
-    const navNumbers = container.find(".atm-nav-number");
-    const postId = container.data("post-id");
-    let isLoading = false;
+  function initializeMultipageContainers() {
+    $(".atm-multipage-container").each(function () {
+      const container = $(this);
+      const contentArea = container.find(".atm-multipage-content");
+      const navContainer = container.find(".atm-post-navigation");
+      const postId = container.data("post-id");
+      let isLoading = false;
+      let totalPages = container.find(".atm-page-number").length;
 
-    navNumbers.on("click", function () {
-      const button = $(this);
-      const pageIndex = button.data("page-index");
+      // Function to load content for a specific page
+      const loadPage = function (pageIndex) {
+        if (isLoading) return;
 
-      if (button.hasClass("active") || isLoading) {
-        return;
-      }
+        isLoading = true;
 
-      isLoading = true;
-      navNumbers.removeClass("active");
-      button.addClass("active");
+        // Update URL hash
+        window.location.hash = "page=" + (pageIndex + 1);
 
-      // Add a loading indicator
-      contentArea
-        .css("opacity", 0.5)
-        .prepend('<div class="atm-multipage-loader"></div>');
+        // Update active state on buttons
+        navContainer.find(".atm-page-number").removeClass("active");
+        navContainer
+          .find('.atm-page-number[data-page-index="' + pageIndex + '"]')
+          .addClass("active");
 
-      $.ajax({
-        url: atm_multipage_data.ajax_url,
-        type: "POST",
-        data: {
-          action: "get_multipage_page_content",
-          nonce: atm_multipage_data.nonce,
-          post_id: postId,
-          page_index: pageIndex,
-        },
-        success: function (response) {
-          if (response.success) {
-            // Fade out, replace content, then fade in
-            contentArea.fadeOut(150, function () {
-              $(this).html(response.data.html_content).fadeIn(150);
-            });
-          } else {
+        // Update prev/next button states
+        navContainer
+          .find(".atm-nav-item.prev")
+          .prop("disabled", pageIndex === 0);
+        navContainer
+          .find(".atm-nav-item.next")
+          .prop("disabled", pageIndex === totalPages - 1);
+
+        // Add loading indicator
+        contentArea
+          .css("opacity", 0.5)
+          .html('<div class="atm-multipage-loader"></div>');
+
+        $.ajax({
+          url: atm_multipage_data.ajax_url,
+          type: "POST",
+          data: {
+            action: "get_multipage_page_content",
+            nonce: atm_multipage_data.nonce,
+            post_id: postId,
+            page_index: pageIndex,
+          },
+          success: function (response) {
+            if (response.success) {
+              contentArea.html(response.data.html_content);
+              // Scroll to top of the article container
+              $("html, body").animate(
+                {
+                  scrollTop: container.offset().top - 30, // 30px offset for admin bar etc.
+                },
+                300
+              );
+            } else {
+              contentArea.html(
+                '<p class="atm-multipage-error">Error: Could not load content. Please try again.</p>'
+              );
+            }
+          },
+          error: function () {
             contentArea.html(
-              '<p class="atm-multipage-error">Error: Could not load content. Please try again.</p>'
+              '<p class="atm-multipage-error">Error: A network error occurred. Please try again.</p>'
             );
-          }
-        },
-        error: function () {
-          contentArea.html(
-            '<p class="atm-multipage-error">Error: A network error occurred. Please try again.</p>'
-          );
-        },
-        complete: function () {
-          isLoading = false;
-          contentArea.css("opacity", 1);
-          container.find(".atm-multipage-loader").remove();
-        },
+          },
+          complete: function () {
+            // BUG FIX: Ensure opacity is always reset and loader is removed
+            isLoading = false;
+            contentArea.css("opacity", 1);
+            container.find(".atm-multipage-loader").remove();
+          },
+        });
+      };
+
+      // Event handler for all navigation clicks
+      navContainer.on("click", "button", function () {
+        const button = $(this);
+        if (button.is(":disabled")) return;
+
+        const pageIndex = parseInt(button.data("page-index"), 10);
+        loadPage(pageIndex);
       });
+
+      // Check URL hash on page load for deep linking
+      const initialHash = window.location.hash;
+      if (initialHash && initialHash.startsWith("#page=")) {
+        const pageNum = parseInt(initialHash.replace("#page=", ""), 10);
+        if (!isNaN(pageNum) && pageNum > 1 && pageNum <= totalPages) {
+          loadPage(pageNum - 1);
+        }
+      }
     });
-  });
+  }
+
+  // Initialize all containers on the page
+  initializeMultipageContainers();
 });
