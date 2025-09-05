@@ -538,7 +538,12 @@ body.atm-chart-theme-dark {
 .atm-multipage-content {
   position: relative;
   min-height: 250px; /* Prevent layout shift during loading */
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease-in-out; /* Updated transition for fade effect */
+}
+
+/* NEW: Added class for the fade-out effect */
+.atm-multipage-content.atm-loading-content {
+  opacity: 0;
 }
 
 .atm-post-navigation {
@@ -560,7 +565,7 @@ body.atm-chart-theme-dark {
   text-decoration: none;
   color: #1e293b;
   font-weight: 600;
-  transition: all 0.3s ease;
+  transition: color 0.3s ease; /* Updated transition */
   background: transparent;
   border: none;
   cursor: pointer;
@@ -577,6 +582,8 @@ body.atm-chart-theme-dark {
 
 .atm-nav-item:not(:disabled):hover {
   color: #8b5cf6;
+  background: transparent !important; /* FIX: Remove hover background */
+  box-shadow: none !important; /* FIX: Remove hover shadow */
 }
 
 .atm-nav-item .arrow {
@@ -596,7 +603,7 @@ body.atm-chart-theme-dark {
   align-items: center;
   width: 38px;
   height: 38px;
-  border-radius: 50%;
+  border-radius: 12px; /* FIX: Changed from 50% to match screenshot */
   background: #ffffff;
   border: 1px solid #e0e0e0;
   color: #111;
@@ -624,6 +631,7 @@ body.atm-chart-theme-dark {
 .atm-dots {
   font-size: 1.2em;
   color: #999;
+  padding: 0 5px;
 }
 
 /* Loader and Error States */
@@ -638,11 +646,14 @@ body.atm-chart-theme-dark {
   border-top-color: #8b5cf6;
   border-radius: 50%;
   animation: atm-spin 1s linear infinite;
+  z-index: 10;
 }
 
 .atm-multipage-error {
   color: #dc2626;
   font-weight: 500;
+  text-align: center;
+  padding: 2rem;
 }
 
 @keyframes atm-spin {

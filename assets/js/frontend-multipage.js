@@ -6,24 +6,22 @@ jQuery(document).ready(function ($) {
       const navContainer = container.find(".atm-post-navigation");
       const postId = container.data("post-id");
       let isLoading = false;
-      let totalPages = container.find(".atm-page-number").length;
+      let totalPages = navContainer.find(".atm-page-number").length;
+      let page_data = {}; // Cache for loaded pages
 
-      // Function to load content for a specific page
+      // Pre-load the first page's content into the cache
+      page_data[0] = contentArea.html();
+
       const loadPage = function (pageIndex) {
         if (isLoading) return;
-
         isLoading = true;
 
-        // Update URL hash
         window.location.hash = "page=" + (pageIndex + 1);
 
-        // Update active state on buttons
         navContainer.find(".atm-page-number").removeClass("active");
         navContainer
           .find('.atm-page-number[data-page-index="' + pageIndex + '"]')
           .addClass("active");
-
-        // Update prev/next button states
         navContainer
           .find(".atm-nav-item.prev")
           .prop("disabled", pageIndex === 0);
@@ -31,60 +29,94 @@ jQuery(document).ready(function ($) {
           .find(".atm-nav-item.next")
           .prop("disabled", pageIndex === totalPages - 1);
 
-        // Add loading indicator
-        contentArea
-          .css("opacity", 0.5)
-          .html('<div class="atm-multipage-loader"></div>');
+        // Start the fade-out transition
+        contentArea.addClass("atm-loading-content");
 
-        $.ajax({
-          url: atm_multipage_data.ajax_url,
-          type: "POST",
-          data: {
-            action: "get_multipage_page_content",
-            nonce: atm_multipage_data.nonce,
-            post_id: postId,
-            page_index: pageIndex,
-          },
-          success: function (response) {
-            if (response.success) {
-              contentArea.html(response.data.html_content);
-              // Scroll to top of the article container
-              $("html, body").animate(
-                {
-                  scrollTop: container.offset().top - 30, // 30px offset for admin bar etc.
-                },
-                300
-              );
-            } else {
+        // After fade out, load new content
+        setTimeout(function () {
+          // Check cache first
+          if (page_data[pageIndex]) {
+            contentArea.html(page_data[pageIndex]);
+            finishLoading();
+            return;
+          }
+
+          // If not in cache, show loader and fetch
+          contentArea.html('<div class="atm-multipage-loader"></div>');
+
+          $.ajax({
+            url: atm_multipage_data.ajax_url,
+            type: "POST",
+            data: {
+              action: "get_multipage_page_content",
+              nonce: atm_multipage_data.nonce,
+              post_id: postId,
+              page_index: pageIndex,
+            },
+            success: function (response) {
+              if (response.success) {
+                page_data[pageIndex] = response.data.html_content; // Cache the new content
+                contentArea.html(response.data.html_content);
+              } else {
+                contentArea.html(
+                  '<p class="atm-multipage-error">Error: Could not load content. Please try again.</p>'
+                );
+              }
+            },
+            error: function () {
               contentArea.html(
-                '<p class="atm-multipage-error">Error: Could not load content. Please try again.</p>'
+                '<p class="atm-multipage-error">Error: A network error occurred. Please try again.</p>'
               );
-            }
-          },
-          error: function () {
-            contentArea.html(
-              '<p class="atm-multipage-error">Error: A network error occurred. Please try again.</p>'
-            );
-          },
-          complete: function () {
-            // BUG FIX: Ensure opacity is always reset and loader is removed
-            isLoading = false;
-            contentArea.css("opacity", 1);
-            container.find(".atm-multipage-loader").remove();
-          },
-        });
+            },
+            complete: function () {
+              finishLoading();
+            },
+          });
+        }, 200); // This timeout matches the CSS transition duration
       };
 
-      // Event handler for all navigation clicks
+      const finishLoading = function () {
+        // Scroll to the top of the article container
+        $("html, body").animate(
+          {
+            scrollTop: container.offset().top - 50, // 50px offset for admin bar etc.
+          },
+          300,
+          function () {
+            // Fade the new content back in
+            contentArea.removeClass("atm-loading-content");
+            isLoading = false;
+          }
+        );
+      };
+
       navContainer.on("click", "button", function () {
         const button = $(this);
         if (button.is(":disabled")) return;
 
-        const pageIndex = parseInt(button.data("page-index"), 10);
-        loadPage(pageIndex);
+        let currentPageIndex = parseInt(
+          navContainer.find(".atm-page-number.active").data("page-index"),
+          10
+        );
+        let newPageIndex;
+
+        if (button.hasClass("prev")) {
+          newPageIndex = currentPageIndex - 1;
+        } else if (button.hasClass("next")) {
+          newPageIndex = currentPageIndex + 1;
+        } else {
+          newPageIndex = parseInt(button.data("page-index"), 10);
+        }
+
+        if (
+          newPageIndex >= 0 &&
+          newPageIndex < totalPages &&
+          newPageIndex !== currentPageIndex
+        ) {
+          loadPage(newPageIndex);
+        }
       });
 
-      // Check URL hash on page load for deep linking
       const initialHash = window.location.hash;
       if (initialHash && initialHash.startsWith("#page=")) {
         const pageNum = parseInt(initialHash.replace("#page=", ""), 10);
@@ -94,7 +126,5 @@ jQuery(document).ready(function ($) {
       }
     });
   }
-
-  // Initialize all containers on the page
   initializeMultipageContainers();
 });
