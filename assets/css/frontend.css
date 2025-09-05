@@ -631,7 +631,10 @@ body.atm-chart-theme-dark {
   padding: 0 5px;
 }
 
-.atm-nav-item button {
+.atm-nav-item input[type="submit"],
+button,
+.atm-nav-item input[type="reset"] input[type="button"],
+.atm-nav-item .ts-button {
   box-shadow: none !important;
 }
 
