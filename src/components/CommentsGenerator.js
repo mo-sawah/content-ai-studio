@@ -201,19 +201,6 @@ function CommentsGenerator({ setActiveView }) {
 
         <div className="atm-comments-actions">
           <Button
-            isSecondary
-            onClick={handleSave}
-            disabled={isSaving || isGenerating || comments.length === 0}
-          >
-            {isSaving ? (
-              <>
-                <CustomSpinner /> Saving...
-              </>
-            ) : (
-              "Save to WordPress"
-            )}
-          </Button>
-          <Button
             isPrimary
             onClick={handleGenerate}
             disabled={isGenerating || isSaving}
@@ -224,6 +211,19 @@ function CommentsGenerator({ setActiveView }) {
               </>
             ) : (
               "Generate Comments"
+            )}
+          </Button>
+          <Button
+            isSecondary
+            onClick={handleSave}
+            disabled={isSaving || isGenerating || comments.length === 0}
+          >
+            {isSaving ? (
+              <>
+                <CustomSpinner /> Saving...
+              </>
+            ) : (
+              "Save to WordPress"
             )}
           </Button>
         </div>

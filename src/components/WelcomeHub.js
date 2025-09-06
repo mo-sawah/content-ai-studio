@@ -46,7 +46,7 @@ function WelcomeHub({ setActiveView }) {
     {
       id: "images",
       title: "Generate Images",
-      description: "Create stunning visuals powered by AI",
+      description: "Create stunning visuals powered by Top AI",
       icon: (
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -121,7 +121,7 @@ function WelcomeHub({ setActiveView }) {
     {
       id: "speech",
       title: "Speech to Text",
-      description: "Convert audio into accurate text",
+      description: "Convert audio into accurate text in the editor",
       icon: (
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -138,7 +138,7 @@ function WelcomeHub({ setActiveView }) {
     {
       id: "translate",
       title: "Translate Text",
-      description: "Translate content across languages",
+      description: "Translate content across all popular languages",
       icon: (
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path

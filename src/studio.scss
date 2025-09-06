@@ -1947,7 +1947,7 @@ body.wp-admin .atm-content-body {
       and override global admin button margins ONLY within the comments action bar */
 .atm-comments-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
   gap: 12px;
   margin-top: 10px;
