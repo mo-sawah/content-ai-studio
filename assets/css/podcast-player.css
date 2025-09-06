@@ -558,3 +558,57 @@
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
+
+/* Podcast Player — Icon reset overrides
+   Load AFTER assets/css/podcast-player.css
+   Purpose: prevent theme/global rules from inflating icons.
+*/
+
+/* 1) Force consistent icon sizing and coloring inside the player */
+.atm-podcast svg,
+.atm-podcast .atm-ico,
+.atm-podcast i[class*="icon"],
+.atm-podcast i[class*="uicon"],
+.atm-podcast [class*="icon"] > svg {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
+  display: inline-block !important;
+  line-height: 0 !important;
+  color: currentColor !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+  pointer-events: none; /* icons shouldn’t block clicks */
+}
+
+/* Slightly larger play glyph for better balance */
+.atm-podcast .atm-play-btn svg,
+.atm-podcast .atm-play-btn .atm-ico {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+/* 2) Ensure buttons clip any oversized content just in case */
+.atm-podcast .atm-ctrl,
+.atm-podcast .atm-play-btn,
+.atm-podcast .atm-icon-btn,
+.atm-podcast .atm-pl-toggle {
+  overflow: hidden;
+  font-size: 0; /* avoid em-based svg sizing from fonts */
+  line-height: 0;
+}
+
+/* 3) Give the transport row a stacking context to keep it above backgrounds */
+.atm-podcast .atm-transport {
+  position: relative;
+  z-index: 1;
+}
+
+/* 4) Safety: keep header icons consistent too */
+.atm-podcast .atm-icon-btn .atm-ico {
+  width: 18px !important;
+  height: 18px !important;
+}
