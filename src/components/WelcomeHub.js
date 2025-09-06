@@ -114,8 +114,8 @@ function WelcomeHub({ setActiveView }) {
           />
         </svg>
       ),
-      // Unique gradient
-      gradient: "from-cyan-500 to-violet-600",
+      // Fixed to match existing gradient palette (prevents white fade)
+      gradient: "from-cyan-500 to-purple-600",
       onClick: () => setActiveView("comments"),
     },
     {
