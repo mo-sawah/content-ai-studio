@@ -1913,9 +1913,65 @@ body.wp-admin .atm-content-body {
   }
 }
 
-/* Scoped alignment for Comments tool only */
+/* APPEND the rules below to your existing studio.scss */
+
+/* 1) Hub grid: 4 cards per row on desktop (with responsive fallbacks) */
+.atm-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  gap: 24px;
+}
+@media (max-width: 1400px) {
+  .atm-quick-actions {
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+  }
+}
+@media (max-width: 1024px) {
+  .atm-quick-actions {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .atm-quick-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 2) Unique gradient for the Comments card icon */
+.bg-gradient-to-r.from-cyan-500.to-violet-600 {
+  background: linear-gradient(90deg, #06b6d4 0%, #7c3aed 100%);
+  color: #fff;
+}
+
+/* 3) Comments generator page: right-align action buttons with proper spacing,
+      and override global admin button margins ONLY within the comments action bar */
 .atm-comments-actions {
   display: flex;
-  justify-content: flex-end; /* push buttons to the right */
-  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+/* Stronger, more specific override to beat:
+   body.wp-admin .atm-content-body .components-button,
+   body.wp-admin .atm-studio-container .components-button { margin: 10px 0 !important; } */
+body.wp-admin
+  .atm-studio-container
+  .atm-generator-view
+  .atm-form-container
+  .atm-comments-actions
+  .components-button,
+body.wp-admin
+  .atm-content-body
+  .atm-generator-view
+  .atm-form-container
+  .atm-comments-actions
+  .components-button {
+  margin: 0 !important;
+}
+
+/* Optional: consistent min width like other tools */
+.atm-comments-actions .components-button {
+  min-width: 160px;
 }

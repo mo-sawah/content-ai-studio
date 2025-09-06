@@ -94,6 +94,30 @@ function WelcomeHub({ setActiveView }) {
       gradient: "from-pink-500 to-purple-600",
       onClick: () => setActiveView("takeaways"),
     },
+    // --- NEW: Generate Comments (right after Key Takeaways) ---
+    {
+      id: "comments",
+      title: "Generate Comments",
+      description: "Create realistic discussion threads based on your post",
+      icon: (
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M7 8h10M7 12h6M4 17v-8a3 3 0 013-3h10a3 3 0 013 3v5a3 3 0 01-3 3H9l-3 3v-3"
+          />
+        </svg>
+      ),
+      // Unique gradient
+      gradient: "from-cyan-500 to-violet-600",
+      onClick: () => setActiveView("comments"),
+    },
     {
       id: "speech",
       title: "Speech to Text",
