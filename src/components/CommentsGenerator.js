@@ -25,7 +25,7 @@ function CommentsGenerator({ setActiveView }) {
   const [statusMessage, setStatusMessage] = useState(
     "Generate realistic, human-style comments from your post content."
   );
-  const [count, setCount] = useState(7);
+  const [count, setCount] = useState(10);
   const [threaded, setThreaded] = useState(true);
   const [approveNow, setApproveNow] = useState(false);
   const [model, setModel] = useState("");
@@ -57,7 +57,7 @@ function CommentsGenerator({ setActiveView }) {
         title,
         content,
         count,
-        threaded,
+        threaded: threaded ? "true" : "false",
         model,
       });
       if (!res.success) throw new Error(res.data || "Generation failed.");
@@ -82,13 +82,10 @@ function CommentsGenerator({ setActiveView }) {
       const res = await callAjax("save_generated_comments", {
         post_id: postId,
         approve: approveNow ? "true" : "false",
-        // Send as a JSON string to preserve parent_index
         comments: JSON.stringify(comments),
       });
       if (!res.success) throw new Error(res.data || "Save failed.");
       setStatusMessage(`✅ Saved ${res.data.inserted} comment(s).`);
-      // Optionally refresh comments panel or clear
-      // setComments([]);
     } catch (e) {
       setStatusMessage(`Error: ${e.message}`);
     } finally {
@@ -96,63 +93,52 @@ function CommentsGenerator({ setActiveView }) {
     }
   };
 
-  // Build a simple threaded structure based on parent_index
   const threadedList = useMemo(() => {
     const nodes = comments.map((c, i) => ({ ...c, index: i, children: [] }));
     const roots = [];
     const byIndex = Object.fromEntries(nodes.map((n) => [n.index, n]));
-
     nodes.forEach((node) => {
       const p = Number.isInteger(node.parent_index) ? node.parent_index : null;
-      if (p === null || p < 0 || !(p in byIndex)) {
-        roots.push(node);
-      } else {
-        byIndex[p].children.push(node);
-      }
+      if (p === null || p < 0 || !(p in byIndex)) roots.push(node);
+      else byIndex[p].children.push(node);
     });
     return roots;
   }, [comments]);
 
-  const CommentCard = ({ comment, depth = 0 }) => {
-    return (
+  const CommentCard = ({ comment, depth = 0 }) => (
+    <div
+      className="atm-form-container"
+      style={{
+        marginLeft: depth ? Math.min(depth, 4) * 18 : 0,
+        borderLeft: depth ? "3px solid #e2e8f0" : "1px solid #e2e8f0",
+      }}
+    >
       <div
-        className="atm-form-container"
         style={{
-          marginLeft: depth ? Math.min(depth, 4) * 18 : 0,
-          borderLeft: depth ? "3px solid #e2e8f0" : "1px solid #e2e8f0",
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 6,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 6,
-          }}
-        >
-          <strong style={{ color: "#1e293b" }}>
-            {comment.author_name || "Anonymous"}
-          </strong>
-          <span style={{ color: "#94a3b8", fontSize: 12 }}>
-            {Number.isInteger(comment.parent_index) ? "Reply" : "Top-level"}
-          </span>
-        </div>
-        <div style={{ whiteSpace: "pre-wrap", color: "#334155" }}>
-          {comment.text || ""}
-        </div>
-        {comment.children?.length ? (
-          <div style={{ marginTop: 10 }}>
-            {comment.children.map((child) => (
-              <CommentCard
-                key={child.index}
-                comment={child}
-                depth={depth + 1}
-              />
-            ))}
-          </div>
-        ) : null}
+        <strong style={{ color: "#1e293b" }}>
+          {comment.author_name || "Anonymous"}
+        </strong>
+        <span style={{ color: "#94a3b8", fontSize: 12 }}>
+          {Number.isInteger(comment.parent_index) ? "Reply" : "Top-level"}
+        </span>
       </div>
-    );
-  };
+      <div style={{ whiteSpace: "pre-wrap", color: "#334155" }}>
+        {comment.text || ""}
+      </div>
+      {comment.children?.length ? (
+        <div style={{ marginTop: 10 }}>
+          {comment.children.map((child) => (
+            <CommentCard key={child.index} comment={child} depth={depth + 1} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 
   return (
     <div className="atm-generator-view">
@@ -192,7 +178,7 @@ function CommentsGenerator({ setActiveView }) {
             value={count}
             onChange={setCount}
             min={5}
-            max={10}
+            max={50}
             disabled={isGenerating || isSaving}
           />
         </div>
@@ -213,20 +199,7 @@ function CommentsGenerator({ setActiveView }) {
           />
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
-          <Button
-            isPrimary
-            onClick={handleGenerate}
-            disabled={isGenerating || isSaving}
-          >
-            {isGenerating ? (
-              <>
-                <CustomSpinner /> Generating...
-              </>
-            ) : (
-              "Generate Comments"
-            )}
-          </Button>
+        <div className="atm-comments-actions">
           <Button
             isSecondary
             onClick={handleSave}
@@ -238,6 +211,19 @@ function CommentsGenerator({ setActiveView }) {
               </>
             ) : (
               "Save to WordPress"
+            )}
+          </Button>
+          <Button
+            isPrimary
+            onClick={handleGenerate}
+            disabled={isGenerating || isSaving}
+          >
+            {isGenerating ? (
+              <>
+                <CustomSpinner /> Generating...
+              </>
+            ) : (
+              "Generate Comments"
             )}
           </Button>
         </div>

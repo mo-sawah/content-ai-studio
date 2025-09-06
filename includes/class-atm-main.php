@@ -6,6 +6,92 @@ if (!defined('ABSPATH')) {
 }
 
 class ATM_Main {
+
+    // When a post is published, schedule comment generation if enabled
+    public function maybe_schedule_comments_on_publish($new_status, $old_status, $post) {
+        if ($new_status !== 'publish' || $old_status === 'publish') {
+            return;
+        }
+        if ($post->post_type !== 'post') {
+            return;
+        }
+        if (!get_option('atm_comments_auto_on_publish', false)) {
+            return;
+        }
+
+        // Schedule a single-run event shortly after publish
+        $delay = rand(20, 120); // seconds
+        wp_schedule_single_event(time() + $delay, 'atm_generate_comments_for_post', [$post->ID]);
+    }
+
+    public function handle_generate_comments_for_post($post_id) {
+        $post = get_post($post_id);
+        if (!$post || $post->post_status !== 'publish') return;
+
+        // Settings defaults
+        $count     = max(5, min(50, intval(get_option('atm_comments_default_count', 10))));
+        $threaded  = (bool) get_option('atm_comments_threaded', true);
+        $approve   = (bool) get_option('atm_comments_approve', false);
+        $model     = sanitize_text_field(get_option('atm_comments_model', ''));
+        $window    = max(1, intval(get_option('atm_comments_randomize_window_days', 3)));
+
+        try {
+            $comments = ATM_API::generate_lifelike_comments($post->post_title, $post->post_content, $count, $threaded, $model);
+
+            // Insert comments (sharing logic with AJAX method)
+            $index_to_id = [];
+            $index_to_time = [];
+            $now_ts = time();
+            $start_ts = max(strtotime($post->post_date_gmt ?: $post->post_date), $now_ts - ($window * DAY_IN_SECONDS));
+
+            foreach ($comments as $idx => $c) {
+                $author = isset($c['author_name']) ? sanitize_text_field($c['author_name']) : 'Guest';
+
+                // Sanitize content and remove links
+                $text = isset($c['text']) ? wp_kses_post($c['text']) : '';
+                $text = preg_replace('/\[(.*?)\]\((https?:\/\/|www\.)[^\s)]+\)/i', '$1', $text);
+                $text = preg_replace('/https?:\/\/\S+/i', '', $text);
+                $text = preg_replace('/\bwww\.[^\s]+/i', '', $text);
+                $text = trim(preg_replace('/\s{2,}/', ' ', $text));
+                $text = wp_kses($text, ['br' => [], 'em' => [], 'strong' => [], 'i' => [], 'b' => []]);
+                if ($text === '') continue;
+
+                $parent_index = isset($c['parent_index']) && $c['parent_index'] !== '' ? intval($c['parent_index']) : -1;
+                $parent_id    = ($parent_index >= 0 && isset($index_to_id[$parent_index])) ? intval($index_to_id[$parent_index]) : 0;
+
+                if ($parent_index >= 0 && isset($index_to_time[$parent_index])) {
+                    $base = $index_to_time[$parent_index] + rand(2 * MINUTE_IN_SECONDS, 60 * MINUTE_IN_SECONDS);
+                    $ts = min($now_ts, $base + rand(0, 45 * MINUTE_IN_SECONDS));
+                } else {
+                    $ts = rand($start_ts, $now_ts);
+                }
+                $date_mysql = gmdate('Y-m-d H:i:s', $ts);
+                $offset = get_option('gmt_offset') * HOUR_IN_SECONDS;
+                $date_local = gmdate('Y-m-d H:i:s', $ts + $offset);
+
+                $commentdata = [
+                    'comment_post_ID'      => $post->ID,
+                    'comment_author'       => $author,
+                    'comment_author_email' => '',
+                    'comment_author_url'   => '',
+                    'comment_content'      => $text,
+                    'comment_type'         => '',
+                    'comment_parent'       => $parent_id,
+                    'user_id'              => 0,
+                    'comment_approved'     => $approve ? 1 : 0,
+                    'comment_date'         => $date_local,
+                    'comment_date_gmt'     => $date_mysql,
+                ];
+                $cid = wp_insert_comment(wp_slash($commentdata));
+                if ($cid && !is_wp_error($cid)) {
+                    $index_to_id[$idx] = $cid;
+                    $index_to_time[$idx] = $ts;
+                }
+            }
+        } catch (\Exception $e) {
+            // Optional: error_log('[ATM] Auto comments failed: ' . $e->getMessage());
+        }
+    }
     
     // --- UPDATED to generate the new navigation structure ---
     public function render_multipage_shortcode($atts) {
@@ -236,6 +322,8 @@ class ATM_Main {
         add_action('init', array($this, 'register_chart_post_type'));
         add_action('rest_api_init', array($this, 'register_chart_rest_routes'));
         add_action('init', array($this, 'register_shortcodes'));
+        add_action('transition_post_status', array($this, 'maybe_schedule_comments_on_publish'), 10, 3);
+        add_action('atm_generate_comments_for_post', array($this, 'handle_generate_comments_for_post'));
         
 
         // --- LICENSE CHECK ---

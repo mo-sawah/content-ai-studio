@@ -372,26 +372,33 @@ class ATM_API {
      * Generate 5–10 lifelike comments grounded in the given article content.
      * Output normalized array of objects: [{author_name, text, parent_index|null}]
      */
+    /**
+     * Generate lifelike comments grounded in article content.
+     * Returns a list of [{author_name, text, parent_index|null}]
+     */
     public static function generate_lifelike_comments($title, $content, $count = 7, $threaded = true, $model_override = '') {
-        // Guardrails
-        $count = max(5, min(10, intval($count)));
+        // Allow up to 50
+        $count = max(5, min(50, intval($count)));
 
         $threading_rule = $threaded
-            ? "- Some comments should be direct replies to earlier ones. Use `parent_index` to reference the zero-based index of the parent comment.\n"
+            ? "- Some comments should be direct replies to earlier ones. Use `parent_index` to reference the zero-based index of the parent comment. Replies MUST reference an earlier index.\n"
             : "- All comments must be top-level (no replies). Set `parent_index` to null.\n";
 
+        // Strong realism, variety, and no links
         $system_prompt = "You are a diverse group of real readers reacting to an article.
-Your task is to produce a realistic discussion thread with natural, varied voices: short reactions, longer takes, questions, counterpoints, and follow-ups.
+Produce a realistic discussion thread with natural, varied voices: short reactions, longer takes, questions, counterpoints, and follow-ups.
 
 CRITICAL RULES:
-- Read and internalize the article context below. Stay on-topic and plausible.
-- Vary tone and style (casual, thoughtful, skeptical, appreciative); avoid over-formality.
-- Avoid generic filler like 'Great post' or AI-ish phrasing. Be specific to the content.
+- Read and internalize the article context below. Stay specific to it.
+- Vary tone and style (casual, thoughtful, skeptical, appreciative). Keep it conversational and human.
+- Avoid generic filler like 'Great post' or robotic phrasing. Be concrete and grounded in the article.
 - Mix lengths: 1–2 sentences up to short paragraphs. No walls of text.
 - Light use of emojis or slang is okay, but not overused. No profanity or hate.
 $threading_rule
-- Names should look human (e.g., 'Aisha M.', 'TomD', 'Elena R'), no fake emails/usernames.
-- Do NOT include timestamps, likes, or extraneous fields.
+- Names must look organic and varied. Use a mix of formats: single names (\"Maya\"), nicknames/usernames (\"el_rondo\", \"N3ll\"), hyphenated (\"Sam-Lee\"), two names (\"João Pereira\"), initials-before (\"K. Martinez\"), or first+last.
+- DO NOT repeat the same naming pattern across all comments. At most ~30% may be 'Firstname + initial'.
+- STRICTLY FORBIDDEN: any links, URLs, domain names, or markdown links. Do not include emails. If referencing sources, paraphrase without URLs.
+- Do NOT include timestamps, likes, or extra fields.
 
 OUTPUT FORMAT (MANDATORY):
 Return ONLY a JSON object with a single key `comments`:
@@ -401,27 +408,27 @@ Return ONLY a JSON object with a single key `comments`:
     ...
   ]
 }
-Generate exactly $count items in the array. No extra text or code fences.";
+Generate exactly $count items. No extra commentary or code fences.";
 
-        // Compose user payload (title can help specificity)
-        $article_payload = json_encode([
+        $article_payload = [
             'title'   => (string) $title,
             'content' => (string) $content,
-        ], JSON_UNESCAPED_SLASHES);
+        ];
 
         $model = !empty($model_override) ? $model_override : get_option('atm_content_model', 'anthropic/claude-3-haiku');
 
-        // Request strict JSON
+        // IMPORTANT: disable web search for comments and force JSON mode
         $raw = self::enhance_content_with_openrouter(
-            ['content' => $article_payload],
+            $article_payload,
             $system_prompt,
             $model,
-            true // json_mode
+            true,   // json_mode
+            false   // enable_web_search
         );
 
+        // Decode safely
         $decoded = json_decode($raw, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            // Try to salvage first JSON object if model added prose
             if (preg_match('/\{.*\}/s', $raw, $m)) {
                 $decoded = json_decode($m[0], true);
             }
@@ -430,26 +437,40 @@ Generate exactly $count items in the array. No extra text or code fences.";
             throw new Exception('AI returned invalid JSON for comments.');
         }
 
-        // Accept either {comments:[...]} or a raw array
         $arr = isset($decoded['comments']) && is_array($decoded['comments']) ? $decoded['comments'] : (is_array($decoded) ? $decoded : []);
         if (empty($arr)) {
             throw new Exception('No comments were generated.');
         }
 
-        // Normalize and clamp to requested count
+        // Normalization + link stripping
         $out = [];
         foreach ($arr as $i => $c) {
             if (count($out) >= $count) break;
+
             $author = isset($c['author_name']) ? sanitize_text_field($c['author_name']) : 'Guest';
-            $text   = isset($c['text']) ? wp_kses_post($c['text']) : '';
-            // Allow simple line breaks only
-            $text   = wp_kses($text, ['br' => [], 'em' => [], 'strong' => [], 'i' => [], 'b' => []]);
-            $pi     = null;
-            if (array_key_exists('parent_index', $c) && $c['parent_index'] !== null && $threaded) {
-                $val = intval($c['parent_index']);
-                $pi  = ($val >= 0 && $val < $count) ? $val : null;
-            }
+
+            $text = isset($c['text']) ? wp_kses_post($c['text']) : '';
+            // Strip any URLs and markdown links defensively
+            // [label](url) -> label
+            $text = preg_replace('/\[(.*?)\]\((https?:\/\/|www\.)[^\s)]+\)/i', '$1', $text);
+            // raw URLs
+            $text = preg_replace('/https?:\/\/\S+/i', '', $text);
+            $text = preg_replace('/\bwww\.[^\s]+/i', '', $text);
+            // collapse extra whitespace
+            $text = trim(preg_replace('/\s{2,}/', ' ', $text));
+
+            // Allow simple inline formatting
+            $text = wp_kses($text, ['br' => [], 'em' => [], 'strong' => [], 'i' => [], 'b' => []]);
+
             if ($text === '') continue;
+
+            $pi = null;
+            if ($threaded && array_key_exists('parent_index', $c) && $c['parent_index'] !== null) {
+                $val = intval($c['parent_index']);
+                // Parent must be an earlier index
+                $pi  = ($val >= 0 && $val < $count && $val < $i) ? $val : null;
+            }
+
             $out[] = [
                 'author_name'  => $author,
                 'text'         => $text,
@@ -457,9 +478,7 @@ Generate exactly $count items in the array. No extra text or code fences.";
             ];
         }
 
-        // Ensure size and parent bounds
-        $out = array_values(array_slice($out, 0, $count));
-        return $out;
+        return array_values(array_slice($out, 0, $count));
     }
 
     // --- NEW: MULTIPAGE ARTICLE FUNCTIONS ---
@@ -1375,62 +1394,68 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
  * @return string The AI's response.
  * @throws Exception On API error.
  */
-    public static function enhance_content_with_openrouter($content_data, $system_prompt, $model_override = '', $json_mode = false) {
-        $api_key = get_option('atm_openrouter_api_key');
-        if (empty($api_key)) {
-            throw new Exception('OpenRouter API key not configured');
+    public static function enhance_content_with_openrouter($input, $system_prompt, $model, $json_mode = false, $enable_web_search = true) {
+        $api_key = trim(get_option('atm_openrouter_api_key', ''));
+        if (!$api_key) {
+            throw new Exception('OpenRouter API key is not configured.');
         }
 
-        // Determine the base model (WITHOUT :online suffix)
-        $model = !empty($model_override) ? $model_override : get_option('atm_article_model', 'openai/gpt-4o');
-        
-        // Get the web search results setting
-        $web_search_results = (int)get_option('atm_web_search_results', 5);
-
-        $body_data = [
-            'model' => $model, // Use base model without :online
+        $payload = [
+            'model' => $model,
             'messages' => [
                 ['role' => 'system', 'content' => $system_prompt],
-                ['role' => 'user', 'content' => $content_data['content']]
             ],
-            'max_tokens' => 4000,
-            'temperature' => 0.7,
-            // Use the plugins parameter instead of :online suffix
-            'plugins' => [
-                [
-                    'id' => 'web',
-                    'max_results' => $web_search_results
-                ]
-            ]
+            'temperature' => 0.8,
         ];
 
+        // Allow $input as string OR array/object (we often pass arrays)
+        if (is_array($input) || is_object($input)) {
+            $payload['messages'][] = ['role' => 'user', 'content' => wp_json_encode($input, JSON_UNESCAPED_SLASHES)];
+        } else {
+            $payload['messages'][] = ['role' => 'user', 'content' => (string) $input];
+        }
+
+        // Strict JSON mode if requested
         if ($json_mode) {
-            $body_data['response_format'] = ['type' => 'json_object'];
+            $payload['response_format'] = [ 'type' => 'json_object' ];
+        }
+
+        // Conditionally include web search plugin
+        $max_results = intval(get_option('atm_web_search_results', 0));
+        if ($enable_web_search && $max_results > 0) {
+            $payload['plugins'] = [
+                [
+                    'id' => 'web',
+                    'config' => [ 'max_results' => $max_results ],
+                ]
+            ];
         }
 
         $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', [
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type' => 'application/json',
-                'HTTP-Referer' => home_url(),
-                'X-Title' => get_bloginfo('name')
+                'Content-Type'  => 'application/json',
             ],
-            'body' => json_encode($body_data),
-            'timeout' => 300
+            'timeout' => 60,
+            'body'    => wp_json_encode($payload),
         ]);
 
         if (is_wp_error($response)) {
-            throw new Exception('Content enhancement failed: ' . $response->get_error_message());
+            throw new Exception('OpenRouter request failed: ' . $response->get_error_message());
         }
 
+        $code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
-        $result = json_decode($body, true);
-
-        if (wp_remote_retrieve_response_code($response) !== 200 || !isset($result['choices'][0]['message']['content'])) {
-            error_log('OpenRouter API Error: ' . $body);
-            throw new Exception('Invalid response from content enhancement API. Raw response: ' . $body);
+        if ($code < 200 || $code >= 300) {
+            throw new Exception('OpenRouter error: ' . $body);
         }
-        return $result['choices'][0]['message']['content'];
+
+        $json = json_decode($body, true);
+        if (!is_array($json) || empty($json['choices'][0]['message']['content'])) {
+            throw new Exception('OpenRouter returned an invalid response.');
+        }
+
+        return $json['choices'][0]['message']['content'];
     }
 
     public static function fetch_headlines_from_serpapi($country_code, $language_code, $keyword = '') {

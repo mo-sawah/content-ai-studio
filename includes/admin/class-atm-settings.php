@@ -372,6 +372,68 @@ class ATM_Settings {
                 </div>
             </div>
 
+            <!-- NEW: Comments Generator Settings -->
+            <div class="atm-settings-card">
+                <h2>💬 Comments Generator</h2>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Generate on Publish</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="atm_comments_auto_on_publish" value="1" <?php checked((bool)$options['comments_auto_on_publish'], true); ?> />
+                                Enable background generation of comments when a post is published.
+                            </label>
+                            <p class="description">A background job runs shortly after publish so it never blocks the editor.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Default Count</th>
+                        <td>
+                            <input type="number" name="atm_comments_default_count" min="5" max="50" value="<?php echo esc_attr($options['comments_default_count']); ?>" />
+                            <p class="description">How many comments to generate automatically on publish.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Allow Threaded Replies</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="atm_comments_threaded" value="1" <?php checked((bool)$options['comments_threaded'], true); ?> />
+                                Let some comments reply to others for realistic threads.
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Approve Immediately</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="atm_comments_approve" value="1" <?php checked((bool)$options['comments_approve'], false); ?> />
+                                Approve comments upon creation (otherwise saved as Pending).
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Model (optional)</th>
+                        <td>
+                            <select name="atm_comments_model">
+                                <option value="" <?php selected($options['comments_model'], ''); ?>>Use Default Content Model</option>
+                                <?php foreach ($options['content_models'] as $model_id => $model_name): ?>
+                                    <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['comments_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="description">Leave empty to use the default Content Model above.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Timestamp Window (days)</th>
+                        <td>
+                            <input type="number" name="atm_comments_randomize_window_days" min="1" max="30" value="<?php echo esc_attr($options['comments_randomize_window_days']); ?>" />
+                            <p class="description">Randomize comment dates between post publish time and now, capped by this window.</p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <!-- /Comments Generator Settings -->
+
             <div class="atm-settings-card">
                 <h2>RSS Feeds</h2>
                 <table class="form-table"><tr><th scope="row">RSS Feed URLs</th><td><textarea name="atm_rss_feeds" rows="8" style="width:100%;"><?php echo esc_textarea($options['rss_feeds']); ?></textarea><p class="description">Add one RSS feed URL per line.</p></td></tr></table>
@@ -406,6 +468,15 @@ class ATM_Settings {
     update_option('atm_google_youtube_api_key', sanitize_text_field($_POST['atm_google_youtube_api_key']));
     update_option('atm_web_search_results', intval($_POST['atm_web_search_results'])); // <-- ADD THIS
     update_option('atm_theme_subtitle_key', sanitize_text_field($_POST['atm_theme_subtitle_key']));
+
+    // NEW: Comments Generator options (no register_settings needed)
+    update_option('atm_comments_auto_on_publish', isset($_POST['atm_comments_auto_on_publish']) ? 1 : 0);
+    update_option('atm_comments_default_count', max(5, min(50, intval($_POST['atm_comments_default_count'] ?? 10))));
+    update_option('atm_comments_threaded', isset($_POST['atm_comments_threaded']) ? 1 : 0);
+    update_option('atm_comments_approve', isset($_POST['atm_comments_approve']) ? 1 : 0);
+    update_option('atm_comments_model', sanitize_text_field($_POST['atm_comments_model'] ?? ''));
+    update_option('atm_comments_randomize_window_days', max(1, min(30, intval($_POST['atm_comments_randomize_window_days'] ?? 3))));
+
     echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
 }
 
@@ -432,6 +503,15 @@ class ATM_Settings {
         'flux_model'       => get_option('atm_flux_model', 'flux-1-schnell'), // <-- FIX IS HERE
         'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
         'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
+
+        // NEW: Comments Generator defaults
+        'comments_auto_on_publish'        => (bool) get_option('atm_comments_auto_on_publish', 0),
+        'comments_default_count'          => intval(get_option('atm_comments_default_count', 10)),
+        'comments_threaded'               => (bool) get_option('atm_comments_threaded', 1),
+        'comments_approve'                => (bool) get_option('atm_comments_approve', 0),
+        'comments_model'                  => get_option('atm_comments_model', ''),
+        'comments_randomize_window_days'  => intval(get_option('atm_comments_randomize_window_days', 3)),
+
         'flux_models' => [
             'flux-1-schnell'        => 'FLUX 1 Schnell',
             'flux-1-dev'            => 'FLUX 1 Dev (Fast)',

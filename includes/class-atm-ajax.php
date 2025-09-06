@@ -19,8 +19,8 @@ class ATM_Ajax {
             $title    = isset($_POST['title']) ? sanitize_text_field(stripslashes($_POST['title'])) : '';
             $content  = isset($_POST['content']) ? wp_kses_post(stripslashes($_POST['content'])) : '';
             $count    = isset($_POST['count']) ? intval($_POST['count']) : 7;
-            $count    = max(5, min(10, $count));
-            $threaded = isset($_POST['threaded']) && $_POST['threaded'] === 'true';
+            $count    = max(5, min(50, $count));
+            $threaded = isset($_POST['threaded']) && in_array($_POST['threaded'], ['true','1',1,true], true);
             $model    = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
 
             if (empty($content) && $post_id) {
@@ -39,7 +39,7 @@ class ATM_Ajax {
         }
     }
 
-    // --- NEW: Persist generated comments into wp_comments ---
+    // Randomize timestamps and insert comments
     public function save_generated_comments() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key.');
@@ -48,10 +48,9 @@ class ATM_Ajax {
 
         try {
             $post_id = intval($_POST['post_id']);
-            if (!$post_id || !get_post($post_id)) {
+            if (!$post_id || !($post = get_post($post_id))) {
                 throw new Exception('Invalid post.');
             }
-            // Comments may arrive as JSON string or array
             $raw = isset($_POST['comments']) ? $_POST['comments'] : '[]';
             $data = is_array($raw) ? $raw : json_decode(stripslashes($raw), true);
             if (!is_array($data)) {
@@ -59,35 +58,62 @@ class ATM_Ajax {
             }
             $approve_flag = isset($_POST['approve']) && $_POST['approve'] === 'true' ? 1 : 0;
 
+            // Timestamp window: between post_date and now, capped by setting window days
+            $window_days = max(1, intval(get_option('atm_comments_randomize_window_days', 3)));
+            $now_ts = time();
+            $start_ts = max(strtotime($post->post_date_gmt ?: $post->post_date), $now_ts - ($window_days * DAY_IN_SECONDS));
+
             $index_to_id = [];
+            $index_to_time = [];
             $inserted = 0;
-            $now_mysql = current_time('mysql');
-            $now_gmt   = current_time('mysql', 1);
 
             foreach ($data as $idx => $c) {
                 $author = isset($c['author_name']) ? sanitize_text_field($c['author_name']) : 'Guest';
-                $text   = isset($c['text']) ? wp_kses_post($c['text']) : '';
+
+                // Sanitize and strip links defensively
+                $text = isset($c['text']) ? wp_kses_post($c['text']) : '';
+                $text = preg_replace('/\[(.*?)\]\((https?:\/\/|www\.)[^\s)]+\)/i', '$1', $text);
+                $text = preg_replace('/https?:\/\/\S+/i', '', $text);
+                $text = preg_replace('/\bwww\.[^\s]+/i', '', $text);
+                $text = trim(preg_replace('/\s{2,}/', ' ', $text));
+                $text = wp_kses($text, ['br' => [], 'em' => [], 'strong' => [], 'i' => [], 'b' => []]);
+
                 if ($text === '') continue;
 
                 $parent_index = isset($c['parent_index']) && $c['parent_index'] !== '' ? intval($c['parent_index']) : -1;
                 $parent_id    = ($parent_index >= 0 && isset($index_to_id[$parent_index])) ? intval($index_to_id[$parent_index]) : 0;
 
+                // Randomize timestamps:
+                // - Top-level: random between start_ts and now
+                // - Reply: >= parent's time + 2..60 minutes
+                if ($parent_index >= 0 && isset($index_to_time[$parent_index])) {
+                    $base = $index_to_time[$parent_index] + rand(2 * MINUTE_IN_SECONDS, 60 * MINUTE_IN_SECONDS);
+                    $ts = min($now_ts, $base + rand(0, 45 * MINUTE_IN_SECONDS));
+                } else {
+                    $ts = rand($start_ts, $now_ts);
+                }
+                $date_mysql = gmdate('Y-m-d H:i:s', $ts);
+                // Convert to local time for comment_date; comment_date_gmt stays GMT
+                $offset = get_option('gmt_offset') * HOUR_IN_SECONDS;
+                $date_local = gmdate('Y-m-d H:i:s', $ts + $offset);
+
                 $commentdata = [
                     'comment_post_ID'      => $post_id,
                     'comment_author'       => $author,
-                    'comment_author_email' => '', // optional
+                    'comment_author_email' => '',
                     'comment_author_url'   => '',
                     'comment_content'      => $text,
                     'comment_type'         => '',
                     'comment_parent'       => $parent_id,
                     'user_id'              => 0,
                     'comment_approved'     => $approve_flag,
-                    'comment_date'         => $now_mysql,
-                    'comment_date_gmt'     => $now_gmt,
+                    'comment_date'         => $date_local,
+                    'comment_date_gmt'     => $date_mysql,
                 ];
                 $cid = wp_insert_comment(wp_slash($commentdata));
                 if ($cid && !is_wp_error($cid)) {
                     $index_to_id[$idx] = $cid;
+                    $index_to_time[$idx] = $ts;
                     $inserted++;
                 }
             }
