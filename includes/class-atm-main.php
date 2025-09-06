@@ -330,6 +330,11 @@ class ATM_Main {
         }
         // --- END CHECK ---
 
+         // NEW: dedicated podcast settings page
+        if (file_exists(ATM_PLUGIN_PATH . 'includes/class-atm-podcast-settings.php')) {
+            require_once ATM_PLUGIN_PATH . 'includes/class-atm-podcast-settings.php';
+        }
+
         // Frontend hooks
         // CHANGE: load our styles after the theme to win specificity battles
         add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'), 99);

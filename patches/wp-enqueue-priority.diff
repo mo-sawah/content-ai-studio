@@ -1,0 +1,6 @@
+--- a/includes/class-atm-main.php
++++ b/includes/class-atm-main.php
+@@
+- add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'));
++ // Load our CSS late to override theme styles
++ add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'), 99);
