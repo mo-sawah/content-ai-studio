@@ -11,7 +11,7 @@ class ATM_Frontend {
 
     public function enqueue_frontend_scripts() {
         if (is_single()) {
-            // Enqueue the main (legacy) assets if you still need them elsewhere
+            // Legacy player assets (still used elsewhere)
             wp_enqueue_script(
                 'atm-frontend-script',
                 ATM_PLUGIN_URL . 'assets/js/frontend.js',
@@ -19,6 +19,7 @@ class ATM_Frontend {
                 ATM_VERSION,
                 true
             );
+
             wp_enqueue_style(
                 'atm-frontend-style',
                 ATM_PLUGIN_URL . 'assets/css/frontend.css',
@@ -41,16 +42,16 @@ class ATM_Frontend {
                 true
             );
 
-            // Localize player settings
-            $default_theme  = get_option('atm_podcast_default_theme', 'dark'); // 'light' | 'dark'
-            $accent_color   = get_option('atm_podcast_accent', '#3b82f6');
+            // Defaults for theme + accent
+            $default_theme = get_option('atm_podcast_default_theme', 'dark'); // 'light' | 'dark'
+            $accent_color  = get_option('atm_podcast_accent', '#3b82f6');
 
             wp_localize_script('atm-podcast-script', 'atm_podcast_settings', array(
                 'theme'  => $default_theme,
                 'accent' => $accent_color,
             ));
 
-            // Charts & multipage (existing logic) ...
+            // Charts (existing logic)
             global $post;
             if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'atm_chart')) {
                 wp_enqueue_script(
@@ -60,6 +61,7 @@ class ATM_Frontend {
                     ATM_VERSION,
                     true
                 );
+
                 wp_localize_script('atm-frontend-charts', 'atm_charts_data', [
                     'nonce'          => wp_create_nonce('wp_rest'),
                     'chart_api_base' => rest_url('atm/v1/charts/'),
@@ -67,14 +69,59 @@ class ATM_Frontend {
                 ]);
             }
 
+            // Multipage (existing logic)
             if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'atm_multipage_article')) {
-                wp_enqueue_script('atm-frontend-multipage', ATM_PLUGIN_URL . 'assets/js/frontend-multipage.js', ['jquery'], ATM_VERSION, true);
+                wp_enqueue_script(
+                    'atm-frontend-multipage',
+                    ATM_PLUGIN_URL . 'assets/js/frontend-multipage.js',
+                    ['jquery'],
+                    ATM_VERSION,
+                    true
+                );
+
                 wp_localize_script('atm-frontend-multipage', 'atm_multipage_data', [
                     'ajax_url' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('atm_multipage_nonce'),
+                    'nonce'    => wp_create_nonce('atm_multipage_nonce'),
                 ]);
             }
         }
+    }
+
+    // RESTORED: Embed Key Takeaways block above content (unchanged behavior)
+    public function embed_takeaways_in_content($content) {
+        if (!is_single() || !in_the_loop() || !is_main_query()) {
+            return $content;
+        }
+
+        $post_id = get_the_ID();
+        $takeaways_meta = get_post_meta($post_id, '_atm_key_takeaways', true);
+
+        if (empty($takeaways_meta)) {
+            return $content;
+        }
+
+        // Saved theme meta (defaults to dark)
+        $theme = get_post_meta($post_id, '_atm_takeaways_theme', true);
+        if (empty($theme)) {
+            $theme = 'dark';
+        }
+        $theme_class = 'atm-theme-' . esc_attr($theme);
+
+        $takeaways_list = array_filter(array_map('trim', explode("\n", $takeaways_meta)));
+
+        $html  = '<details class="atm-takeaways-wrapper ' . $theme_class . '">';
+        $html .= '<summary class="atm-takeaways-summary">✨ SHOW KEY TAKEAWAYS</summary>';
+        $html .= '<div class="atm-takeaways-content">';
+        $html .= '<h4>🔑&nbsp; Key Takeaways</h4>';
+        $html .= '<ul>';
+        foreach ($takeaways_list as $takeaway) {
+            $html .= '<li>' . esc_html($takeaway) . '</li>';
+        }
+        $html .= '</ul>';
+        $html .= '</div>';
+        $html .= '</details>';
+
+        return $html . $content;
     }
 
     public function embed_podcast_in_content($content) {
@@ -84,14 +131,14 @@ class ATM_Frontend {
 
         global $post;
         $podcast_url = get_post_meta($post->ID, '_atm_podcast_url', true);
+
         if ($podcast_url) {
-            // Determine cover: post-specific meta, then plugin default /assets/images/pody.jpg, then fallback SVG
+            // Determine cover: post meta -> legacy default option -> plugin asset
             $podcast_image = get_post_meta($post->ID, '_atm_podcast_image', true);
-            $default_image = ATM_PLUGIN_URL . 'assets/images/pody.jpg';
+            $asset_default = ATM_PLUGIN_URL . 'assets/images/pody.jpg';
             if (empty($podcast_image)) {
-                // Backward compatibility: allow previously saved default option
-                $opt_default = get_option('atm_default_image', '');
-                $podcast_image = !empty($opt_default) ? $opt_default : $default_image;
+                $opt_default   = get_option('atm_default_image', '');
+                $podcast_image = !empty($opt_default) ? $opt_default : $asset_default;
             }
 
             $player_html = $this->get_player_html($post, $podcast_url, $podcast_image);
@@ -103,15 +150,16 @@ class ATM_Frontend {
 
     private function print_icon_sprite_once() {
         if (self::$sprite_printed) return;
+
         $sprite_path = ATM_PLUGIN_PATH . 'assets/img/atm-podcast-icons.svg';
         if (file_exists($sprite_path)) {
             $svg = file_get_contents($sprite_path);
-            // Print inline to ensure availability with no extra requests
-            echo '<div class="atm-icon-sprite" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">'.$svg.'</div>';
+            echo '<div class="atm-icon-sprite" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">' . $svg . '</div>';
         }
         self::$sprite_printed = true;
     }
 
+    // Build playlist from most recent posts that already have a podcast URL
     private function get_recent_podcasts($current_post_id, $limit = 8) {
         $args = array(
             'post_type'      => 'post',
@@ -131,14 +179,16 @@ class ATM_Frontend {
         $q = new WP_Query($args);
         $items = array();
         if ($q->have_posts()) {
-            while ($q->have_posts()) { $q->the_post();
-                $pid = get_the_ID();
-                $url = get_post_meta($pid, '_atm_podcast_url', true);
-                if (empty($url)) continue;
+            while ($q->have_posts()) {
+                $q->the_post();
+                $pid  = get_the_ID();
+                $url  = get_post_meta($pid, '_atm_podcast_url', true);
+                if (empty($url)) { continue; }
                 $cover = get_post_meta($pid, '_atm_podcast_image', true);
                 if (empty($cover)) {
                     $cover = ATM_PLUGIN_URL . 'assets/images/pody.jpg';
                 }
+
                 $items[] = array(
                     'title' => get_the_title($pid),
                     'url'   => $url,
@@ -157,8 +207,8 @@ class ATM_Frontend {
         $theme     = get_option('atm_podcast_default_theme', 'dark'); // 'light' | 'dark'
         $accent    = get_option('atm_podcast_accent', '#3b82f6');
 
-        // Build playlist items (most recent podcasts)
-        $playlist = $this->get_recent_podcasts($post->ID, 8);
+        $playlist  = $this->get_recent_podcasts($post->ID, 8);
+
         ob_start();
         ?>
         <div class="atm-podcast" data-theme="<?php echo esc_attr($theme); ?>" style="--atm-accent: <?php echo esc_attr($accent); ?>;">
