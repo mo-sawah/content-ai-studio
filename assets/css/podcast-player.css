@@ -1,0 +1,372 @@
+/* Compact Podcast Player — backend icon style (stroke), light/dark, scoped */
+.atm-podcast,
+.atm-podcast * {
+  box-sizing: border-box;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.atm-podcast {
+  --atm-accent: #3b82f6;
+}
+
+.atm-podcast[data-theme="light"] {
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --shadow: 0 12px 34px rgba(2, 6, 23, 0.1);
+  --text: #0f172a;
+  --sub: #6b7280;
+  --muted: #9ca3af;
+  --icon: #334155;
+  --rail: #e5e7eb;
+  --fill: var(--atm-accent);
+  --knob: #ffffff;
+  --chip-bg: #f3f4f6;
+  --chip-bd: #e5e7eb;
+  --chip-tx: #0f172a;
+  --grad: linear-gradient(135deg, #7c3aed, #2563eb);
+}
+.atm-podcast[data-theme="dark"] {
+  --card-bg: #1f2937;
+  --card-border: #263244;
+  --shadow: 0 16px 44px rgba(0, 0, 0, 0.45);
+  --text: #e5e7eb;
+  --sub: #aab7c6;
+  --muted: #94a3b8;
+  --icon: #d1d5db;
+  --rail: #2f3b4e;
+  --fill: var(--atm-accent);
+  --knob: #0b1220;
+  --chip-bg: #2b3647;
+  --chip-bd: #3a465a;
+  --chip-tx: #e8eef7;
+  --grad: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.atm-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+/* Header */
+.atm-header {
+  position: relative;
+  padding: 16px;
+  color: #fff;
+  background: var(--grad);
+  border-radius: 16px 16px 0 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+.atm-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.atm-ep {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+.atm-ep::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--cover, none);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.22;
+}
+.atm-head-meta .atm-show {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.atm-head-meta .atm-season {
+  font-size: 11px;
+  opacity: 0.92;
+}
+.atm-right {
+  display: flex;
+  gap: 8px;
+}
+.atm-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition:
+    transform 0.12s ease,
+    background 0.12s ease;
+}
+.atm-icon-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.25);
+}
+.atm-ico {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.atm-head-title {
+  grid-column: 1 / -1;
+  font-weight: 800;
+  font-size: 18px;
+  margin-top: 4px;
+}
+.atm-head-sub {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  opacity: 0.98;
+  margin-top: -2px;
+}
+
+/* Progress */
+.atm-progress {
+  padding: 12px 16px 0;
+}
+.atm-rail {
+  position: relative;
+  height: 6px;
+  cursor: pointer;
+}
+.atm-rail-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--rail);
+  border-radius: 999px;
+}
+.atm-rail-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--fill);
+  border-radius: 999px;
+  width: 0%;
+  transition: width 0.12s linear;
+}
+.atm-rail-knob {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  left: 0%;
+  background: var(--knob);
+  border: 2px solid var(--fill);
+}
+.atm-times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+  padding: 0 2px 8px;
+}
+
+/* Transport */
+.atm-transport {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 6px;
+}
+.atm-ctrl {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--chip-tx);
+  border: 1px solid var(--chip-bd);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.atm-ctrl:hover {
+  transform: translateY(-1px);
+}
+.atm-ctrl .atm-ico {
+  width: 18px;
+  height: 18px;
+}
+.atm-ctrl.atm-toggle.is-on {
+  outline: 2px solid color-mix(in oklab, var(--atm-accent) 40%, transparent);
+}
+
+.atm-play-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: var(--grad);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 26px
+    color-mix(in oklab, var(--atm-accent) 40%, transparent);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.atm-play-btn:hover {
+  transform: translateY(-1px);
+}
+.atm-play-btn .atm-ico {
+  width: 22px;
+  height: 22px;
+}
+
+/* Bottom */
+.atm-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 12px 12px;
+}
+.atm-volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 240px;
+}
+.atm-vol-ico {
+  color: var(--icon);
+}
+.atm-vol-track {
+  position: relative;
+  height: 6px;
+  flex: 1;
+}
+.atm-vol-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.atm-vol-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--fill);
+}
+.atm-vol-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--fill);
+}
+.atm-vol-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: var(--fill);
+  border-radius: 999px;
+  pointer-events: none;
+}
+.atm-vol-val {
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 36px;
+  text-align: right;
+}
+
+.atm-speed-select {
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  outline: none;
+}
+
+/* Playlist */
+.atm-playlist {
+  border-top: 1px solid var(--card-border);
+  padding: 10px 12px 12px;
+}
+.atm-pl-head {
+  font-size: 12px;
+  color: var(--sub);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.atm-pl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.atm-pl-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--card-bg) 85%, #0000);
+  cursor: pointer;
+}
+.atm-pl-item img {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.atm-pl-meta .atm-pl-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.atm-pl-meta .atm-pl-sub {
+  font-size: 11px;
+  color: var(--sub);
+}
+.atm-pl-more {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px dashed var(--card-border);
+  background: transparent;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .atm-volume {
+    min-width: 180px;
+  }
+}
