@@ -1,30 +1,40 @@
-/* Compact Podcast Player — backend icon style (stroke), light/dark, scoped */
+/* Content AI Studio — Podcast Player (Light-first) */
+/* Fully scoped. Neutralizes theme styles inside .atm-podcast. */
+
+/* Base scope + tokens (Light mode defaults) */
 .atm-podcast,
 .atm-podcast * {
   box-sizing: border-box;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
-.atm-podcast {
-  --atm-accent: #3b82f6;
-}
 
-.atm-podcast[data-theme="light"] {
+.atm-podcast {
+  /* Accent can be overridden from settings via inline style="--atm-accent: #xxxxxx" */
+  --atm-accent: #3b82f6;
+
+  /* Light theme tokens (default) */
   --card-bg: #ffffff;
   --card-border: #e5e7eb;
   --shadow: 0 12px 34px rgba(2, 6, 23, 0.1);
+
   --text: #0f172a;
   --sub: #6b7280;
   --muted: #9ca3af;
   --icon: #334155;
+
   --rail: #e5e7eb;
   --fill: var(--atm-accent);
   --knob: #ffffff;
+
   --chip-bg: #f3f4f6;
   --chip-bd: #e5e7eb;
   --chip-tx: #0f172a;
-  --grad: linear-gradient(135deg, #7c3aed, #2563eb);
+
+  --grad: linear-gradient(135deg, #3b82f6, #7c3aed);
 }
+
+/* Dark variant (kept for future toggle; light is default) */
 .atm-podcast[data-theme="dark"] {
   --card-bg: #1f2937;
   --card-border: #263244;
@@ -39,19 +49,21 @@
   --chip-bg: #2b3647;
   --chip-bd: #3a465a;
   --chip-tx: #e8eef7;
-  --grad: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  --grad: linear-gradient(135deg, #2563eb, #1d4ed8);
 }
 
-.atm-card {
+/* Card */
+.atm-podcast .atm-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: var(--shadow);
+  background-clip: padding-box;
 }
 
 /* Header */
-.atm-header {
+.atm-podcast .atm-header {
   position: relative;
   padding: 16px;
   color: #fff;
@@ -62,12 +74,14 @@
   gap: 10px;
   align-items: center;
 }
-.atm-left {
+
+.atm-podcast .atm-left {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.atm-ep {
+
+.atm-podcast .atm-ep {
   width: 36px;
   height: 36px;
   border-radius: 10px;
@@ -82,7 +96,7 @@
   position: relative;
   overflow: hidden;
 }
-.atm-ep::before {
+.atm-podcast .atm-ep::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -91,20 +105,27 @@
   background-position: center;
   opacity: 0.22;
 }
-.atm-head-meta .atm-show {
+
+.atm-podcast .atm-head-meta .atm-show {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.1;
 }
-.atm-head-meta .atm-season {
+.atm-podcast .atm-head-meta .atm-season {
   font-size: 11px;
   opacity: 0.92;
 }
-.atm-right {
+
+.atm-podcast .atm-right {
   display: flex;
   gap: 8px;
 }
-.atm-icon-btn {
+
+/* Icon buttons (header + bottom actions) */
+.atm-podcast .atm-icon-btn {
+  /* Neutralize theme padding rule: input[type=submit], button, ... { padding: var(--btn-pad, 0 17px); } */
+  padding: 0 !important;
+
   width: 32px;
   height: 32px;
   border-radius: 999px;
@@ -119,45 +140,50 @@
     transform 0.12s ease,
     background 0.12s ease;
 }
-.atm-icon-btn:hover {
+.atm-podcast .atm-icon-btn:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.25);
 }
-.atm-ico {
+.atm-podcast .atm-ico {
   width: 16px;
   height: 16px;
   display: block;
 }
 
-.atm-head-title {
+/* Titles */
+.atm-podcast .atm-head-title {
   grid-column: 1 / -1;
   font-weight: 800;
   font-size: 18px;
   margin-top: 4px;
 }
-.atm-head-sub {
+.atm-podcast .atm-head-sub {
   grid-column: 1 / -1;
   font-size: 12px;
   opacity: 0.98;
   margin-top: -2px;
+  color: #eef2ff;
 }
 
 /* Progress */
-.atm-progress {
+.atm-podcast .atm-progress {
   padding: 12px 16px 0;
 }
-.atm-rail {
+
+.atm-podcast .atm-rail {
   position: relative;
   height: 6px;
   cursor: pointer;
+  border: none !important;
+  box-shadow: none !important;
 }
-.atm-rail-bg {
+.atm-podcast .atm-rail-bg {
   position: absolute;
   inset: 0;
   background: var(--rail);
   border-radius: 999px;
 }
-.atm-rail-fill {
+.atm-podcast .atm-rail-fill {
   position: absolute;
   inset: 0 auto 0 0;
   background: var(--fill);
@@ -165,18 +191,21 @@
   width: 0%;
   transition: width 0.12s linear;
 }
-.atm-rail-knob {
+.atm-podcast .atm-rail-knob {
   position: absolute;
   top: 50%;
+  transform: translate(-50%, -50%);
+  left: 0%;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
-  left: 0%;
   background: var(--knob);
   border: 2px solid var(--fill);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  z-index: 2;
 }
-.atm-times {
+
+.atm-podcast .atm-times {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
@@ -186,14 +215,17 @@
 }
 
 /* Transport */
-.atm-transport {
+.atm-podcast .atm-transport {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 12px;
   padding: 8px 12px 6px;
 }
-.atm-ctrl {
+
+/* Chip buttons */
+.atm-podcast .atm-ctrl {
+  padding: 0 !important; /* beat theme padding */
   width: 38px;
   height: 38px;
   border-radius: 999px;
@@ -204,19 +236,23 @@
   place-items: center;
   cursor: pointer;
   transition: transform 0.12s ease;
+  box-shadow: none !important;
+  text-shadow: none !important;
 }
-.atm-ctrl:hover {
+.atm-podcast .atm-ctrl:hover {
   transform: translateY(-1px);
 }
-.atm-ctrl .atm-ico {
+.atm-podcast .atm-ctrl .atm-ico {
   width: 18px;
   height: 18px;
 }
-.atm-ctrl.atm-toggle.is-on {
+.atm-podcast .atm-ctrl.atm-toggle.is-on {
   outline: 2px solid color-mix(in oklab, var(--atm-accent) 40%, transparent);
 }
 
-.atm-play-btn {
+/* Primary play button */
+.atm-podcast .atm-play-btn {
+  padding: 0 !important; /* neutralize theme rule */
   width: 54px;
   height: 54px;
   border-radius: 999px;
@@ -232,60 +268,96 @@
     transform 0.12s ease,
     box-shadow 0.12s ease;
 }
-.atm-play-btn:hover {
+.atm-podcast .atm-play-btn:hover {
   transform: translateY(-1px);
 }
-.atm-play-btn .atm-ico {
+.atm-podcast .atm-play-btn .atm-ico {
   width: 22px;
   height: 22px;
 }
 
-/* Bottom */
-.atm-bottom {
+/* Bottom row */
+.atm-podcast .atm-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 4px 12px 12px;
 }
-.atm-volume {
+
+/* Volume */
+.atm-podcast .atm-volume {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 240px;
 }
-.atm-vol-ico {
+.atm-podcast .atm-vol-ico {
   color: var(--icon);
 }
-.atm-vol-track {
+
+.atm-podcast .atm-vol-track {
   position: relative;
   height: 6px;
   flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
 }
-.atm-vol-range {
+
+/* Range reset (WebKit/Firefox/Edge) */
+.atm-podcast .atm-vol-range {
+  -webkit-appearance: none !important;
+  appearance: none !important;
   position: absolute;
   inset: 0;
   width: 100%;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
+  height: 6px;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
 }
-.atm-vol-range::-webkit-slider-thumb {
+.atm-podcast .atm-vol-range::-webkit-slider-runnable-track {
+  height: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+}
+.atm-podcast .atm-vol-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 14px;
   height: 14px;
+  margin-top: -4px;
   border-radius: 50%;
   background: #fff;
   border: 2px solid var(--fill);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
-.atm-vol-range::-moz-range-thumb {
+.atm-podcast .atm-vol-range::-moz-range-track {
+  height: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+}
+.atm-podcast .atm-vol-range::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
   background: #fff;
   border: 2px solid var(--fill);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
-.atm-vol-fill {
+.atm-podcast .atm-vol-range::-ms-track {
+  height: 6px;
+  background: transparent;
+  border: none;
+  color: transparent;
+}
+
+/* Filled part of volume track */
+.atm-podcast .atm-vol-fill {
   position: absolute;
   top: 0;
   left: 0;
@@ -294,94 +366,15 @@
   border-radius: 999px;
   pointer-events: none;
 }
-.atm-vol-val {
+
+.atm-podcast .atm-vol-val {
   font-size: 11px;
   color: var(--muted);
   min-width: 36px;
   text-align: right;
 }
 
-.atm-speed-select {
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  outline: none;
-}
-
-/* Playlist */
-.atm-playlist {
-  border-top: 1px solid var(--card-border);
-  padding: 10px 12px 12px;
-}
-.atm-pl-head {
-  font-size: 12px;
-  color: var(--sub);
-  margin-bottom: 8px;
-  font-weight: 700;
-}
-.atm-pl-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-.atm-pl-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
-  background: color-mix(in oklab, var(--card-bg) 85%, #0000);
-  cursor: pointer;
-}
-.atm-pl-item img {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  object-fit: cover;
-}
-.atm-pl-meta .atm-pl-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-.atm-pl-meta .atm-pl-sub {
-  font-size: 11px;
-  color: var(--sub);
-}
-.atm-pl-more {
-  margin-left: auto;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  border: 1px dashed var(--card-border);
-  background: transparent;
-  cursor: pointer;
-}
-
-@media (max-width: 640px) {
-  .atm-volume {
-    min-width: 180px;
-  }
-}
-
-/* ===== THEME OVERRIDES / HARD RESETS (append at end of file) ===== */
-
-/* General form reset within the player */
-.atm-podcast select,
-.atm-podcast input,
-.atm-podcast button {
-  font: inherit !important;
-  color: inherit !important;
-}
-
-/* Select: remove theme chrome and add our chevron */
+/* Speed select — reset theme, add custom chevron */
 .atm-podcast .atm-speed-select {
   -webkit-appearance: none !important;
   appearance: none !important;
@@ -389,8 +382,9 @@
   border: 1px solid var(--card-border) !important;
   color: var(--text) !important;
   border-radius: 8px !important;
-  padding: 6px 28px 6px 10px !important;
+  padding: 6px 28px 6px 10px !important; /* custom chevron space */
   line-height: 1.1 !important;
+  box-shadow: none !important;
   background-image:
     linear-gradient(45deg, var(--muted) 50%, transparent 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%);
@@ -408,104 +402,76 @@
   border-color: var(--atm-accent) !important;
 }
 
-/* Range: strip all theme styling and enforce our 6px track */
-.atm-podcast .atm-vol-track {
-  position: relative !important;
-  height: 6px !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 999px !important;
+/* Playlist */
+.atm-podcast .atm-playlist {
+  border-top: 1px solid var(--card-border);
+  padding: 10px 12px 12px;
+}
+.atm-podcast .atm-pl-head {
+  font-size: 12px;
+  color: var(--sub);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.atm-podcast .atm-pl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.atm-podcast .atm-pl-item {
+  /* neutralize theme padding rule for buttons inside items */
+  padding: 8px !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--card-bg) 85%, #0000);
+  cursor: pointer;
+}
+.atm-podcast .atm-pl-item img {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.atm-podcast .atm-pl-meta .atm-pl-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.atm-podcast .atm-pl-meta .atm-pl-sub {
+  font-size: 11px;
+  color: var(--sub);
+}
+.atm-podcast .atm-pl-more {
+  padding: 0 !important; /* beat theme rule */
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px dashed var(--card-border);
+  background: transparent;
+  cursor: pointer;
 }
 
-.atm-podcast .atm-vol-range {
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 6px !important;
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
-  cursor: pointer !important;
-}
-
-/* WebKit track/thumb */
-.atm-podcast .atm-vol-range::-webkit-slider-runnable-track {
-  height: 6px !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 999px !important;
-}
-.atm-podcast .atm-vol-range::-webkit-slider-thumb {
-  -webkit-appearance: none !important;
-  width: 14px !important;
-  height: 14px !important;
-  margin-top: -4px !important; /* center on 6px track */
-  border-radius: 50% !important;
-  background: #fff !important;
-  border: 2px solid var(--fill) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18) !important;
-}
-
-/* Firefox track/thumb */
-.atm-podcast .atm-vol-range::-moz-range-track {
-  height: 6px !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 999px !important;
-}
-.atm-podcast .atm-vol-range::-moz-range-thumb {
-  width: 14px !important;
-  height: 14px !important;
-  border-radius: 50% !important;
-  background: #fff !important;
-  border: 2px solid var(--fill) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18) !important;
-}
-
-/* Hide outline/border some themes add around the range element */
-.atm-podcast .atm-vol-range::-ms-track {
-  height: 6px !important;
-  background: transparent !important;
-  border: none !important;
-  color: transparent !important;
-}
-
-/* Our filled portion for the volume track */
-.atm-podcast .atm-vol-fill {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  bottom: 0 !important;
-  background: var(--fill) !important;
-  border-radius: 999px !important;
-  pointer-events: none !important;
-}
-
-/* Progress rail: ensure no theme border creeps in */
-.atm-podcast .atm-rail,
-.atm-podcast .atm-rail-bg,
-.atm-podcast .atm-rail-fill,
-.atm-podcast .atm-rail-knob {
-  border: none !important;
+/* Global hard-resets inside the player to avoid theme bleed */
+.atm-podcast button,
+.atm-podcast input[type="submit"],
+.atm-podcast input[type="button"],
+.atm-podcast input[type="reset"],
+.atm-podcast .ts-button {
+  padding: 0 !important; /* FIX: overrides the theme's padding var rule */
   box-shadow: none !important;
+  text-shadow: none !important;
+  background-image: none !important;
 }
 
-/* Progress knob above any theme pseudo-elements */
-.atm-podcast .atm-rail-knob {
-  z-index: 2 !important;
-}
-
-/* Buttons: ensure no theme box-shadows/borders override our chips */
-.atm-podcast .atm-ctrl,
-.atm-podcast .atm-icon-btn,
-.atm-podcast .atm-play-btn {
-  box-shadow: none;
-  text-shadow: none;
-}
-
-/* Card body: some themes add inner borders; neutralize */
-.atm-podcast .atm-card {
-  background-clip: padding-box !important;
+/* Responsive */
+@media (max-width: 640px) {
+  .atm-podcast .atm-volume {
+    min-width: 180px;
+  }
 }
