@@ -6,6 +6,98 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    // --- NEW: Generate lifelike comments from post content ---
+    public function generate_post_comments() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 180);
+
+        try {
+            $post_id  = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+            $title    = isset($_POST['title']) ? sanitize_text_field(stripslashes($_POST['title'])) : '';
+            $content  = isset($_POST['content']) ? wp_kses_post(stripslashes($_POST['content'])) : '';
+            $count    = isset($_POST['count']) ? intval($_POST['count']) : 7;
+            $count    = max(5, min(10, $count));
+            $threaded = isset($_POST['threaded']) && $_POST['threaded'] === 'true';
+            $model    = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
+
+            if (empty($content) && $post_id) {
+                $post = get_post($post_id);
+                if ($post) $content = $post->post_content;
+            }
+            if (empty($content)) {
+                throw new Exception('Editor content is empty.');
+            }
+
+            $comments = ATM_API::generate_lifelike_comments($title, $content, $count, $threaded, $model);
+
+            wp_send_json_success(['comments' => $comments]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    // --- NEW: Persist generated comments into wp_comments ---
+    public function save_generated_comments() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+
+        try {
+            $post_id = intval($_POST['post_id']);
+            if (!$post_id || !get_post($post_id)) {
+                throw new Exception('Invalid post.');
+            }
+            // Comments may arrive as JSON string or array
+            $raw = isset($_POST['comments']) ? $_POST['comments'] : '[]';
+            $data = is_array($raw) ? $raw : json_decode(stripslashes($raw), true);
+            if (!is_array($data)) {
+                throw new Exception('Invalid comments payload.');
+            }
+            $approve_flag = isset($_POST['approve']) && $_POST['approve'] === 'true' ? 1 : 0;
+
+            $index_to_id = [];
+            $inserted = 0;
+            $now_mysql = current_time('mysql');
+            $now_gmt   = current_time('mysql', 1);
+
+            foreach ($data as $idx => $c) {
+                $author = isset($c['author_name']) ? sanitize_text_field($c['author_name']) : 'Guest';
+                $text   = isset($c['text']) ? wp_kses_post($c['text']) : '';
+                if ($text === '') continue;
+
+                $parent_index = isset($c['parent_index']) && $c['parent_index'] !== '' ? intval($c['parent_index']) : -1;
+                $parent_id    = ($parent_index >= 0 && isset($index_to_id[$parent_index])) ? intval($index_to_id[$parent_index]) : 0;
+
+                $commentdata = [
+                    'comment_post_ID'      => $post_id,
+                    'comment_author'       => $author,
+                    'comment_author_email' => '', // optional
+                    'comment_author_url'   => '',
+                    'comment_content'      => $text,
+                    'comment_type'         => '',
+                    'comment_parent'       => $parent_id,
+                    'user_id'              => 0,
+                    'comment_approved'     => $approve_flag,
+                    'comment_date'         => $now_mysql,
+                    'comment_date_gmt'     => $now_gmt,
+                ];
+                $cid = wp_insert_comment(wp_slash($commentdata));
+                if ($cid && !is_wp_error($cid)) {
+                    $index_to_id[$idx] = $cid;
+                    $inserted++;
+                }
+            }
+
+            wp_send_json_success(['inserted' => $inserted]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
    // --- NEW: MULTIPAGE ARTICLE FUNCTIONS ---
     public function generate_multipage_title() {
         check_ajax_referer('atm_nonce', 'nonce');
@@ -474,6 +566,10 @@ public function translate_text() {
         add_action('wp_ajax_atm_save_campaign', array($this, 'save_campaign'));
         add_action('wp_ajax_atm_delete_campaign', array($this, 'delete_campaign'));
         add_action('wp_ajax_atm_run_campaign_now', array($this, 'run_campaign_now'));
+
+        // NEW hooks for comments tool
+        add_action('wp_ajax_generate_post_comments', array($this, 'generate_post_comments'));
+        add_action('wp_ajax_save_generated_comments', array($this, 'save_generated_comments'));
 
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));

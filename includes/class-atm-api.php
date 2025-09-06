@@ -368,6 +368,100 @@ class ATM_API {
      * 
      */
 
+    /**
+     * Generate 5–10 lifelike comments grounded in the given article content.
+     * Output normalized array of objects: [{author_name, text, parent_index|null}]
+     */
+    public static function generate_lifelike_comments($title, $content, $count = 7, $threaded = true, $model_override = '') {
+        // Guardrails
+        $count = max(5, min(10, intval($count)));
+
+        $threading_rule = $threaded
+            ? "- Some comments should be direct replies to earlier ones. Use `parent_index` to reference the zero-based index of the parent comment.\n"
+            : "- All comments must be top-level (no replies). Set `parent_index` to null.\n";
+
+        $system_prompt = "You are a diverse group of real readers reacting to an article.
+Your task is to produce a realistic discussion thread with natural, varied voices: short reactions, longer takes, questions, counterpoints, and follow-ups.
+
+CRITICAL RULES:
+- Read and internalize the article context below. Stay on-topic and plausible.
+- Vary tone and style (casual, thoughtful, skeptical, appreciative); avoid over-formality.
+- Avoid generic filler like 'Great post' or AI-ish phrasing. Be specific to the content.
+- Mix lengths: 1–2 sentences up to short paragraphs. No walls of text.
+- Light use of emojis or slang is okay, but not overused. No profanity or hate.
+$threading_rule
+- Names should look human (e.g., 'Aisha M.', 'TomD', 'Elena R'), no fake emails/usernames.
+- Do NOT include timestamps, likes, or extraneous fields.
+
+OUTPUT FORMAT (MANDATORY):
+Return ONLY a JSON object with a single key `comments`:
+{
+  \"comments\": [
+    { \"author_name\": \"...\", \"text\": \"...\", \"parent_index\": null|number },
+    ...
+  ]
+}
+Generate exactly $count items in the array. No extra text or code fences.";
+
+        // Compose user payload (title can help specificity)
+        $article_payload = json_encode([
+            'title'   => (string) $title,
+            'content' => (string) $content,
+        ], JSON_UNESCAPED_SLASHES);
+
+        $model = !empty($model_override) ? $model_override : get_option('atm_content_model', 'anthropic/claude-3-haiku');
+
+        // Request strict JSON
+        $raw = self::enhance_content_with_openrouter(
+            ['content' => $article_payload],
+            $system_prompt,
+            $model,
+            true // json_mode
+        );
+
+        $decoded = json_decode($raw, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            // Try to salvage first JSON object if model added prose
+            if (preg_match('/\{.*\}/s', $raw, $m)) {
+                $decoded = json_decode($m[0], true);
+            }
+        }
+        if (!is_array($decoded)) {
+            throw new Exception('AI returned invalid JSON for comments.');
+        }
+
+        // Accept either {comments:[...]} or a raw array
+        $arr = isset($decoded['comments']) && is_array($decoded['comments']) ? $decoded['comments'] : (is_array($decoded) ? $decoded : []);
+        if (empty($arr)) {
+            throw new Exception('No comments were generated.');
+        }
+
+        // Normalize and clamp to requested count
+        $out = [];
+        foreach ($arr as $i => $c) {
+            if (count($out) >= $count) break;
+            $author = isset($c['author_name']) ? sanitize_text_field($c['author_name']) : 'Guest';
+            $text   = isset($c['text']) ? wp_kses_post($c['text']) : '';
+            // Allow simple line breaks only
+            $text   = wp_kses($text, ['br' => [], 'em' => [], 'strong' => [], 'i' => [], 'b' => []]);
+            $pi     = null;
+            if (array_key_exists('parent_index', $c) && $c['parent_index'] !== null && $threaded) {
+                $val = intval($c['parent_index']);
+                $pi  = ($val >= 0 && $val < $count) ? $val : null;
+            }
+            if ($text === '') continue;
+            $out[] = [
+                'author_name'  => $author,
+                'text'         => $text,
+                'parent_index' => $threaded ? $pi : null,
+            ];
+        }
+
+        // Ensure size and parent bounds
+        $out = array_values(array_slice($out, 0, $count));
+        return $out;
+    }
+
     // --- NEW: MULTIPAGE ARTICLE FUNCTIONS ---
     public static function generate_multipage_title($keyword, $page_count, $model_override) {
         $system_prompt = "You are an expert SEO content strategist. Your task is to generate a single, compelling, SEO-friendly title for a {$page_count}-page article about '{$keyword}'. The title should be catchy and clearly indicate that the content is a comprehensive, multi-part guide. Return only the title itself, with no extra text or quotation marks.";
