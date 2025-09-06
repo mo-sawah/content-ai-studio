@@ -612,3 +612,14 @@
   width: 18px !important;
   height: 18px !important;
 }
+
+.atm-podcast input[type="submit"],
+.atm-podcast button,
+.atm-podcast input[type="reset"] input[type="button"],
+.atm-podcast .ts-button {
+  padding: 0 !important;
+}
+
+.atm-podcast .atm-pl-toggle {
+  padding: 0 !important;
+}
