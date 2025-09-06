@@ -311,7 +311,6 @@ class ATM_Main {
         $ajax = new ATM_Ajax();
         $frontend = new ATM_Frontend();
         $campaign_manager = new ATM_Campaign_Manager();
-        // $block_editor = new ATM_Block_Editor(); // ADD THIS LINE
 
         // Admin hooks
         add_action('admin_menu', array($settings, 'add_admin_menu'));
@@ -324,7 +323,6 @@ class ATM_Main {
         add_action('init', array($this, 'register_shortcodes'));
         add_action('transition_post_status', array($this, 'maybe_schedule_comments_on_publish'), 10, 3);
         add_action('atm_generate_comments_for_post', array($this, 'handle_generate_comments_for_post'));
-        
 
         // --- LICENSE CHECK ---
         if (ATM_Licensing::is_license_active()) {
@@ -333,7 +331,8 @@ class ATM_Main {
         // --- END CHECK ---
 
         // Frontend hooks
-        add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'));
+        // CHANGE: load our styles after the theme to win specificity battles
+        add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'), 99);
         add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
         add_filter('the_content', array($frontend, 'embed_takeaways_in_content'));
         add_filter('the_content', array($frontend, 'embed_podcast_in_content'));

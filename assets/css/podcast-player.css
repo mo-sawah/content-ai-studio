@@ -370,3 +370,142 @@
     min-width: 180px;
   }
 }
+
+/* ===== THEME OVERRIDES / HARD RESETS (append at end of file) ===== */
+
+/* General form reset within the player */
+.atm-podcast select,
+.atm-podcast input,
+.atm-podcast button {
+  font: inherit !important;
+  color: inherit !important;
+}
+
+/* Select: remove theme chrome and add our chevron */
+.atm-podcast .atm-speed-select {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background-color: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text) !important;
+  border-radius: 8px !important;
+  padding: 6px 28px 6px 10px !important;
+  line-height: 1.1 !important;
+  background-image:
+    linear-gradient(45deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    right 10px center,
+    right 6px center;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+}
+.atm-podcast .atm-speed-select:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--atm-accent) 25%, transparent) !important;
+  border-color: var(--atm-accent) !important;
+}
+
+/* Range: strip all theme styling and enforce our 6px track */
+.atm-podcast .atm-vol-track {
+  position: relative !important;
+  height: 6px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 999px !important;
+}
+
+.atm-podcast .atm-vol-range {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 6px !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  cursor: pointer !important;
+}
+
+/* WebKit track/thumb */
+.atm-podcast .atm-vol-range::-webkit-slider-runnable-track {
+  height: 6px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 999px !important;
+}
+.atm-podcast .atm-vol-range::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  width: 14px !important;
+  height: 14px !important;
+  margin-top: -4px !important; /* center on 6px track */
+  border-radius: 50% !important;
+  background: #fff !important;
+  border: 2px solid var(--fill) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Firefox track/thumb */
+.atm-podcast .atm-vol-range::-moz-range-track {
+  height: 6px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 999px !important;
+}
+.atm-podcast .atm-vol-range::-moz-range-thumb {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  border: 2px solid var(--fill) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Hide outline/border some themes add around the range element */
+.atm-podcast .atm-vol-range::-ms-track {
+  height: 6px !important;
+  background: transparent !important;
+  border: none !important;
+  color: transparent !important;
+}
+
+/* Our filled portion for the volume track */
+.atm-podcast .atm-vol-fill {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  background: var(--fill) !important;
+  border-radius: 999px !important;
+  pointer-events: none !important;
+}
+
+/* Progress rail: ensure no theme border creeps in */
+.atm-podcast .atm-rail,
+.atm-podcast .atm-rail-bg,
+.atm-podcast .atm-rail-fill,
+.atm-podcast .atm-rail-knob {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Progress knob above any theme pseudo-elements */
+.atm-podcast .atm-rail-knob {
+  z-index: 2 !important;
+}
+
+/* Buttons: ensure no theme box-shadows/borders override our chips */
+.atm-podcast .atm-ctrl,
+.atm-podcast .atm-icon-btn,
+.atm-podcast .atm-play-btn {
+  box-shadow: none;
+  text-shadow: none;
+}
+
+/* Card body: some themes add inner borders; neutralize */
+.atm-podcast .atm-card {
+  background-clip: padding-box !important;
+}
