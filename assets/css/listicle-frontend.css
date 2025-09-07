@@ -1,5 +1,4 @@
-/* Clean Listicle Styles - Single Color, Light Mode
-   WordPress Plugin Version with complete isolation */
+/* Updated Listicle Styles - Layout Fixes */
 
 /* CSS Reset and Container Isolation */
 .atm-listicle-container {
@@ -201,14 +200,18 @@
   border-color: #3b82f6 !important;
 }
 
+/* FIXED: Item Header - Title and Number on Same Line */
 .atm-listicle-container .atm-listicle-item-header {
   background: #3b82f6 !important;
   padding: 2rem !important;
   color: white !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 1.5rem !important;
 }
 
 .atm-listicle-container .atm-listicle-item-number {
-  display: inline-flex !important;
+  display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 48px !important;
@@ -217,42 +220,63 @@
   border-radius: 12px !important;
   font-size: 1.5rem !important;
   font-weight: 700 !important;
-  margin-bottom: 1rem !important;
   color: white !important;
+  flex-shrink: 0 !important;
+}
+
+.atm-listicle-container .atm-listicle-item-title-section {
+  flex: 1 !important;
 }
 
 .atm-listicle-container .atm-listicle-item-title {
   font-size: 1.5rem !important;
   font-weight: 600 !important;
   line-height: 1.3 !important;
-  margin: 0 !important;
+  margin: 0 0 0.5rem 0 !important;
   color: white !important;
+}
+
+/* ADDED: Small description under title */
+.atm-listicle-container .atm-listicle-item-subtitle {
+  font-size: 0.9rem !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  margin: 0 !important;
+  line-height: 1.4 !important;
 }
 
 .atm-listicle-container .atm-listicle-item-content {
   padding: 2rem !important;
 }
 
-/* Rating Component */
+/* FIXED: Rating and Price on Same Line */
+.atm-listicle-container .atm-rating-price-row {
+  display: flex !important;
+  gap: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+  align-items: center !important;
+}
+
 .atm-listicle-container .atm-listicle-rating {
   display: flex !important;
   align-items: center !important;
-  gap: 1rem !important;
+  gap: 0.75rem !important;
   background: #fef3c7 !important;
   border: 2px solid #f59e0b !important;
   border-radius: 12px !important;
-  padding: 1rem !important;
-  margin-bottom: 1.5rem !important;
+  padding: 1rem 1.25rem !important;
+  flex: 1 !important;
 }
 
+/* FIXED: Bigger Stars */
 .atm-listicle-container .atm-listicle-stars {
   display: flex !important;
   gap: 0.2rem !important;
 }
 
 .atm-listicle-container .atm-listicle-star {
-  font-size: 1.1rem !important;
+  font-size: 1.4rem !important;
   color: #f59e0b !important;
+  line-height: 1 !important;
 }
 
 .atm-listicle-container .atm-listicle-rating-text {
@@ -261,25 +285,26 @@
   font-size: 1rem !important;
 }
 
-/* Price Component */
+/* Price Component - Same Line as Rating */
 .atm-listicle-container .atm-listicle-price {
   background: #f0fdf4 !important;
   border: 2px solid #10b981 !important;
   border-radius: 12px !important;
-  padding: 1.25rem !important;
+  padding: 1rem 1.25rem !important;
   text-align: center !important;
-  margin-bottom: 1.5rem !important;
+  flex: 1 !important;
 }
 
 .atm-listicle-container .atm-listicle-price-amount {
-  font-size: 1.5rem !important;
+  font-size: 1.25rem !important;
   font-weight: 700 !important;
   color: #059669 !important;
   margin-bottom: 0.25rem !important;
+  line-height: 1 !important;
 }
 
 .atm-listicle-container .atm-listicle-price-note {
-  font-size: 0.9rem !important;
+  font-size: 0.8rem !important;
   color: #047857 !important;
   margin: 0 !important;
 }
@@ -299,41 +324,42 @@
   color: #374151 !important;
 }
 
-/* Features Grid */
+/* FIXED: Features in One Box, Two Columns */
 .atm-listicle-container .atm-listicle-features {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
-  gap: 1rem !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-left: 4px solid #3b82f6 !important;
+  border-radius: 8px !important;
+  padding: 1.5rem !important;
   margin-bottom: 1.5rem !important;
 }
 
-.atm-listicle-container .atm-listicle-feature {
-  background: #f8fafc !important;
-  border-radius: 8px !important;
-  padding: 1rem !important;
-  border-left: 4px solid #3b82f6 !important;
-  transition: all 0.2s ease !important;
-}
-
-.atm-listicle-container .atm-listicle-feature:hover {
-  background: #f1f5f9 !important;
-  transform: translateY(-1px) !important;
-}
-
-.atm-listicle-container .atm-listicle-feature-label {
-  font-size: 0.75rem !important;
+.atm-listicle-container .atm-listicle-features h4 {
+  font-size: 1rem !important;
   font-weight: 600 !important;
-  color: #3b82f6 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-  margin-bottom: 0.5rem !important;
+  color: #1e293b !important;
+  margin: 0 0 1rem 0 !important;
 }
 
-.atm-listicle-container .atm-listicle-feature-value {
-  font-size: 0.95rem !important;
-  font-weight: 500 !important;
-  color: #1e293b !important;
-  margin: 0 !important;
+.atm-listicle-container .atm-listicle-features-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 0.75rem 1.5rem !important;
+}
+
+.atm-listicle-container .atm-listicle-feature-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 0.5rem !important;
+  font-size: 0.9rem !important;
+  color: #374151 !important;
+}
+
+.atm-listicle-container .atm-listicle-feature-item .feature-icon {
+  color: #3b82f6 !important;
+  font-size: 0.8rem !important;
+  margin-top: 0.2rem !important;
+  flex-shrink: 0 !important;
 }
 
 /* Pros and Cons */
@@ -438,34 +464,6 @@
   margin: 0 !important;
 }
 
-/* Call-to-Action Button */
-.atm-listicle-container .atm-listicle-cta {
-  text-align: center !important;
-  margin-top: 1.5rem !important;
-}
-
-.atm-listicle-container .atm-listicle-cta-button {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 0.5rem !important;
-  background: #3b82f6 !important;
-  color: white !important;
-  text-decoration: none !important;
-  padding: 0.75rem 1.5rem !important;
-  border-radius: 8px !important;
-  font-weight: 500 !important;
-  transition: all 0.2s ease !important;
-  border: none !important;
-  cursor: pointer !important;
-}
-
-.atm-listicle-container .atm-listicle-cta-button:hover {
-  background: #2563eb !important;
-  transform: translateY(-1px) !important;
-  color: white !important;
-  text-decoration: none !important;
-}
-
 /* Conclusion */
 .atm-listicle-container .atm-listicle-conclusion {
   background: #f8fafc !important;
@@ -517,10 +515,18 @@
 
   .atm-listicle-container .atm-listicle-item-header {
     padding: 1.5rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
   }
 
   .atm-listicle-container .atm-listicle-item-content {
     padding: 1.5rem !important;
+  }
+
+  .atm-listicle-container .atm-rating-price-row {
+    flex-direction: column !important;
+    gap: 1rem !important;
   }
 
   .atm-listicle-container .atm-listicle-pros-cons {
@@ -528,8 +534,9 @@
     gap: 1rem !important;
   }
 
-  .atm-listicle-container .atm-listicle-features {
+  .atm-listicle-container .atm-listicle-features-grid {
     grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
   }
 
   .atm-listicle-container .atm-listicle-toc {
@@ -569,8 +576,7 @@
 }
 
 /* Focus states for accessibility */
-.atm-listicle-container .atm-listicle-toc-link:focus,
-.atm-listicle-container .atm-listicle-cta-button:focus {
+.atm-listicle-container .atm-listicle-toc-link:focus {
   outline: 2px solid #3b82f6 !important;
   outline-offset: 2px !important;
 }

@@ -143,39 +143,53 @@ private function format_listicle_html($data, $title) {
     foreach ($data['items'] as $item) {
         $html .= '<div class="atm-listicle-item" id="item-' . $item['number'] . '">';
         
-        // Item Header
+        // FIXED: Item Header - Number and Title on Same Line with Description
         $html .= '<div class="atm-listicle-item-header">';
         $html .= '<div class="atm-listicle-item-number">' . $item['number'] . '</div>';
+        $html .= '<div class="atm-listicle-item-title-section">';
         $html .= '<h2 class="atm-listicle-item-title">' . esc_html($item['title']) . '</h2>';
+        // Add small description under title
+        if (!empty($item['subtitle']) || !empty($item['short_description'])) {
+            $description = !empty($item['subtitle']) ? $item['subtitle'] : $item['short_description'];
+            $html .= '<p class="atm-listicle-item-subtitle">' . esc_html($description) . '</p>';
+        }
+        $html .= '</div>';
         $html .= '</div>';
 
         // Item Content
         $html .= '<div class="atm-listicle-item-content">';
         
-        // Rating
-        if (!empty($item['rating'])) {
-            $html .= '<div class="atm-listicle-rating">';
-            $html .= '<div class="atm-listicle-stars">';
-            $full_stars = floor($item['rating']);
-            $half_star = ($item['rating'] - $full_stars) >= 0.5;
+        // FIXED: Rating and Price on Same Line
+        if (!empty($item['rating']) || !empty($item['price'])) {
+            $html .= '<div class="atm-rating-price-row">';
             
-            for ($i = 0; $i < $full_stars; $i++) {
-                $html .= '<span class="atm-listicle-star">★</span>';
+            // Rating
+            if (!empty($item['rating'])) {
+                $html .= '<div class="atm-listicle-rating">';
+                $html .= '<div class="atm-listicle-stars">';
+                $full_stars = floor($item['rating']);
+                $half_star = ($item['rating'] - $full_stars) >= 0.5;
+                
+                for ($i = 0; $i < $full_stars; $i++) {
+                    $html .= '<span class="atm-listicle-star">★</span>';
+                }
+                if ($half_star) {
+                    $html .= '<span class="atm-listicle-star">☆</span>';
+                }
+                $html .= '</div>';
+                $html .= '<span class="atm-listicle-rating-text">' . $item['rating'] . '/5</span>';
+                $html .= '</div>';
             }
-            if ($half_star) {
-                $html .= '<span class="atm-listicle-star">☆</span>';
-            }
-            $html .= '</div>';
-            $html .= '<span class="atm-listicle-rating-text">' . $item['rating'] . '/5</span>';
-            $html .= '</div>';
-        }
 
-        // Price
-        if (!empty($item['price'])) {
-            $html .= '<div class="atm-listicle-price">';
-            $html .= '<div class="atm-listicle-price-amount">' . esc_html($item['price']) . '</div>';
-            $html .= '<div class="atm-listicle-price-note">Starting price</div>';
-            $html .= '</div>';
+            // Price
+            if (!empty($item['price'])) {
+                $html .= '<div class="atm-listicle-price">';
+                $html .= '<div class="atm-listicle-price-amount">' . esc_html($item['price']) . '</div>';
+                $html .= '<div class="atm-listicle-price-note">Starting price</div>';
+                $html .= '</div>';
+            }
+            
+            $html .= '</div>'; // Close rating-price-row
         }
 
         // Description
@@ -183,15 +197,18 @@ private function format_listicle_html($data, $title) {
         $html .= '<p>' . esc_html($item['description']) . '</p>';
         $html .= '</div>';
 
-        // Features
+        // FIXED: Features in One Box, Two Columns
         if (!empty($item['features'])) {
             $html .= '<div class="atm-listicle-features">';
+            $html .= '<h4>Key Features</h4>';
+            $html .= '<div class="atm-listicle-features-grid">';
             foreach ($item['features'] as $feature) {
-                $html .= '<div class="atm-listicle-feature">';
-                $html .= '<div class="atm-listicle-feature-label">Key Feature</div>';
-                $html .= '<div class="atm-listicle-feature-value">' . esc_html($feature) . '</div>';
+                $html .= '<div class="atm-listicle-feature-item">';
+                $html .= '<span class="feature-icon">•</span>';
+                $html .= '<span>' . esc_html($feature) . '</span>';
                 $html .= '</div>';
             }
+            $html .= '</div>';
             $html .= '</div>';
         }
 
@@ -211,52 +228,43 @@ private function format_listicle_html($data, $title) {
             }
 
             if (!empty($item['cons'])) {
-                $html .= '<div class="atm-listicle-cons">';
-                $html .= '<h4>❌ Cons</h4>';
-                $html .= '<ul>';
-                foreach ($item['cons'] as $con) {
-                    $html .= '<li>' . esc_html($con) . '</li>';
-                }
-                $html .= '</ul>';
-                $html .= '</div>';
-            }
-            
-            $html .= '</div>';
-        }
+               $html .= '<div class="atm-listicle-cons">';
+               $html .= '<h4>❌ Cons</h4>';
+               $html .= '<ul>';
+               foreach ($item['cons'] as $con) {
+                   $html .= '<li>' . esc_html($con) . '</li>';
+               }
+               $html .= '</ul>';
+               $html .= '</div>';
+           }
+           
+           $html .= '</div>'; // Close pros-cons
+       }
 
-        // Why it's great
-        if (!empty($item['why_its_great'])) {
-            $html .= '<div class="atm-why-great">';
-            $html .= '<div class="atm-why-great-label">Why It Made Our List</div>';
-            $html .= '<p class="atm-why-great-text">' . esc_html($item['why_its_great']) . '</p>';
-            $html .= '</div>';
-        }
+       // Why it's great
+       if (!empty($item['why_its_great'])) {
+           $html .= '<div class="atm-why-great">';
+           $html .= '<div class="atm-why-great-label">Why It Made Our List</div>';
+           $html .= '<p class="atm-why-great-text">' . esc_html($item['why_its_great']) . '</p>';
+           $html .= '</div>';
+       }
 
-        // Call to Action (optional)
-        if (!empty($item['cta_text']) && !empty($item['cta_url'])) {
-            $html .= '<div class="atm-listicle-cta">';
-            $html .= '<a href="' . esc_url($item['cta_url']) . '" class="atm-listicle-cta-button" target="_blank" rel="noopener">';
-            $html .= esc_html($item['cta_text']);
-            $html .= '</a>';
-            $html .= '</div>';
-        }
+       $html .= '</div>'; // Close item content
+       $html .= '</div>'; // Close item
+   }
+   
+   $html .= '</div>'; // Close items container
 
-        $html .= '</div>'; // Close item content
-        $html .= '</div>'; // Close item
-    }
-    
-    $html .= '</div>'; // Close items container
+   // Conclusion (removed sharing buttons as requested)
+   if (!empty($data['conclusion'])) {
+       $html .= '<div class="atm-listicle-conclusion">';
+       $html .= '<h3>Final Thoughts</h3>';
+       $html .= '<p>' . esc_html($data['conclusion']) . '</p>';
+       $html .= '</div>';
+   }
 
-    // Conclusion
-    if (!empty($data['conclusion'])) {
-        $html .= '<div class="atm-listicle-conclusion">';
-        $html .= '<h3>Final Thoughts</h3>';
-        $html .= '<p>' . esc_html($data['conclusion']) . '</p>';
-        $html .= '</div>';
-    }
+   $html .= '</div>'; // Close container
 
-    $html .= '</div>'; // Close container
-
-    return $html;
+   return $html;
 }
 }
