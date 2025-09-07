@@ -18,7 +18,7 @@ const callAjax = (action, data) =>
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
 
-const updateEditorContent = (title, markdownContent) => {
+const updateEditorContent = (title, markdownContent, subtitle) => {
   const isBlockEditor = document.body.classList.contains("block-editor-page");
   const htmlContent = window.marked
     ? window.marked.parse(markdownContent)
@@ -49,6 +49,22 @@ const updateEditorContent = (title, markdownContent) => {
     } else {
       jQuery("#content").val(htmlContent);
     }
+  }
+
+  // ADD SUBTITLE HANDLING
+  if (subtitle && subtitle.trim()) {
+    console.log("ATM: Attempting to populate subtitle:", subtitle);
+    setTimeout(function () {
+      const subtitleField = jQuery('input[name="_bunyad_sub_title"]');
+      if (subtitleField.length > 0) {
+        console.log("ATM: Found SmartMag subtitle field, populating...");
+        subtitleField.val(subtitle);
+        subtitleField.trigger("input").trigger("change").trigger("keyup");
+        console.log("ATM: Subtitle populated successfully");
+      } else {
+        console.log("ATM: SmartMag subtitle field not found");
+      }
+    }, 1000);
   }
 };
 
@@ -201,7 +217,11 @@ function CreativeForm() {
         throw new Error(contentResponse.data);
       }
 
-      updateEditorContent(finalTitle, contentResponse.data.article_content);
+      updateEditorContent(
+        finalTitle,
+        contentResponse.data.article_content,
+        contentResponse.data.subtitle || ""
+      );
       setStatusMessage("✅ Article content inserted!");
 
       if (generateImage) {
