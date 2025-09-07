@@ -1,24 +1,21 @@
 // src/components/ArticleGenerator.js
 import { useState } from "@wordpress/element";
-import CustomDropdown from "./common/CustomDropdown";
+import { SelectControl } from "@wordpress/components";
 import CreativeForm from "./CreativeForm";
 import MultipageArticlesForm from "./MultipageArticlesForm";
 
 function ArticleGenerator({ setActiveView }) {
   const [activeTab, setActiveTab] = useState("creative");
 
+  console.log("ArticleGenerator - Current activeTab:", activeTab);
+
   const articleTypeOptions = [
     { value: "creative", label: "Standard Articles" },
     { value: "multipage", label: "Multipage Articles" },
-    // Ready for future expansion:
-    // { value: "listicle", label: "Listicle Articles" },
-    // { value: "howto", label: "How-To Guides" },
-    // { value: "review", label: "Product Reviews" },
-    // { value: "comparison", label: "Comparison Articles" },
-    // { value: "tutorial", label: "Step-by-Step Tutorials" },
   ];
 
   const handleTypeChange = (newType) => {
+    console.log("ArticleGenerator - Changing to:", newType);
     setActiveTab(newType);
   };
 
@@ -28,24 +25,42 @@ function ArticleGenerator({ setActiveView }) {
       <div className="atm-form-container">
         <div className="atm-dropdown-field">
           <label className="atm-dropdown-label">Article Type</label>
-          <CustomDropdown
-            options={articleTypeOptions}
+          <SelectControl
             value={activeTab}
+            options={articleTypeOptions}
             onChange={handleTypeChange}
-            placeholder="Select article type..."
+            __nextHasNoMarginBottom
           />
         </div>
       </div>
 
+      {/* Debug Info */}
+      <div
+        style={{
+          padding: "10px",
+          background: "#f0f0f0",
+          margin: "10px 0",
+          fontSize: "12px",
+        }}
+      >
+        Debug: Current tab = {activeTab}
+      </div>
+
       {/* Content based on selected type */}
       <div className="atm-tab-content">
-        {activeTab === "creative" && <CreativeForm />}
-        {activeTab === "multipage" && <MultipageArticlesForm />}
-        {/* Future article types can be added here:
-        {activeTab === "listicle" && <ListicleForm />}
-        {activeTab === "howto" && <HowToForm />}
-        {activeTab === "review" && <ReviewForm />}
-        */}
+        {activeTab === "creative" && (
+          <div>
+            <h4>Standard Articles Selected</h4>
+            <CreativeForm />
+          </div>
+        )}
+        {activeTab === "multipage" && (
+          <div>
+            <h4>Multipage Articles Selected</h4>
+            <MultipageArticlesForm />
+          </div>
+        )}
+        {!activeTab && <div>No tab selected</div>}
       </div>
     </div>
   );
