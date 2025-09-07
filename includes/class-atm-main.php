@@ -316,6 +316,11 @@ class ATM_Main {
         require_once ATM_PLUGIN_PATH . 'includes/lib/Parsedown.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-listicle.php';
         // require_once ATM_PLUGIN_PATH . 'includes/class-atm-block-editor.php'; // ADD THIS LINE
+
+        // ADD THIS DEBUG LINE:
+        error_log('ATM: Loading listicle class file');
+        require_once ATM_PLUGIN_PATH . 'includes/class-atm-listicle.php';
+        error_log('ATM: Listicle class file loaded');
     }
 
     private function init_hooks() {
@@ -344,6 +349,11 @@ class ATM_Main {
         }
         // --- END CHECK ---
 
+        // ADD THIS:
+        error_log('ATM: About to instantiate listicle class');
+        $listicle = new ATM_Listicle_Generator();
+        error_log('ATM: Listicle class instantiated');
+
          // NEW: dedicated podcast settings page
         if (file_exists(ATM_PLUGIN_PATH . 'includes/class-atm-podcast-settings.php')) {
             require_once ATM_PLUGIN_PATH . 'includes/class-atm-podcast-settings.php';
@@ -359,6 +369,13 @@ class ATM_Main {
 
         // Campaign manager hooks
         ATM_Campaign_Manager::schedule_main_cron();
+
+        // ADD THIS AT THE END:
+    add_action('init', function() {
+        error_log('ATM: Checking registered AJAX actions');
+        error_log('ATM: wp_ajax_generate_listicle_title registered: ' . (has_action('wp_ajax_generate_listicle_title') ? 'YES' : 'NO'));
+        error_log('ATM: wp_ajax_generate_listicle_content registered: ' . (has_action('wp_ajax_generate_listicle_content') ? 'YES' : 'NO'));
+    });
     }
     
     public function enqueue_admin_scripts($hook) {
