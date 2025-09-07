@@ -5,6 +5,7 @@ if (!defined('ABSPATH')) {
 }
 
 class ATM_Ajax {
+    
 
     // Add this new AJAX function to force subtitle population
     public function populate_subtitle_field() {

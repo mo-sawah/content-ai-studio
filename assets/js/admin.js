@@ -43,83 +43,23 @@ jQuery(document).ready(function ($) {
       }
     }
 
-    // --- Enhanced Subtitle Population ---
+    // --- Update SmartMag Subtitle Field (Direct Targeting) ---
     if (subtitle && subtitle.trim()) {
       console.log("ATM: Attempting to populate subtitle:", subtitle);
 
-      // Multiple attempts with different timings
-      const populateSubtitle = function (attempt = 1) {
-        const maxAttempts = 5;
-        const delay = attempt * 500; // Increasing delay: 500ms, 1s, 1.5s, 2s, 2.5s
+      // Wait for SmartMag to finish loading its fields
+      setTimeout(function () {
+        const subtitleField = jQuery('input[name="_bunyad_sub_title"]');
 
-        setTimeout(function () {
-          let subtitlePopulated = false;
-
-          // Try multiple selectors
-          const selectors = [
-            'input[name="_bunyad_sub_title"]',
-            'input[id="_bunyad_sub_title"]',
-            'textarea[name="_bunyad_sub_title"]',
-            'input[name*="sub_title"]',
-            'input[name*="subtitle"]',
-          ];
-
-          for (let selector of selectors) {
-            const field = jQuery(selector);
-            if (field.length > 0) {
-              console.log("ATM: Found subtitle field with selector:", selector);
-              field.val(subtitle);
-              field
-                .trigger("input")
-                .trigger("change")
-                .trigger("keyup")
-                .trigger("blur");
-              subtitlePopulated = true;
-              break;
-            }
-          }
-
-          if (!subtitlePopulated && attempt < maxAttempts) {
-            console.log(
-              "ATM: Subtitle field not found, retrying attempt",
-              attempt + 1
-            );
-            populateSubtitle(attempt + 1);
-          } else if (!subtitlePopulated) {
-            console.log(
-              "ATM: Could not find subtitle field after",
-              maxAttempts,
-              "attempts"
-            );
-
-            // Last resort: force refresh the meta box
-            const postId = jQuery("#post_ID").val();
-            if (postId) {
-              jQuery.ajax({
-                url: atm_ajax.ajax_url,
-                type: "POST",
-                data: {
-                  action: "populate_subtitle_field",
-                  post_id: postId,
-                  nonce: atm_ajax.nonce,
-                },
-                success: function (response) {
-                  if (response.success && response.data.found) {
-                    console.log(
-                      "ATM: Subtitle confirmed in database:",
-                      response.data.subtitle
-                    );
-                  }
-                },
-              });
-            }
-          } else {
-            console.log("ATM: Subtitle populated successfully");
-          }
-        }, delay);
-      };
-
-      populateSubtitle();
+        if (subtitleField.length > 0) {
+          console.log("ATM: Found SmartMag subtitle field, populating...");
+          subtitleField.val(subtitle);
+          subtitleField.trigger("input").trigger("change").trigger("keyup");
+          console.log("ATM: Subtitle populated successfully");
+        } else {
+          console.log("ATM: SmartMag subtitle field not found");
+        }
+      }, 1000);
     }
   }
 
@@ -1377,43 +1317,38 @@ jQuery(document).ready(function ($) {
   }
 });
 
-// Add this to admin.js temporarily to debug
+// Add this to admin.js - this will populate the SmartMag field from saved meta data
 jQuery(document).ready(function ($) {
-  setTimeout(function () {
-    console.log("=== SmartMag Field Debug ===");
+  // Function to populate SmartMag subtitle field
+  function populateSmartMagSubtitle() {
+    const postId = $("#post_ID").val();
+    if (!postId) return;
 
-    // Look for all possible subtitle fields
-    const possibleFields = [
-      'input[name="_bunyad_sub_title"]',
-      'input[name="bunyad_sub_title"]',
-      'input[id="_bunyad_sub_title"]',
-      'input[id="bunyad_sub_title"]',
-      'textarea[name="_bunyad_sub_title"]',
-      'input[name*="sub_title"]',
-      'input[name*="subtitle"]',
-    ];
+    $.ajax({
+      url: atm_ajax.ajax_url,
+      type: "POST",
+      data: {
+        action: "get_post_subtitle",
+        post_id: postId,
+        nonce: atm_ajax.nonce,
+      },
+      success: function (response) {
+        if (response.success && response.data.subtitle) {
+          const subtitle = response.data.subtitle;
+          const subtitleField = $('input[name="_bunyad_sub_title"]');
 
-    possibleFields.forEach(function (selector) {
-      const field = $(selector);
-      if (field.length > 0) {
-        console.log("Found field:", selector, "Value:", field.val());
-      }
+          if (subtitleField.length && !subtitleField.val()) {
+            console.log("ATM: Populating SmartMag subtitle field:", subtitle);
+            subtitleField.val(subtitle);
+            subtitleField.trigger("input").trigger("change");
+          }
+        }
+      },
     });
+  }
 
-    // List all input fields in meta boxes
-    $(".postbox input, .postbox textarea").each(function () {
-      const name = $(this).attr("name");
-      const id = $(this).attr("id");
-      if (name && (name.includes("sub") || name.includes("title"))) {
-        console.log(
-          "Potential subtitle field - Name:",
-          name,
-          "ID:",
-          id,
-          "Value:",
-          $(this).val()
-        );
-      }
-    });
-  }, 3000);
+  // Run on page load for existing posts
+  if ($("body").hasClass("post-php")) {
+    setTimeout(populateSmartMagSubtitle, 2000);
+  }
 });
