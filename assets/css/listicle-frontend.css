@@ -580,3 +580,205 @@
   outline: 2px solid #3b82f6 !important;
   outline-offset: 2px !important;
 }
+
+/* Specific fixes for the listicle layout issues */
+
+/* 1. FIXED: Title and number on same line + description under title */
+.atm-listicle-container .atm-listicle-item-header {
+  background: #3b82f6 !important;
+  padding: 1.5rem 2rem !important;
+  color: white !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 1.5rem !important;
+}
+
+.atm-listicle-container .atm-listicle-item-number {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 48px !important;
+  height: 48px !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 12px !important;
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: white !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+}
+
+.atm-listicle-container .atm-listicle-item-title {
+  font-size: 1.4rem !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  margin: 0 0 0.5rem 0 !important;
+  color: white !important;
+}
+
+/* NEW: Description under title in header */
+.atm-listicle-container .atm-listicle-item-subtitle {
+  font-size: 0.9rem !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  margin: 0 !important;
+  line-height: 1.4 !important;
+  font-weight: 400 !important;
+}
+
+/* 2. FIXED: Rating and Price on same line + bigger stars */
+.atm-listicle-container .atm-rating-price-container {
+  display: flex !important;
+  gap: 1rem !important;
+  margin-bottom: 1.5rem !important;
+  align-items: stretch !important;
+}
+
+/* Rating box - bigger stars */
+.atm-listicle-container .atm-listicle-rating {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  background: #fef3c7 !important;
+  border: 2px solid #f59e0b !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  flex: 1 !important;
+  min-height: 60px !important;
+}
+
+.atm-listicle-container .atm-listicle-stars {
+  display: flex !important;
+  gap: 0.1rem !important;
+}
+
+.atm-listicle-container .atm-listicle-star {
+  font-size: 1.6rem !important;
+  color: #f59e0b !important;
+  line-height: 1 !important;
+}
+
+.atm-listicle-container .atm-listicle-rating-text {
+  font-weight: 600 !important;
+  color: #92400e !important;
+  font-size: 1rem !important;
+  white-space: nowrap !important;
+}
+
+/* Price box - same line as rating */
+.atm-listicle-container .atm-listicle-price {
+  background: #f0fdf4 !important;
+  border: 2px solid #10b981 !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  text-align: center !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  min-height: 60px !important;
+}
+
+.atm-listicle-container .atm-listicle-price-amount {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  color: #059669 !important;
+  margin: 0 0 0.25rem 0 !important;
+  line-height: 1.2 !important;
+}
+
+.atm-listicle-container .atm-listicle-price-note {
+  font-size: 0.75rem !important;
+  color: #047857 !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* 3. FIXED: Key Features in one box with two columns */
+.atm-listicle-container .atm-listicle-features {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-left: 4px solid #3b82f6 !important;
+  border-radius: 8px !important;
+  padding: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.atm-listicle-container .atm-listicle-features h4 {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+  margin: 0 0 1rem 0 !important;
+}
+
+.atm-listicle-container .atm-features-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 0.5rem 1.5rem !important;
+}
+
+.atm-listicle-container .atm-feature-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 0.5rem !important;
+  font-size: 0.9rem !important;
+  color: #374151 !important;
+  padding: 0.25rem 0 !important;
+}
+
+.atm-listicle-container .atm-feature-bullet {
+  color: #3b82f6 !important;
+  font-weight: bold !important;
+  font-size: 0.8rem !important;
+  margin-top: 0.15rem !important;
+  flex-shrink: 0 !important;
+}
+
+/* 4. REMOVED: Sharing buttons (hide them) */
+.atm-listicle-container .atm-listicle-share,
+.atm-listicle-container .atm-share-buttons,
+.atm-listicle-container .social-share {
+  display: none !important;
+}
+
+/* Remove any print/share buttons at the end */
+.atm-listicle-container .print-article,
+.atm-listicle-container .share-article {
+  display: none !important;
+}
+
+/* 5. Ensure no external links are styled as buttons */
+.atm-listicle-container a[href^="http"]:not([href*="sawahsolutions.com"]) {
+  display: none !important;
+}
+
+/* Mobile responsive fixes */
+@media (max-width: 768px) {
+  .atm-listicle-container .atm-listicle-item-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+    padding: 1.5rem !important;
+  }
+
+  .atm-listicle-container .atm-rating-price-container {
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+
+  .atm-listicle-container .atm-features-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  .atm-listicle-container .atm-listicle-item-number {
+    align-self: flex-start !important;
+  }
+}
+
+/* Additional cleanup - remove any other social/sharing elements */
+.atm-listicle-container [class*="share"],
+.atm-listicle-container [class*="social"],
+.atm-listicle-container [id*="share"],
+.atm-listicle-container [data-share] {
+  display: none !important;
+}
