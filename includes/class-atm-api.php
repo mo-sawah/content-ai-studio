@@ -339,6 +339,76 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    public static function generate_advanced_podcast_script($title, $content, $language, $duration = 'medium') {
+    
+        // Duration mapping
+        $duration_specs = [
+            'short' => '5-7 minutes (approximately 750-1000 words)',
+            'medium' => '8-12 minutes (approximately 1200-1800 words)', 
+            'long' => '15-20 minutes (approximately 2000-3000 words)'
+        ];
+        
+        $target_duration = $duration_specs[$duration] ?? $duration_specs['medium'];
+
+        $system_prompt = "You are creating a professional, engaging podcast script between two experienced hosts discussing '{$title}'. 
+
+    **CRITICAL REQUIREMENTS:**
+
+    1. **Two-Person Format**: Create a natural conversation between:
+    - HOST_A: The primary presenter (slightly more knowledgeable, guides discussion)
+    - HOST_B: The co-host (asks good questions, provides different perspectives, reactions)
+
+    2. **Script Structure** (Target: {$target_duration}):
+    - **Opening** (30-45 seconds): Natural greeting, topic introduction
+    - **Main Discussion** (80% of content): Deep dive with back-and-forth conversation
+    - **Closing** (30-45 seconds): Summary and sign-off
+
+    3. **Conversation Elements**:
+    - Natural interruptions and overlaps: [INTERRUPTING], [OVERLAPPING]
+    - Emotional reactions: [LAUGHS], [CHUCKLES], [SURPRISED], [THOUGHTFUL PAUSE]
+    - Conversational fillers: 'Um', 'Well', 'You know', 'Actually'
+    - Questions between hosts: 'What do you think?', 'Have you experienced this?'
+    - Agreements/disagreements: 'Exactly!', 'Hmm, I'm not sure about that'
+
+    4. **Research Integration**: Use web search to find:
+    - Recent developments on the topic
+    - Statistics and data points
+    - Expert opinions or quotes
+    - Related examples or case studies
+    - Contrary viewpoints for balanced discussion
+
+    5. **Output Format**:
+    HOST_A: [ENTHUSIASTIC] Welcome back to the show! I'm [Host A name]
+    HOST_B: [FRIENDLY] And I'm [Host B name]. Today we're diving into something really interesting...
+    HOST_A: [AGREEMENT] Absolutely! So let's start with...
+    [Continue with natural conversation]
+
+    6. **Language**: Write entirely in {$language}
+
+    **Content Guidelines**:
+    - Make it sound like two real people having an informed conversation
+    - Include personal anecdotes or hypothetical scenarios
+    - Add transitional phrases: 'Speaking of which...', 'That reminds me...'
+    - Include listener engagement: 'Let us know what you think'
+    - Balance information with entertainment
+    - Use contemporary language and references
+
+    **Research the article topic thoroughly before writing the script to ensure accuracy and add current context.**";
+
+        // Use the most capable model for this complex task
+        $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
+        
+        $script = self::enhance_content_with_openrouter(
+            ['title' => $title, 'content' => $content],
+            $system_prompt,
+            $model,
+            false, // not JSON mode
+            true   // enable web search for research
+        );
+
+        return $script;
+    }
+
     /**
      * Generate listicle title
      */
@@ -1641,6 +1711,78 @@ Follow these rules strictly:
         }
 
         return $audio_content;
+    }
+
+    public static function generate_two_person_podcast_audio($script, $voice_a, $voice_b, $provider = 'openai') {
+        // Parse the script to separate HOST_A and HOST_B lines
+        $audio_segments = self::parse_podcast_script($script);
+        $final_audio_content = '';
+        
+        // Add intro silence
+        $final_audio_content .= base64_decode('SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGllbmRhcmQgTG9wZXogaW4gT25lVHJpY2sBTQuelleAAAAANFaAAAAAAAAAAAAAAAAAAAAD/8AAAAAAAADw==');
+
+        foreach ($audio_segments as $segment) {
+            $voice = ($segment['speaker'] === 'HOST_A') ? $voice_a : $voice_b;
+            $text = $segment['text'];
+            
+            // Clean up emotions and stage directions for TTS
+            $clean_text = preg_replace('/\[([^\]]+)\]/', '', $text);
+            $clean_text = trim($clean_text);
+            
+            if (empty($clean_text)) continue;
+
+            // Generate audio for this segment
+            if ($provider === 'elevenlabs') {
+                $segment_audio = self::generate_audio_with_elevenlabs($clean_text, $voice);
+            } else {
+                $segment_audio = self::generate_audio_with_openai_tts($clean_text, $voice);
+            }
+            
+            $final_audio_content .= $segment_audio;
+            
+            // Add small pause between speakers (0.3 seconds of silence)
+            if (isset($segment['add_pause']) && $segment['add_pause']) {
+                $final_audio_content .= self::generate_silence(300); // 300ms
+            }
+        }
+
+        return $final_audio_content;
+    }
+
+    private static function parse_podcast_script($script) {
+        $lines = explode("\n", $script);
+        $segments = [];
+        $current_speaker = null;
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+            
+            // Check if line starts with HOST_A: or HOST_B:
+            if (preg_match('/^(HOST_[AB]):\s*(.+)/', $line, $matches)) {
+                $speaker = $matches[1];
+                $text = $matches[2];
+                
+                // Add pause if speaker changed
+                $add_pause = ($current_speaker && $current_speaker !== $speaker);
+                
+                $segments[] = [
+                    'speaker' => $speaker,
+                    'text' => $text,
+                    'add_pause' => $add_pause
+                ];
+                
+                $current_speaker = $speaker;
+            }
+        }
+        
+        return $segments;
+    }
+
+    private static function generate_silence($milliseconds) {
+        // Generate brief silence - simple implementation
+        // For a more sophisticated approach, you'd generate actual audio silence
+        return str_repeat(chr(0), intval($milliseconds * 0.044)); // Rough approximation
     }
     
     private static function save_audio_file($audio_content, $post_id, $extension) {

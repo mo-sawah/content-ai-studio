@@ -96,10 +96,14 @@ function GeneratorView({
   isLoading,
 }) {
   const [scriptContent, setScriptContent] = useState("");
-  const [selectedVoice, setSelectedVoice] = useState("");
-  const [selectedVoiceLabel, setSelectedVoiceLabel] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [selectedLanguageLabel, setSelectedLanguageLabel] = useState("English");
+  const [duration, setDuration] = useState("medium");
+  const [durationLabel, setDurationLabel] = useState("Medium (8-12 minutes)");
+  const [hostAVoice, setHostAVoice] = useState("alloy");
+  const [hostAVoiceLabel, setHostAVoiceLabel] = useState("Alloy");
+  const [hostBVoice, setHostBVoice] = useState("nova");
+  const [hostBVoiceLabel, setHostBVoiceLabel] = useState("Nova");
   const [audioProvider, setAudioProvider] = useState(
     atm_studio_data.audio_provider || "openai"
   );
@@ -136,57 +140,115 @@ function GeneratorView({
     { label: "Polish", value: "Polish" },
   ];
 
+  const durationOptions = [
+    { label: "Short (5-7 minutes)", value: "short" },
+    { label: "Medium (8-12 minutes)", value: "medium" },
+    { label: "Long (15-20 minutes)", value: "long" },
+  ];
+
   const providerOptions = [
     { label: "OpenAI TTS", value: "openai" },
     { label: "ElevenLabs", value: "elevenlabs" },
   ];
 
+  // Helper functions
+  const getVoiceLabel = (voiceValue) => {
+    const voice = voiceOptions.find((v) => v.value === voiceValue);
+    return voice ? voice.label : "Select Voice";
+  };
+
+  const getDurationLabel = (durationValue) => {
+    const duration = durationOptions.find((d) => d.value === durationValue);
+    return duration ? duration.label : "Select Duration";
+  };
+
   useEffect(() => {
     if (voiceOptions.length > 0) {
-      const currentSelection = voiceOptions.find(
-        (opt) => opt.value === selectedVoice
-      );
-      if (!currentSelection) {
-        setSelectedVoice(voiceOptions[0].value);
-        setSelectedVoiceLabel(voiceOptions[0].label);
+      // Update Host A voice if not found in current options
+      const hostAMatch = voiceOptions.find((opt) => opt.value === hostAVoice);
+      if (!hostAMatch) {
+        setHostAVoice(voiceOptions[0].value);
+        setHostAVoiceLabel(voiceOptions[0].label);
+      } else {
+        setHostAVoiceLabel(hostAMatch.label);
+      }
+
+      // Update Host B voice if not found in current options
+      const hostBMatch = voiceOptions.find((opt) => opt.value === hostBVoice);
+      if (!hostBMatch) {
+        // Try to select a different voice for Host B
+        const differentVoice =
+          voiceOptions.find((opt) => opt.value !== hostAVoice) ||
+          voiceOptions[0];
+        setHostBVoice(differentVoice.value);
+        setHostBVoiceLabel(differentVoice.label);
+      } else {
+        setHostBVoiceLabel(hostBMatch.label);
       }
     }
   }, [audioProvider, voiceOptions]);
 
   return (
     <div className="atm-form-container">
-      <CustomDropdown
-        label="Script Language"
-        text={selectedLanguageLabel}
-        options={languageOptions}
-        onChange={(option) => {
-          setSelectedLanguage(option.value);
-          setSelectedLanguageLabel(option.label);
-        }}
-        disabled={isLoading}
-      />
+      <h4>Two-Person Podcast Configuration</h4>
+      <p className="components-base-control__help">
+        Generate a professional conversational podcast with two hosts discussing
+        your article content with research-enhanced insights.
+      </p>
+
+      <div className="atm-grid-2">
+        <CustomDropdown
+          label="Script Language"
+          text={selectedLanguageLabel}
+          options={languageOptions}
+          onChange={(option) => {
+            setSelectedLanguage(option.value);
+            setSelectedLanguageLabel(option.label);
+          }}
+          disabled={isLoading}
+        />
+        <CustomDropdown
+          label="Podcast Duration"
+          text={durationLabel}
+          options={durationOptions}
+          onChange={(option) => {
+            setDuration(option.value);
+            setDurationLabel(option.label);
+          }}
+          disabled={isLoading}
+          helpText="Target length for the podcast episode"
+        />
+      </div>
+
       <Button
         isSecondary
-        onClick={() => handleGenerateScript(selectedLanguage, setScriptContent)}
+        onClick={() =>
+          handleGenerateScript(selectedLanguage, duration, setScriptContent)
+        }
         disabled={isLoading}
       >
         {isLoading && statusMessage.includes("script") ? (
           <>
-            <CustomSpinner /> Generating Script...
+            <CustomSpinner /> Generating Advanced Script...
           </>
         ) : (
-          "Step 1: Generate Script from Post Content"
+          "Step 1: Generate Two-Person Script with Research"
         )}
       </Button>
+
       <TextareaControl
         label="Podcast Script"
-        help="The generated script will appear here. You can edit it before generating the audio."
+        help="The generated two-person conversational script will appear here. You can edit it before generating the audio. Look for HOST_A: and HOST_B: dialogue markers."
         value={scriptContent}
         onChange={setScriptContent}
-        rows="15"
+        rows="20"
         disabled={isLoading}
+        className="atm-podcast-script-textarea"
       />
-      <div className="atm-grid-2">
+
+      <div className="atm-form-container">
+        <h4>Voice Configuration</h4>
+
         <CustomDropdown
           label="Audio Provider"
           text={audioProviderLabel}
@@ -198,39 +260,71 @@ function GeneratorView({
           disabled={isLoading || elevenlabsVoices.length === 0}
           helpText={
             elevenlabsVoices.length === 0
-              ? "Enter ElevenLabs API key in settings to enable."
-              : ""
+              ? "Enter ElevenLabs API key in settings to enable higher quality voices."
+              : "ElevenLabs provides more natural-sounding voices for professional podcasts."
           }
         />
-        <CustomDropdown
-          label="AI Voice"
-          text={
-            selectedVoiceLabel ||
-            (voiceOptions.length > 0
-              ? voiceOptions[0].label
-              : "No voices available")
-          }
-          options={voiceOptions}
-          onChange={(option) => {
-            setSelectedVoice(option.value);
-            setSelectedVoiceLabel(option.label);
-          }}
-          disabled={isLoading || !voiceOptions.length}
-        />
+
+        <div className="atm-grid-2">
+          <CustomDropdown
+            label="Host A Voice (Primary)"
+            text={hostAVoiceLabel}
+            options={voiceOptions}
+            onChange={(option) => {
+              setHostAVoice(option.value);
+              setHostAVoiceLabel(option.label);
+            }}
+            disabled={isLoading || !voiceOptions.length}
+            helpText="The main host voice - typically leads the discussion"
+          />
+          <CustomDropdown
+            label="Host B Voice (Co-host)"
+            text={hostBVoiceLabel}
+            options={voiceOptions}
+            onChange={(option) => {
+              setHostBVoice(option.value);
+              setHostBVoiceLabel(option.label);
+            }}
+            disabled={isLoading || !voiceOptions.length}
+            helpText="The co-host voice - provides reactions and questions"
+          />
+        </div>
+
+        {hostAVoice === hostBVoice && voiceOptions.length > 1 && (
+          <p
+            className="atm-warning-message"
+            style={{
+              color: "#d97706",
+              fontSize: "0.9rem",
+              fontStyle: "italic",
+            }}
+          >
+            Warning: Both hosts are using the same voice. Consider selecting
+            different voices for better distinction.
+          </p>
+        )}
       </div>
+
       <Button
         isPrimary
         onClick={() =>
-          handleGenerateAudio(scriptContent, selectedVoice, audioProvider)
+          handleGenerateAudio(
+            scriptContent,
+            hostAVoice,
+            hostBVoice,
+            audioProvider
+          )
         }
-        disabled={isLoading || !scriptContent.trim() || !selectedVoice}
+        disabled={
+          isLoading || !scriptContent.trim() || !hostAVoice || !hostBVoice
+        }
       >
         {isLoading && statusMessage.includes("audio") ? (
           <>
-            <CustomSpinner /> Generating Audio...
+            <CustomSpinner /> Generating Two-Person Audio...
           </>
         ) : (
-          "Step 2: Generate MP3 Audio"
+          "Step 2: Generate Professional Podcast Audio"
         )}
       </Button>
     </div>
@@ -250,7 +344,7 @@ function PodcastGenerator({ setActiveView }) {
     []
   );
 
-  const handleGenerateScript = async (language, setScriptContent) => {
+  const handleGenerateScript = async (language, duration, setScriptContent) => {
     const editorContent = wp.data.select("core/editor").getEditedPostContent();
     if (!editorContent.trim()) {
       alert(
@@ -259,7 +353,10 @@ function PodcastGenerator({ setActiveView }) {
       return;
     }
     setIsLoading(true);
-    setStatusMessage("Generating podcast script...");
+    setStatusMessage(
+      "Analyzing article content and researching additional information..."
+    );
+
     try {
       const response = await jQuery.ajax({
         url: atm_studio_data.ajax_url,
@@ -270,12 +367,13 @@ function PodcastGenerator({ setActiveView }) {
           content: editorContent,
           post_id: postId,
           language: language,
+          duration: duration,
         },
       });
       if (!response.success) throw new Error(response.data);
       setScriptContent(response.data.script);
       setStatusMessage(
-        "✅ Script generated successfully. You can now edit it below."
+        "Script generated successfully! Review the two-person conversation below, then generate audio."
       );
     } catch (error) {
       setStatusMessage(`Error generating script: ${error.message}`);
@@ -284,13 +382,29 @@ function PodcastGenerator({ setActiveView }) {
     }
   };
 
-  const handleGenerateAudio = async (script, voice, provider) => {
+  const handleGenerateAudio = async (
+    script,
+    hostAVoice,
+    hostBVoice,
+    provider
+  ) => {
     if (!script.trim()) {
       alert("Script cannot be empty.");
       return;
     }
+
+    if (!script.includes("HOST_A:") || !script.includes("HOST_B:")) {
+      alert(
+        "The script doesn't appear to be in the correct two-person format. Please regenerate the script first."
+      );
+      return;
+    }
+
     setIsLoading(true);
-    setStatusMessage("Generating MP3 audio... this may take a minute.");
+    setStatusMessage(
+      "Generating professional two-person podcast audio... this may take several minutes."
+    );
+
     try {
       const response = await jQuery.ajax({
         url: atm_studio_data.ajax_url,
@@ -300,13 +414,14 @@ function PodcastGenerator({ setActiveView }) {
           nonce: atm_studio_data.nonce,
           post_id: postId,
           script,
-          voice,
+          host_a_voice: hostAVoice,
+          host_b_voice: hostBVoice,
           provider,
         },
       });
       if (!response.success) throw new Error(response.data);
       setStatusMessage(
-        "✅ Success! The page will now reload to show the audio player."
+        "Success! Your professional two-person podcast has been generated. The page will reload to show the audio player."
       );
       setTimeout(() => window.location.reload(), 2000);
     } catch (error) {

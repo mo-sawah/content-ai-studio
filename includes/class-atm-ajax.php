@@ -634,41 +634,40 @@ public function translate_text() {
     }
 
     public function generate_podcast_script() {
-        if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
-        }
-
-        check_ajax_referer('atm_nonce', 'nonce');
-        try {
-            $article_content = wp_strip_all_tags(stripslashes($_POST['content']));
-            $language = sanitize_text_field($_POST['language']);
-
-            if (empty($article_content)) {
-                throw new Exception("Article content is empty. Please write your article first.");
-            }
-
-            // Fetches the master prompt from the central API class, avoiding duplication.
-            $system_prompt = ATM_API::get_default_master_prompt();
-
-            // Inject the language instruction into the master prompt
-            $system_prompt = "**CRITICAL INSTRUCTION: You MUST write the entire podcast script in " . $language . ".**\n\n" . $system_prompt;
-
-            $post = get_post(intval($_POST['post_id']));
-            $final_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
-$final_prompt .= ' Use your web search ability to verify facts and add any recent developments to make the podcast as up-to-date as possible.';
-
-            $generated_script = ATM_API::enhance_content_with_openrouter(
-                ['content' => $article_content],
-                $final_prompt,
-                get_option('atm_content_model', 'anthropic/claude-3-haiku')
-            );
-
-            wp_send_json_success(['script' => $generated_script]);
-
-        } catch (Exception $e) {
-            wp_send_json_error($e->getMessage());
-        }
+    if (!ATM_Licensing::is_license_active()) {
+        wp_send_json_error('Please activate your license key to use this feature.');
     }
+
+    check_ajax_referer('atm_nonce', 'nonce');
+    @ini_set('max_execution_time', 300); // Extended for research
+    
+    try {
+        $article_content = wp_strip_all_tags(stripslashes($_POST['content']));
+        $language = sanitize_text_field($_POST['language']);
+        $post_id = intval($_POST['post_id']);
+        $duration = isset($_POST['duration']) ? sanitize_text_field($_POST['duration']) : 'medium'; // short, medium, long
+
+        if (empty($article_content)) {
+            throw new Exception("Article content is empty. Please write your article first.");
+        }
+
+        $post = get_post($post_id);
+        $article_title = $post ? $post->post_title : 'Article';
+
+        // Generate advanced two-person podcast script
+        $generated_script = ATM_API::generate_advanced_podcast_script(
+            $article_title,
+            $article_content,
+            $language,
+            $duration
+        );
+
+        wp_send_json_success(['script' => $generated_script]);
+
+    } catch (Exception $e) {
+        wp_send_json_error($e->getMessage());
+    }
+}
 
     public function generate_podcast() {
         if (!ATM_Licensing::is_license_active()) {
@@ -702,6 +701,17 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             if (!empty($current_chunk)) {
                 $script_chunks[] = trim($current_chunk);
             }
+
+            $host_a_voice = sanitize_text_field($_POST['host_a_voice'] ?? 'alloy');
+            $host_b_voice = sanitize_text_field($_POST['host_b_voice'] ?? 'nova');
+            
+            // Generate two-person audio
+            $final_audio_content = ATM_API::generate_two_person_podcast_audio(
+                $script, 
+                $host_a_voice, 
+                $host_b_voice, 
+                $provider
+            );
 
             $final_audio_content = '';
             $final_audio_content .= base64_decode('SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGllbmRhcmQgTG9wZXogaW4gT25lVHJpY2sBTQuelleAAAAANFaAAAAAAAAAAAAAAAAAAAAD/8AAAAAAAADw==');
