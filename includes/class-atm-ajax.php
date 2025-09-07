@@ -712,7 +712,7 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
         check_ajax_referer('atm_nonce', 'nonce');
         try {
             $keyword = sanitize_text_field($_POST['keyword']);
-            $title_input = sanitize_text_field($_POST['title']);
+            $title_input = sanitize_text_field($_POST['article_title']);
             $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
             $topic = !empty($title_input) ? 'the article title: "' . $title_input . '"' : 'the keyword: "' . $keyword . '"';
             if (empty($topic)) {

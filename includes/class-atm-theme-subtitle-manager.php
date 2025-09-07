@@ -39,29 +39,38 @@ class ATM_Theme_Subtitle_Manager {
             return $known_keys[$current_theme_slug];
         }
 
-        // Priority 3: Return the plugin's default fallback key.
-        return '_atm_subtitle';
+        // Priority 3: Return empty string to indicate no subtitle support
+        return '';
     }
 
     /**
-     * Saves the subtitle to the theme's field or prepends it to the content as a fallback.
+     * Saves the subtitle to the theme's field ONLY if a valid field is detected.
+     * If no valid field is found, returns the original content unchanged.
      *
      * @param int    $post_id  The ID of the post.
      * @param string $subtitle The subtitle text.
      * @param string $content  The original article content.
-     * @return string The final article content (modified only if fallback is used).
+     * @return string The final article content (always unmodified).
      */
     public static function save_subtitle($post_id, $subtitle, $content) {
+        error_log('ATM Debug - save_subtitle called with: post_id=' . $post_id . ', subtitle=' . $subtitle);
+        
         $active_key = self::get_active_subtitle_key();
+        error_log('ATM Debug - Active subtitle key: "' . $active_key . '"');
 
-        // If a theme-specific key is found (manual or auto-detected), use it.
-        if ($active_key !== '_atm_subtitle') {
-            update_post_meta($post_id, $active_key, $subtitle);
-            // Return the original, unmodified content.
-            return $content;
+        // Only save if we have a valid theme subtitle field
+        if (!empty($active_key)) {
+            $result = update_post_meta($post_id, $active_key, $subtitle);
+            error_log('ATM Debug - update_post_meta result for key "' . $active_key . '": ' . ($result ? 'success' : 'failed'));
+            
+            // Verify it was saved
+            $saved_value = get_post_meta($post_id, $active_key, true);
+            error_log('ATM Debug - Verified saved value: "' . $saved_value . '"');
+        } else {
+            error_log('ATM Debug - No valid subtitle field found, skipping subtitle save');
         }
 
-        // Fallback: Prepend the subtitle as a bolded paragraph to the content.
-        return "**Sub Title:** " . $subtitle . "\n\n" . $content;
+        // Always return the original content unchanged
+        return $content;
     }
 }
