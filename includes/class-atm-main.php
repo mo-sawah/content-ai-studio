@@ -324,59 +324,49 @@ class ATM_Main {
     }
 
     private function init_hooks() {
-        $meta_box = new ATM_Meta_Box();
-        $settings = new ATM_Settings();
-        $ajax = new ATM_Ajax();
-        $frontend = new ATM_Frontend();
-        $campaign_manager = new ATM_Campaign_Manager();
-        $listicle = new ATM_Listicle_Generator();
+    $meta_box = new ATM_Meta_Box();
+    $settings = new ATM_Settings();
+    $ajax = new ATM_Ajax();
+    $frontend = new ATM_Frontend();
+    $campaign_manager = new ATM_Campaign_Manager();
+    
+    // Load listicle class ONCE - no duplicate instantiation
+    $listicle = new ATM_Listicle_Generator();
 
-        // Admin hooks
-        add_action('admin_menu', array($settings, 'add_admin_menu'));
+    // Admin hooks
+    add_action('admin_menu', array($settings, 'add_admin_menu'));
+    add_action('add_meta_boxes', array($meta_box, 'add_meta_boxes'));
+    add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+    add_action('admin_head', array($this, 'register_tinymce_button'));
+    add_action('rest_api_init', array($this, 'register_rest_routes'));
+    add_action('init', array($this, 'register_chart_post_type'));
+    add_action('rest_api_init', array($this, 'register_chart_rest_routes'));
+    add_action('init', array($this, 'register_shortcodes'));
+    add_action('transition_post_status', array($this, 'maybe_schedule_comments_on_publish'), 10, 3);
+    add_action('atm_generate_comments_for_post', array($this, 'handle_generate_comments_for_post'));
+
+    // --- LICENSE CHECK ---
+    if (ATM_Licensing::is_license_active()) {
         add_action('add_meta_boxes', array($meta_box, 'add_meta_boxes'));
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
-        add_action('admin_head', array($this, 'register_tinymce_button'));
-        add_action('rest_api_init', array($this, 'register_rest_routes'));
-        add_action('init', array($this, 'register_chart_post_type'));
-        add_action('rest_api_init', array($this, 'register_chart_rest_routes'));
-        add_action('init', array($this, 'register_shortcodes'));
-        add_action('transition_post_status', array($this, 'maybe_schedule_comments_on_publish'), 10, 3);
-        add_action('atm_generate_comments_for_post', array($this, 'handle_generate_comments_for_post'));
-
-        // --- LICENSE CHECK ---
-        if (ATM_Licensing::is_license_active()) {
-            add_action('add_meta_boxes', array($meta_box, 'add_meta_boxes'));
-        }
-        // --- END CHECK ---
-
-        // ADD THIS:
-        error_log('ATM: About to instantiate listicle class');
-        $listicle = new ATM_Listicle_Generator();
-        error_log('ATM: Listicle class instantiated');
-
-         // NEW: dedicated podcast settings page
-        if (file_exists(ATM_PLUGIN_PATH . 'includes/class-atm-podcast-settings.php')) {
-            require_once ATM_PLUGIN_PATH . 'includes/class-atm-podcast-settings.php';
-        }
-
-        // Frontend hooks
-        // CHANGE: load our styles after the theme to win specificity battles
-        add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'), 99);
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_listicle_styles'), 100);
-        add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
-        add_filter('the_content', array($frontend, 'embed_takeaways_in_content'));
-        add_filter('the_content', array($frontend, 'embed_podcast_in_content'));
-
-        // Campaign manager hooks
-        ATM_Campaign_Manager::schedule_main_cron();
-
-        // ADD THIS AT THE END:
-    add_action('init', function() {
-        error_log('ATM: Checking registered AJAX actions');
-        error_log('ATM: wp_ajax_generate_listicle_title registered: ' . (has_action('wp_ajax_generate_listicle_title') ? 'YES' : 'NO'));
-        error_log('ATM: wp_ajax_generate_listicle_content registered: ' . (has_action('wp_ajax_generate_listicle_content') ? 'YES' : 'NO'));
-    });
     }
+    // --- END CHECK ---
+
+    // NEW: dedicated podcast settings page
+    if (file_exists(ATM_PLUGIN_PATH . 'includes/class-atm-podcast-settings.php')) {
+        require_once ATM_PLUGIN_PATH . 'includes/class-atm-podcast-settings.php';
+    }
+
+    // Frontend hooks
+    // CHANGE: load our styles after the theme to win specificity battles
+    add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'), 99);
+    add_action('wp_enqueue_scripts', array($this, 'enqueue_listicle_styles'), 100);
+    add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
+    add_filter('the_content', array($frontend, 'embed_takeaways_in_content'));
+    add_filter('the_content', array($frontend, 'embed_podcast_in_content'));
+
+    // Campaign manager hooks
+    ATM_Campaign_Manager::schedule_main_cron();
+}
     
     public function enqueue_admin_scripts($hook) {
     $screen = get_current_screen();

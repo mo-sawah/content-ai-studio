@@ -4,10 +4,12 @@
 class ATM_Listicle_Generator {
     
     public function __construct() {
-        error_log('ATM: Listicle class constructor called');
-        add_action('wp_ajax_generate_listicle_title', array($this, 'generate_listicle_title'));
-        add_action('wp_ajax_generate_listicle_content', array($this, 'generate_listicle_content'));
-        error_log('ATM: Listicle AJAX actions registered');
+        // Prevent multiple AJAX registrations
+        if (!self::$ajax_registered) {
+            add_action('wp_ajax_generate_listicle_title', array($this, 'generate_listicle_title'));
+            add_action('wp_ajax_generate_listicle_content', array($this, 'generate_listicle_content'));
+            self::$ajax_registered = true;
+        }
     }
 
     /**
