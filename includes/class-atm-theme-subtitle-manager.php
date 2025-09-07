@@ -1,76 +1,145 @@
 <?php
+// /includes/class-atm-theme-subtitle-manager.php
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
 class ATM_Theme_Subtitle_Manager {
-
+    
     /**
-     * A map of known theme slugs to their subtitle meta keys.
-     * This allows for more reliable auto-detection.
+     * Save subtitle to appropriate theme fields
      */
-    private static function get_known_theme_keys() {
-        return [
-            'smart-mag' => '_bunyad_sub_title', // Your SmartMag Theme
-            'kadence'   => '_kadence_post_subtitle',
-            'astra'     => 'astra_subtitle',
-            // Add more popular themes here over time
-        ];
-    }
-
-    /**
-     * Determines the correct subtitle meta key to use.
-     * Priority: Manual Setting > Auto-Detected Theme > Fallback
-     *
-     * @return string The meta key to use.
-     */
-    public static function get_active_subtitle_key() {
-        // Priority 1: Check for a user-defined manual key in settings.
-        $manual_key = get_option('atm_theme_subtitle_key', '');
-        if (!empty($manual_key)) {
-            return $manual_key;
+    public static function save_subtitle($post_id, $subtitle) {
+        if ($post_id <= 0 || empty($subtitle)) {
+            return false;
         }
-
-        // Priority 2: Check if the current theme is in our known list.
-        $current_theme_slug = get_template(); // Gets the directory name of the active theme, e.g., "smart-mag"
-        $known_keys = self::get_known_theme_keys();
-
-        if (isset($known_keys[$current_theme_slug])) {
-            return $known_keys[$current_theme_slug];
-        }
-
-        // Priority 3: Return empty string to indicate no subtitle support
-        return '';
-    }
-
-    /**
-     * Saves the subtitle to the theme's field ONLY if a valid field is detected.
-     * If no valid field is found, returns the original content unchanged.
-     *
-     * @param int    $post_id  The ID of the post.
-     * @param string $subtitle The subtitle text.
-     * @param string $content  The original article content.
-     * @return string The final article content (always unmodified).
-     */
-    public static function save_subtitle($post_id, $subtitle, $content) {
-        error_log('ATM Debug - save_subtitle called with: post_id=' . $post_id . ', subtitle=' . $subtitle);
         
-        $active_key = self::get_active_subtitle_key();
-        error_log('ATM Debug - Active subtitle key: "' . $active_key . '"');
-
-        // Only save if we have a valid theme subtitle field
-        if (!empty($active_key)) {
-            $result = update_post_meta($post_id, $active_key, $subtitle);
-            error_log('ATM Debug - update_post_meta result for key "' . $active_key . '": ' . ($result ? 'success' : 'failed'));
-            
-            // Verify it was saved
-            $saved_value = get_post_meta($post_id, $active_key, true);
-            error_log('ATM Debug - Verified saved value: "' . $saved_value . '"');
-        } else {
-            error_log('ATM Debug - No valid subtitle field found, skipping subtitle save');
+        $theme = get_template();
+        $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
+        
+        // Always save to our plugin's field as backup
+        update_post_meta($post_id, '_atm_subtitle', $subtitle);
+        
+        // Save to configured theme field if set
+        if (!empty($theme_subtitle_key)) {
+            update_post_meta($post_id, $theme_subtitle_key, $subtitle);
+            error_log("ATM Plugin: Saved subtitle to configured field: {$theme_subtitle_key}");
         }
-
-        // Always return the original content unchanged
-        return $content;
+        
+        // Auto-detect and save to theme-specific fields
+        if (strpos($theme, 'smartmag') !== false) {
+            update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
+            error_log("ATM Plugin: Saved subtitle to SmartMag field: _bunyad_sub_title");
+        } elseif (strpos($theme, 'newspaper') !== false) {
+            update_post_meta($post_id, '_td_subtitle', $subtitle);
+        } elseif (strpos($theme, 'kadence') !== false) {
+            update_post_meta($post_id, '_kadence_post_subtitle', $subtitle);
+        } elseif (strpos($theme, 'genesis') !== false) {
+            update_post_meta($post_id, '_genesis_subtitle', $subtitle);
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Get subtitle from the most appropriate field
+     */
+    public static function get_subtitle($post_id) {
+        // Priority: configured theme field > theme-specific field > our field
+        $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
+        
+        if (!empty($theme_subtitle_key)) {
+            $subtitle = get_post_meta($post_id, $theme_subtitle_key, true);
+            if (!empty($subtitle)) {
+                return $subtitle;
+            }
+        }
+        
+        // Check theme-specific fields
+        $theme = get_template();
+        if (strpos($theme, 'smartmag') !== false) {
+            $subtitle = get_post_meta($post_id, '_bunyad_sub_title', true);
+            if (!empty($subtitle)) {
+                return $subtitle;
+            }
+        } elseif (strpos($theme, 'newspaper') !== false) {
+            $subtitle = get_post_meta($post_id, '_td_subtitle', true);
+            if (!empty($subtitle)) {
+                return $subtitle;
+            }
+        } elseif (strpos($theme, 'kadence') !== false) {
+            $subtitle = get_post_meta($post_id, '_kadence_post_subtitle', true);
+            if (!empty($subtitle)) {
+                return $subtitle;
+            }
+        }
+        
+        // Fallback to our field
+        return get_post_meta($post_id, '_atm_subtitle', true);
+    }
+    
+    /**
+     * Get the active subtitle key for a post
+     */
+    public static function get_active_subtitle_key($post_id) {
+        $theme_subtitle_key = get_option('atm_theme_subtitle_key', '');
+        
+        if (!empty($theme_subtitle_key)) {
+            $subtitle = get_post_meta($post_id, $theme_subtitle_key, true);
+            if (!empty($subtitle)) {
+                return $theme_subtitle_key;
+            }
+        }
+        
+        // Check theme-specific fields
+        $theme = get_template();
+        if (strpos($theme, 'smartmag') !== false) {
+            $subtitle = get_post_meta($post_id, '_bunyad_sub_title', true);
+            if (!empty($subtitle)) {
+                return '_bunyad_sub_title';
+            }
+        } elseif (strpos($theme, 'newspaper') !== false) {
+            $subtitle = get_post_meta($post_id, '_td_subtitle', true);
+            if (!empty($subtitle)) {
+                return '_td_subtitle';
+            }
+        } elseif (strpos($theme, 'kadence') !== false) {
+            $subtitle = get_post_meta($post_id, '_kadence_post_subtitle', true);
+            if (!empty($subtitle)) {
+                return '_kadence_post_subtitle';
+            }
+        }
+        
+        // Fallback to our field
+        return '_atm_subtitle';
+    }
+    
+    /**
+     * Check if theme handles subtitles natively
+     */
+    public static function theme_handles_subtitle() {
+        $theme = get_template();
+        
+        $themes_with_subtitle_support = [
+            'smartmag' => 'bunyad_post_subtitle',
+            'newspaper' => 'td_subtitle', 
+            'kadence' => 'kadence_post_subtitle',
+            'genesis' => 'genesis_subtitle',
+            'astra' => 'astra_subtitle'
+        ];
+        
+        foreach ($themes_with_subtitle_support as $theme_name => $function_check) {
+            if (strpos($theme, $theme_name) !== false) {
+                // Check if theme function exists
+                if (function_exists($function_check) || 
+                    function_exists('get_' . $function_check) ||
+                    has_action('bunyad_single_content_wrap')) { // SmartMag specific
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
 }
