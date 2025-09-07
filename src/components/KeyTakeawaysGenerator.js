@@ -23,7 +23,6 @@ function KeyTakeawaysGenerator({ setActiveView }) {
   const [articleModelLabel, setArticleModelLabel] =
     useState("Use Default Model");
 
-  // --- NEW: State for theme selection ---
   const [theme, setTheme] = useState("dark");
   const [themeLabel, setThemeLabel] = useState("Dark");
 
@@ -35,7 +34,6 @@ function KeyTakeawaysGenerator({ setActiveView }) {
     })),
   ];
 
-  // --- NEW: Options for the theme dropdown ---
   const themeOptions = [
     { label: "Dark", value: "dark" },
     { label: "Light", value: "light" },
@@ -85,7 +83,6 @@ function KeyTakeawaysGenerator({ setActiveView }) {
       .getAttribute("data-post-id");
 
     try {
-      // --- MODIFIED: Send theme along with takeaways ---
       const response = await callAjax("save_key_takeaways", {
         post_id: postId,
         takeaways: takeaways,
@@ -107,33 +104,7 @@ function KeyTakeawaysGenerator({ setActiveView }) {
 
   return (
     <div className="atm-generator-view">
-      <div className="atm-view-header">
-        <button
-          className="atm-back-btn"
-          onClick={() => setActiveView("hub")}
-          disabled={isLoading || isSaving}
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M15 18L9 12L15 6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-        <h3>Key Takeaways</h3>
-      </div>
-
       <div className="atm-form-container">
-        {/* --- NEW: Grid layout for dropdowns --- */}
         <div className="atm-grid-2">
           <CustomDropdown
             label="AI Model"
@@ -156,7 +127,6 @@ function KeyTakeawaysGenerator({ setActiveView }) {
             disabled={isLoading || isSaving}
           />
         </div>
-        {/* --- END NEW --- */}
 
         <Button
           isPrimary

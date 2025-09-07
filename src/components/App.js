@@ -365,8 +365,33 @@ function App() {
       <div className="atm-main-content">
         {activeView !== "hub" && (
           <div className="atm-content-header">
-            <h1 className="atm-content-title">{getPageTitle()}</h1>
-            <p className="atm-content-subtitle">{getPageSubtitle()}</p>
+            <div className="atm-content-header-inner">
+              <button
+                className="atm-header-back-btn"
+                onClick={() => setActiveView("hub")}
+                aria-label="Go back to hub"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M15 18L9 12L15 6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              <div className="atm-content-header-text">
+                <h1 className="atm-content-title">{getPageTitle()}</h1>
+                <p className="atm-content-subtitle">{getPageSubtitle()}</p>
+              </div>
+            </div>
           </div>
         )}
         <div className="atm-content-body">{renderActiveView()}</div>

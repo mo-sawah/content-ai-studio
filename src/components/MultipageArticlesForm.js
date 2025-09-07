@@ -166,7 +166,7 @@ function MultipageArticlesForm({ setActiveView }) {
       }
     } catch (error) {
       console.error("Generation error:", error);
-      setStatusMessage(`❌ Generation failed: ${error.message}`);
+      setStatusMessage(`⌁ Generation failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -174,30 +174,6 @@ function MultipageArticlesForm({ setActiveView }) {
 
   return (
     <div className="atm-generator-view">
-      <div className="atm-view-header">
-        <button
-          className="atm-back-btn"
-          onClick={() => setActiveView("hub")}
-          disabled={isLoading || isSaving}
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M15 18L9 12L15 6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-        <h3>Generate Multipage Article</h3>
-      </div>
       <div className="atm-form-container">
         <div className="atm-form-section">
           <h4 className="atm-section-title">Content Configuration</h4>
@@ -252,7 +228,6 @@ function MultipageArticlesForm({ setActiveView }) {
               max={10}
               disabled={isLoading || isSaving}
             />
-            {/* --- UPDATED: RangeControl for word count --- */}
             <RangeControl
               label={`Words per Page: ~${wordsPerPage}`}
               value={wordsPerPage}
@@ -316,7 +291,7 @@ function MultipageArticlesForm({ setActiveView }) {
         </div>
         {statusMessage && (
           <p
-            className={`atm-status-message ${statusMessage.includes("✅") ? "success" : statusMessage.includes("❌") ? "error" : "info"}`}
+            className={`atm-status-message ${statusMessage.includes("✅") ? "success" : statusMessage.includes("⌁") ? "error" : "info"}`}
           >
             {statusMessage}
           </p>

@@ -142,25 +142,6 @@ function CommentsGenerator({ setActiveView }) {
 
   return (
     <div className="atm-generator-view">
-      <div className="atm-view-header">
-        <button
-          className="atm-back-btn"
-          onClick={() => setActiveView("hub")}
-          disabled={isGenerating || isSaving}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M15 18L9 12L15 6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-        <h3>Generate Comments</h3>
-      </div>
-
       <div className="atm-form-container">
         <div className="atm-grid-2">
           <CustomDropdown

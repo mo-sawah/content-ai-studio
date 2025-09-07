@@ -1983,3 +1983,56 @@ body.wp-admin
 .atm-tab-content {
   padding-top: 24px;
 }
+
+/* --- Header Back Button Styles --- */
+.atm-content-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.atm-header-back-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 44px !important;
+  height: 44px !important;
+  background: rgba(139, 92, 246, 0.1) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  border-radius: 12px !important;
+  color: #8b5cf6 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  &:hover {
+    background: rgba(139, 92, 246, 0.15) !important;
+    border-color: rgba(139, 92, 246, 0.3) !important;
+    transform: translateX(-2px) !important;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2) !important;
+  }
+
+  &:active {
+    transform: translateX(-1px) !important;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3) !important;
+  }
+
+  svg {
+    width: 20px !important;
+    height: 20px !important;
+    color: inherit !important;
+  }
+}
+
+.atm-content-header-text {
+  flex: 1;
+}
+
+.atm-content-title {
+  margin: 0 !important;
+}
+
+.atm-content-subtitle {
+  margin: 0 !important;
+}
