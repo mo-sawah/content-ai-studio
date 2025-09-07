@@ -3,6 +3,8 @@
 
 class ATM_Listicle_Generator {
     
+    private static $ajax_registered = false;
+    
     public function __construct() {
         // Prevent multiple AJAX registrations
         if (!self::$ajax_registered) {
@@ -16,7 +18,7 @@ class ATM_Listicle_Generator {
      * Generate a compelling listicle title
      */
     public function generate_listicle_title() {
-        check_ajax_referer('atm_studio_nonce', 'nonce');
+        check_ajax_referer('atm_nonce', 'nonce');
         
         $topic = sanitize_text_field($_POST['topic']);
         $item_count = intval($_POST['item_count']);
@@ -28,19 +30,12 @@ class ATM_Listicle_Generator {
             return;
         }
 
-        // Create title generation prompt
-        $prompt = $this->build_title_prompt($topic, $item_count, $category);
-        
         try {
-            $ai_response = $this->call_ai_service($prompt, $model);
+            $title = ATM_API::generate_listicle_title($topic, $item_count, $category, $model);
             
-            if ($ai_response && !empty($ai_response['title'])) {
-                wp_send_json_success(array(
-                    'article_title' => $ai_response['title']
-                ));
-            } else {
-                throw new Exception('Failed to generate title');
-            }
+            wp_send_json_success(array(
+                'article_title' => $title
+            ));
             
         } catch (Exception $e) {
             wp_send_json_error('Title generation failed: ' . $e->getMessage());
@@ -51,7 +46,7 @@ class ATM_Listicle_Generator {
      * Generate full listicle content
      */
     public function generate_listicle_content() {
-        check_ajax_referer('atm_studio_nonce', 'nonce');
+        check_ajax_referer('atm_nonce', 'nonce');
         
         $post_id = intval($_POST['post_id']);
         $title = sanitize_text_field($_POST['article_title']);
@@ -68,23 +63,26 @@ class ATM_Listicle_Generator {
             return;
         }
 
-        // Build comprehensive listicle prompt
-        $prompt = $this->build_content_prompt($title, $topic, $item_count, $category, $include_pricing, $include_ratings, $custom_prompt);
-        
         try {
-            $ai_response = $this->call_ai_service($prompt, $model);
+            $params = array(
+                'topic' => $topic,
+                'item_count' => $item_count,
+                'category' => $category,
+                'include_pricing' => $include_pricing,
+                'include_ratings' => $include_ratings,
+                'model' => $model,
+                'custom_prompt' => $custom_prompt
+            );
             
-            if ($ai_response && !empty($ai_response['content'])) {
-                // Generate the formatted HTML content
-                $html_content = $this->format_listicle_html($ai_response, $title);
-                
-                wp_send_json_success(array(
-                    'article_content' => $html_content,
-                    'subtitle' => $ai_response['subtitle'] ?? ''
-                ));
-            } else {
-                throw new Exception('Failed to generate content');
-            }
+            $result = ATM_API::generate_listicle_content($params);
+            
+            // Generate the formatted HTML content
+            $html_content = $this->format_listicle_html($result, $title);
+            
+            wp_send_json_success(array(
+                'article_content' => $html_content,
+                'subtitle' => $result['subtitle'] ?? ''
+            ));
             
         } catch (Exception $e) {
             wp_send_json_error('Content generation failed: ' . $e->getMessage());
@@ -92,80 +90,11 @@ class ATM_Listicle_Generator {
     }
 
     /**
-     * Build title generation prompt
-     */
-    private function build_title_prompt($topic, $item_count, $category) {
-        return "Create a compelling listicle title for the following:
-
-Topic: {$topic}
-Number of items: {$item_count}
-Category: {$category}
-
-Requirements:
-- Make it clickable and SEO-friendly
-- Include the number of items
-- Use power words that drive engagement
-- Keep it under 60 characters for SEO
-- Make it specific and valuable
-
-Examples of good listicle titles:
-- '10 Best Project Management Tools for Small Teams in 2024'
-- '15 Proven Email Marketing Strategies That Boost Sales'
-- '7 Essential WordPress Plugins Every Blogger Needs'
-
-Return only the title, nothing else.";
-    }
-
-    /**
-     * Build content generation prompt
-     */
-    private function build_content_prompt($title, $topic, $item_count, $category, $include_pricing, $include_ratings, $custom_prompt) {
-        $pricing_instruction = $include_pricing ? "Include pricing information where relevant." : "";
-        $rating_instruction = $include_ratings ? "Include star ratings or numerical scores for each item." : "";
-        $custom_instruction = !empty($custom_prompt) ? "Additional instructions: {$custom_prompt}" : "";
-
-        return "Create a comprehensive listicle article with the following specifications:
-
-Title: {$title}
-Topic: {$topic}
-Category: {$category}
-Number of items: {$item_count}
-{$pricing_instruction}
-{$rating_instruction}
-{$custom_instruction}
-
-Structure the content as a JSON response with this format:
-{
-    \"subtitle\": \"Brief engaging subtitle\",
-    \"introduction\": \"Compelling introduction paragraph\",
-    \"overview\": \"Brief overview of what the list covers\",
-    \"items\": [
-        {
-            \"number\": 1,
-            \"title\": \"Item title\",
-            \"description\": \"Detailed description\",
-            \"features\": [\"feature1\", \"feature2\", \"feature3\"],
-            \"pros\": [\"pro1\", \"pro2\"],
-            \"cons\": [\"con1\", \"con2\"],
-            \"rating\": 4.5,
-            \"price\": \"$99/month\",
-            \"why_its_great\": \"Explanation of why this item made the list\"
-        }
-    ],
-    \"conclusion\": \"Compelling conclusion paragraph\"
-}
-
-Make each item valuable and detailed. Focus on providing genuine value to readers. Use engaging language but keep it informative and helpful.";
-    }
-
-    /**
      * Format the AI response into beautiful HTML
      */
-    private function format_listicle_html($ai_response, $title) {
-        $data = json_decode($ai_response['content'], true);
-        
-        if (!$data) {
-            throw new Exception('Invalid AI response format');
+    private function format_listicle_html($data, $title) {
+        if (!is_array($data) || !isset($data['items'])) {
+            throw new Exception('Invalid data format for listicle');
         }
 
         $html = '<div class="atm-listicle-container">';
@@ -175,7 +104,7 @@ Make each item valuable and detailed. Focus on providing genuine value to reader
         $html .= '<h1>' . esc_html($title) . '</h1>';
         $html .= '<div class="atm-listicle-meta">';
         $html .= '<div class="atm-listicle-meta-item">';
-        $html .= '<span class="atm-listicle-meta-icon">📝</span>';
+        $html .= '<span class="atm-listicle-meta-icon">📋</span>';
         $html .= '<span>' . count($data['items']) . ' Items</span>';
         $html .= '</div>';
         $html .= '<div class="atm-listicle-meta-item">';
@@ -320,65 +249,4 @@ Make each item valuable and detailed. Focus on providing genuine value to reader
 
         return $html;
     }
-
-    /**
-     * Call AI service (implement based on your AI provider)
-     */
-    private function call_ai_service($prompt, $model = '') {
-        // Implement your AI service call here
-        // This should return an array with 'content' and optionally 'subtitle'
-        
-        // Example implementation (replace with your actual AI service):
-        /*
-        $api_key = get_option('your_ai_api_key');
-        $response = wp_remote_post('https://api.your-ai-service.com/generate', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type' => 'application/json'
-            ],
-            'body' => json_encode([
-                'prompt' => $prompt,
-                'model' => $model,
-                'max_tokens' => 4000
-            ])
-        ]);
-        
-        if (is_wp_error($response)) {
-            throw new Exception($response->get_error_message());
-        }
-        
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        
-        return [
-            'content' => $data['choices'][0]['message']['content'],
-            'subtitle' => 'Generated subtitle if available'
-        ];
-        */
-        
-        // Temporary mock response for testing
-        return [
-            'content' => json_encode([
-                'subtitle' => 'Discover the best tools for your needs',
-                'introduction' => 'This comprehensive list covers the top options in this category.',
-                'items' => [
-                    [
-                        'number' => 1,
-                        'title' => 'Sample Item 1',
-                        'description' => 'This is a sample description for testing.',
-                        'features' => ['Feature 1', 'Feature 2'],
-                        'pros' => ['Great feature', 'Easy to use'],
-                        'cons' => ['Could be cheaper'],
-                        'rating' => 4.5,
-                        'price' => '$99/month',
-                        'why_its_great' => 'Excellent overall value'
-                    ]
-                ],
-                'conclusion' => 'This list provides excellent options for your consideration.'
-            ])
-        ];
-    }
 }
-
-// Initialize the listicle generator
-new ATM_Listicle_Generator();
