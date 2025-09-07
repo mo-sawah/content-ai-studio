@@ -3,8 +3,8 @@ jQuery(document).ready(function ($) {
    * Helper function to update the editor content in either the Block or Classic editor.
    * @param {string} title - The new post title.
    * @param {string} markdownContent - The new post content in Markdown format.
+   * @param {string} subtitle - The subtitle for the post.
    */
-  // In admin.js, update the updateEditorContent function to handle subtitles
   function updateEditorContent(title, markdownContent, subtitle) {
     // Check if the block editor is active
     const isBlockEditor = document.body.classList.contains("block-editor-page");
@@ -136,6 +136,7 @@ jQuery(document).ready(function ($) {
       isGenerating = false;
     }
   }
+
   // Handle the new "Generate Script" button
   $("#atm-generate-script-btn").on("click", function () {
     const button = $(this);
@@ -173,7 +174,7 @@ jQuery(document).ready(function ($) {
         if (response.success) {
           $("#atm-podcast-script").val(response.data.script).height(250);
         } else {
-          alert("Error: ".response.data);
+          alert("Error: " + response.data);
         }
       },
       error: function () {
@@ -188,7 +189,6 @@ jQuery(document).ready(function ($) {
   });
 
   // --- Update the main "Generate Podcast" button handler ---
-  // Remove the old one and replace it with this:
   $("#atm-generate-podcast-btn").on("click", function () {
     const button = $(this);
     if (button.prop("disabled")) return;
@@ -221,7 +221,7 @@ jQuery(document).ready(function ($) {
             location.reload();
           }, 2000);
         } else {
-          alert("Error: ".response.data);
+          alert("Error: " + response.data);
           resetButton(button, "Generate Podcast");
         }
       },
@@ -232,7 +232,7 @@ jQuery(document).ready(function ($) {
     });
   });
 
-  // In admin.js, the existing 'change' handler will be updated
+  // Article type selection handler
   $("#atm-article-type-select")
     .on("change", function () {
       const selectedType = $(this).val();
@@ -257,8 +257,6 @@ jQuery(document).ready(function ($) {
     .trigger("change"); // Trigger on page load to set the correct initial state
 
   // Enhanced RSS handling functions
-
-  // Function to handle both fetch and search with enhanced options
   function fetchRSSArticles(button, keyword = "", useScraping = false) {
     const resultsContainer = $("#atm-rss-results");
     const originalText = button.html();
@@ -356,7 +354,6 @@ jQuery(document).ready(function ($) {
       return;
     }
 
-    // Check if deep search is enabled
     const useDeepSearch = $("#atm-rss-deep-search").is(":checked");
     fetchRSSArticles($(this), keyword, useDeepSearch);
   });
@@ -392,6 +389,13 @@ jQuery(document).ready(function ($) {
       },
       success: function (response) {
         if (response.success) {
+          // ADD DEBUG LOGS
+          console.log("ATM Debug - RSS Response data:", response.data);
+          console.log(
+            "ATM Debug - RSS Subtitle received:",
+            response.data.subtitle
+          );
+
           updateEditorContent(
             response.data.article_title,
             response.data.article_content,
@@ -458,7 +462,6 @@ jQuery(document).ready(function ($) {
           let html =
             '<ul style="list-style: none; margin: 0; padding: 0; display: grid; gap: 15px;">';
           response.data.forEach(function (article) {
-            // THE FIX: Display the date next to the source
             html += `<li style="padding: 15px; background: #1a202c; border-radius: 6px;">
                                     <div style="margin-bottom: 10px; font-weight: 600;">${article.title} - <em style="color:#a0aec0; font-weight: 400;">(${article.source} | ${article.date})</em></div>
                                     <button class="atm-button atm-button-small atm-primary generate-from-headline-btn" data-url="${article.link}" data-title="${escape(article.title)}">Generate Article</button>
@@ -483,12 +486,12 @@ jQuery(document).ready(function ($) {
     });
   }
 
-  // 1. Fetch Top 5 Headlines
+  // Fetch Top 5 Headlines
   $("#atm-fetch-headlines-btn").on("click", function () {
     fetchHeadlines($(this));
   });
 
-  // 2. Fetch News by Keyword
+  // Fetch News by Keyword
   $("#atm-fetch-keyword-news-btn").on("click", function () {
     const keyword = $("#atm-google-news-keyword").val().trim();
     if (!keyword) {
@@ -498,7 +501,7 @@ jQuery(document).ready(function ($) {
     fetchHeadlines($(this), keyword);
   });
 
-  // 3. Generate Article from a specific headline
+  // Generate Article from a specific headline
   $("#atm-google-news-results").on(
     "click",
     ".generate-from-headline-btn",
@@ -543,7 +546,7 @@ jQuery(document).ready(function ($) {
     }
   );
 
-  // --- Generate Article Button ---
+  // Generate Article Button
   $("#atm-generate-article-btn").on("click", function () {
     const button = $(this);
     if (button.prop("disabled")) return;
@@ -551,19 +554,7 @@ jQuery(document).ready(function ($) {
     generateArticle(button, postId);
   });
 
-  // Show/hide the News options based on the Article Type
-  // This handler seems duplicated, the one at the top of the file handles all cases.
-  // $('#atm-article-type-select').on('change', function() {
-  //     if ($(this).val() === 'news') {
-  //         $('#atm-news-source-wrapper').slideDown();
-  //         $('#atm-force-fresh-wrapper').slideDown();
-  //     } else {
-  //         $('#atm-news-source-wrapper').slideUp();
-  //         $('#atm-force-fresh-wrapper').slideUp();
-  //     }
-  // }).trigger('change'); // Trigger on page load
-
-  // --- Generate Image Button ---
+  // Generate Image Button
   $("#atm-generate-image-btn").on("click", function () {
     const button = $(this);
     if (button.prop("disabled")) return;
@@ -571,7 +562,7 @@ jQuery(document).ready(function ($) {
     generateImage(button, postId);
   });
 
-  // --- Generate Podcast Button ---
+  // Generate Podcast Button
   $("#atm-generate-podcast-btn").on("click", function () {
     const button = $(this);
     if (button.prop("disabled")) return;
@@ -630,7 +621,7 @@ jQuery(document).ready(function ($) {
     button.prop("disabled", true);
 
     const articleType = $("#atm-article-type-select").val();
-    const newsSource = $("#atm-news-source-select").val(); // Get the selected news source
+    const newsSource = $("#atm-news-source-select").val();
     const forceFresh = $("#atm-force-fresh-search").is(":checked");
     const keyword = $("#atm-article-keyword").val().trim();
     const title = $("#atm-article-title-input").val().trim();
@@ -657,17 +648,25 @@ jQuery(document).ready(function ($) {
           topic: topic,
           model: model,
           force_fresh: forceFresh,
-          news_source: newsSource, // Send the selected news source
+          news_source: newsSource,
           nonce: atm_ajax.nonce,
         },
         success: function (response) {
           if (response.success) {
+            // ADD DEBUG LOGS
+            console.log("ATM Debug - News Response data:", response.data);
+            console.log(
+              "ATM Debug - News Subtitle received:",
+              response.data.subtitle
+            );
+
             button.html('<div class="atm-spinner"></div> Writing article...');
             updateEditorContent(
               response.data.article_title,
-              response.data.article_content
+              response.data.article_content,
+              response.data.subtitle || ""
             );
-            checkAndGenerateImage(button, $("#post_ID").val()); // This calls your image logic
+            checkAndGenerateImage(button, $("#post_ID").val());
           } else {
             alert("Error: " + response.data);
             resetButton(button, "Generate Article");
@@ -679,7 +678,6 @@ jQuery(document).ready(function ($) {
         },
       });
     } else {
-      // ... (creative article logic remains the same)
       if (title) {
         button.html('<div class="atm-spinner"></div> Generating Content...');
         generateContentForTitle(
@@ -727,7 +725,7 @@ jQuery(document).ready(function ($) {
         keyword: keyword,
         title: "",
         model: model,
-        article_type: articleType, // Add article type here
+        article_type: articleType,
         nonce: atm_ajax.nonce,
       },
       success: function (response) {
@@ -782,6 +780,16 @@ jQuery(document).ready(function ($) {
       },
       success: function (contentResponse) {
         if (contentResponse.success) {
+          // ADD DEBUG LOGS
+          console.log(
+            "ATM Debug - Content Response data:",
+            contentResponse.data
+          );
+          console.log(
+            "ATM Debug - Content Subtitle received:",
+            contentResponse.data.subtitle
+          );
+
           updateEditorContent(
             finalTitle,
             contentResponse.data.article_content,
@@ -815,7 +823,6 @@ jQuery(document).ready(function ($) {
       },
       success: function (response) {
         if (response.success) {
-          // Update the featured image UI in both editors
           const isBlockEditor =
             document.body.classList.contains("block-editor-page");
 
@@ -824,7 +831,6 @@ jQuery(document).ready(function ($) {
               .dispatch("core/editor")
               .editPost({ featured_media: response.data.attachment_id });
           } else {
-            // For the Classic Editor
             $("#postimagediv .inside").html(response.data.html);
           }
           button.html("✅ Image Set!");
@@ -894,6 +900,257 @@ jQuery(document).ready(function ($) {
     button.prop("disabled", false).html(text);
     button.closest(".atm-section").find(".atm-progress-bar").remove();
   }
+
+  // Subtitle detection and management
+  if ($("#atm-detect-subtitle-key-btn").length) {
+    $("#atm-detect-subtitle-key-btn").on("click", function () {
+      const button = $(this);
+      const statusEl = $("#atm-scan-status");
+      const inputEl = $("#atm_theme_subtitle_key_field");
+
+      button.prop("disabled", true).text("Scanning...");
+      statusEl.text("Loading editor in the background...");
+      inputEl.val("");
+
+      const iframe = $("<iframe />", {
+        src: "post-new.php",
+        style:
+          "width:0; height:0; border:0; position:absolute; top: -9999px; left: -9999px;",
+      }).appendTo("body");
+
+      iframe.on("load", function () {
+        try {
+          const iframeDoc = iframe.contents();
+          let foundKey = "";
+
+          const keywords = [
+            "subtitle",
+            "sub heading",
+            "sub-heading",
+            "sub_heading",
+            "subheading",
+            "tagline",
+            "secondary title",
+            "alt title",
+            "alternative title",
+            "sub title",
+            "small title",
+            "headline",
+            "subheadline",
+            "sub-headline",
+            "short description",
+            "lead",
+            "intro",
+            "kicker",
+          ];
+
+          iframeDoc.find("label").each(function () {
+            const labelText = $(this).text().toLowerCase().trim();
+            if (keywords.some((keyword) => labelText.includes(keyword))) {
+              const inputId = $(this).attr("for");
+              if (inputId) {
+                const inputField = iframeDoc.find("#" + inputId);
+                if (inputField.length) {
+                  foundKey = inputField.attr("name");
+                  return false;
+                }
+              }
+            }
+          });
+
+          if (foundKey) {
+            const match = foundKey.match(/\[([^\]]+)\]/);
+            if (match && match[1]) {
+              foundKey = match[1];
+            }
+            inputEl.val(foundKey);
+            statusEl
+              .text("✅ Found potential key: " + foundKey)
+              .css("color", "#2f855a");
+          } else {
+            statusEl
+              .text(
+                "⚠ No common subtitle field was found. Please enter the key manually."
+              )
+              .css("color", "#9b2c2c");
+          }
+        } catch (e) {
+          console.error("Content AI Studio Scan Error:", e);
+          statusEl
+            .text("Error during scan. Please enter the key manually.")
+            .css("color", "#9b2c2c");
+        } finally {
+          iframe.remove();
+          button.prop("disabled", false).text("Smart Scan");
+        }
+      });
+    });
+  }
+
+  // Campaign management
+  if ($("#atm-campaign-form").length || $(".atm-delete-campaign").length) {
+    // Handle Campaign Form Submission
+    $("#atm-campaign-form").on("submit", function (e) {
+      e.preventDefault();
+
+      const button = $("#atm-save-campaign-btn");
+      const originalText = button.val();
+      button.val("Saving...").prop("disabled", true);
+
+      const formData = $(this).serializeArray();
+      const data = {};
+      $.map(formData, function (n, i) {
+        data[n["name"]] = n["value"];
+      });
+
+      data.nonce = atm_ajax.nonce;
+
+      $.ajax({
+        url: atm_ajax.ajax_url,
+        type: "POST",
+        data: data,
+        success: function (response) {
+          if (response.success) {
+            alert("Campaign saved successfully!");
+            location.reload();
+          } else {
+            alert("Error: " + response.data);
+            button.val(originalText).prop("disabled", false);
+          }
+        },
+        error: function () {
+          alert("An unknown error occurred.");
+          button.val(originalText).prop("disabled", false);
+        },
+      });
+    });
+
+    // Handle "Delete" action from the list table
+    $(".atm-delete-campaign").on("click", function (e) {
+      e.preventDefault();
+
+      if (
+        !confirm(
+          "Are you sure you want to delete this campaign? This cannot be undone."
+        )
+      ) {
+        return;
+      }
+
+      const link = $(this);
+      const campaignId = link.data("id");
+      const row = link.closest("tr");
+
+      $.ajax({
+        url: atm_ajax.ajax_url,
+        type: "POST",
+        data: {
+          action: "atm_delete_campaign",
+          id: campaignId,
+          nonce: atm_ajax.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            row.fadeOut(300, function () {
+              $(this).remove();
+            });
+          } else {
+            alert("Error: " + response.data);
+          }
+        },
+      });
+    });
+
+    // Handle "Run Now" action from both the list and edit pages
+    $(document).on(
+      "click",
+      ".atm-run-campaign, #atm-run-now-btn",
+      function (e) {
+        e.preventDefault();
+
+        const button = $(this);
+        const campaignId = button.data("id");
+        const statusEl = $("#atm-run-now-status");
+
+        button.prop("disabled", true);
+        statusEl.text("Running...");
+
+        $.ajax({
+          url: atm_ajax.ajax_url,
+          type: "POST",
+          data: {
+            action: "atm_run_campaign_now",
+            id: campaignId,
+            nonce: atm_ajax.nonce,
+          },
+          success: function (response) {
+            if (response.success) {
+              statusEl.text("✅ " + response.data.message);
+            } else {
+              statusEl.text("⚠ Error: " + response.data);
+            }
+          },
+          error: function () {
+            statusEl.text("⚠ An unknown error occurred.");
+          },
+          complete: function () {
+            setTimeout(function () {
+              button.prop("disabled", false);
+              statusEl.text("");
+            }, 5000);
+          },
+        });
+      }
+    );
+  }
+
+  // Initialize color pickers for podcast settings
+  if ($(".atm-color-picker").length) {
+    $(".atm-color-picker").wpColorPicker({
+      change: function (event, ui) {
+        // Optional: Add preview functionality here
+      },
+      clear: function () {
+        // Handle color clear
+      },
+    });
+  }
+
+  // Auto-populate SmartMag subtitle field on page load
+  function populateSmartMagSubtitle() {
+    const postId = $("#post_ID").val();
+    if (!postId) return;
+
+    $.ajax({
+      url: atm_ajax.ajax_url,
+      type: "POST",
+      data: {
+        action: "get_post_subtitle",
+        post_id: postId,
+        nonce: atm_ajax.nonce,
+      },
+      success: function (response) {
+        if (response.success && response.data.subtitle) {
+          const subtitle = response.data.subtitle;
+          const subtitleField = $('input[name="_bunyad_sub_title"]');
+
+          if (subtitleField.length && !subtitleField.val()) {
+            console.log(
+              "ATM: Populating SmartMag subtitle field on load:",
+              subtitle
+            );
+            subtitleField.val(subtitle);
+            subtitleField.trigger("input").trigger("change");
+          }
+        }
+      },
+    });
+  }
+
+  // Run on page load for existing posts
+  if ($("body").hasClass("post-php")) {
+    setTimeout(populateSmartMagSubtitle, 2000);
+  }
 });
 
 // Make testRSSFeed globally available
@@ -943,412 +1200,14 @@ window.testRSSFeed = function (feedUrl, keyword = "") {
         jQuery("#atm-rss-test-results").html(html);
       } else {
         jQuery("#atm-rss-test-results").html(
-          '<div class="atm-error">❌ ' + response.data + "</div>"
+          '<div class="atm-error">⚠ ' + response.data + "</div>"
         );
       }
     },
     error: function () {
       jQuery("#atm-rss-test-results").html(
-        '<div class="atm-error">❌ Connection error while testing feed.</div>'
+        '<div class="atm-error">⚠ Connection error while testing feed.</div>'
       );
     },
   });
 };
-
-jQuery(document).ready(function ($) {
-  // Only run this script on the main settings page
-  if (!$("#atm-detect-subtitle-key-btn").length) {
-    return;
-  }
-
-  $("#atm-detect-subtitle-key-btn").on("click", function () {
-    const button = $(this);
-    const statusEl = $("#atm-scan-status");
-    const inputEl = $("#atm_theme_subtitle_key_field");
-
-    button.prop("disabled", true).text("Scanning...");
-    statusEl.text("Loading editor in the background...");
-    inputEl.val("");
-
-    // Create a hidden iframe to load the post editor
-    const iframe = $("<iframe />", {
-      src: "post-new.php",
-      style:
-        "width:0; height:0; border:0; position:absolute; top: -9999px; left: -9999px;",
-    }).appendTo("body");
-
-    iframe.on("load", function () {
-      try {
-        const iframeDoc = iframe.contents();
-        let foundKey = "";
-
-        // --- MODIFIED: Expanded keyword list for better detection ---
-        const keywords = [
-          "subtitle",
-          "sub heading",
-          "sub-heading",
-          "sub_heading",
-          "subheading",
-          "tagline",
-          "secondary title",
-          "alt title",
-          "alternative title",
-          "sub title", // spaced version
-          "small title",
-          "headline",
-          "subheadline",
-          "sub-headline",
-          "short description",
-          "lead", // journalism/press style
-          "intro", // intro line under main title
-          "kicker", // used in news/blog themes
-        ];
-
-        // Find all labels and check them
-        iframeDoc.find("label").each(function () {
-          const labelText = $(this).text().toLowerCase().trim();
-
-          // Check if any keyword exists in the label text
-          if (keywords.some((keyword) => labelText.includes(keyword))) {
-            const inputId = $(this).attr("for");
-            if (inputId) {
-              const inputField = iframeDoc.find("#" + inputId);
-              if (inputField.length) {
-                foundKey = inputField.attr("name");
-                return false; // Exit the loop once found
-              }
-            }
-          }
-        });
-
-        if (foundKey) {
-          // Sometimes the name is in a format like "kadence_custom_meta[_kadence_post_subtitle]"
-          // We need to extract the actual key.
-          const match = foundKey.match(/\[([^\]]+)\]/);
-          if (match && match[1]) {
-            foundKey = match[1];
-          }
-
-          inputEl.val(foundKey);
-          statusEl
-            .text("✅ Found potential key: " + foundKey)
-            .css("color", "#2f855a");
-        } else {
-          statusEl
-            .text(
-              "❌ No common subtitle field was found. Please check your theme's documentation and enter the key manually."
-            )
-            .css("color", "#9b2c2c");
-        }
-      } catch (e) {
-        console.error("Content AI Studio Scan Error:", e);
-        statusEl
-          .text(
-            "Error during scan. Please check the console and enter the key manually."
-          )
-          .css("color", "#9b2c2c");
-      } finally {
-        // Clean up
-        iframe.remove();
-        button.prop("disabled", false).text("Smart Scan");
-      }
-    });
-  });
-});
-
-jQuery(document).ready(function ($) {
-  if (!$("#atm-detect-subtitle-key-btn").length) {
-    return;
-  }
-  $("#atm-detect-subtitle-key-btn").on("click", function () {
-    const button = $(this);
-    const statusEl = $("#atm-scan-status");
-    const inputEl = $("#atm_theme_subtitle_key_field");
-    button.prop("disabled", true).text("Scanning...");
-    statusEl.text("Loading editor in the background...");
-    inputEl.val("");
-    const iframe = $("<iframe />", {
-      src: "post-new.php",
-      style:
-        "width:0; height:0; border:0; position:absolute; top: -9999px; left: -9999px;",
-    }).appendTo("body");
-    iframe.on("load", function () {
-      try {
-        const iframeDoc = iframe.contents();
-        let foundKey = "";
-        const keywords = [
-          "subtitle",
-          "sub heading",
-          "sub-heading",
-          "sub_heading",
-          "subheading",
-          "tagline",
-          "secondary title",
-          "alt title",
-          "alternative title",
-          "sub title",
-          "small title",
-          "headline",
-          "subheadline",
-          "sub-headline",
-          "short description",
-          "lead",
-          "intro",
-          "kicker",
-        ];
-        iframeDoc.find("label").each(function () {
-          const labelText = $(this).text().toLowerCase().trim();
-          if (keywords.some((keyword) => labelText.includes(keyword))) {
-            const inputId = $(this).attr("for");
-            if (inputId) {
-              const inputField = iframeDoc.find("#" + inputId);
-              if (inputField.length) {
-                foundKey = inputField.attr("name");
-                return false;
-              }
-            }
-          }
-        });
-        if (foundKey) {
-          const match = foundKey.match(/\[([^\]]+)\]/);
-          if (match && match[1]) {
-            foundKey = match[1];
-          }
-          inputEl.val(foundKey);
-          statusEl
-            .text("✅ Found potential key: " + foundKey)
-            .css("color", "#2f855a");
-        } else {
-          statusEl
-            .text(
-              "❌ No common subtitle field was found. Please enter the key manually."
-            )
-            .css("color", "#9b2c2c");
-        }
-      } catch (e) {
-        console.error("Content AI Studio Scan Error:", e);
-        statusEl
-          .text("Error during scan. Please enter the key manually.")
-          .css("color", "#9b2c2c");
-      } finally {
-        iframe.remove();
-        button.prop("disabled", false).text("Smart Scan");
-      }
-    });
-  });
-});
-
-// Campaign Code
-
-jQuery(document).ready(function ($) {
-  // Only run this code on our campaign page
-  if (!$("#atm-campaign-form").length && !$(".atm-delete-campaign").length) {
-    return;
-  }
-
-  // Handle Campaign Form Submission
-  $("#atm-campaign-form").on("submit", function (e) {
-    e.preventDefault();
-
-    const button = $("#atm-save-campaign-btn");
-    const originalText = button.val();
-    button.val("Saving...").prop("disabled", true);
-
-    // Manually gather form data into an object
-    const formData = $(this).serializeArray();
-    const data = {};
-    $.map(formData, function (n, i) {
-      data[n["name"]] = n["value"];
-    });
-
-    // Manually add the global nonce
-    data.nonce = atm_ajax.nonce;
-
-    $.ajax({
-      url: atm_ajax.ajax_url,
-      type: "POST",
-      data: data, // Send the data object
-      success: function (response) {
-        if (response.success) {
-          // Instead of redirecting, just show a success message and reload.
-          alert("Campaign saved successfully!");
-          location.reload();
-        } else {
-          alert("Error: " + response.data);
-          button.val(originalText).prop("disabled", false);
-        }
-      },
-      error: function () {
-        alert("An unknown error occurred.");
-        button.val(originalText).prop("disabled", false);
-      },
-    });
-  });
-
-  // Handle "Delete" action from the list table
-  // Handle "Delete" action from the list table
-  $(".atm-delete-campaign").on("click", function (e) {
-    e.preventDefault();
-
-    if (
-      !confirm(
-        "Are you sure you want to delete this campaign? This cannot be undone."
-      )
-    ) {
-      return;
-    }
-
-    const link = $(this);
-    const campaignId = link.data("id");
-    const row = link.closest("tr");
-
-    $.ajax({
-      url: atm_ajax.ajax_url,
-      type: "POST",
-      data: {
-        action: "atm_delete_campaign", // This line is now correct
-        id: campaignId,
-        nonce: atm_ajax.nonce,
-      },
-      success: function (response) {
-        if (response.success) {
-          row.fadeOut(300, function () {
-            $(this).remove();
-          });
-        } else {
-          alert("Error: " + response.data);
-        }
-      },
-    });
-  });
-
-  // Handle "Run Now" action from both the list and edit pages
-  $(document).on("click", ".atm-run-campaign, #atm-run-now-btn", function (e) {
-    e.preventDefault();
-
-    const button = $(this);
-    const campaignId = button.data("id");
-    const statusEl = $("#atm-run-now-status");
-
-    button.prop("disabled", true);
-    statusEl.text("Running...");
-
-    $.ajax({
-      url: atm_ajax.ajax_url,
-      type: "POST",
-      data: {
-        action: "atm_run_campaign_now",
-        id: campaignId,
-        nonce: atm_ajax.nonce,
-      },
-      success: function (response) {
-        if (response.success) {
-          statusEl.text("✅ " + response.data.message);
-        } else {
-          statusEl.text("❌ Error: " + response.data);
-        }
-      },
-      error: function () {
-        statusEl.text("❌ An unknown error occurred.");
-      },
-      complete: function () {
-        setTimeout(function () {
-          button.prop("disabled", false);
-          statusEl.text("");
-        }, 5000);
-      },
-    });
-  });
-});
-
-// Add this to admin.js
-jQuery(document).ready(function ($) {
-  // Initialize color pickers for podcast settings
-  if ($(".atm-color-picker").length) {
-    $(".atm-color-picker").wpColorPicker({
-      change: function (event, ui) {
-        // Optional: Add preview functionality here
-      },
-      clear: function () {
-        // Handle color clear
-      },
-    });
-  }
-});
-
-// Auto-populate SmartMag subtitle field on page load
-jQuery(document).ready(function ($) {
-  const subtitleMeta = $('input[name="_bunyad_sub_title"]').val();
-  if (subtitleMeta) {
-    $('input[name="_bunyad_sub_title"]').val(subtitleMeta);
-  }
-});
-
-// Add this to admin.js for page load subtitle population
-jQuery(document).ready(function ($) {
-  // Check if we're on a post edit page
-  if ($("body").hasClass("post-php")) {
-    setTimeout(function () {
-      // Get post ID from the page
-      const postId = $("#post_ID").val();
-      if (postId) {
-        // Make an AJAX call to get the subtitle
-        $.ajax({
-          url: atm_ajax.ajax_url,
-          type: "POST",
-          data: {
-            action: "get_post_subtitle",
-            post_id: postId,
-            nonce: atm_ajax.nonce,
-          },
-          success: function (response) {
-            if (response.success && response.data.subtitle) {
-              const subtitle = response.data.subtitle;
-              const subtitleInput = $('input[name="_bunyad_sub_title"]');
-              if (subtitleInput.length && !subtitleInput.val()) {
-                subtitleInput.val(subtitle);
-                subtitleInput.trigger("change");
-              }
-            }
-          },
-        });
-      }
-    }, 2000);
-  }
-});
-
-// Add this to admin.js - this will populate the SmartMag field from saved meta data
-jQuery(document).ready(function ($) {
-  // Function to populate SmartMag subtitle field
-  function populateSmartMagSubtitle() {
-    const postId = $("#post_ID").val();
-    if (!postId) return;
-
-    $.ajax({
-      url: atm_ajax.ajax_url,
-      type: "POST",
-      data: {
-        action: "get_post_subtitle",
-        post_id: postId,
-        nonce: atm_ajax.nonce,
-      },
-      success: function (response) {
-        if (response.success && response.data.subtitle) {
-          const subtitle = response.data.subtitle;
-          const subtitleField = $('input[name="_bunyad_sub_title"]');
-
-          if (subtitleField.length && !subtitleField.val()) {
-            console.log("ATM: Populating SmartMag subtitle field:", subtitle);
-            subtitleField.val(subtitle);
-            subtitleField.trigger("input").trigger("change");
-          }
-        }
-      },
-    });
-  }
-
-  // Run on page load for existing posts
-  if ($("body").hasClass("post-php")) {
-    setTimeout(populateSmartMagSubtitle, 2000);
-  }
-});
