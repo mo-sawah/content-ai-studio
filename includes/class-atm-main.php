@@ -324,6 +324,7 @@ class ATM_Main {
         $ajax = new ATM_Ajax();
         $frontend = new ATM_Frontend();
         $campaign_manager = new ATM_Campaign_Manager();
+        $listicle = new ATM_Listicle_Generator();
 
         // Admin hooks
         add_action('admin_menu', array($settings, 'add_admin_menu'));
