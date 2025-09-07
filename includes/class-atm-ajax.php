@@ -771,17 +771,43 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
             }
             $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $article_title], $system_prompt, $model_override ?: get_option('atm_article_model'), true);
-            $result = json_decode($raw_response, true);
+            
+            // More robust JSON extraction
+            $json_string = trim($raw_response);
+            if (!str_starts_with($json_string, '{')) {
+                // Try to extract JSON from response
+                if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                    $json_string = $matches[0];
+                }
+            }
+
+            $result = json_decode($json_string, true);
             if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
                 error_log('Content AI Studio - Invalid JSON from Creative AI: ' . $raw_response);
                 throw new Exception('The AI returned an invalid response structure. Please try again.');
             }
-            $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : (isset($result['subtitle']) ? trim($result['subtitle']) : '');
+
+            // More robust subtitle extraction
+            $subtitle = '';
+            if (isset($result['subheadline']) && !empty(trim($result['subheadline']))) {
+                $subtitle = trim($result['subheadline']);
+            } elseif (isset($result['subtitle']) && !empty(trim($result['subtitle']))) {
+                $subtitle = trim($result['subtitle']);
+            } elseif (isset($result['sub_headline']) && !empty(trim($result['sub_headline']))) {
+                $subtitle = trim($result['sub_headline']);
+            }
+
             $original_content = trim($result['content']);
             $final_content = $original_content;
+
+            // Add debugging
+            error_log('ATM Debug - Post ID: ' . $post_id . ', Subtitle: "' . $subtitle . '"');
+
             if ($post_id > 0 && !empty($subtitle)) {
                 $final_content = ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle, $original_content);
+                error_log('ATM Debug - Subtitle saved, final content length: ' . strlen($final_content));
             }
+
             wp_send_json_success(['article_title' => $article_title, 'article_content' => $final_content, 'subtitle' => $subtitle]);
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
@@ -818,28 +844,59 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
 
                 **Final Output Format:**
                 Your entire output MUST be a single, valid JSON object with three keys:
-                1. "headline": A concise, factual, and compelling headline for the new article.
+                1. "title": A concise, factual, and compelling headline for the new article.
                 2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
-                3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.'; // The long prompt text remains the same
+                3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
             $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $news_context], $system_prompt, $model_override, true);
-            $json_string = '';
-            if (preg_match('/\{.*?\}/s', $raw_response, $matches)) {
-                $json_string = $matches[0];
-            } else {
-                throw new Exception('The AI returned a non-JSON response. Please try again.');
+            
+            // More robust JSON extraction
+            $json_string = trim($raw_response);
+            if (!str_starts_with($json_string, '{')) {
+                if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                    $json_string = $matches[0];
+                } else {
+                    throw new Exception('The AI returned a non-JSON response. Please try again.');
+                }
             }
+
             $result = json_decode($json_string, true);
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
                 error_log('ATM Plugin - Invalid JSON from AI: ' . $json_string);
                 throw new Exception('The AI returned an invalid response structure. Please try again.');
             }
-            $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : '';
+
+            // Robust field extraction
+            $headline = '';
+            if (isset($result['title']) && !empty(trim($result['title']))) {
+                $headline = trim($result['title']);
+            } elseif (isset($result['headline']) && !empty(trim($result['headline']))) {
+                $headline = trim($result['headline']);
+            } else {
+                throw new Exception('No headline found in AI response.');
+            }
+
+            $subtitle = '';
+            if (isset($result['subheadline']) && !empty(trim($result['subheadline']))) {
+                $subtitle = trim($result['subheadline']);
+            } elseif (isset($result['subtitle']) && !empty(trim($result['subtitle']))) {
+                $subtitle = trim($result['subtitle']);
+            }
+
             $original_content = trim($result['content']);
             $final_content = $original_content;
+
+            error_log('ATM Debug - News Article - Post ID: ' . $post_id . ', Subtitle: "' . $subtitle . '"');
+
             if ($post_id > 0 && !empty($subtitle)) {
                 $final_content = ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle, $original_content);
+                error_log('ATM Debug - News subtitle saved');
             }
-            wp_send_json_success(['article_title' => $result['headline'], 'article_content' => $final_content, 'subtitle' => $subtitle]);
+
+            if (empty($headline) || empty($final_content)) {
+                throw new Exception('Generated title or content is empty.');
+            }
+
+            wp_send_json_success(['article_title' => $headline, 'article_content' => $final_content, 'subtitle' => $subtitle]);
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
@@ -894,7 +951,7 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             $url = esc_url_raw($_POST['article_url']);
             $guid = sanitize_text_field($_POST['article_guid']);
             $use_full_content = isset($_POST['use_full_content']) && $_POST['use_full_content'] === 'true';
-            // ... (rest of the content fetching logic remains the same)
+            
             $final_url = ATM_API::resolve_redirect_url($url);
             $source_content = '';
             if ($use_full_content) {
@@ -925,36 +982,62 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
 
                 **Final Output Format:**
                 Your entire output MUST be a single, valid JSON object with three keys:
-                1. "headline": A concise, factual, and compelling headline for the new article.
+                1. "title": A concise, factual, and compelling headline for the new article.
                 2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
-                3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.'; // The long prompt text remains the same
+                3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
             $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $source_content], $system_prompt, get_option('atm_article_model', 'openai/gpt-4o'), true);
-            $json_string = '';
-            if (preg_match('/\{.*?\}/s', $raw_response, $matches)) {
-                $json_string = $matches[0];
-            } else {
-                throw new Exception('The AI returned a non-JSON response. Please try again.');
+            
+            // More robust JSON extraction
+            $json_string = trim($raw_response);
+            if (!str_starts_with($json_string, '{')) {
+                if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                    $json_string = $matches[0];
+                } else {
+                    throw new Exception('The AI returned a non-JSON response. Please try again.');
+                }
             }
+
             $result = json_decode($json_string, true);
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['headline']) || !isset($result['content'])) {
+            if (json_last_error() !== JSON_ERROR_NONE) {
                 error_log('ATM Plugin - Invalid JSON from AI: ' . $json_string);
                 throw new Exception('The AI returned an invalid response structure. Please try again.');
             }
-            $headline = trim($result['headline']);
-            $subtitle = isset($result['subheadline']) ? trim($result['subheadline']) : '';
+
+            // Robust field extraction
+            $headline = '';
+            if (isset($result['title']) && !empty(trim($result['title']))) {
+                $headline = trim($result['title']);
+            } elseif (isset($result['headline']) && !empty(trim($result['headline']))) {
+                $headline = trim($result['headline']);
+            }
+
+            $subtitle = '';
+            if (isset($result['subheadline']) && !empty(trim($result['subheadline']))) {
+                $subtitle = trim($result['subheadline']);
+            } elseif (isset($result['subtitle']) && !empty(trim($result['subtitle']))) {
+                $subtitle = trim($result['subtitle']);
+            }
+
+            if (empty($headline) || empty($result['content'])) {
+                throw new Exception('AI response missing required fields.');
+            }
+
             $original_content = trim($result['content']);
             $final_content = $original_content;
+
+            error_log('ATM Debug - RSS Article - Post ID: ' . $post_id . ', Subtitle: "' . $subtitle . '"');
+
             if ($post_id > 0 && !empty($subtitle)) {
                 $final_content = ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle, $original_content);
+                error_log('ATM Debug - RSS subtitle saved');
             }
-            if (empty($headline) || empty($final_content)) {
-                throw new Exception('Generated title or content is empty.');
-            }
+
             if ($post_id > 0) {
                 $used_guids = get_post_meta($post_id, '_atm_used_rss_guids', true) ?: [];
                 $used_guids[] = $guid;
                 update_post_meta($post_id, '_atm_used_rss_guids', array_unique($used_guids));
             }
+
             wp_send_json_success(['article_title' => $headline, 'article_content' => $final_content, 'subtitle' => $subtitle]);
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
