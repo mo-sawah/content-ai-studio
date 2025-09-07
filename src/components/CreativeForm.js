@@ -51,7 +51,6 @@ const updateEditorContent = (title, markdownContent, subtitle) => {
     }
   }
 
-  // ADD SUBTITLE HANDLING
   if (subtitle && subtitle.trim()) {
     console.log("ATM: Attempting to populate subtitle:", subtitle);
     setTimeout(function () {
@@ -217,7 +216,6 @@ function CreativeForm() {
         throw new Error(contentResponse.data);
       }
 
-      // ADD DEBUG LOGS
       console.log("ATM Debug - Response data:", contentResponse.data);
       console.log(
         "ATM Debug - Subtitle received:",
@@ -231,7 +229,6 @@ function CreativeForm() {
       );
       setStatusMessage("✅ Article content inserted!");
 
-      // ADD SUBTITLE SAVING LOGIC
       if (contentResponse.data.subtitle) {
         setStatusMessage(
           "✅ Article inserted! Saving post to apply subtitle..."
@@ -270,7 +267,7 @@ function CreativeForm() {
   };
 
   return (
-    <div className="atm-creative-form">
+    <div className="atm-form-container">
       <TextControl
         label="Keyword"
         placeholder="e.g., AI in digital marketing"

@@ -1612,8 +1612,6 @@ body.wp-admin .atm-content-body {
 body.wp-admin .atm-studio-container,
 body.wp-admin .atm-content-body {
   .components-button {
-    margin: 0 !important;
-
     &:first-child {
       margin-top: 0 !important;
     }
@@ -1658,8 +1656,6 @@ body.wp-admin .atm-content-body {
 body.wp-admin .atm-studio-container,
 body.wp-admin .atm-content-body {
   .components-button {
-    margin: 0 !important;
-
     &:first-child {
       margin-top: 0 !important;
     }
@@ -1955,7 +1951,6 @@ body.wp-admin
   .atm-form-container
   .atm-comments-actions
   .components-button {
-  margin: 0 !important;
 }
 
 /* Optional: consistent min width like other tools */
