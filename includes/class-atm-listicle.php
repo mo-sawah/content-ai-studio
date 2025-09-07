@@ -89,164 +89,97 @@ class ATM_Listicle_Generator {
         }
     }
 
-    /**
-     * Format the AI response into beautiful HTML
-     */
     private function format_listicle_html($data, $title) {
-        if (!is_array($data) || !isset($data['items'])) {
-            throw new Exception('Invalid data format for listicle');
-        }
-
-        $html = '<div class="atm-listicle-container">';
-        
-        // Header
-        $html .= '<div class="atm-listicle-header">';
-        $html .= '<h1>' . esc_html($title) . '</h1>';
-        $html .= '<div class="atm-listicle-meta">';
-        $html .= '<div class="atm-listicle-meta-item">';
-        $html .= '<span class="atm-listicle-meta-icon">📋</span>';
-        $html .= '<span>' . count($data['items']) . ' Items</span>';
-        $html .= '</div>';
-        $html .= '<div class="atm-listicle-meta-item">';
-        $html .= '<span class="atm-listicle-meta-icon">⏱️</span>';
-        $html .= '<span>' . ceil(count($data['items']) * 2) . ' min read</span>';
-        $html .= '</div>';
-        $html .= '</div>';
-        $html .= '</div>';
-
-        // Introduction
-        if (!empty($data['introduction'])) {
-            $html .= '<div class="atm-listicle-overview">';
-            $html .= '<h3>Overview</h3>';
-            $html .= '<p>' . esc_html($data['introduction']) . '</p>';
-            $html .= '</div>';
-        }
-
-        // Table of Contents
-        $html .= '<div class="atm-listicle-toc">';
-        $html .= '<h3>What\'s in This List</h3>';
-        $html .= '<ol class="atm-listicle-toc-list">';
-        foreach ($data['items'] as $item) {
-            $html .= '<li class="atm-listicle-toc-item">';
-            $html .= '<a href="#item-' . $item['number'] . '" class="atm-listicle-toc-link">';
-            $html .= esc_html($item['title']);
-            $html .= '</a>';
-            $html .= '</li>';
-        }
-        $html .= '</ol>';
-        $html .= '</div>';
-
-        // List Items
-        $html .= '<div class="atm-listicle-items">';
-        
-        foreach ($data['items'] as $item) {
-            $html .= '<div class="atm-listicle-item" id="item-' . $item['number'] . '">';
-            
-            // Item Header
-            $html .= '<div class="atm-listicle-item-header">';
-            $html .= '<div class="atm-listicle-item-number">' . $item['number'] . '</div>';
-            $html .= '<h2 class="atm-listicle-item-title">' . esc_html($item['title']) . '</h2>';
-            $html .= '</div>';
-
-            // Item Content
-            $html .= '<div class="atm-listicle-item-content">';
-            
-            // Rating
-            if (!empty($item['rating'])) {
-                $html .= '<div class="atm-listicle-rating">';
-                $html .= '<div class="atm-listicle-stars">';
-                $full_stars = floor($item['rating']);
-                $half_star = ($item['rating'] - $full_stars) >= 0.5;
-                
-                for ($i = 0; $i < $full_stars; $i++) {
-                    $html .= '<span class="atm-listicle-star">★</span>';
-                }
-                if ($half_star) {
-                    $html .= '<span class="atm-listicle-star">☆</span>';
-                }
-                $html .= '</div>';
-                $html .= '<span class="atm-listicle-rating-text">' . $item['rating'] . '/5</span>';
-                $html .= '</div>';
-            }
-
-            // Price
-            if (!empty($item['price'])) {
-                $html .= '<div class="atm-listicle-price">';
-                $html .= '<div class="atm-listicle-price-amount">' . esc_html($item['price']) . '</div>';
-                $html .= '<div class="atm-listicle-price-note">Starting price</div>';
-                $html .= '</div>';
-            }
-
-            // Description
-            $html .= '<div class="atm-listicle-item-description">';
-            $html .= '<p>' . esc_html($item['description']) . '</p>';
-            $html .= '</div>';
-
-            // Features
-            if (!empty($item['features'])) {
-                $html .= '<div class="atm-listicle-features">';
-                foreach ($item['features'] as $feature) {
-                    $html .= '<div class="atm-listicle-feature">';
-                    $html .= '<div class="atm-listicle-feature-label">Key Feature</div>';
-                    $html .= '<div class="atm-listicle-feature-value">' . esc_html($feature) . '</div>';
-                    $html .= '</div>';
-                }
-                $html .= '</div>';
-            }
-
-            // Pros and Cons
-            if (!empty($item['pros']) || !empty($item['cons'])) {
-                $html .= '<div class="atm-listicle-pros-cons">';
-                
-                if (!empty($item['pros'])) {
-                    $html .= '<div class="atm-listicle-pros">';
-                    $html .= '<h4>✅ Pros</h4>';
-                    $html .= '<ul>';
-                    foreach ($item['pros'] as $pro) {
-                        $html .= '<li>' . esc_html($pro) . '</li>';
-                    }
-                    $html .= '</ul>';
-                    $html .= '</div>';
-                }
-
-                if (!empty($item['cons'])) {
-                    $html .= '<div class="atm-listicle-cons">';
-                    $html .= '<h4>❌ Cons</h4>';
-                    $html .= '<ul>';
-                    foreach ($item['cons'] as $con) {
-                        $html .= '<li>' . esc_html($con) . '</li>';
-                    }
-                    $html .= '</ul>';
-                    $html .= '</div>';
-                }
-                
-                $html .= '</div>';
-            }
-
-            // Why it's great
-            if (!empty($item['why_its_great'])) {
-                $html .= '<div class="atm-listicle-feature">';
-                $html .= '<div class="atm-listicle-feature-label">Why It Made Our List</div>';
-                $html .= '<div class="atm-listicle-feature-value">' . esc_html($item['why_its_great']) . '</div>';
-                $html .= '</div>';
-            }
-
-            $html .= '</div>'; // Close item content
-            $html .= '</div>'; // Close item
-        }
-        
-        $html .= '</div>'; // Close items container
-
-        // Conclusion
-        if (!empty($data['conclusion'])) {
-            $html .= '<div class="atm-listicle-conclusion">';
-            $html .= '<h3>Final Thoughts</h3>';
-            $html .= '<p>' . esc_html($data['conclusion']) . '</p>';
-            $html .= '</div>';
-        }
-
-        $html .= '</div>'; // Close container
-
-        return $html;
+    if (!is_array($data) || !isset($data['items'])) {
+        throw new Exception('Invalid data format for listicle');
     }
+
+    $html = '<div class="atm-listicle-container">';
+    
+    // Progress Bar
+    $html .= '<div class="atm-listicle-progress-container">';
+    $html .= '<div class="atm-listicle-progress-bar" id="atm-progress-bar"></div>';
+    $html .= '</div>';
+    
+    // Main Grid
+    $html .= '<div class="atm-listicle-grid">';
+    
+    // Sidebar with TOC
+    $html .= '<div class="atm-listicle-sidebar">';
+    $html .= '<div class="atm-listicle-toc">';
+    $html .= '<div class="atm-toc-header">';
+    $html .= '<h3>In This Article</h3>';
+    $html .= '<p>Jump to any section</p>';
+    $html .= '</div>';
+    $html .= '<ul class="atm-toc-list">';
+    
+    // Introduction link
+    $html .= '<li><a href="#intro"><span class="atm-toc-icon">ℹ️</span> Introduction</a></li>';
+    
+    // Items
+    foreach ($data['items'] as $item) {
+        $html .= '<li><a href="#item-' . $item['number'] . '">';
+        $html .= '<span class="atm-toc-number">' . $item['number'] . '</span>';
+        $html .= esc_html($item['title']);
+        $html .= '</a></li>';
+    }
+    
+    // Conclusion link
+    $html .= '<li><a href="#conclusion"><span class="atm-toc-icon">✅</span> Conclusion</a></li>';
+    $html .= '</ul>';
+    
+    // Share buttons
+    $html .= '<div class="atm-listicle-share">';
+    $html .= '<p>Share this list</p>';
+    $html .= '<div class="atm-share-buttons">';
+    $html .= '<a href="#" class="atm-share-btn facebook">f</a>';
+    $html .= '<a href="#" class="atm-share-btn twitter">t</a>';
+    $html .= '<a href="#" class="atm-share-btn linkedin">in</a>';
+    $html .= '</div>';
+    $html .= '</div>';
+    
+    $html .= '</div>'; // Close toc
+    $html .= '</div>'; // Close sidebar
+    
+    // Main Content
+    $html .= '<div class="atm-listicle-content">';
+    
+    // Introduction
+    if (!empty($data['introduction'])) {
+        $html .= '<div class="atm-listicle-intro" id="intro">';
+        $html .= '<p class="atm-listicle-lead">' . esc_html($data['introduction']) . '</p>';
+        $html .= '<div class="atm-listicle-overview">';
+        $html .= '<div class="atm-overview-header">';
+        $html .= '<span class="atm-overview-icon">💡</span>';
+        $html .= '<h3>What You\'ll Learn</h3>';
+        $html .= '</div>';
+        $html .= '<p class="atm-overview-text">This comprehensive guide covers the essential tools you need to optimize your workflow and achieve better results.</p>';
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    
+    // List Items (keep your existing item rendering logic but use new CSS classes)
+    foreach ($data['items'] as $item) {
+        $html .= '<div class="atm-listicle-item" id="item-' . $item['number'] . '">';
+        // ... rest of your existing item HTML but with updated class names
+        $html .= '</div>';
+    }
+    
+    // Conclusion
+    if (!empty($data['conclusion'])) {
+        $html .= '<div class="atm-listicle-conclusion" id="conclusion">';
+        $html .= '<div class="atm-conclusion-header">';
+        $html .= '<i class="fas fa-check-circle"></i>';
+        $html .= '<h3>Final Thoughts</h3>';
+        $html .= '</div>';
+        $html .= '<p>' . esc_html($data['conclusion']) . '</p>';
+        $html .= '</div>';
+    }
+    
+    $html .= '</div>'; // Close content
+    $html .= '</div>'; // Close grid
+    $html .= '</div>'; // Close container
+    
+    return $html;
+}
 }

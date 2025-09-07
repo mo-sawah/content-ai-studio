@@ -1,474 +1,711 @@
-/* Listicle Article Styles - Theme Independent */
+/* Modern Listicle Styles - WordPress Plugin Version
+   Two-column layout with sticky sidebar and progress bar */
+
+/* CSS Reset and Container Isolation */
 .atm-listicle-container {
-  /* CSS Reset and Isolation */
   all: initial;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
-  line-height: 1.6;
-  color: #333333;
-  background: #ffffff;
-  padding: 0;
-  margin: 0;
-
-  /* CSS Containment for complete isolation */
-  contain: style layout;
-
-  /* Ensure proper box model */
-  *,
-  *::before,
-  *::after {
-    box-sizing: border-box;
-  }
+    Arial, sans-serif !important;
+  line-height: 1.6 !important;
+  color: #1e293b !important;
+  background: #ffffff !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  contain: style layout !important;
+  position: relative !important;
 }
 
-/* Listicle Header */
-.atm-listicle-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 2rem 1.5rem;
-  margin-bottom: 2rem;
-  border-radius: 16px;
-  text-align: center;
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+.atm-listicle-container *,
+.atm-listicle-container *::before,
+.atm-listicle-container *::after {
+  box-sizing: border-box !important;
 }
 
-.atm-listicle-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.2;
+/* Progress Bar */
+.atm-listicle-progress-container {
+  position: sticky !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 4px !important;
+  background-color: #f1f5f9 !important;
+  z-index: 1000 !important;
+  margin-bottom: 2rem !important;
 }
 
-.atm-listicle-header .atm-listicle-meta {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-top: 1rem;
-  font-size: 0.9rem;
-  opacity: 0.9;
-  flex-wrap: wrap;
+.atm-listicle-progress-bar {
+  height: 100% !important;
+  background: linear-gradient(to right, #5b21b6, #0891b2) !important;
+  width: 0% !important;
+  transition: width 0.2s ease !important;
 }
 
-.atm-listicle-meta-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+/* Main Grid Layout */
+.atm-listicle-grid {
+  display: grid !important;
+  grid-template-columns: 300px 1fr !important;
+  gap: 3rem !important;
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+  padding: 0 1rem !important;
 }
 
-.atm-listicle-meta-icon {
-  width: 16px;
-  height: 16px;
-  opacity: 0.8;
+/* Sticky Sidebar */
+.atm-listicle-sidebar {
+  position: relative !important;
 }
 
-/* Quick Summary/Overview */
+.atm-listicle-toc {
+  position: sticky !important;
+  top: 2rem !important;
+  background: #ffffff !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid #e2e8f0 !important;
+  overflow: hidden !important;
+}
+
+.atm-toc-header {
+  background: #5b21b6 !important;
+  color: white !important;
+  padding: 1.5rem !important;
+}
+
+.atm-toc-header h3 {
+  margin: 0 0 0.5rem 0 !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: white !important;
+}
+
+.atm-toc-header p {
+  margin: 0 !important;
+  font-size: 0.85rem !important;
+  opacity: 0.9 !important;
+  color: white !important;
+}
+
+.atm-toc-list {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.atm-toc-list li {
+  border-bottom: 1px solid #f1f5f9 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.atm-toc-list li:last-child {
+  border-bottom: none !important;
+}
+
+.atm-toc-list a {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  padding: 1rem 1.5rem !important;
+  color: #475569 !important;
+  text-decoration: none !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+  font-size: 0.9rem !important;
+}
+
+.atm-toc-list a:hover {
+  background: #f8fafc !important;
+  color: #5b21b6 !important;
+  text-decoration: none !important;
+}
+
+.atm-toc-list a.active {
+  background: rgba(91, 33, 182, 0.1) !important;
+  color: #5b21b6 !important;
+  font-weight: 500 !important;
+}
+
+.atm-toc-list a.active::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 3px !important;
+  background: #5b21b6 !important;
+}
+
+.atm-toc-number {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  background: #f1f5f9 !important;
+  border-radius: 50% !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  flex-shrink: 0 !important;
+}
+
+.atm-toc-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  color: #5b21b6 !important;
+  font-size: 0.85rem !important;
+  flex-shrink: 0 !important;
+}
+
+/* Share Section in Sidebar */
+.atm-listicle-share {
+  padding: 1.5rem !important;
+  border-top: 1px solid #f1f5f9 !important;
+}
+
+.atm-listicle-share p {
+  margin: 0 0 1rem 0 !important;
+  font-size: 0.85rem !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+}
+
+.atm-share-buttons {
+  display: flex !important;
+  gap: 0.5rem !important;
+}
+
+.atm-share-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  color: white !important;
+  text-decoration: none !important;
+  transition: transform 0.2s ease !important;
+  font-size: 0.8rem !important;
+}
+
+.atm-share-btn:hover {
+  transform: translateY(-2px) !important;
+  text-decoration: none !important;
+}
+
+.atm-share-btn.facebook {
+  background: #1877f2 !important;
+}
+.atm-share-btn.twitter {
+  background: #1da1f2 !important;
+}
+.atm-share-btn.linkedin {
+  background: #0a66c2 !important;
+}
+.atm-share-btn.pinterest {
+  background: #e60023 !important;
+}
+
+/* Main Content Area */
+.atm-listicle-content {
+  min-width: 0 !important;
+}
+
+/* Introduction */
+.atm-listicle-intro {
+  margin-bottom: 3rem !important;
+}
+
+.atm-listicle-lead {
+  font-size: 1.15rem !important;
+  color: #334155 !important;
+  line-height: 1.7 !important;
+  margin-bottom: 2rem !important;
+  font-weight: 400 !important;
+}
+
 .atm-listicle-overview {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  border-left: 4px solid #667eea;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-radius: 12px !important;
+  padding: 1.5rem !important;
+  border-left: 4px solid #5b21b6 !important;
+  margin-bottom: 2rem !important;
 }
 
-.atm-listicle-overview h3 {
-  margin: 0 0 1rem 0;
-  color: #1e293b;
-  font-size: 1.1rem;
-  font-weight: 600;
+.atm-overview-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  margin-bottom: 0.75rem !important;
 }
 
-.atm-listicle-overview p {
-  margin: 0;
-  color: #64748b;
-  line-height: 1.6;
+.atm-overview-icon {
+  color: #5b21b6 !important;
+  font-size: 1.1rem !important;
 }
 
-/* List Items Container */
-.atm-listicle-items {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+.atm-overview-header h3 {
+  margin: 0 !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: #5b21b6 !important;
 }
 
-/* Individual List Item */
+.atm-overview-text {
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+}
+
+/* List Items */
 .atm-listicle-item {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 0;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  position: relative;
+  margin-bottom: 3rem !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.3s ease !important;
+  position: relative !important;
 }
 
 .atm-listicle-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  border-color: #667eea;
+  transform: translateY(-4px) !important;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  border-color: #c7d2fe !important;
 }
 
-/* Item Header with Number */
-.atm-listicle-item-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 1.5rem;
-  position: relative;
-  overflow: hidden;
+/* Item Header */
+.atm-item-header {
+  background: linear-gradient(135deg, #5b21b6 0%, #0891b2 100%) !important;
+  color: white !important;
+  padding: 1.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
 }
 
-.atm-listicle-item-header::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 100px;
-  height: 100px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  transform: translate(30px, -30px);
+.atm-item-number {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 40px !important;
+  height: 40px !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+  margin-right: 1rem !important;
+  flex-shrink: 0 !important;
+  color: white !important;
 }
 
-.atm-listicle-item-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  backdrop-filter: blur(10px);
+.atm-item-header h2 {
+  margin: 0 !important;
+  font-size: 1.4rem !important;
+  font-weight: 600 !important;
+  flex-grow: 1 !important;
+  color: white !important;
 }
 
-.atm-listicle-item-title {
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin: 0;
-  line-height: 1.3;
+.atm-item-rating {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  margin-left: auto !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50px !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.85rem !important;
+  color: white !important;
+}
+
+.atm-stars {
+  color: #fbbf24 !important;
+  letter-spacing: -1px !important;
+  font-size: 0.9rem !important;
 }
 
 /* Item Content */
-.atm-listicle-item-content {
-  padding: 1.5rem;
+.atm-item-content {
+  padding: 1.5rem !important;
 }
 
-.atm-listicle-item-description {
-  color: #4b5563;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
+.atm-item-image {
+  margin-bottom: 1.5rem !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  aspect-ratio: 16/9 !important;
 }
 
-/* Key Features/Highlights */
-.atm-listicle-features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+.atm-item-image img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
 }
 
-.atm-listicle-feature {
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 1rem;
-  border-left: 3px solid #667eea;
+.atm-item-description {
+  margin-bottom: 1.5rem !important;
+  font-size: 1rem !important;
+  color: #334155 !important;
+  line-height: 1.6 !important;
 }
 
-.atm-listicle-feature-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #667eea;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.25rem;
+.atm-item-description p {
+  margin: 0 !important;
+  font-size: 1rem !important;
+  color: #334155 !important;
+  line-height: 1.6 !important;
 }
 
-.atm-listicle-feature-value {
-  font-size: 1rem;
-  font-weight: 500;
-  color: #1e293b;
+/* Price Tag */
+.atm-item-price {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: #f8fafc !important;
+  padding: 1rem 1.25rem !important;
+  border-radius: 8px !important;
+  margin-bottom: 1.5rem !important;
+  border: 1px solid #f1f5f9 !important;
+}
+
+.atm-price-tag {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  color: #5b21b6 !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+}
+
+.atm-price-tag i {
+  color: #5b21b6 !important;
+  font-size: 0.9rem !important;
+}
+
+.atm-price-note {
+  font-size: 0.85rem !important;
+  color: #64748b !important;
+}
+
+/* Features */
+.atm-item-features {
+  margin-bottom: 1.5rem !important;
+}
+
+.atm-item-features h4 {
+  margin: 0 0 0.75rem 0 !important;
+  font-size: 1rem !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
+}
+
+.atm-item-features ul {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+  gap: 0.5rem 1.5rem !important;
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.atm-item-features li {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  padding: 0.25rem 0 !important;
+  font-size: 0.9rem !important;
+  color: #475569 !important;
+}
+
+.atm-item-features li i {
+  color: #10b981 !important;
+  font-size: 0.8rem !important;
 }
 
 /* Pros and Cons */
-.atm-listicle-pros-cons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+.atm-pros-cons {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 1rem !important;
+  margin-bottom: 1.5rem !important;
 }
 
-.atm-listicle-pros,
-.atm-listicle-cons {
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 1.25rem;
+.atm-pros {
+  background: rgba(16, 185, 129, 0.05) !important;
+  border-radius: 8px !important;
+  padding: 1.25rem !important;
+  border-left: 3px solid #10b981 !important;
 }
 
-.atm-listicle-pros {
-  border-left: 4px solid #10b981;
+.atm-cons {
+  background: rgba(239, 68, 68, 0.05) !important;
+  border-radius: 8px !important;
+  padding: 1.25rem !important;
+  border-left: 3px solid #ef4444 !important;
 }
 
-.atm-listicle-cons {
-  border-left: 4px solid #ef4444;
+.atm-pros h5,
+.atm-cons h5 {
+  margin: 0 0 0.75rem 0 !important;
+  font-size: 0.95rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  font-weight: 600 !important;
 }
 
-.atm-listicle-pros h4,
-.atm-listicle-cons h4 {
-  margin: 0 0 1rem 0;
-  font-size: 1rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.atm-pros h5 {
+  color: #10b981 !important;
 }
 
-.atm-listicle-pros h4 {
-  color: #10b981;
+.atm-cons h5 {
+  color: #ef4444 !important;
 }
 
-.atm-listicle-cons h4 {
-  color: #ef4444;
+.atm-pros ul,
+.atm-cons ul {
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
 }
 
-.atm-listicle-pros ul,
-.atm-listicle-cons ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.atm-pros li,
+.atm-cons li {
+  padding: 0.2rem 0 !important;
+  position: relative !important;
+  padding-left: 1.25rem !important;
+  font-size: 0.85rem !important;
+  color: #475569 !important;
+  line-height: 1.5 !important;
 }
 
-.atm-listicle-pros li,
-.atm-listicle-cons li {
-  padding: 0.25rem 0;
-  position: relative;
-  padding-left: 1.5rem;
+.atm-pros li::before {
+  content: "✓" !important;
+  position: absolute !important;
+  left: 0 !important;
+  color: #10b981 !important;
+  font-weight: bold !important;
+  font-size: 0.8rem !important;
 }
 
-.atm-listicle-pros li::before {
-  content: "✓";
-  position: absolute;
-  left: 0;
-  color: #10b981;
-  font-weight: bold;
+.atm-cons li::before {
+  content: "✗" !important;
+  position: absolute !important;
+  left: 0 !important;
+  color: #ef4444 !important;
+  font-weight: bold !important;
+  font-size: 0.8rem !important;
 }
 
-.atm-listicle-cons li::before {
-  content: "✗";
-  position: absolute;
-  left: 0;
-  color: #ef4444;
-  font-weight: bold;
+/* Why It's Great */
+.atm-item-why {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 1rem !important;
+  padding: 1.25rem !important;
+  background: #f8fafc !important;
+  border-radius: 8px !important;
+  margin-bottom: 1.5rem !important;
+  border: 1px solid #f1f5f9 !important;
 }
 
-/* Rating Display */
-.atm-listicle-rating {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: #fef3c7;
-  border: 1px solid #fbbf24;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
+.atm-item-why i {
+  font-size: 1.2rem !important;
+  color: #0891b2 !important;
+  margin-top: 0.2rem !important;
+  flex-shrink: 0 !important;
 }
 
-.atm-listicle-stars {
-  display: flex;
-  gap: 0.25rem;
+.atm-item-why h4 {
+  margin: 0 0 0.5rem 0 !important;
+  font-size: 0.95rem !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
 }
 
-.atm-listicle-star {
-  width: 20px;
-  height: 20px;
-  color: #fbbf24;
+.atm-item-why p {
+  margin: 0 !important;
+  font-size: 0.9rem !important;
+  color: #64748b !important;
+  line-height: 1.5 !important;
 }
 
-.atm-listicle-rating-text {
-  font-weight: 600;
-  color: #92400e;
+/* CTA Button */
+.atm-item-cta {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  background: #5b21b6 !important;
+  color: white !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 50px !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  font-size: 0.9rem !important;
 }
 
-/* Price Information */
-.atm-listicle-price {
-  background: #ecfdf5;
-  border: 1px solid #10b981;
-  border-radius: 8px;
-  padding: 1rem;
-  text-align: center;
-  margin-bottom: 1.5rem;
+.atm-item-cta:hover {
+  background: #4c1d95 !important;
+  transform: translateY(-1px) !important;
+  color: white !important;
+  text-decoration: none !important;
 }
 
-.atm-listicle-price-amount {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #10b981;
-  margin-bottom: 0.25rem;
+.atm-item-cta i {
+  font-size: 0.8rem !important;
 }
 
-.atm-listicle-price-note {
-  font-size: 0.9rem;
-  color: #059669;
-}
-
-/* Call-to-Action Button */
-.atm-listicle-cta {
-  text-align: center;
-  margin-top: 1.5rem;
-}
-
-.atm-listicle-cta-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  text-decoration: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  border: none;
-  cursor: pointer;
-}
-
-.atm-listicle-cta-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  color: white;
-  text-decoration: none;
-}
-
-/* Final Summary/Conclusion */
+/* Conclusion */
 .atm-listicle-conclusion {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  border-radius: 16px;
-  padding: 2rem;
-  margin-top: 3rem;
-  border: 1px solid #e2e8f0;
-  text-align: center;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-radius: 16px !important;
+  padding: 2.5rem !important;
+  margin: 4rem 0 !important;
+  text-align: center !important;
+  border: 1px solid #e2e8f0 !important;
+  position: relative !important;
+}
+
+.atm-conclusion-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.75rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.atm-conclusion-header i {
+  color: #10b981 !important;
+  font-size: 1.5rem !important;
 }
 
 .atm-listicle-conclusion h3 {
-  color: #1e293b;
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0 0 1rem 0;
+  color: #1e293b !important;
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
 }
 
 .atm-listicle-conclusion p {
-  color: #4b5563;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-  font-size: 1.1rem;
-}
-
-/* Table of Contents (Optional) */
-.atm-listicle-toc {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.atm-listicle-toc h3 {
-  margin: 0 0 1rem 0;
-  color: #1e293b;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.atm-listicle-toc-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.atm-listicle-toc-item {
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.atm-listicle-toc-item:last-child {
-  border-bottom: none;
-}
-
-.atm-listicle-toc-link {
-  color: #667eea;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-
-.atm-listicle-toc-link:hover {
-  color: #5a67d8;
-  text-decoration: underline;
+  color: #475569 !important;
+  font-size: 1rem !important;
+  line-height: 1.7 !important;
+  max-width: 700px !important;
+  margin: 0 auto 1rem auto !important;
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
-  .atm-listicle-container {
-    font-size: 0.9rem;
+@media (max-width: 1024px) {
+  .atm-listicle-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
   }
 
-  .atm-listicle-header {
-    padding: 1.5rem 1rem;
+  .atm-listicle-toc {
+    position: relative !important;
+    top: 0 !important;
+    margin-bottom: 2rem !important;
   }
 
-  .atm-listicle-header h1 {
-    font-size: 1.5rem;
-  }
-
-  .atm-listicle-header .atm-listicle-meta {
-    gap: 1rem;
-    font-size: 0.8rem;
-  }
-
-  .atm-listicle-item-content {
-    padding: 1rem;
-  }
-
-  .atm-listicle-features {
-    grid-template-columns: 1fr;
-  }
-
-  .atm-listicle-pros-cons {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .atm-listicle-conclusion {
-    padding: 1.5rem;
+  .atm-pros-cons {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
   }
 }
 
-/* Dark theme support (optional) */
-@media (prefers-color-scheme: dark) {
-  .atm-listicle-container {
-    background: #1a202c;
-    color: #e2e8f0;
+@media (max-width: 768px) {
+  .atm-listicle-grid {
+    padding: 0 0.5rem !important;
   }
 
-  .atm-listicle-item {
-    background: #2d3748;
-    border-color: #4a5568;
+  .atm-item-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
   }
 
-  .atm-listicle-overview {
-    background: #2d3748;
-    border-color: #4a5568;
+  .atm-item-rating {
+    margin-left: 0 !important;
   }
 
-  .atm-listicle-feature {
-    background: #2d3748;
+  .atm-item-features ul {
+    grid-template-columns: 1fr !important;
   }
 
-  .atm-listicle-pros,
-  .atm-listicle-cons {
-    background: #2d3748;
+  .atm-item-content {
+    padding: 1.25rem !important;
   }
+
+  .atm-listicle-conclusion {
+    padding: 2rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .atm-listicle-grid {
+    padding: 0 !important;
+  }
+
+  .atm-item-content {
+    padding: 1rem !important;
+  }
+
+  .atm-item-header {
+    padding: 1.25rem !important;
+  }
+
+  .atm-listicle-conclusion {
+    padding: 1.5rem !important;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth !important;
+}
+
+/* Focus states for accessibility */
+.atm-toc-list a:focus,
+.atm-item-cta:focus {
+  outline: 2px solid #5b21b6 !important;
+  outline-offset: 2px !important;
+}
+
+/* WordPress theme override protection */
+.atm-listicle-container h1,
+.atm-listicle-container h2,
+.atm-listicle-container h3,
+.atm-listicle-container h4,
+.atm-listicle-container h5,
+.atm-listicle-container h6 {
+  font-family: inherit !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.atm-listicle-container a {
+  text-decoration: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.atm-listicle-container ul,
+.atm-listicle-container ol {
+  list-style-position: outside !important;
 }
