@@ -1002,6 +1002,11 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             wp_send_json_error('Please activate your license key to use this feature.');
         }
         check_ajax_referer('atm_nonce', 'nonce');
+
+        @ini_set('max_execution_time', 300); // 5 minutes
+        @set_time_limit(300);
+
+        
         try {
             $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
             $url = esc_url_raw($_POST['article_url']);

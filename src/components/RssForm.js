@@ -106,7 +106,6 @@ function RssForm() {
     setStatusMessage(`Generating from "${article.title}"...`);
     setIsLoading(true);
 
-    // Disable just this one button
     const newResults = [...results];
     newResults[index].isGenerating = true;
     setResults(newResults);
@@ -115,18 +114,27 @@ function RssForm() {
       .getElementById("atm-studio-root")
       .getAttribute("data-post-id");
 
+    // ADD TIMEOUT WRAPPER
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Request timed out after 2 minutes")),
+        120000
+      )
+    );
+
+    const ajaxPromise = callAjax("generate_article_from_rss", {
+      post_id: postId,
+      article_url: article.link,
+      article_guid: article.guid,
+      rss_content: article.content,
+      use_full_content: useFullContent,
+    });
+
     try {
-      const response = await callAjax("generate_article_from_rss", {
-        post_id: postId,
-        article_url: article.link,
-        article_guid: article.guid,
-        rss_content: article.content,
-        use_full_content: useFullContent,
-      });
+      const response = await Promise.race([ajaxPromise, timeoutPromise]);
 
       if (!response.success) throw new Error(response.data);
 
-      // ADD DEBUG LOGS
       console.log("ATM Debug - Response data:", response.data);
       console.log("ATM Debug - Subtitle received:", response.data.subtitle);
 
@@ -137,7 +145,6 @@ function RssForm() {
       );
       setStatusMessage(`✅ Article generated from "${article.title}"!`);
 
-      // Remove the item from the list
       setResults(results.filter((_, i) => i !== index));
 
       if (response.data.subtitle) {
@@ -150,13 +157,15 @@ function RssForm() {
         );
       }
     } catch (error) {
+      console.error("RSS Generation Error:", error);
       setStatusMessage(`Error: ${error.message}`);
     } finally {
       setIsLoading(false);
-      // In case of error, re-enable the button
       const finalResults = [...results];
-      finalResults[index].isGenerating = false;
-      setResults(finalResults);
+      if (finalResults[index]) {
+        finalResults[index].isGenerating = false;
+        setResults(finalResults);
+      }
     }
   };
 
