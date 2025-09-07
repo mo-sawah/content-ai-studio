@@ -675,73 +675,72 @@ public function translate_text() {
         }
 
         check_ajax_referer('atm_nonce', 'nonce');
-        @ini_set('max_execution_time', 600);
-
+        @ini_set('max_execution_time', 300);
+        
         try {
             $post_id = intval($_POST['post_id']);
-            $script = isset($_POST['script']) ? wp_kses_post(stripslashes($_POST['script'])) : '';
-            $voice = sanitize_text_field($_POST['voice']);
-            $provider = sanitize_text_field($_POST['provider']);
+            $script = wp_unslash($_POST['script']);
+            $provider = sanitize_text_field($_POST['provider'] ?? 'openai');
             
-            if (empty($script)) throw new Exception('The Podcast Script cannot be empty.');
-
-            $max_chunk_size = ($provider === 'elevenlabs') ? 4500 : 4000;
-            $script_chunks = [];
-            $current_chunk = '';
-
-            $sentences = preg_split('/(?<=[.?!])\s+/', $script, -1, PREG_SPLIT_NO_EMPTY);
-            foreach ($sentences as $sentence) {
-                if (strlen($current_chunk) + strlen($sentence) + 1 > $max_chunk_size) {
-                    $script_chunks[] = $current_chunk;
-                    $current_chunk = $sentence;
-                } else {
-                    $current_chunk .= ' ' . $sentence;
-                }
-            }
-            if (!empty($current_chunk)) {
-                $script_chunks[] = trim($current_chunk);
-            }
-
-            $host_a_voice = sanitize_text_field($_POST['host_a_voice'] ?? 'alloy');
+            // Handle both old single voice and new dual voice parameters
+            $host_a_voice = sanitize_text_field($_POST['host_a_voice'] ?? $_POST['voice'] ?? 'alloy');
             $host_b_voice = sanitize_text_field($_POST['host_b_voice'] ?? 'nova');
             
-            // Generate two-person audio
-            $final_audio_content = ATM_API::generate_two_person_podcast_audio(
-                $script, 
-                $host_a_voice, 
-                $host_b_voice, 
-                $provider
-            );
+            // Fallback if voices are empty
+            if (empty($host_a_voice)) $host_a_voice = 'alloy';
+            if (empty($host_b_voice)) $host_b_voice = 'nova';
 
-            $final_audio_content = '';
-            $final_audio_content .= base64_decode('SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGllbmRhcmQgTG9wZXogaW4gT25lVHJpY2sBTQuelleAAAAANFaAAAAAAAAAAAAAAAAAAAAD/8AAAAAAAADw==');
+            if (empty($script)) {
+                throw new Exception("Script content is required.");
+            }
 
-            foreach ($script_chunks as $chunk) {
-                $audio_chunk_content = null;
+            $post = get_post($post_id);
+            if (!$post) {
+                throw new Exception("Post not found.");
+            }
+
+            // Check if this is a two-person script
+            $is_two_person = (strpos($script, 'HOST_A:') !== false && strpos($script, 'HOST_B:') !== false);
+            
+            if ($is_two_person) {
+                // Generate two-person audio
+                $final_audio_content = ATM_API::generate_two_person_podcast_audio(
+                    $script, 
+                    $host_a_voice, 
+                    $host_b_voice, 
+                    $provider
+                );
+            } else {
+                // Fallback to single voice generation
                 if ($provider === 'elevenlabs') {
-                    $audio_chunk_content = ATM_API::generate_audio_with_elevenlabs(trim($chunk), $voice);
-                } else { // Default to OpenAI
-                    $audio_chunk_content = ATM_API::generate_audio_with_openai_tts(trim($chunk), $voice);
+                    $final_audio_content = ATM_API::generate_audio_with_elevenlabs($script, $host_a_voice);
+                } else {
+                    $final_audio_content = ATM_API::generate_audio_with_openai_tts($script, $host_a_voice);
                 }
-                $final_audio_content .= $audio_chunk_content;
             }
 
+            // Save the audio file (rest of your existing save logic)
             $upload_dir = wp_upload_dir();
-            $podcast_dir = $upload_dir['basedir'] . '/podcasts';
-            if (!file_exists($podcast_dir)) wp_mkdir_p($podcast_dir);
             $filename = 'podcast-' . $post_id . '-' . time() . '.mp3';
-            $filepath = $podcast_dir . '/' . $filename;
-            if (!file_put_contents($filepath, $final_audio_content)) {
-                throw new Exception('Failed to save the final audio file.');
+            $file_path = $upload_dir['path'] . '/' . $filename;
+            
+            if (file_put_contents($file_path, $final_audio_content) === false) {
+                throw new Exception("Failed to save audio file.");
             }
-            $podcast_url = $upload_dir['baseurl'] . '/podcasts/' . $filename;
-            update_post_meta($post_id, '_atm_podcast_url', $podcast_url);
+
+            $file_url = $upload_dir['url'] . '/' . $filename;
+            
+            // Update post meta
+            update_post_meta($post_id, '_atm_podcast_url', $file_url);
             update_post_meta($post_id, '_atm_podcast_script', $script);
-            
-            wp_send_json_success(['message' => 'Podcast generated successfully!', 'podcast_url' => $podcast_url]);
-            
+            update_post_meta($post_id, '_atm_podcast_voice', $host_a_voice);
+            update_post_meta($post_id, '_atm_podcast_host_b_voice', $host_b_voice);
+            update_post_meta($post_id, '_atm_podcast_provider', $provider);
+
+            wp_send_json_success(['audio_url' => $file_url]);
+
         } catch (Exception $e) {
-            error_log('Content AI Studio Error: ' . $e->getMessage());
+            error_log('Content AI Studio - Podcast generation error: ' . $e->getMessage());
             wp_send_json_error($e->getMessage());
         }
     }

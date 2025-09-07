@@ -317,10 +317,7 @@ class ATM_Main {
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-listicle.php';
         // require_once ATM_PLUGIN_PATH . 'includes/class-atm-block-editor.php'; // ADD THIS LINE
 
-        // ADD THIS DEBUG LINE:
-        error_log('ATM: Loading listicle class file');
-        require_once ATM_PLUGIN_PATH . 'includes/class-atm-listicle.php';
-        error_log('ATM: Listicle class file loaded');
+
     }
 
     private function init_hooks() {
