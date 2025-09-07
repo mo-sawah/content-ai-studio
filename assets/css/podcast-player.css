@@ -355,7 +355,7 @@
 
   .atm-podcast .atm-speed .atm-speed-select {
     height: 32px; /* Fixed height to match toggle */
-    padding: 6px 8px;
+    padding: 0;
     font-size: 12px;
     min-width: 45px;
     max-width: 55px; /* Prevent it from growing too wide */
@@ -399,6 +399,7 @@
     max-width: 50px;
     height: 28px;
     font-size: 11px;
+    padding: 0;
   }
 
   .atm-podcast .atm-pl-toggle {
