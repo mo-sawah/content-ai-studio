@@ -43,33 +43,83 @@ jQuery(document).ready(function ($) {
       }
     }
 
-    // --- NEW: Update SmartMag Subtitle Field ---
+    // --- Enhanced Subtitle Population ---
     if (subtitle && subtitle.trim()) {
-      setTimeout(function () {
-        // Try multiple selectors for SmartMag subtitle field
-        const subtitleSelectors = [
-          'input[name="_bunyad_sub_title"]',
-          "#_bunyad_sub_title",
-          'input[id*="sub_title"]',
-          'input[name*="subtitle"]',
-        ];
+      console.log("ATM: Attempting to populate subtitle:", subtitle);
 
-        let subtitleInput = null;
-        for (let selector of subtitleSelectors) {
-          subtitleInput = $(selector);
-          if (subtitleInput.length > 0) {
-            break;
+      // Multiple attempts with different timings
+      const populateSubtitle = function (attempt = 1) {
+        const maxAttempts = 5;
+        const delay = attempt * 500; // Increasing delay: 500ms, 1s, 1.5s, 2s, 2.5s
+
+        setTimeout(function () {
+          let subtitlePopulated = false;
+
+          // Try multiple selectors
+          const selectors = [
+            'input[name="_bunyad_sub_title"]',
+            'input[id="_bunyad_sub_title"]',
+            'textarea[name="_bunyad_sub_title"]',
+            'input[name*="sub_title"]',
+            'input[name*="subtitle"]',
+          ];
+
+          for (let selector of selectors) {
+            const field = jQuery(selector);
+            if (field.length > 0) {
+              console.log("ATM: Found subtitle field with selector:", selector);
+              field.val(subtitle);
+              field
+                .trigger("input")
+                .trigger("change")
+                .trigger("keyup")
+                .trigger("blur");
+              subtitlePopulated = true;
+              break;
+            }
           }
-        }
 
-        if (subtitleInput && subtitleInput.length > 0) {
-          subtitleInput.val(subtitle);
-          subtitleInput.trigger("input").trigger("change").trigger("blur");
-          console.log("ATM: Subtitle populated in SmartMag field:", subtitle);
-        } else {
-          console.log("ATM: SmartMag subtitle field not found");
-        }
-      }, 500);
+          if (!subtitlePopulated && attempt < maxAttempts) {
+            console.log(
+              "ATM: Subtitle field not found, retrying attempt",
+              attempt + 1
+            );
+            populateSubtitle(attempt + 1);
+          } else if (!subtitlePopulated) {
+            console.log(
+              "ATM: Could not find subtitle field after",
+              maxAttempts,
+              "attempts"
+            );
+
+            // Last resort: force refresh the meta box
+            const postId = jQuery("#post_ID").val();
+            if (postId) {
+              jQuery.ajax({
+                url: atm_ajax.ajax_url,
+                type: "POST",
+                data: {
+                  action: "populate_subtitle_field",
+                  post_id: postId,
+                  nonce: atm_ajax.nonce,
+                },
+                success: function (response) {
+                  if (response.success && response.data.found) {
+                    console.log(
+                      "ATM: Subtitle confirmed in database:",
+                      response.data.subtitle
+                    );
+                  }
+                },
+              });
+            }
+          } else {
+            console.log("ATM: Subtitle populated successfully");
+          }
+        }, delay);
+      };
+
+      populateSubtitle();
     }
   }
 
@@ -1325,4 +1375,45 @@ jQuery(document).ready(function ($) {
       }
     }, 2000);
   }
+});
+
+// Add this to admin.js temporarily to debug
+jQuery(document).ready(function ($) {
+  setTimeout(function () {
+    console.log("=== SmartMag Field Debug ===");
+
+    // Look for all possible subtitle fields
+    const possibleFields = [
+      'input[name="_bunyad_sub_title"]',
+      'input[name="bunyad_sub_title"]',
+      'input[id="_bunyad_sub_title"]',
+      'input[id="bunyad_sub_title"]',
+      'textarea[name="_bunyad_sub_title"]',
+      'input[name*="sub_title"]',
+      'input[name*="subtitle"]',
+    ];
+
+    possibleFields.forEach(function (selector) {
+      const field = $(selector);
+      if (field.length > 0) {
+        console.log("Found field:", selector, "Value:", field.val());
+      }
+    });
+
+    // List all input fields in meta boxes
+    $(".postbox input, .postbox textarea").each(function () {
+      const name = $(this).attr("name");
+      const id = $(this).attr("id");
+      if (name && (name.includes("sub") || name.includes("title"))) {
+        console.log(
+          "Potential subtitle field - Name:",
+          name,
+          "ID:",
+          id,
+          "Value:",
+          $(this).val()
+        );
+      }
+    });
+  }, 3000);
 });

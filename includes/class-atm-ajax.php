@@ -6,6 +6,23 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    // Add this new AJAX function to force subtitle population
+    public function populate_subtitle_field() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $post_id = intval($_POST['post_id']);
+            $subtitle = get_post_meta($post_id, '_bunyad_sub_title', true);
+            
+            if ($subtitle) {
+                wp_send_json_success(['subtitle' => $subtitle, 'found' => true]);
+            } else {
+                wp_send_json_success(['subtitle' => '', 'found' => false]);
+            }
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
     public function get_post_subtitle() {
         check_ajax_referer('atm_nonce', 'nonce');
         try {
@@ -591,6 +608,7 @@ public function translate_text() {
         add_action('wp_ajax_generate_key_takeaways', array($this, 'generate_key_takeaways'));
         add_action('wp_ajax_save_key_takeaways', array($this, 'save_key_takeaways'));
         add_action('wp_ajax_get_post_subtitle', array($this, 'get_post_subtitle'));
+        add_action('wp_ajax_populate_subtitle_field', array($this, 'populate_subtitle_field'));
 
         // --- MULTIPAGE ACTIONS ---
         add_action('wp_ajax_generate_multipage_title', array($this, 'generate_multipage_title'));
