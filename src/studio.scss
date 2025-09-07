@@ -1566,18 +1566,6 @@ body.wp-admin .atm-content-body {
 
 /* Add this CSS to your studio.scss file - append to the end */
 
-/* --- Fix Button Margins --- */
-body.wp-admin .atm-studio-container,
-body.wp-admin .atm-content-body {
-  .components-button {
-    margin-bottom: 16px !important;
-
-    &:last-child {
-      margin-bottom: 0 !important;
-    }
-  }
-}
-
 /* --- Override Welcome Header Title Size --- */
 .atm-welcome-header h2 {
   font-size: 48px !important;
@@ -1608,20 +1596,6 @@ body.wp-admin .atm-content-body {
 
 /* Add this CSS to your studio.scss file - append to the end */
 
-/* --- Fix Button Margins for ALL Button Types --- */
-body.wp-admin .atm-studio-container,
-body.wp-admin .atm-content-body {
-  .components-button {
-    &:first-child {
-      margin-top: 0 !important;
-    }
-
-    &:last-child {
-      margin-bottom: 0 !important;
-    }
-  }
-}
-
 /* --- Override Welcome Header Title Size --- */
 .atm-welcome-header h2 {
   font-size: 48px !important;
@@ -1651,33 +1625,6 @@ body.wp-admin .atm-content-body {
 }
 
 /* Add this CSS to your studio.scss file - append to the end */
-
-/* --- Fix Button Margins for ALL Button Types --- */
-body.wp-admin .atm-studio-container,
-body.wp-admin .atm-content-body {
-  .components-button {
-    &:first-child {
-      margin-top: 0 !important;
-    }
-
-    &:last-child {
-      margin-bottom: 0 !important;
-    }
-  }
-
-  /* Also target any buttons that might not have components-button class */
-  button {
-    margin: 0 !important;
-
-    &:first-child {
-      margin-top: 0 !important;
-    }
-
-    &:last-child {
-      margin-bottom: 0 !important;
-    }
-  }
-}
 
 /* --- Override Welcome Header Title Size --- */
 .atm-welcome-header h2 {
@@ -1934,28 +1881,6 @@ body.wp-admin .atm-content-body {
   align-items: center;
   gap: 12px;
   margin-top: 10px;
-}
-
-/* Stronger, more specific override to beat:
-   body.wp-admin .atm-content-body .components-button,
-   body.wp-admin .atm-studio-container .components-button { margin: 10px 0 !important; } */
-body.wp-admin
-  .atm-studio-container
-  .atm-generator-view
-  .atm-form-container
-  .atm-comments-actions
-  .components-button,
-body.wp-admin
-  .atm-content-body
-  .atm-generator-view
-  .atm-form-container
-  .atm-comments-actions
-  .components-button {
-}
-
-/* Optional: consistent min width like other tools */
-.atm-comments-actions .components-button {
-  min-width: 160px;
 }
 
 // Add to src/studio.scss
