@@ -780,7 +780,7 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             - When including external links, NEVER use the website URL as the anchor text
             - Use ONLY 1-2 descriptive words as anchor text
             - Example: Use [study](https://example.com) NOT [recent comprehensive study](https://example.com)
-            - Anchor text should be: "study", "report", "research", "analysis", "source", etc.
+            - Anchor text should be relevant keywords from the article topic (e.g., marketing, design, finance, AI)
             - Keep anchor text extremely concise (maximum 2 words)
             - Make links feel natural within the sentence flow
             - Avoid long phrases as anchor text';
@@ -823,8 +823,18 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
 
             // Direct SmartMag subtitle saving
             if ($post_id > 0 && !empty($subtitle)) {
-                update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
-                error_log("ATM Plugin: Saved subtitle '{$subtitle}' to SmartMag field for post {$post_id}");
+                // Save to SmartMag field
+                $smartmag_result = update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
+                error_log("ATM Plugin: Saved subtitle '{$subtitle}' to SmartMag field (_bunyad_sub_title) for post {$post_id}. Result: " . ($smartmag_result ? 'success' : 'failed'));
+                
+                // Also save to our backup field
+                $backup_result = update_post_meta($post_id, '_atm_subtitle', $subtitle);
+                error_log("ATM Plugin: Saved subtitle to backup field (_atm_subtitle). Result: " . ($backup_result ? 'success' : 'failed'));
+                
+                // Verify it was saved
+                $saved_smartmag = get_post_meta($post_id, '_bunyad_sub_title', true);
+                $saved_backup = get_post_meta($post_id, '_atm_subtitle', true);
+                error_log("ATM Plugin: Verification - SmartMag field: '{$saved_smartmag}', Backup field: '{$saved_backup}'");
             }
 
             wp_send_json_success(['article_title' => $article_title, 'article_content' => $final_content, 'subtitle' => $subtitle]);
