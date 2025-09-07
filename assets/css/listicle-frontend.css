@@ -1,0 +1,474 @@
+/* Listicle Article Styles - Theme Independent */
+.atm-listicle-container {
+  /* CSS Reset and Isolation */
+  all: initial;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  line-height: 1.6;
+  color: #333333;
+  background: #ffffff;
+  padding: 0;
+  margin: 0;
+
+  /* CSS Containment for complete isolation */
+  contain: style layout;
+
+  /* Ensure proper box model */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+
+/* Listicle Header */
+.atm-listicle-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem 1.5rem;
+  margin-bottom: 2rem;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+}
+
+.atm-listicle-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.2;
+}
+
+.atm-listicle-header .atm-listicle-meta {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  opacity: 0.9;
+  flex-wrap: wrap;
+}
+
+.atm-listicle-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.atm-listicle-meta-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
+}
+
+/* Quick Summary/Overview */
+.atm-listicle-overview {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-left: 4px solid #667eea;
+}
+
+.atm-listicle-overview h3 {
+  margin: 0 0 1rem 0;
+  color: #1e293b;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.atm-listicle-overview p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+/* List Items Container */
+.atm-listicle-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Individual List Item */
+.atm-listicle-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.atm-listicle-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: #667eea;
+}
+
+/* Item Header with Number */
+.atm-listicle-item-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.atm-listicle-item-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transform: translate(30px, -30px);
+}
+
+.atm-listicle-item-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.atm-listicle-item-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Item Content */
+.atm-listicle-item-content {
+  padding: 1.5rem;
+}
+
+.atm-listicle-item-description {
+  color: #4b5563;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+/* Key Features/Highlights */
+.atm-listicle-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.atm-listicle-feature {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 3px solid #667eea;
+}
+
+.atm-listicle-feature-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #667eea;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.atm-listicle-feature-value {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+/* Pros and Cons */
+.atm-listicle-pros-cons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.atm-listicle-pros,
+.atm-listicle-cons {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.atm-listicle-pros {
+  border-left: 4px solid #10b981;
+}
+
+.atm-listicle-cons {
+  border-left: 4px solid #ef4444;
+}
+
+.atm-listicle-pros h4,
+.atm-listicle-cons h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.atm-listicle-pros h4 {
+  color: #10b981;
+}
+
+.atm-listicle-cons h4 {
+  color: #ef4444;
+}
+
+.atm-listicle-pros ul,
+.atm-listicle-cons ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.atm-listicle-pros li,
+.atm-listicle-cons li {
+  padding: 0.25rem 0;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.atm-listicle-pros li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #10b981;
+  font-weight: bold;
+}
+
+.atm-listicle-cons li::before {
+  content: "✗";
+  position: absolute;
+  left: 0;
+  color: #ef4444;
+  font-weight: bold;
+}
+
+/* Rating Display */
+.atm-listicle-rating {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.atm-listicle-stars {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.atm-listicle-star {
+  width: 20px;
+  height: 20px;
+  color: #fbbf24;
+}
+
+.atm-listicle-rating-text {
+  font-weight: 600;
+  color: #92400e;
+}
+
+/* Price Information */
+.atm-listicle-price {
+  background: #ecfdf5;
+  border: 1px solid #10b981;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.atm-listicle-price-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #10b981;
+  margin-bottom: 0.25rem;
+}
+
+.atm-listicle-price-note {
+  font-size: 0.9rem;
+  color: #059669;
+}
+
+/* Call-to-Action Button */
+.atm-listicle-cta {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+.atm-listicle-cta-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-decoration: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.atm-listicle-cta-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  color: white;
+  text-decoration: none;
+}
+
+/* Final Summary/Conclusion */
+.atm-listicle-conclusion {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-top: 3rem;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.atm-listicle-conclusion h3 {
+  color: #1e293b;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+}
+
+.atm-listicle-conclusion p {
+  color: #4b5563;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+/* Table of Contents (Optional) */
+.atm-listicle-toc {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.atm-listicle-toc h3 {
+  margin: 0 0 1rem 0;
+  color: #1e293b;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.atm-listicle-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.atm-listicle-toc-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.atm-listicle-toc-item:last-child {
+  border-bottom: none;
+}
+
+.atm-listicle-toc-link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.atm-listicle-toc-link:hover {
+  color: #5a67d8;
+  text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .atm-listicle-container {
+    font-size: 0.9rem;
+  }
+
+  .atm-listicle-header {
+    padding: 1.5rem 1rem;
+  }
+
+  .atm-listicle-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .atm-listicle-header .atm-listicle-meta {
+    gap: 1rem;
+    font-size: 0.8rem;
+  }
+
+  .atm-listicle-item-content {
+    padding: 1rem;
+  }
+
+  .atm-listicle-features {
+    grid-template-columns: 1fr;
+  }
+
+  .atm-listicle-pros-cons {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .atm-listicle-conclusion {
+    padding: 1.5rem;
+  }
+}
+
+/* Dark theme support (optional) */
+@media (prefers-color-scheme: dark) {
+  .atm-listicle-container {
+    background: #1a202c;
+    color: #e2e8f0;
+  }
+
+  .atm-listicle-item {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+
+  .atm-listicle-overview {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+
+  .atm-listicle-feature {
+    background: #2d3748;
+  }
+
+  .atm-listicle-pros,
+  .atm-listicle-cons {
+    background: #2d3748;
+  }
+}

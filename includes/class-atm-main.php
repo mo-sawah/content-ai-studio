@@ -7,6 +7,18 @@ if (!defined('ABSPATH')) {
 
 class ATM_Main {
 
+    public function enqueue_listicle_styles() {
+        // Only enqueue on single posts/pages where listicle content might appear
+        if (is_singular()) {
+            wp_enqueue_style(
+                'atm-listicle-frontend',
+                ATM_PLUGIN_URL . 'assets/css/listicle-frontend.css',
+                array(),
+                ATM_VERSION
+            );
+        }
+    }
+
     // When a post is published, schedule comment generation if enabled
     public function maybe_schedule_comments_on_publish($new_status, $old_status, $post) {
         if ($new_status !== 'publish' || $old_status === 'publish') {
@@ -302,6 +314,7 @@ class ATM_Main {
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-licensing.php';
         require_once ATM_PLUGIN_PATH . 'includes/class-atm-campaign-manager.php';
         require_once ATM_PLUGIN_PATH . 'includes/lib/Parsedown.php';
+        require_once ATM_PLUGIN_PATH . 'includes/class-atm-listicle.php';
         // require_once ATM_PLUGIN_PATH . 'includes/class-atm-block-editor.php'; // ADD THIS LINE
     }
 
@@ -338,6 +351,7 @@ class ATM_Main {
         // Frontend hooks
         // CHANGE: load our styles after the theme to win specificity battles
         add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'), 99);
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_listicle_styles'), 100);
         add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
         add_filter('the_content', array($frontend, 'embed_takeaways_in_content'));
         add_filter('the_content', array($frontend, 'embed_podcast_in_content'));

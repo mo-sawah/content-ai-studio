@@ -2083,3 +2083,163 @@ body.wp-admin .atm-content-body {
 .atm-form-container .components-button {
   margin: 10px 0 !important;
 }
+
+/* Add these styles to your existing studio.scss file */
+
+/* --- Additional Gradient Definitions for Listicle --- */
+.from-green-500 {
+  --tw-gradient-from: #10b981 !important;
+  --tw-gradient-to: rgb(16 185 129 / 0) !important;
+  --tw-gradient-stops:
+    var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.to-emerald-600 {
+  --tw-gradient-to: #059669 !important;
+}
+
+.atm-type-icon.bg-gradient-to-r.from-green-500.to-emerald-600 {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+}
+
+/* --- Listicle Form Specific Styles --- */
+.atm-form-container .components-range-control__wrapper {
+  margin-bottom: 1.5rem;
+
+  .components-range-control__track {
+    background-color: #e2e8f0 !important;
+    height: 8px !important;
+    border-radius: 4px !important;
+  }
+
+  .components-range-control__progress {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    height: 8px !important;
+    border-radius: 4px !important;
+  }
+
+  .components-range-control__thumb {
+    background: #10b981 !important;
+    border: 3px solid white !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+
+    &:focus {
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3) !important;
+      outline: none !important;
+    }
+
+    &:hover {
+      transform: scale(1.1) !important;
+      transition: transform 0.2s ease !important;
+    }
+  }
+}
+
+/* --- Enhance Checkbox Styling for Listicle Options --- */
+.atm-form-container .components-checkbox-control {
+  .components-checkbox-control__input[type="checkbox"] {
+    width: 20px !important;
+    height: 20px !important;
+    accent-color: #10b981 !important;
+    cursor: pointer !important;
+    border-radius: 4px !important;
+
+    &:checked {
+      background-color: #10b981 !important;
+      border-color: #10b981 !important;
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+      outline: none !important;
+    }
+  }
+
+  .components-checkbox-control__label {
+    color: #374151 !important;
+    font-weight: 500 !important;
+    margin-left: 8px !important;
+    cursor: pointer !important;
+    user-select: none !important;
+  }
+}
+
+/* --- Enhanced Button for Listicle --- */
+.atm-form-container .components-button.is-primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+  }
+
+  svg {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2)) !important;
+  }
+}
+
+/* --- Responsive Grid Improvements --- */
+@media (max-width: 768px) {
+  .atm-type-cards {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .atm-type-card {
+    padding: 16px !important;
+    gap: 12px !important;
+  }
+
+  .atm-type-icon {
+    width: 40px !important;
+    height: 40px !important;
+
+    svg {
+      width: 20px !important;
+      height: 20px !important;
+    }
+  }
+}
+
+/* --- Loading State Enhancements --- */
+.atm-form-container .components-button:disabled {
+  .components-spinner {
+    margin-right: 8px !important;
+    margin-left: 0 !important;
+  }
+}
+
+/* --- Status Message Enhancements --- */
+.atm-status-message {
+  animation: atm-fade-in 0.3s ease-in-out !important;
+
+  &.success {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+    border-left: 4px solid #10b981 !important;
+  }
+
+  &.error {
+    background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%) !important;
+    border-left: 4px solid #ef4444 !important;
+  }
+
+  &.info {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    border-left: 4px solid #3b82f6 !important;
+  }
+}
+
+@keyframes atm-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

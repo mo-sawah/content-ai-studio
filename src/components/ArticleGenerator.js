@@ -2,6 +2,7 @@
 import { useState } from "@wordpress/element";
 import CreativeForm from "./CreativeForm";
 import MultipageArticlesForm from "./MultipageArticlesForm";
+import ListicleForm from "./ListicleForm";
 
 function ArticleGenerator({ setActiveView }) {
   const [activeTab, setActiveTab] = useState("creative");
@@ -28,6 +29,28 @@ function ArticleGenerator({ setActiveView }) {
         </svg>
       ),
       gradient: "from-blue-500 to-purple-600",
+    },
+    {
+      id: "listicle",
+      title: "Listicle Articles",
+      description: "Create numbered lists and top 10 style content",
+      icon: (
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 7h.01M9 12h.01m0 4h.01m3-6h4m-4 4h4m2-5h.01M21 12h.01"
+          />
+        </svg>
+      ),
+      gradient: "from-green-500 to-emerald-600",
     },
     {
       id: "multipage",
@@ -81,6 +104,7 @@ function ArticleGenerator({ setActiveView }) {
       {/* Content based on selected type */}
       <div className="atm-tab-content">
         {activeTab === "creative" && <CreativeForm />}
+        {activeTab === "listicle" && <ListicleForm />}
         {activeTab === "multipage" && <MultipageArticlesForm />}
       </div>
     </div>
