@@ -217,12 +217,28 @@ function CreativeForm() {
         throw new Error(contentResponse.data);
       }
 
+      // ADD DEBUG LOGS
+      console.log("ATM Debug - Response data:", contentResponse.data);
+      console.log(
+        "ATM Debug - Subtitle received:",
+        contentResponse.data.subtitle
+      );
+
       updateEditorContent(
         finalTitle,
         contentResponse.data.article_content,
         contentResponse.data.subtitle || ""
       );
       setStatusMessage("✅ Article content inserted!");
+
+      // ADD SUBTITLE SAVING LOGIC
+      if (contentResponse.data.subtitle) {
+        setStatusMessage(
+          "✅ Article inserted! Saving post to apply subtitle..."
+        );
+        await savePost();
+        setStatusMessage("✅ Article and subtitle saved!");
+      }
 
       if (generateImage) {
         setStatusMessage("Saving post...");
@@ -247,7 +263,7 @@ function CreativeForm() {
     } catch (error) {
       console.error("Generation error:", error);
       alert("Error: " + error.message);
-      setStatusMessage("❌ Generation failed. Please try again.");
+      setStatusMessage("⚠ Generation failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -358,7 +374,7 @@ function CreativeForm() {
           className={`atm-status-message ${
             statusMessage.includes("✅")
               ? "success"
-              : statusMessage.includes("❌")
+              : statusMessage.includes("⚠")
                 ? "error"
                 : "info"
           }`}

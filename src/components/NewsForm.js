@@ -6,6 +6,7 @@ import {
   TextControl,
   CheckboxControl,
   DropdownMenu,
+  TextareaControl,
 } from "@wordpress/components";
 import CustomSpinner from "./common/CustomSpinner";
 import { chevronDown } from "@wordpress/icons";
@@ -16,6 +17,7 @@ const callAjax = (action, data) =>
     type: "POST",
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
+
 const updateEditorContent = (title, markdownContent, subtitle) => {
   const isBlockEditor = document.body.classList.contains("block-editor-page");
   const htmlContent = window.marked
@@ -144,6 +146,10 @@ function NewsForm() {
 
       if (!response.success) throw new Error(response.data);
 
+      // ADD DEBUG LOGS
+      console.log("ATM Debug - Response data:", response.data);
+      console.log("ATM Debug - Subtitle received:", response.data.subtitle);
+
       setStatusMessage("Writing article...");
       updateEditorContent(
         response.data.article_title,
@@ -152,7 +158,6 @@ function NewsForm() {
       );
       setStatusMessage("✅ News article inserted!");
 
-      // ADD THIS
       if (response.data.subtitle) {
         setStatusMessage(
           "✅ News article inserted! Saving post to apply subtitle..."
@@ -221,12 +226,8 @@ function NewsForm() {
         onChange={(isChecked) => {
           setGenerateImage(isChecked);
           if (isChecked) {
-            // Pre-fill the prompt when the box is checked
-            const defaultPrompt = `Create a highly photorealistic image that visually represents the following article title in the most accurate and engaging way:\n\n"{{article_title}}"\n\nGuidelines:\n- Style: photorealistic, ultra-realistic, natural lighting\n- Composition: clear, well-framed subject that directly illustrates the article title\n- Avoid: text, logos, watermarks, artistic/cartoon styles\n- Aspect ratio: 16:9 (suitable for a featured article image)\n- Quality: high-resolution, detailed textures, realistic colors`;
-            const finalTitle = title || keyword; // Use title if available, fallback to keyword
-            setImagePrompt(
-              defaultPrompt.replace("{{article_title}}", finalTitle)
-            );
+            const defaultPrompt = `Create a highly photorealistic image that visually represents the following news topic: "${topic}"\n\nGuidelines:\n- Style: photorealistic, ultra-realistic, natural lighting\n- Composition: clear, well-framed subject that directly illustrates the topic\n- Avoid: text, logos, watermarks, artistic/cartoon styles\n- Aspect ratio: 16:9 (suitable for a featured article image)\n- Quality: high-resolution, detailed textures, realistic colors`;
+            setImagePrompt(defaultPrompt);
           }
         }}
         disabled={isLoading || isSaving}
@@ -246,14 +247,14 @@ function NewsForm() {
       <Button
         isPrimary
         onClick={handleGenerate}
-        disabled={isLoading || isSaving || (!keyword && !title)}
+        disabled={isLoading || isSaving || !topic}
       >
         {isLoading || isSaving ? (
           <>
             <CustomSpinner /> Generating...
           </>
         ) : (
-          "Generate Creative Article"
+          "Generate News Article"
         )}
       </Button>
       {statusMessage && <p className="atm-status-message">{statusMessage}</p>}

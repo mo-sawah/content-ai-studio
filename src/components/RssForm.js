@@ -1,17 +1,17 @@
 // src/components/RssForm.js
 import { useState } from "@wordpress/element";
-import { useDispatch, useSelect } from "@wordpress/data"; // <-- ADD THIS
+import { useDispatch, useSelect } from "@wordpress/data";
 import { Button, TextControl, CheckboxControl } from "@wordpress/components";
-import { external } from "@wordpress/icons"; // <-- ADD THIS IMPORT
+import { external } from "@wordpress/icons";
 import CustomSpinner from "./common/CustomSpinner";
 
-// We can move these helpers to a shared file later
 const callAjax = (action, data) =>
   jQuery.ajax({
     url: atm_studio_data.ajax_url,
     type: "POST",
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
+
 const updateEditorContent = (title, markdownContent, subtitle) => {
   const isBlockEditor = document.body.classList.contains("block-editor-page");
   const htmlContent = window.marked
@@ -125,6 +125,11 @@ function RssForm() {
       });
 
       if (!response.success) throw new Error(response.data);
+
+      // ADD DEBUG LOGS
+      console.log("ATM Debug - Response data:", response.data);
+      console.log("ATM Debug - Subtitle received:", response.data.subtitle);
+
       updateEditorContent(
         response.data.article_title,
         response.data.article_content,
@@ -135,7 +140,6 @@ function RssForm() {
       // Remove the item from the list
       setResults(results.filter((_, i) => i !== index));
 
-      // ADD THIS
       if (response.data.subtitle) {
         setStatusMessage(
           `✅ Article generated! Saving post to apply subtitle...`
@@ -207,13 +211,8 @@ function RssForm() {
 
       {results.length > 0 && (
         <div className="atm-video-results-list">
-          {" "}
-          {/* Reusing the list container class */}
           {results.map((article, index) => (
             <div key={article.guid} className="atm-video-result-item">
-              {" "}
-              {/* Use the same card class */}
-              {/* A placeholder for where a thumbnail would go */}
               <div className="atm-video-thumbnail">
                 {article.image ? (
                   <img src={article.image} alt={article.title} />
@@ -232,7 +231,6 @@ function RssForm() {
                   {article.description.substring(0, 150)}...
                 </p>
 
-                {/* New action buttons section */}
                 <div className="atm-video-actions">
                   <Button
                     isSecondary
@@ -246,7 +244,7 @@ function RssForm() {
                     isPrimary
                     onClick={() => handleGenerateFromRss(article, index)}
                     disabled={isLoading || article.isGenerating}
-                    className="is-embed" // Use the same class as the primary action button
+                    className="is-embed"
                   >
                     {article.isGenerating ? (
                       <>
