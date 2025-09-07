@@ -84,16 +84,16 @@ jQuery(document).ready(function ($) {
           data: {
             action: "generate_featured_image",
             post_id: postId,
-            prompt: "", // Send empty prompt to use automatic prompt on the backend
+            prompt: "", // This is OK now - the backend will handle empty prompts
             nonce: atm_ajax.nonce,
           },
           success: function (imgResponse) {
             if (imgResponse.success) {
-              // Display the prompt in an alert box if it exists
+              // Display the generated prompt if it exists
               if (imgResponse.data.generated_prompt) {
-                alert(
-                  "AI-Generated Image Prompt:\n\n" +
-                    imgResponse.data.generated_prompt
+                console.log(
+                  "Generated Image Prompt:",
+                  imgResponse.data.generated_prompt
                 );
               }
 

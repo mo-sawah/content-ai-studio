@@ -963,13 +963,13 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
 
     public function generate_featured_image() {
         if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
+            wp_send_json_error('Please activate your license key.');
         }
         check_ajax_referer('atm_nonce', 'nonce');
         @ini_set('max_execution_time', 300);
         try {
             $post_id = intval($_POST['post_id']);
-            $prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : ''; // This now comes directly from the user
+            $prompt = isset($_POST['prompt']) ? sanitize_textarea_field(stripslashes($_POST['prompt'])) : '';
             $size_override = isset($_POST['size']) ? sanitize_text_field($_POST['size']) : '';
             $quality_override = isset($_POST['quality']) ? sanitize_text_field($_POST['quality']) : '';
             $provider_override = isset($_POST['provider']) ? sanitize_text_field($_POST['provider']) : '';
@@ -979,11 +979,12 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 throw new Exception("Post not found.");
             }
 
+            // If no prompt provided, generate one automatically from the post title
             if (empty(trim($prompt))) {
-                throw new Exception('Image prompt cannot be empty.');
+                $prompt = ATM_API::get_default_image_prompt();
             }
 
-            // We use the prompt directly, replacing any shortcodes it might contain
+            // We use the prompt, replacing any shortcodes it might contain
             $final_prompt = ATM_API::replace_prompt_shortcodes($prompt, $post);
 
             $provider = !empty($provider_override) ? $provider_override : get_option('atm_image_provider', 'openai');
@@ -1019,8 +1020,11 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             set_post_thumbnail($post_id, $attachment_id);
             $thumbnail_html = _wp_post_thumbnail_html($attachment_id, $post_id);
 
-            // We no longer need to send back the prompt since the user wrote it.
-            wp_send_json_success(['attachment_id' => $attachment_id, 'html' => $thumbnail_html]);
+            wp_send_json_success([
+                'attachment_id' => $attachment_id, 
+                'html' => $thumbnail_html,
+                'generated_prompt' => $final_prompt // Include the generated prompt for reference
+            ]);
 
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
