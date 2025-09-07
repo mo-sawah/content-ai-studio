@@ -1623,19 +1623,6 @@ body.wp-admin .atm-content-body {
     }
   }
 
-  /* Also target any buttons that might not have components-button class */
-  button {
-    margin: 10px 0 !important;
-
-    &:first-child {
-      margin-top: 0 !important;
-    }
-
-    &:last-child {
-      margin-bottom: 0 !important;
-    }
-  }
-}
 
 /* --- Override Welcome Header Title Size --- */
 .atm-welcome-header h2 {
