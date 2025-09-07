@@ -9,23 +9,6 @@ if (!defined('ABSPATH')) {
  * Enhanced RSS Parser Class
  */
 class ATM_RSS_Parser {
-
-    /**
- * Summarizes a large block of text using a fast AI model.
- * @param string $content The long content to summarize.
- * @return string The summarized content.
- */
-
-public static function summarize_content_for_rewrite($content) {
-    $summary_prompt = 'You are a text summarization expert. Your task is to read the following article content and create a concise but comprehensive summary. The summary should capture all the main points, key facts, and the overall conclusion of the article. Output only the summary text. The article is below:';
-
-    // Use a fast and cost-effective model specifically for this summarization task.
-    return self::enhance_content_with_openrouter(
-        ['content' => $content],
-        $summary_prompt,
-        'anthropic/claude-3-haiku' 
-    );
-}
     
     /**
      * Parse RSS feeds with advanced content extraction and keyword matching
@@ -70,7 +53,7 @@ public static function summarize_content_for_rewrite($content) {
     }
     
     /**
-     * Fetch RSS content with cURL for better control
+     * Extract image from RSS item
      */
     private static function extract_image_from_rss_item($item) {
         // 1. Check for Media RSS (media:content)
@@ -92,7 +75,6 @@ public static function summarize_content_for_rewrite($content) {
 
         return ''; // Return empty if no image is found
     }
-
 
     private static function fetch_rss_content($url) {
         $args = array(
@@ -183,7 +165,6 @@ public static function summarize_content_for_rewrite($content) {
         // Extract title
         $title = (string) ($item->title ?? '');
         
-        // ...
         // Extract link
         if (isset($item->link)) {
             if (is_string($item->link)) {
@@ -196,12 +177,10 @@ public static function summarize_content_for_rewrite($content) {
         // Extract GUID
         $guid = (string) ($item->guid ?? $item->id ?? $link);
 
-        // --- FIX: Add fallback to use GUID if link is missing ---
+        // Add fallback to use GUID if link is missing
         if (empty($link) && filter_var($guid, FILTER_VALIDATE_URL)) {
             $link = $guid;
         }
-        // --- END FIX ---
-        // ...
         
         // Extract date
         $date = (string) ($item->pubDate ?? $item->published ?? $item->updated ?? '');
@@ -245,7 +224,7 @@ public static function summarize_content_for_rewrite($content) {
         }
         
         return [
-            'image' => self::extract_image_from_rss_item($item), // <-- ADD THIS LINE
+            'image' => self::extract_image_from_rss_item($item),
             'title' => trim($title),
             'link' => trim($link),
             'description' => trim(strip_tags($description)),
@@ -361,17 +340,23 @@ public static function summarize_content_for_rewrite($content) {
 class ATM_API {
 
     /**
-     * Resolves a redirect URL to find its final destination.
-     *
-     * @param string $url The initial URL to check.
-     * @return string The final destination URL, or the original URL if not a redirect.
-     * 
+     * Summarizes a large block of text using a fast AI model.
+     * @param string $content The long content to summarize.
+     * @return string The summarized content.
      */
+    public static function summarize_content_for_rewrite($content) {
+        $summary_prompt = 'You are a text summarization expert. Your task is to read the following article content and create a concise but comprehensive summary. The summary should capture all the main points, key facts, and the overall conclusion of the article. Output only the summary text. The article is below:';
 
-    /**
-     * Generate 5–10 lifelike comments grounded in the given article content.
-     * Output normalized array of objects: [{author_name, text, parent_index|null}]
-     */
+        // Use a fast and cost-effective model specifically for this summarization task.
+        return self::enhance_content_with_openrouter(
+            ['content' => $content],
+            $summary_prompt,
+            'anthropic/claude-3-haiku',
+            false, // json_mode
+            false  // enable_web_search
+        );
+    }
+
     /**
      * Generate lifelike comments grounded in article content.
      * Returns a list of [{author_name, text, parent_index|null}]
@@ -481,7 +466,7 @@ Generate exactly $count items. No extra commentary or code fences.";
         return array_values(array_slice($out, 0, $count));
     }
 
-    // --- NEW: MULTIPAGE ARTICLE FUNCTIONS ---
+    // --- MULTIPAGE ARTICLE FUNCTIONS ---
     public static function generate_multipage_title($keyword, $page_count, $model_override) {
         $system_prompt = "You are an expert SEO content strategist. Your task is to generate a single, compelling, SEO-friendly title for a {$page_count}-page article about '{$keyword}'. The title should be catchy and clearly indicate that the content is a comprehensive, multi-part guide. Return only the title itself, with no extra text or quotation marks.";
         
@@ -555,7 +540,6 @@ Generate exactly $count items. No extra commentary or code fences.";
             $enable_web_search
         );
     }
-    // --- END NEW ---
 
     public static function extract_article_links_from_html($html_content, $base_url) {
         $system_prompt = "You are a web scraping expert. Analyze the following HTML content from the base URL `{$base_url}`. Your task is to extract all the hyperlinks (`<a>` tags) that appear to lead to individual news articles.
@@ -598,7 +582,6 @@ Generate exactly $count items. No extra commentary or code fences.";
     }
     
     public static function generate_takeaways_from_content($content, $model_override = '') {
-        // --- PROMPT IS UPDATED FOR CONCISENESS AND TO PREVENT INTRODUCTORY TEXT ---
         $system_prompt = "You are an expert editor. Your task is to analyze the following article and extract the 5 most important key takeaways.
 
         CRITICAL RULES:
@@ -610,7 +593,6 @@ Generate exactly $count items. No extra commentary or code fences.";
         
         $model = !empty($model_override) ? $model_override : get_option('atm_content_model', 'anthropic/claude-3-haiku');
 
-        // --- CALL THE API WITH WEB SEARCH DISABLED ---
         return self::enhance_content_with_openrouter(
             ['content' => $content],
             $system_prompt,
@@ -621,103 +603,101 @@ Generate exactly $count items. No extra commentary or code fences.";
     }
     
     public static function generate_image_with_blockflow($prompt, $model_override = '', $size_override = '') {
-    $api_key = get_option('atm_blockflow_api_key');
-    if (empty($api_key)) {
-        throw new Exception('BlockFlow API key is not configured.');
-    }
+        $api_key = get_option('atm_blockflow_api_key');
+        if (empty($api_key)) {
+            throw new Exception('BlockFlow API key is not configured.');
+        }
 
-    $model = !empty($model_override) ? $model_override : get_option('atm_flux_model', 'flux-1-schnell');
-    $size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1024x1024');
+        $model = !empty($model_override) ? $model_override : get_option('atm_flux_model', 'flux-1-schnell');
+        $size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1024x1024');
 
-    // Convert '1024x1024' to '1:1' for the API's aspect_ratio parameter
-    $aspect_ratio_map = [
-        '1024x1024' => '1:1',
-        '1792x1024' => '16:9',
-        '1024x1792' => '9:16'
-    ];
-    $aspect_ratio = isset($aspect_ratio_map[$size]) ? $aspect_ratio_map[$size] : '1:1';
+        // Convert '1024x1024' to '1:1' for the API's aspect_ratio parameter
+        $aspect_ratio_map = [
+            '1024x1024' => '1:1',
+            '1792x1024' => '16:9',
+            '1024x1792' => '9:16'
+        ];
+        $aspect_ratio = isset($aspect_ratio_map[$size]) ? $aspect_ratio_map[$size] : '1:1';
 
-    // --- 1. Initial Request to the Correct Endpoint ---
-    $initial_response = wp_remote_post('https://api.bfl.ai/v1/' . $model, [
-        'headers' => [
-            'x-key' => $api_key,
-            'Content-Type'  => 'application/json',
-        ],
-        'body'    => json_encode([
-            'prompt' => self::enhance_image_prompt($prompt),
-            'aspect_ratio' => $aspect_ratio
-        ]),
-        'timeout' => 30
-    ]);
-
-    if (is_wp_error($initial_response) || wp_remote_retrieve_response_code($initial_response) !== 200) {
-        throw new Exception('BlockFlow API initial request failed: ' . wp_remote_retrieve_body($initial_response));
-    }
-
-    $initial_data = json_decode(wp_remote_retrieve_body($initial_response), true);
-    if (!isset($initial_data['polling_url'])) {
-        throw new Exception('BlockFlow API did not return a polling URL.');
-    }
-    $polling_url = $initial_data['polling_url'];
-
-    // --- 2. Polling for the Result ---
-    $final_result = null;
-    $max_attempts = 180; // Poll for a maximum of 90 seconds (180 * 0.5s)
-    $attempts = 0;
-
-    while ($attempts < $max_attempts) {
-        usleep(500000); // Wait for 0.5 seconds before checking again
-
-        $polling_response = wp_remote_get($polling_url, [
-            'headers' => ['x-key' => $api_key],
-            'timeout' => 15
+        // Initial Request to the Correct Endpoint
+        $initial_response = wp_remote_post('https://api.bfl.ai/v1/' . $model, [
+            'headers' => [
+                'x-key' => $api_key,
+                'Content-Type'  => 'application/json',
+            ],
+            'body'    => json_encode([
+                'prompt' => self::enhance_image_prompt($prompt),
+                'aspect_ratio' => $aspect_ratio
+            ]),
+            'timeout' => 30
         ]);
 
-        if (is_wp_error($polling_response)) continue; // Try again on connection error
-
-        $result_data = json_decode(wp_remote_retrieve_body($polling_response), true);
-
-        if (isset($result_data['status']) && $result_data['status'] === 'Ready') {
-            $final_result = $result_data;
-            break;
+        if (is_wp_error($initial_response) || wp_remote_retrieve_response_code($initial_response) !== 200) {
+            throw new Exception('BlockFlow API initial request failed: ' . wp_remote_retrieve_body($initial_response));
         }
 
-        if (isset($result_data['status']) && in_array($result_data['status'], ['Error', 'Failed'])) {
-            throw new Exception('BlockFlow image generation failed with status: ' . $result_data['status']);
+        $initial_data = json_decode(wp_remote_retrieve_body($initial_response), true);
+        if (!isset($initial_data['polling_url'])) {
+            throw new Exception('BlockFlow API did not return a polling URL.');
+        }
+        $polling_url = $initial_data['polling_url'];
+
+        // Polling for the Result
+        $final_result = null;
+        $max_attempts = 180; // Poll for a maximum of 90 seconds (180 * 0.5s)
+        $attempts = 0;
+
+        while ($attempts < $max_attempts) {
+            usleep(500000); // Wait for 0.5 seconds before checking again
+
+            $polling_response = wp_remote_get($polling_url, [
+                'headers' => ['x-key' => $api_key],
+                'timeout' => 15
+            ]);
+
+            if (is_wp_error($polling_response)) continue; // Try again on connection error
+
+            $result_data = json_decode(wp_remote_retrieve_body($polling_response), true);
+
+            if (isset($result_data['status']) && $result_data['status'] === 'Ready') {
+                $final_result = $result_data;
+                break;
+            }
+
+            if (isset($result_data['status']) && in_array($result_data['status'], ['Error', 'Failed'])) {
+                throw new Exception('BlockFlow image generation failed with status: ' . $result_data['status']);
+            }
+
+            $attempts++;
         }
 
-        $attempts++;
+        if (is_null($final_result)) {
+            throw new Exception('BlockFlow image generation timed out.');
+        }
+
+        if (!isset($final_result['result']['sample'])) {
+            throw new Exception('BlockFlow API response did not contain a final image URL.');
+        }
+
+        $image_download_url = $final_result['result']['sample'];
+
+        // Download the temporary image to our server
+        $ajax_handler = new ATM_Ajax();
+        $attachment_id = $ajax_handler->set_image_from_url($image_download_url, 0);
+
+        if (is_wp_error($attachment_id)) {
+            throw new Exception('Failed to download the final image from BlockFlow: ' . $attachment_id->get_error_message());
+        }
+
+        // We can't return a URL, so we must return the actual image data.
+        $image_path = get_attached_file($attachment_id);
+        $image_data = file_get_contents($image_path);
+        wp_delete_attachment($attachment_id, true); // Clean up the temporary media library entry
+
+        return $image_data;
     }
 
-    if (is_null($final_result)) {
-        throw new Exception('BlockFlow image generation timed out.');
-    }
-
-    if (!isset($final_result['result']['sample'])) {
-        throw new Exception('BlockFlow API response did not contain a final image URL.');
-    }
-
-    $image_download_url = $final_result['result']['sample'];
-
-    // --- 3. Download the temporary image to our server ---
-    // This reuses the existing function in your plugin for downloading images.
-    // We are passing a fake post ID of 0 because we just need the raw image data.
-    $ajax_handler = new ATM_Ajax();
-    $attachment_id = $ajax_handler->set_image_from_url($image_download_url, 0);
-
-    if (is_wp_error($attachment_id)) {
-        throw new Exception('Failed to download the final image from BlockFlow: ' . $attachment_id->get_error_message());
-    }
-
-    // We can't return a URL, so we must return the actual image data.
-    $image_path = get_attached_file($attachment_id);
-    $image_data = file_get_contents($image_path);
-    wp_delete_attachment($attachment_id, true); // Clean up the temporary media library entry
-
-    return $image_data;
-}
-
-    public static function generate_chart_config_from_prompt($prompt) {
+public static function generate_chart_config_from_prompt($prompt) {
         $system_prompt = "You are an expert data visualization assistant specializing in Apache ECharts. Your task is to generate a valid ECharts JSON configuration object based on the user's request.
 
 Follow these rules strictly:
@@ -736,7 +716,8 @@ Follow these rules strictly:
             ['content' => $prompt],
             $system_prompt,
             $model,
-            true // Enable JSON mode
+            true, // Enable JSON mode
+            true  // Enable web search
         );
 
         $result = json_decode($raw_response, true);
@@ -749,7 +730,6 @@ Follow these rules strictly:
     }
 
     public static function get_youtube_autocomplete_suggestions($query) {
-        // Caching has been removed.
         $url = 'https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=' . urlencode($query);
         $response = wp_remote_get($url);
 
@@ -769,8 +749,6 @@ Follow these rules strictly:
         if (empty($api_key)) {
             throw new Exception('YouTube API key is not configured in settings.');
         }
-        
-        // Caching has been removed to ensure fresh results.
 
         $api_params = [
             'part' => 'snippet',
@@ -788,7 +766,7 @@ Follow these rules strictly:
             $api_params['videoDuration'] = $filters['videoDuration'];
         }
 
-        // --- THIS IS THE FIX for the date filter logic ---
+        // Date filter logic
         if (!empty($filters['publishedAfter'])) {
             $interval_map = [
                 'hour'  => '-1 hour',
@@ -800,10 +778,8 @@ Follow these rules strictly:
             
             if (isset($interval_map[$filters['publishedAfter']])) {
                 $interval = $interval_map[$filters['publishedAfter']];
-                // Use current_time to get a timestamp respecting the WordPress timezone setting.
                 $timestamp = current_time('timestamp');
                 $past_timestamp = strtotime($interval, $timestamp);
-                // wp_date() ensures the final format is also timezone-aware.
                 $api_params['publishedAfter'] = wp_date(DateTime::RFC3339, $past_timestamp);
             }
         }
@@ -842,17 +818,17 @@ Follow these rules strictly:
         return $results;
     }
 
-
     public static function translate_text($text, $target_language) {
         $system_prompt = "You are an expert multilingual translator. Your task is to automatically detect the source language of the text provided by the user and then translate it accurately into " . $target_language . ". Provide ONLY the translated text, with no extra commentary, introductions, or quotation marks.";
         
-        // We can use a fast and efficient model for this task.
         $model = get_option('atm_translation_model', 'anthropic/claude-3-haiku');
         
         return self::enhance_content_with_openrouter(
             ['content' => $text],
             $system_prompt,
-            $model
+            $model,
+            false, // json_mode
+            false  // enable_web_search
         );
     }
 
@@ -872,7 +848,8 @@ Follow these rules strictly:
             ['content' => $user_content],
             $system_prompt,
             $model,
-            true // Enable JSON mode
+            true, // Enable JSON mode
+            false // disable web search for translation
         );
 
         $result = json_decode($raw_response, true);
@@ -884,13 +861,7 @@ Follow these rules strictly:
         return $result;
     }
 
-    /**
- * Transcribes an audio file using the OpenAI Whisper API.
- * @param string $audio_file_path The temporary path to the uploaded audio file.
- * @return string The transcribed text.
- * @throws Exception On API error.
- */
-public static function transcribe_audio_with_whisper($audio_file_path) {
+    public static function transcribe_audio_with_whisper($audio_file_path) {
         $api_key = get_option('atm_openai_api_key');
         if (empty($api_key)) {
             throw new Exception('OpenAI API key not configured.');
@@ -913,8 +884,6 @@ public static function transcribe_audio_with_whisper($audio_file_path) {
         $data .= '--' . $boundary . "\r\n";
         $data .= 'Content-Disposition: form-data; name="model"' . "\r\n\r\n";
         $data .= 'whisper-1' . "\r\n";
-        
-        // Prompt logic has been removed
         
         // Add file field
         $data .= '--' . $boundary . "\r\n";
@@ -960,248 +929,226 @@ public static function transcribe_audio_with_whisper($audio_file_path) {
     }
     
     public static function get_elevenlabs_voices() {
-    $api_key = get_option('atm_elevenlabs_api_key');
-    if (empty($api_key)) {
-        return []; // Return empty if no key
-    }
-
-    $transient_key = 'atm_elevenlabs_voices';
-    $cached_voices = get_transient($transient_key);
-    if ($cached_voices) {
-        return $cached_voices;
-    }
-
-    $response = wp_remote_get('https://api.elevenlabs.io/v1/voices', [
-        'headers' => ['xi-api-key' => $api_key],
-        'timeout' => 20
-    ]);
-
-    if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
-        error_log('ElevenLabs API Error: Failed to fetch voices.');
-        return [];
-    }
-
-    $body = json_decode(wp_remote_retrieve_body($response), true);
-    $voices = [];
-    if (isset($body['voices'])) {
-        foreach ($body['voices'] as $voice) {
-            $voices[$voice['voice_id']] = $voice['name'];
+        $api_key = get_option('atm_elevenlabs_api_key');
+        if (empty($api_key)) {
+            return []; // Return empty if no key
         }
+
+        $transient_key = 'atm_elevenlabs_voices';
+        $cached_voices = get_transient($transient_key);
+        if ($cached_voices) {
+            return $cached_voices;
+        }
+
+        $response = wp_remote_get('https://api.elevenlabs.io/v1/voices', [
+            'headers' => ['xi-api-key' => $api_key],
+            'timeout' => 20
+        ]);
+
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+            error_log('ElevenLabs API Error: Failed to fetch voices.');
+            return [];
+        }
+
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        $voices = [];
+        if (isset($body['voices'])) {
+            foreach ($body['voices'] as $voice) {
+                $voices[$voice['voice_id']] = $voice['name'];
+            }
+        }
+
+        set_transient($transient_key, $voices, 6 * HOUR_IN_SECONDS); // Cache for 6 hours
+        return $voices;
     }
 
-    set_transient($transient_key, $voices, 6 * HOUR_IN_SECONDS); // Cache for 6 hours
-    return $voices;
-}
+    public static function generate_audio_with_elevenlabs($script_chunk, $voice_id) {
+        $api_key = get_option('atm_elevenlabs_api_key');
+        if (empty($api_key)) {
+            throw new Exception('ElevenLabs API key not configured');
+        }
 
-public static function generate_audio_with_elevenlabs($script_chunk, $voice_id) {
-    $api_key = get_option('atm_elevenlabs_api_key');
-    if (empty($api_key)) {
-        throw new Exception('ElevenLabs API key not configured');
+        $endpoint_url = 'https://api.elevenlabs.io/v1/text-to-speech/' . $voice_id;
+
+        $response = wp_remote_post($endpoint_url, [
+            'headers' => [
+                'xi-api-key'   => $api_key,
+                'Content-Type' => 'application/json',
+                'Accept'       => 'audio/mpeg'
+            ],
+            'body'    => json_encode([
+                'text'     => $script_chunk,
+                'model_id' => 'eleven_multilingual_v2'
+            ]),
+            'timeout' => 300
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('ElevenLabs API call failed: ' . $response->get_error_message());
+        }
+
+        $audio_content = wp_remote_retrieve_body($response);
+
+        if (wp_remote_retrieve_response_code($response) !== 200) {
+            $error_body = json_decode($audio_content, true);
+            $error_message = isset($error_body['detail']['message']) ? $error_body['detail']['message'] : 'An unknown API error occurred.';
+            error_log('ElevenLabs API Error: ' . $audio_content);
+            throw new Exception('ElevenLabs API Error: ' . $error_message);
+        }
+
+        return $audio_content;
     }
 
-    $endpoint_url = 'https://api.elevenlabs.io/v1/text-to-speech/' . $voice_id;
+    public static function generate_image_with_google_imagen($prompt, $size_override = '') {
+        $api_key = get_option('atm_google_api_key');
+        if (empty($api_key)) {
+            throw new Exception('Google AI API key is not configured.');
+        }
 
-    $response = wp_remote_post($endpoint_url, [
-        'headers' => [
-            'xi-api-key'   => $api_key,
-            'Content-Type' => 'application/json',
-            'Accept'       => 'audio/mpeg'
-        ],
-        'body'    => json_encode([
-            'text'     => $script_chunk,
-            'model_id' => 'eleven_multilingual_v2'
-        ]),
-        'timeout' => 300
-    ]);
+        $model = 'imagen-4.0-generate-001';
+        $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':predict';
 
-    if (is_wp_error($response)) {
-        throw new Exception('ElevenLabs API call failed: ' . $response->get_error_message());
-    }
-
-    $audio_content = wp_remote_retrieve_body($response);
-
-    if (wp_remote_retrieve_response_code($response) !== 200) {
-        $error_body = json_decode($audio_content, true);
-        $error_message = isset($error_body['detail']['message']) ? $error_body['detail']['message'] : 'An unknown API error occurred.';
-        error_log('ElevenLabs API Error: ' . $audio_content);
-        throw new Exception('ElevenLabs API Error: ' . $error_message);
-    }
-
-    return $audio_content;
-}
-    
-    /**
- * Enhances a simple image prompt into a detailed one, like ChatGPT.
- */
-public static function generate_image_with_google_imagen($prompt, $size_override = '') {
-    $api_key = get_option('atm_google_api_key');
-    if (empty($api_key)) {
-        throw new Exception('Google AI API key is not configured.');
-    }
-
-    // CORRECT: Use the :predict endpoint for the specific Imagen model
-    $model = 'imagen-4.0-generate-001';
-    $endpoint_url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':predict';
-
-    $request_body = [
-        'instances' => [
-            [
-                'prompt' => $prompt
+        $request_body = [
+            'instances' => [
+                [
+                    'prompt' => $prompt
+                ]
+            ],
+            'parameters' => [
+                'sampleCount' => 1
             ]
-        ],
-        'parameters' => [
-            'sampleCount' => 1
-        ]
-    ];
+        ];
 
-    // Handle aspect ratio
-    if (!empty($size_override)) {
-        switch ($size_override) {
-            case '1024x1024':
-                $request_body['parameters']['aspectRatio'] = '1:1';
-                break;
-            case '1792x1024':
-                $request_body['parameters']['aspectRatio'] = '16:9';
-                break;
-            case '1024x1792':
-                $request_body['parameters']['aspectRatio'] = '9:16';
-                break;
+        // Handle aspect ratio
+        if (!empty($size_override)) {
+            switch ($size_override) {
+                case '1024x1024':
+                    $request_body['parameters']['aspectRatio'] = '1:1';
+                    break;
+                case '1792x1024':
+                    $request_body['parameters']['aspectRatio'] = '16:9';
+                    break;
+                case '1024x1792':
+                    $request_body['parameters']['aspectRatio'] = '9:16';
+                    break;
+            }
         }
-    }
 
-    $response = wp_remote_post($endpoint_url, [
-        'headers' => [
-            'x-goog-api-key' => $api_key, // Use the correct header for this endpoint
-            'Content-Type' => 'application/json'
-        ],
-        'body' => json_encode($request_body),
-        'timeout' => 120
-    ]);
+        $response = wp_remote_post($endpoint_url, [
+            'headers' => [
+                'x-goog-api-key' => $api_key,
+                'Content-Type' => 'application/json'
+            ],
+            'body' => json_encode($request_body),
+            'timeout' => 120
+        ]);
 
-    if (is_wp_error($response)) {
-        throw new Exception('Google Imagen API call failed: ' . $response->get_error_message());
-    }
+        if (is_wp_error($response)) {
+            throw new Exception('Google Imagen API call failed: ' . $response->get_error_message());
+        }
 
-    $body = wp_remote_retrieve_body($response);
-    $response_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        $response_code = wp_remote_retrieve_response_code($response);
 
-    if ($response_code !== 200) {
+        if ($response_code !== 200) {
+            $result = json_decode($body, true);
+            $error_message = 'HTTP ' . $response_code;
+            if (isset($result['error']['message'])) {
+                $error_message .= ': ' . $result['error']['message'];
+            }
+            throw new Exception('Google Imagen Error: ' . $error_message);
+        }
+
         $result = json_decode($body, true);
-        $error_message = 'HTTP ' . $response_code;
-        if (isset($result['error']['message'])) {
-            $error_message .= ': ' . $result['error']['message'];
+
+        if (isset($result['predictions'][0]['bytesBase64Encoded'])) {
+            return base64_decode($result['predictions'][0]['bytesBase64Encoded']);
         }
-        throw new Exception('Google Imagen Error: ' . $error_message);
+
+        $error_details = isset($result['error']['message']) ? $result['error']['message'] : 'The API response did not contain image data.';
+        throw new Exception('Google Imagen Error: ' . $error_details);
     }
 
-    $result = json_decode($body, true);
-
-    if (isset($result['predictions'][0]['bytesBase64Encoded'])) {
-        return base64_decode($result['predictions'][0]['bytesBase64Encoded']);
-    }
-
-    // Add a fallback for unexpected responses
-    $error_details = isset($result['error']['message']) ? $result['error']['message'] : 'The API response did not contain image data.';
-    throw new Exception('Google Imagen Error: ' . $error_details);
-}
-
-// STEP 2: Add this helper function for prompt enhancement (optional but recommended)
-private static function enhance_image_prompt($prompt) {
-    // Simple prompt enhancement - you can make this more sophisticated
-    if (strlen($prompt) < 50) {
-        return $prompt . ', high quality, detailed, professional';
-    }
-    return $prompt;
-}
-
-// STEP 3: Update your generate_image_with_openai function to use prompt enhancement too
-public static function generate_image_with_openai($prompt, $size_override = '', $quality_override = '') {
-    $api_key = get_option('atm_openai_api_key');
-    if (empty($api_key)) {
-        throw new Exception('OpenAI API key not configured in settings.');
-    }
-
-    // Enhance the prompt for better results
-    $enhanced_prompt = self::enhance_image_prompt($prompt);
-    error_log("Enhanced DALL-E Prompt: " . $enhanced_prompt);
-
-    $image_size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1792x1024');
-    $image_quality = !empty($quality_override) ? $quality_override : get_option('atm_image_quality', 'hd');
-
-    $post_data = json_encode([
-        'model'   => 'dall-e-3',
-        'prompt'  => $enhanced_prompt,
-        'n'       => 1,
-        'size'    => $image_size,
-        'quality' => $image_quality,
-        'style'   => 'vivid'
-    ]);
-
-    $response = wp_remote_post('https://api.openai.com/v1/images/generations', [
-        'headers' => [
-            'Authorization' => 'Bearer ' . $api_key,
-            'Content-Type'  => 'application/json',
-        ],
-        'body'    => $post_data,
-        'timeout' => 120
-    ]);
-
-    if (is_wp_error($response)) {
-        throw new Exception('Image generation failed: ' . $response->get_error_message());
-    }
-
-    $body = wp_remote_retrieve_body($response);
-    $result = json_decode($body, true);
-    $response_code = wp_remote_retrieve_response_code($response);
-
-    if ($response_code !== 200) {
-        $error_message = 'Invalid response from OpenAI API (Code: ' . $response_code . ')';
-        if (isset($result['error']['message'])) {
-            $error_message = 'API Error: ' . $result['error']['message'];
+    private static function enhance_image_prompt($prompt) {
+        if (strlen($prompt) < 50) {
+            return $prompt . ', high quality, detailed, professional';
         }
-        error_log('OpenAI Image API Error: ' . $body);
-        throw new Exception($error_message);
+        return $prompt;
     }
 
-    if (!isset($result['data'][0]['url'])) {
-        error_log('OpenAI Image API Error: Malformed success response. ' . $body);
-        throw new Exception('Image generation succeeded but the response was invalid.');
-    }
+    public static function generate_image_with_openai($prompt, $size_override = '', $quality_override = '') {
+        $api_key = get_option('atm_openai_api_key');
+        if (empty($api_key)) {
+            throw new Exception('OpenAI API key not configured in settings.');
+        }
 
-    return $result['data'][0]['url'];
-}
+        $enhanced_prompt = self::enhance_image_prompt($prompt);
+        error_log("Enhanced DALL-E Prompt: " . $enhanced_prompt);
+
+        $image_size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1792x1024');
+        $image_quality = !empty($quality_override) ? $quality_override : get_option('atm_image_quality', 'hd');
+
+        $post_data = json_encode([
+            'model'   => 'dall-e-3',
+            'prompt'  => $enhanced_prompt,
+            'n'       => 1,
+            'size'    => $image_size,
+            'quality' => $image_quality,
+            'style'   => 'vivid'
+        ]);
+
+        $response = wp_remote_post('https://api.openai.com/v1/images/generations', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type'  => 'application/json',
+            ],
+            'body'    => $post_data,
+            'timeout' => 120
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Image generation failed: ' . $response->get_error_message());
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $result = json_decode($body, true);
+        $response_code = wp_remote_retrieve_response_code($response);
+
+        if ($response_code !== 200) {
+            $error_message = 'Invalid response from OpenAI API (Code: ' . $response_code . ')';
+            if (isset($result['error']['message'])) {
+                $error_message = 'API Error: ' . $result['error']['message'];
+            }
+            error_log('OpenAI Image API Error: ' . $body);
+            throw new Exception($error_message);
+        }
+
+        if (!isset($result['data'][0]['url'])) {
+            error_log('OpenAI Image API Error: Malformed success response. ' . $body);
+            throw new Exception('Image generation succeeded but the response was invalid.');
+        }
+
+        return $result['data'][0]['url'];
+    }
 
     public static function resolve_redirect_url($url) {
-        // Use wp_remote_head for efficiency as we only need headers.
-        // 'redirection' => 0 prevents WordPress from following the redirect automatically.
         $response = wp_remote_head($url, array('redirection' => 0));
-
-        // Check if the request was successful and returned a redirect status code.
         $response_code = wp_remote_retrieve_response_code($response);
+        
         if (!is_wp_error($response) && in_array($response_code, [301, 302, 307, 308])) {
-            // Retrieve the 'Location' header which contains the destination URL.
             $final_url = wp_remote_retrieve_header($response, 'location');
-            
-            // If we found a new URL, return it.
             if (!empty($final_url)) {
                 return $final_url;
             }
         }
 
-        // If it's not a redirect or something went wrong, return the original URL.
         return $url;
     }
 
-    /**
-     * Updated RSS parsing method that uses the advanced parser
-     */
     public static function parse_rss_feeds($feed_urls_string, $post_id, $keyword = '') {
         return ATM_RSS_Parser::parse_rss_feeds_advanced($feed_urls_string, $post_id, $keyword);
     }
     
-    /**
-     * New method for enhanced RSS search
-     */
     public static function search_rss_feeds($feed_urls_string, $keyword, $use_scraping = false) {
         return ATM_RSS_Parser::enhanced_search_feeds($feed_urls_string, $keyword, $use_scraping);
     }
@@ -1217,7 +1164,6 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         return ['title' => $title, 'content' => $content];
     }
 
-    // New Dispatcher Function
     public static function fetch_news($keyword, $source = 'newsapi', $force_fresh = false) {
         switch ($source) {
             case 'gnews':
@@ -1226,12 +1172,10 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
                 return self::fetch_news_from_guardian($keyword, $force_fresh);
             case 'newsapi':
             default:
-                // This function should already be in your file, renamed and updated
                 return self::fetch_news_from_newsapi($keyword, $force_fresh);
         }
     }
 
-    // New Function for GNews.io
     private static function fetch_news_from_gnews($keyword, $force_fresh = false) {
         $api_key = get_option('atm_gnews_api_key');
         if (empty($api_key)) throw new Exception('GNews API key is not configured.');
@@ -1245,7 +1189,7 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         }
 
         $url = 'https://gnews.io/api/v4/search?' . http_build_query([
-            'q' => '"' . $keyword . '"', // Use quotes for exact phrase matching
+            'q' => '"' . $keyword . '"',
             'in' => 'title',
             'max' => 5,
             'lang' => 'en',
@@ -1253,10 +1197,19 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
             'token' => $api_key,
         ]);
         
-        $response = wp_remote_get($url); // GNews doesn't require User-Agent
-        // ... (Error handling similar to newsapi) ...
+        $response = wp_remote_get($url);
+        
+        if (is_wp_error($response)) {
+            throw new Exception('Failed to connect to GNews API: ' . $response->get_error_message());
+        }
+        
         $body = wp_remote_retrieve_body($response);
         $result = json_decode($body, true);
+        
+        if (wp_remote_retrieve_response_code($response) !== 200) {
+            throw new Exception('Error from GNews API: ' . ($result['message'] ?? 'Unknown error'));
+        }
+        
         if (empty($result['articles'])) return '';
         
         $context = "LATEST NEWS SNIPPETS (GNews.io):\n\n";
@@ -1271,7 +1224,6 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         return $context;
     }
 
-    // New Function for The Guardian
     private static function fetch_news_from_guardian($keyword, $force_fresh = false) {
         $api_key = get_option('atm_guardian_api_key');
         if (empty($api_key)) throw new Exception('The Guardian API key is not configured.');
@@ -1288,14 +1240,23 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
             'q' => '"' . $keyword . '"',
             'order-by' => 'newest',
             'page-size' => 5,
-            'show-fields' => 'trailText', // trailText is like a description
+            'show-fields' => 'trailText',
             'api-key' => $api_key,
         ]);
 
         $response = wp_remote_get($url);
-        // ... (Error handling similar to newsapi) ...
+        
+        if (is_wp_error($response)) {
+            throw new Exception('Failed to connect to Guardian API: ' . $response->get_error_message());
+        }
+        
         $body = wp_remote_retrieve_body($response);
         $result = json_decode($body, true);
+        
+        if (wp_remote_retrieve_response_code($response) !== 200) {
+            throw new Exception('Error from Guardian API: ' . ($result['message'] ?? 'Unknown error'));
+        }
+        
         if (empty($result['response']['results'])) return '';
 
         $context = "LATEST NEWS SNIPPETS (The Guardian):\n\n";
@@ -1310,7 +1271,6 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         return $context;
     }
 
-    // Renamed and updated to fetch news from the last 48 hours
     public static function fetch_news_from_newsapi($keyword, $force_fresh = false) {
         $api_key = get_option('atm_news_api_key');
         if (empty($api_key)) {
@@ -1328,14 +1288,12 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
             }
         }
 
-        // 1. Switched back to the /everything endpoint
-        // 2. Added a 'from' date to specify the 48-hour window
         $from_date = date('Y-m-d\TH:i:s', strtotime('-48 hours'));
 
         $url = 'https://newsapi.org/v2/everything?' . http_build_query([
-            'qInTitle' => $keyword, // Use qInTitle for strong relevance
+            'qInTitle' => $keyword,
             'from' => $from_date,
-            'sortBy' => 'publishedAt', // Get the newest first within the window
+            'sortBy' => 'publishedAt',
             'pageSize' => 5,
             'language' => 'en',
             'apiKey' => $api_key
@@ -1373,27 +1331,6 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         return $context;
     }
 
-    /**
-     * Enhance content using OpenRouter, with an option for forced JSON output.
-     *
-     * @param array $content_data The content to be processed.
-     * @param string $system_prompt The system prompt for the AI.
-     * @param string $model_override Optional model override.
-     * @param bool $json_mode If true, requests JSON output from the API.
-     * @return string The AI's response.
-     * @throws Exception On API error.
-     */
-    /**
- * Enhance content using OpenRouter, with an option for forced JSON output.
- * Web search is now enabled by default for all calls.
- *
- * @param array $content_data The content to be processed.
- * @param string $system_prompt The system prompt for the AI.
- * @param string $model_override Optional model override.
- * @param bool $json_mode If true, requests JSON output from the API.
- * @return string The AI's response.
- * @throws Exception On API error.
- */
     public static function enhance_content_with_openrouter($input, $system_prompt, $model, $json_mode = false, $enable_web_search = true) {
         $api_key = trim(get_option('atm_openrouter_api_key', ''));
         if (!$api_key) {
@@ -1476,7 +1413,11 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         $url = 'https://serpapi.com/search.json?' . http_build_query($params);
 
         $response = wp_remote_get($url);
-        // ... (Error handling) ...
+        
+        if (is_wp_error($response)) {
+            throw new Exception('SerpApi request failed: ' . $response->get_error_message());
+        }
+        
         $body = wp_remote_retrieve_body($response);
         $result = json_decode($body, true);
 
@@ -1484,9 +1425,7 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         
         $headlines = [];
         foreach ($result['news_results'] as $article) {
-            // --- NEW QUALITY FILTER ---
-            // 1. Skip any result that doesn't have a clear source name OR a date.
-            // This effectively filters out the generic topic pages.
+            // Quality filter - skip results without proper source name or date
             if (empty($article['source']['name']) || empty($article['date'])) {
                 continue;
             }
@@ -1497,7 +1436,7 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
                 'title' => esc_html($article['title']),
                 'link' => esc_url($article['link']),
                 'source' => esc_html($source_name),
-                'date' => esc_html($article['date']) // 2. Capture the date
+                'date' => esc_html($article['date'])
             ];
             
             // Stop once we have 5 high-quality headlines
@@ -1523,9 +1462,7 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         
         $response = wp_remote_get($scraper_url, ['timeout' => 120]);
 
-        // --- NEW: Improved Error Handling ---
         if (is_wp_error($response)) {
-            // This catches server-level connection errors (like a firewall block).
             throw new Exception('Scraping API Connection Error: ' . $response->get_error_message());
         }
 
@@ -1533,12 +1470,10 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         $body = wp_remote_retrieve_body($response);
 
         if ($response_code !== 200) {
-            // This catches API-level errors (like a bad key or quota limit).
             $error_data = json_decode($body, true);
             $error_detail = isset($error_data['detail']) ? $error_data['detail'] : 'Please check your ScrapingAnt account.';
             throw new Exception('Scraping API Error (Code: ' . $response_code . '): ' . $error_detail);
         }
-        // --- END NEW ---
 
         $result = json_decode($body, true);
 
@@ -1548,6 +1483,7 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
 
         $html_content = $result['content'];
 
+        // Clean up HTML content
         $html_content = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $html_content);
         $html_content = preg_replace('/<style\b[^>]*>(.*?)<\/style>/is', "", $html_content);
         $html_content = preg_replace('/<nav\b[^>]*>(.*?)<\/nav>/is', "", $html_content);
@@ -1566,44 +1502,43 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
     }
     
     public static function generate_audio_with_openai_tts($script_chunk, $voice) {
-    $api_key = get_option('atm_openai_api_key');
-    if (empty($api_key)) {
-        throw new Exception('OpenAI API key not configured');
-    }
-
-    $response = wp_remote_post('https://api.openai.com/v1/audio/speech', [
-        'headers' => [
-            'Authorization' => 'Bearer ' . $api_key,
-            'Content-Type' => 'application/json'
-        ],
-        'body' => json_encode([
-            'model' => 'tts-1',
-            'input' => $script_chunk,
-            'voice' => $voice,
-            'response_format' => 'mp3'
-        ]),
-        'timeout' => 300
-    ]);
-
-    if (is_wp_error($response)) {
-        throw new Exception('Audio generation failed: ' . $response->get_error_message());
-    }
-
-    $audio_content = wp_remote_retrieve_body($response);
-
-    if (wp_remote_retrieve_response_code($response) !== 200) {
-        $error_body = json_decode($audio_content, true);
-        $error_message = 'An unknown API error occurred.';
-        if (isset($error_body['error']['message'])) {
-            $error_message = $error_body['error']['message'];
+        $api_key = get_option('atm_openai_api_key');
+        if (empty($api_key)) {
+            throw new Exception('OpenAI API key not configured');
         }
-        error_log('OpenAI TTS Error: ' . $audio_content);
-        throw new Exception('OpenAI TTS API Error: ' . $error_message);
-    }
 
-    // Return the raw audio data for this chunk
-    return $audio_content;
-}
+        $response = wp_remote_post('https://api.openai.com/v1/audio/speech', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json'
+            ],
+            'body' => json_encode([
+                'model' => 'tts-1',
+                'input' => $script_chunk,
+                'voice' => $voice,
+                'response_format' => 'mp3'
+            ]),
+            'timeout' => 300
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Audio generation failed: ' . $response->get_error_message());
+        }
+
+        $audio_content = wp_remote_retrieve_body($response);
+
+        if (wp_remote_retrieve_response_code($response) !== 200) {
+            $error_body = json_decode($audio_content, true);
+            $error_message = 'An unknown API error occurred.';
+            if (isset($error_body['error']['message'])) {
+                $error_message = $error_body['error']['message'];
+            }
+            error_log('OpenAI TTS Error: ' . $audio_content);
+            throw new Exception('OpenAI TTS API Error: ' . $error_message);
+        }
+
+        return $audio_content;
+    }
     
     private static function save_audio_file($audio_content, $post_id, $extension) {
         $silent_intro_base64 = 'SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGllbmRhcmQgTG9wZXogaW4gT25lVHJpY2sBTQuelleAAAAANFaAAAAAAAAAAAAAAAAAAAAD/8AAAAAAAADw==';
@@ -1620,7 +1555,6 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
         
         return $upload_dir['baseurl'] . '/podcasts/' . $filename;
     }
-    
 
     public static function get_translated_prompt($language, $master_prompt) {
         if (strtolower($language) === 'english') return $master_prompt;
@@ -1630,7 +1564,13 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
 
         $translation_instruction = "You are an expert translator. Translate the following text into " . $language . ". Return ONLY the translated text, with no extra commentary, introductions, or quotation marks. The text to translate is below:\n\n" . $master_prompt;
         
-        return self::enhance_content_with_openrouter(['content' => $translation_instruction], 'You are a helpful assistant.', 'anthropic/claude-3-haiku');
+        return self::enhance_content_with_openrouter(
+            ['content' => $translation_instruction], 
+            'You are a helpful assistant.', 
+            'anthropic/claude-3-haiku',
+            false, // json_mode
+            false  // enable_web_search
+        );
     }
 
     public static function replace_prompt_shortcodes($template, $post) {
@@ -1671,7 +1611,6 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
     }
 
     public static function get_writing_styles() {
-        // Base instructions to ensure consistency across all styles
         $base_instructions = 'Your task is to generate a complete article based on the provided title, using your web search ability to ensure the information is up-to-date and factual. The content must be well-structured and formatted using Markdown (headings, lists, bold text). When you cite an external source, you MUST format it as a natural, contextual Markdown hyperlink. The anchor text for the link should be a relevant keyword or phrase (e.g., "a recent study showed that..."), not just the website\'s name. **IMPORTANT: Do not repeat the article title in the content of your response.**';
 
         return [
@@ -1711,8 +1650,8 @@ public static function generate_image_with_openai($prompt, $size_override = '', 
     }
 
     public static function get_default_image_prompt() {
-    return 'Create a highly realistic, professional-quality photograph to be used as a featured image for a news/blog article titled "[article_title]". The image should be directly relevant to the subject of the title, visually meaningful, and look like authentic editorial photography. Use cinematic lighting, sharp focus, and a natural color palette. Avoid text, watermarks, or artificial-looking elements. Maintain a serious and credible journalistic style suitable for a news website.';
-}
+        return 'Create a highly realistic, professional-quality photograph to be used as a featured image for a news/blog article titled "[article_title]". The image should be directly relevant to the subject of the title, visually meaningful, and look like authentic editorial photography. Use cinematic lighting, sharp focus, and a natural color palette. Avoid text, watermarks, or artificial-looking elements. Maintain a serious and credible journalistic style suitable for a news website.';
+    }
 }
 
 /**
