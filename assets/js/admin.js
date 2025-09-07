@@ -4,25 +4,24 @@ jQuery(document).ready(function ($) {
    * @param {string} title - The new post title.
    * @param {string} markdownContent - The new post content in Markdown format.
    */
-  function updateEditorContent(title, markdownContent) {
-    // Check if the block editor is active by looking for its data store.
+  // In admin.js, update the updateEditorContent function to handle subtitles
+  function updateEditorContent(title, markdownContent, subtitle) {
+    // Check if the block editor is active
     const isBlockEditor = document.body.classList.contains("block-editor-page");
 
     // --- Update Post Title ---
     if (isBlockEditor) {
       wp.data.dispatch("core/editor").editPost({ title: title });
     } else {
-      // Fallback for Classic Editor
       $("#title").val(title);
-      $("#title-prompt-text").hide(); // Manually hide the "Add title" label
-      $("#title").trigger("blur"); // This tells WordPress to update the slug preview
+      $("#title-prompt-text").hide();
+      $("#title").trigger("blur");
     }
 
     // --- Update Post Content ---
     const htmlContent = marked.parse(markdownContent);
     if (isBlockEditor) {
       const blocks = wp.blocks.parse(htmlContent);
-      // Clear existing content before inserting new blocks
       const currentBlocks = wp.data.select("core/block-editor").getBlocks();
       if (
         currentBlocks.length > 0 &&
@@ -37,14 +36,40 @@ jQuery(document).ready(function ($) {
       }
       wp.data.dispatch("core/block-editor").insertBlocks(blocks);
     } else {
-      // Fallback for Classic Editor
       if (typeof tinymce !== "undefined" && tinymce.get("content")) {
-        // Set content in the Visual (TinyMCE) editor
         tinymce.get("content").setContent(htmlContent);
       } else {
-        // Fallback for the plain Text editor
         $("#content").val(htmlContent);
       }
+    }
+
+    // --- NEW: Update SmartMag Subtitle Field ---
+    if (subtitle && subtitle.trim()) {
+      setTimeout(function () {
+        // Try multiple selectors for SmartMag subtitle field
+        const subtitleSelectors = [
+          'input[name="_bunyad_sub_title"]',
+          "#_bunyad_sub_title",
+          'input[id*="sub_title"]',
+          'input[name*="subtitle"]',
+        ];
+
+        let subtitleInput = null;
+        for (let selector of subtitleSelectors) {
+          subtitleInput = $(selector);
+          if (subtitleInput.length > 0) {
+            break;
+          }
+        }
+
+        if (subtitleInput && subtitleInput.length > 0) {
+          subtitleInput.val(subtitle);
+          subtitleInput.trigger("input").trigger("change").trigger("blur");
+          console.log("ATM: Subtitle populated in SmartMag field:", subtitle);
+        } else {
+          console.log("ATM: SmartMag subtitle field not found");
+        }
+      }, 500);
     }
   }
 
@@ -360,7 +385,6 @@ jQuery(document).ready(function ($) {
       .html('<div class="atm-spinner"></div> Generating...');
     const postId = button.closest(".postbox").find("#post_ID").val();
 
-    // Check if full content scraping should be used
     const useFullContent = $("#atm-rss-use-full-content").is(":checked");
 
     $.ajax({
@@ -380,7 +404,8 @@ jQuery(document).ready(function ($) {
         if (response.success) {
           updateEditorContent(
             response.data.article_title,
-            response.data.article_content
+            response.data.article_content,
+            response.data.subtitle || ""
           );
           button.html("✅ Article Generated").css("background", "#2f855a");
           setTimeout(() => {
@@ -491,7 +516,7 @@ jQuery(document).ready(function ($) {
       const button = $(this);
       const articleUrl = button.data("url");
       const articleTitle = unescape(button.data("title"));
-      const language = $("#atm-google-news-language").val(); // Get selected language
+      const language = $("#atm-google-news-language").val();
 
       button
         .prop("disabled", true)
@@ -504,14 +529,15 @@ jQuery(document).ready(function ($) {
           action: "generate_article_from_url",
           article_url: articleUrl,
           article_title: articleTitle,
-          language: language, // Send language
+          language: language,
           nonce: atm_ajax.nonce,
         },
         success: function (response) {
           if (response.success) {
             updateEditorContent(
               response.data.article_title,
-              response.data.article_content
+              response.data.article_content,
+              response.data.subtitle || ""
             );
             button.html("✅ Inserted").css("background", "#2f855a");
           } else {
@@ -761,13 +787,17 @@ jQuery(document).ready(function ($) {
         writing_style: writingStyle,
         custom_prompt: customPrompt,
         word_count: wordCount,
-        article_type: articleType, // Add article type here
+        article_type: articleType,
         nonce: atm_ajax.nonce,
       },
       success: function (contentResponse) {
         if (contentResponse.success) {
-          updateEditorContent(finalTitle, contentResponse.data.article_content);
-          checkAndGenerateImage(button, postId); // This calls your image logic
+          updateEditorContent(
+            finalTitle,
+            contentResponse.data.article_content,
+            contentResponse.data.subtitle || ""
+          );
+          checkAndGenerateImage(button, postId);
         } else {
           alert("Error generating content: " + contentResponse.data);
           resetButton(button, "Generate Article");
@@ -1272,5 +1302,38 @@ jQuery(document).ready(function ($) {
         }
       }
     }, 1000); // Wait 1 second for the page to fully load
+  }
+});
+
+// Add this to admin.js for page load subtitle population
+jQuery(document).ready(function ($) {
+  // Check if we're on a post edit page
+  if ($("body").hasClass("post-php")) {
+    setTimeout(function () {
+      // Get post ID from the page
+      const postId = $("#post_ID").val();
+      if (postId) {
+        // Make an AJAX call to get the subtitle
+        $.ajax({
+          url: atm_ajax.ajax_url,
+          type: "POST",
+          data: {
+            action: "get_post_subtitle",
+            post_id: postId,
+            nonce: atm_ajax.nonce,
+          },
+          success: function (response) {
+            if (response.success && response.data.subtitle) {
+              const subtitle = response.data.subtitle;
+              const subtitleInput = $('input[name="_bunyad_sub_title"]');
+              if (subtitleInput.length && !subtitleInput.val()) {
+                subtitleInput.val(subtitle);
+                subtitleInput.trigger("change");
+              }
+            }
+          },
+        });
+      }
+    }, 2000);
   }
 });

@@ -6,6 +6,17 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    public function get_post_subtitle() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        try {
+            $post_id = intval($_POST['post_id']);
+            $subtitle = get_post_meta($post_id, '_bunyad_sub_title', true);
+            wp_send_json_success(['subtitle' => $subtitle]);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
     // --- NEW: Generate lifelike comments from post content ---
     public function generate_post_comments() {
         if (!ATM_Licensing::is_license_active()) {
@@ -579,6 +590,7 @@ public function translate_text() {
         add_action('wp_ajax_save_atm_chart', array($this, 'save_atm_chart'));
         add_action('wp_ajax_generate_key_takeaways', array($this, 'generate_key_takeaways'));
         add_action('wp_ajax_save_key_takeaways', array($this, 'save_key_takeaways'));
+        add_action('wp_ajax_get_post_subtitle', array($this, 'get_post_subtitle'));
 
         // --- MULTIPAGE ACTIONS ---
         add_action('wp_ajax_generate_multipage_title', array($this, 'generate_multipage_title'));
