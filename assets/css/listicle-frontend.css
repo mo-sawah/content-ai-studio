@@ -786,3 +786,69 @@
 .atm-listicle-container [data-share] {
   display: none !important;
 }
+
+/* Remove hero section completely */
+.atm-listicle-container .atm-listicle-hero {
+  display: none !important;
+}
+
+/* Enhanced overview with multiple paragraphs */
+.atm-listicle-container .atm-overview-text {
+  font-size: 1rem !important;
+  color: #64748b !important;
+  line-height: 1.7 !important;
+  margin: 0 0 1rem 0 !important;
+}
+
+.atm-listicle-container .atm-overview-text:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Always open TOC with two columns */
+.atm-listicle-container .atm-listicle-toc.atm-toc-always-open {
+  background: #ffffff !important;
+  border: 2px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  padding: 2rem !important;
+  margin-bottom: 3rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.atm-listicle-container .atm-toc-two-columns {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 0.5rem 1.5rem !important;
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Enhanced description with multiple paragraphs */
+.atm-listicle-container .atm-listicle-item-description p {
+  margin: 0 0 1.2rem 0 !important;
+  font-size: 1rem !important;
+  line-height: 1.7 !important;
+  color: #374151 !important;
+}
+
+.atm-listicle-container .atm-listicle-item-description p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Enhanced why it's great section */
+.atm-listicle-container .atm-why-great-text {
+  font-size: 0.95rem !important;
+  color: #374151 !important;
+  font-weight: 500 !important;
+  line-height: 1.6 !important;
+  margin: 0 !important;
+  text-align: left !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .atm-listicle-container .atm-toc-two-columns {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+}

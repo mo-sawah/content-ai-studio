@@ -96,36 +96,40 @@ private function format_listicle_html($data, $title) {
 
     $html = '<div class="atm-listicle-container">';
     
-    // Hero Header
-    $html .= '<div class="atm-listicle-hero">';
-    $html .= '<h1>' . esc_html($title) . '</h1>';
-    $html .= '<div class="atm-listicle-meta">';
-    $html .= '<div class="atm-listicle-meta-item">';
-    $html .= '<span class="atm-listicle-meta-icon">📋</span>';
-    $html .= '<span>' . count($data['items']) . ' Items</span>';
-    $html .= '</div>';
-    $html .= '<div class="atm-listicle-meta-item">';
-    $html .= '<span class="atm-listicle-meta-icon">⏱️</span>';
-    $html .= '<span>' . ceil(count($data['items']) * 2) . ' min read</span>';
-    $html .= '</div>';
-    $html .= '</div>';
-    $html .= '</div>';
-
-    // Overview
+    // REMOVED: Hero Header section completely
+    
+    // Enhanced Overview - Two paragraphs
     if (!empty($data['introduction'])) {
         $html .= '<div class="atm-listicle-overview">';
         $html .= '<div class="atm-overview-header">';
         $html .= '<div class="atm-overview-icon">💡</div>';
         $html .= '<h3>Quick Overview</h3>';
         $html .= '</div>';
-        $html .= '<p class="atm-overview-text">' . esc_html($data['introduction']) . '</p>';
+        
+        // Split introduction into paragraphs if it's not already
+        $intro_text = $data['introduction'];
+        $paragraphs = explode("\n\n", $intro_text);
+        if (count($paragraphs) == 1) {
+            // If it's one long paragraph, split it roughly in half
+            $sentences = explode('. ', $intro_text);
+            $mid = ceil(count($sentences) / 2);
+            $first_half = implode('. ', array_slice($sentences, 0, $mid));
+            $second_half = implode('. ', array_slice($sentences, $mid));
+            $paragraphs = [$first_half, $second_half];
+        }
+        
+        foreach ($paragraphs as $paragraph) {
+            if (!empty(trim($paragraph))) {
+                $html .= '<p class="atm-overview-text">' . esc_html(trim($paragraph)) . '</p>';
+            }
+        }
         $html .= '</div>';
     }
 
-    // Table of Contents
-    $html .= '<div class="atm-listicle-toc">';
+    // Table of Contents - Always open, two columns
+    $html .= '<div class="atm-listicle-toc atm-toc-always-open">';
     $html .= '<h3>🗂️ What\'s in This List</h3>';
-    $html .= '<ol class="atm-listicle-toc-list">';
+    $html .= '<ol class="atm-listicle-toc-list atm-toc-two-columns">';
     foreach ($data['items'] as $item) {
         $html .= '<li class="atm-listicle-toc-item">';
         $html .= '<a href="#item-' . $item['number'] . '" class="atm-listicle-toc-link">';
@@ -143,16 +147,14 @@ private function format_listicle_html($data, $title) {
     foreach ($data['items'] as $item) {
         $html .= '<div class="atm-listicle-item" id="item-' . $item['number'] . '">';
         
-        // FIXED: Header with number and title on same line + description under title
+        // Header with number and title on same line + description under title
         $html .= '<div class="atm-listicle-item-header">';
         $html .= '<div class="atm-listicle-item-number">' . $item['number'] . '</div>';
         $html .= '<div>';
         $html .= '<h2 class="atm-listicle-item-title">' . esc_html($item['title']) . '</h2>';
-        // Add subtitle/description under title in same box
         if (!empty($item['subtitle'])) {
             $html .= '<p class="atm-listicle-item-subtitle">' . esc_html($item['subtitle']) . '</p>';
         } else {
-            // Create a short subtitle from the description
             $short_desc = substr(esc_html($item['description']), 0, 100) . '...';
             $html .= '<p class="atm-listicle-item-subtitle">' . $short_desc . '</p>';
         }
@@ -162,11 +164,10 @@ private function format_listicle_html($data, $title) {
         // Item Content
         $html .= '<div class="atm-listicle-item-content">';
         
-        // FIXED: Rating and Price on same line with bigger stars
+        // Rating and Price on same line with bigger stars
         if (!empty($item['rating']) || !empty($item['price'])) {
             $html .= '<div class="atm-rating-price-container">';
             
-            // Rating with bigger stars
             if (!empty($item['rating'])) {
                 $html .= '<div class="atm-listicle-rating">';
                 $html .= '<div class="atm-listicle-stars">';
@@ -184,7 +185,6 @@ private function format_listicle_html($data, $title) {
                 $html .= '</div>';
             }
 
-            // Price next to rating
             if (!empty($item['price'])) {
                 $html .= '<div class="atm-listicle-price">';
                 $html .= '<div class="atm-listicle-price-amount">' . esc_html($item['price']) . '</div>';
@@ -192,15 +192,39 @@ private function format_listicle_html($data, $title) {
                 $html .= '</div>';
             }
             
-            $html .= '</div>'; // Close rating-price-container
+            $html .= '</div>';
         }
 
-        // Description
+        // Enhanced Description - 3 paragraphs
         $html .= '<div class="atm-listicle-item-description">';
-        $html .= '<p>' . esc_html($item['description']) . '</p>';
+        
+        // Split description into 3 paragraphs
+        $description = $item['description'];
+        $paragraphs = explode("\n\n", $description);
+        
+        // Ensure we have exactly 3 paragraphs
+        if (count($paragraphs) < 3) {
+            // If we have fewer paragraphs, split existing ones
+            $sentences = explode('. ', $description);
+            $third = ceil(count($sentences) / 3);
+            $paragraphs = [
+                implode('. ', array_slice($sentences, 0, $third)),
+                implode('. ', array_slice($sentences, $third, $third)),
+                implode('. ', array_slice($sentences, $third * 2))
+            ];
+        } elseif (count($paragraphs) > 3) {
+            // If we have more than 3, combine them
+            $paragraphs = array_slice($paragraphs, 0, 3);
+        }
+        
+        foreach ($paragraphs as $paragraph) {
+            if (!empty(trim($paragraph))) {
+                $html .= '<p>' . esc_html(trim($paragraph)) . '</p>';
+            }
+        }
         $html .= '</div>';
 
-        // FIXED: Features in one box with two columns
+        // Features in one box with two columns
         if (!empty($item['features'])) {
             $html .= '<div class="atm-listicle-features">';
             $html .= '<h4>Key Features</h4>';
@@ -215,7 +239,7 @@ private function format_listicle_html($data, $title) {
             $html .= '</div>';
         }
 
-        // Pros and Cons
+        // Enhanced Pros and Cons (6 each)
         if (!empty($item['pros']) || !empty($item['cons'])) {
             $html .= '<div class="atm-listicle-pros-cons">';
             
@@ -223,7 +247,7 @@ private function format_listicle_html($data, $title) {
                 $html .= '<div class="atm-listicle-pros">';
                 $html .= '<h4>✅ Pros</h4>';
                 $html .= '<ul>';
-                foreach ($item['pros'] as $pro) {
+                foreach (array_slice($item['pros'], 0, 6) as $pro) {
                     $html .= '<li>' . esc_html($pro) . '</li>';
                 }
                 $html .= '</ul>';
@@ -234,7 +258,7 @@ private function format_listicle_html($data, $title) {
                 $html .= '<div class="atm-listicle-cons">';
                 $html .= '<h4>❌ Cons</h4>';
                 $html .= '<ul>';
-                foreach ($item['cons'] as $con) {
+                foreach (array_slice($item['cons'], 0, 6) as $con) {
                     $html .= '<li>' . esc_html($con) . '</li>';
                 }
                 $html .= '</ul>';
@@ -244,11 +268,11 @@ private function format_listicle_html($data, $title) {
             $html .= '</div>';
         }
 
-        // Why it's great
+        // Enhanced Why it's great
         if (!empty($item['why_its_great'])) {
             $html .= '<div class="atm-why-great">';
             $html .= '<div class="atm-why-great-label">Why It Made Our List</div>';
-            $html .= '<p class="atm-why-great-text">' . esc_html($item['why_its_great']) . '</p>';
+            $html .= '<div class="atm-why-great-text">' . esc_html($item['why_its_great']) . '</div>';
             $html .= '</div>';
         }
 
@@ -258,7 +282,7 @@ private function format_listicle_html($data, $title) {
     
     $html .= '</div>'; // Close items container
 
-    // Conclusion (no sharing buttons)
+    // Conclusion
     if (!empty($data['conclusion'])) {
         $html .= '<div class="atm-listicle-conclusion">';
         $html .= '<h3>Final Thoughts</h3>';

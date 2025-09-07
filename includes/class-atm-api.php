@@ -376,7 +376,7 @@ class ATM_API {
      * Generate listicle content
      */
     public static function generate_listicle_content($params) {
-        extract($params); // Extracts all variables from the params array
+        extract($params);
         
         $pricing_instruction = $include_pricing ? "Include pricing information where relevant." : "";
         $rating_instruction = $include_ratings ? "Include star ratings or numerical scores for each item." : "";
@@ -384,39 +384,44 @@ class ATM_API {
 
         $system_prompt = "You are an expert content creator specializing in listicle articles. Your task is to create a comprehensive, engaging listicle about '{$topic}' with exactly {$item_count} items in the {$category} category.
 
-    CRITICAL INSTRUCTIONS:
-    1. Your entire response MUST be a single, valid JSON object.
-    2. Structure the JSON response exactly as follows:
-    {
-        \"subtitle\": \"Brief engaging subtitle\",
-        \"introduction\": \"Compelling introduction paragraph\",
-        \"overview\": \"Brief overview of what the list covers\",
-        \"items\": [
-            {
-                \"number\": 1,
-                \"title\": \"Item title\",
-                \"description\": \"Detailed description (2-3 sentences)\",
-                \"features\": [\"feature1\", \"feature2\", \"feature3\"],
-                \"pros\": [\"pro1\", \"pro2\"],
-                \"cons\": [\"con1\", \"con2\"],
-                \"rating\": 4.5,
-                \"price\": \"$99/month\",
-                \"why_its_great\": \"Explanation of why this item made the list\"
-            }
-        ],
-        \"conclusion\": \"Compelling conclusion paragraph\"
-    }
+        CRITICAL INSTRUCTIONS:
+        1. Your entire response MUST be a single, valid JSON object.
+        2. Structure the JSON response exactly as follows:
+        {
+            \"subtitle\": \"Brief engaging subtitle\",
+            \"introduction\": \"Two comprehensive paragraphs about the topic. Make this detailed and informative, explaining the importance and context of the topic.\",
+            \"overview\": \"Brief overview of what the list covers\",
+            \"items\": [
+                {
+                    \"number\": 1,
+                    \"title\": \"Item title\",
+                    \"description\": \"Detailed description (3 comprehensive paragraphs with substantial content)\",
+                    \"features\": [\"feature1\", \"feature2\", \"feature3\", \"feature4\", \"feature5\"],
+                    \"pros\": [\"pro1\", \"pro2\", \"pro3\", \"pro4\", \"pro5\", \"pro6\"],
+                    \"cons\": [\"con1\", \"con2\", \"con3\", \"con4\", \"con5\", \"con6\"],
+                    \"rating\": 4.5,
+                    \"price\": \"$99/month\",
+                    \"why_its_great\": \"Comprehensive explanation of why this item made the list - make this substantial, detailed, and at least 3-4 sentences long\"
+                }
+            ],
+            \"conclusion\": \"Compelling conclusion paragraph\"
+        }
 
-    CONTENT REQUIREMENTS:
-    - Make each item valuable and detailed
-    - Use engaging language but keep it informative
-    - Focus on providing genuine value to readers
-    - Ensure items are ranked logically (best to good, or most important to least)
-    - {$pricing_instruction}
-    - {$rating_instruction}
-    - {$custom_instruction}
+        CONTENT REQUIREMENTS:
+        - Introduction must be exactly TWO substantial paragraphs
+        - Each item description must be exactly THREE detailed paragraphs
+        - Provide exactly 6 pros and 6 cons for each item (make them meaningful and specific)
+        - Features should be 5 relevant items
+        - 'why_its_great' should be substantial (3-4 sentences minimum)
+        - Make each item valuable and detailed
+        - Use engaging language but keep it informative
+        - Focus on providing genuine value to readers
+        - Ensure items are ranked logically (best to good, or most important to least)
+        - {$pricing_instruction}
+        - {$rating_instruction}
+        - {$custom_instruction}
 
-    Use your web search ability to ensure all information is current and accurate. Do not include any text outside the JSON object.";
+        Use your web search ability to ensure all information is current and accurate. Do not include any text outside the JSON object.";
 
         $model = !empty($model) ? $model : get_option('atm_article_model', 'openai/gpt-4o');
 
