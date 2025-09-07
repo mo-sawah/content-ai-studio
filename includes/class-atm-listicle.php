@@ -102,6 +102,9 @@ class ATM_Listicle_Generator {
         // Header
         $html .= '<div class="atm-listicle-header">';
         $html .= '<h1>' . esc_html($title) . '</h1>';
+        if (!empty($data['subtitle'])) {
+            $html .= '<p class="atm-listicle-subtitle">' . esc_html($data['subtitle']) . '</p>';
+        }
         $html .= '<div class="atm-listicle-meta">';
         $html .= '<div class="atm-listicle-meta-item">';
         $html .= '<span class="atm-listicle-meta-icon">📋</span>';
@@ -111,8 +114,13 @@ class ATM_Listicle_Generator {
         $html .= '<span class="atm-listicle-meta-icon">⏱️</span>';
         $html .= '<span>' . ceil(count($data['items']) * 2) . ' min read</span>';
         $html .= '</div>';
-        $html .= '</div>';
-        $html .= '</div>';
+        $html .= '</div>'; // Close meta
+        $html .= '</div>'; // Close header
+
+        // Add the layout wrapper with progress bar
+        $html .= '<div class="atm-listicle-layout">';
+        $html .= '<div class="atm-listicle-progress"><div class="atm-listicle-progress-bar"></div></div>';
+        $html .= '<div class="atm-listicle-content">';
 
         // Introduction
         if (!empty($data['introduction'])) {
@@ -124,11 +132,12 @@ class ATM_Listicle_Generator {
 
         // Table of Contents
         $html .= '<div class="atm-listicle-toc">';
-        $html .= '<h3>What\'s in This List</h3>';
+        $html .= '<h3>What\'s Inside</h3>';
         $html .= '<ol class="atm-listicle-toc-list">';
         foreach ($data['items'] as $item) {
             $html .= '<li class="atm-listicle-toc-item">';
             $html .= '<a href="#item-' . $item['number'] . '" class="atm-listicle-toc-link">';
+            $html .= '<span class="atm-listicle-toc-item-number">' . $item['number'] . '</span>';
             $html .= esc_html($item['title']);
             $html .= '</a>';
             $html .= '</li>';
@@ -145,8 +154,16 @@ class ATM_Listicle_Generator {
             // Item Header
             $html .= '<div class="atm-listicle-item-header">';
             $html .= '<div class="atm-listicle-item-number">' . $item['number'] . '</div>';
+            $html .= '<div class="atm-listicle-item-title-wrapper">';
             $html .= '<h2 class="atm-listicle-item-title">' . esc_html($item['title']) . '</h2>';
-            $html .= '</div>';
+            
+            // Item subtitle (if available)
+            if (!empty($item['subtitle'])) {
+                $html .= '<p class="atm-listicle-item-subtitle">' . esc_html($item['subtitle']) . '</p>';
+            }
+            
+            $html .= '</div>'; // Close title wrapper
+            $html .= '</div>'; // Close item header
 
             // Item Content
             $html .= '<div class="atm-listicle-item-content">';
@@ -162,18 +179,10 @@ class ATM_Listicle_Generator {
                     $html .= '<span class="atm-listicle-star">★</span>';
                 }
                 if ($half_star) {
-                    $html .= '<span class="atm-listicle-star">☆</span>';
+                    $html .= '<span class="atm-listicle-star">★</span>';
                 }
                 $html .= '</div>';
-                $html .= '<span class="atm-listicle-rating-text">' . $item['rating'] . '/5</span>';
-                $html .= '</div>';
-            }
-
-            // Price
-            if (!empty($item['price'])) {
-                $html .= '<div class="atm-listicle-price">';
-                $html .= '<div class="atm-listicle-price-amount">' . esc_html($item['price']) . '</div>';
-                $html .= '<div class="atm-listicle-price-note">Starting price</div>';
+                $html .= '<span class="atm-listicle-rating-text">' . $item['rating'] . '<span class="atm-listicle-rating-scale">/5</span></span>';
                 $html .= '</div>';
             }
 
@@ -191,6 +200,14 @@ class ATM_Listicle_Generator {
                     $html .= '<div class="atm-listicle-feature-value">' . esc_html($feature) . '</div>';
                     $html .= '</div>';
                 }
+                $html .= '</div>';
+            }
+
+            // Price
+            if (!empty($item['price'])) {
+                $html .= '<div class="atm-listicle-price">';
+                $html .= '<div class="atm-listicle-price-amount">' . esc_html($item['price']) . '</div>';
+                $html .= '<div class="atm-listicle-price-note">Starting price</div>';
                 $html .= '</div>';
             }
 
@@ -231,6 +248,15 @@ class ATM_Listicle_Generator {
                 $html .= '</div>';
             }
 
+            // CTA Button (optional)
+            if (!empty($item['action_url'])) {
+                $html .= '<div class="atm-listicle-cta">';
+                $html .= '<a href="' . esc_url($item['action_url']) . '" class="atm-listicle-cta-button" target="_blank">';
+                $html .= 'Learn More';
+                $html .= '</a>';
+                $html .= '</div>';
+            }
+
             $html .= '</div>'; // Close item content
             $html .= '</div>'; // Close item
         }
@@ -242,9 +268,26 @@ class ATM_Listicle_Generator {
             $html .= '<div class="atm-listicle-conclusion">';
             $html .= '<h3>Final Thoughts</h3>';
             $html .= '<p>' . esc_html($data['conclusion']) . '</p>';
+            
+            // Share buttons
+            $html .= '<div class="atm-listicle-share">';
+            $html .= '<button class="atm-listicle-share-button" aria-label="Share on Facebook">𝕏</button>';
+            $html .= '<button class="atm-listicle-share-button" aria-label="Share on Twitter">f</button>';
+            $html .= '<button class="atm-listicle-share-button" aria-label="Share on LinkedIn">in</button>';
             $html .= '</div>';
+            
+            // Print button
+            $html .= '<div class="atm-listicle-print">';
+            $html .= '<button class="atm-listicle-print-button">';
+            $html .= '<span>🖨️</span> Print this article';
+            $html .= '</button>';
+            $html .= '</div>';
+            
+            $html .= '</div>'; // Close conclusion
         }
 
+        $html .= '</div>'; // Close content div (from layout)
+        $html .= '</div>'; // Close layout wrapper
         $html .= '</div>'; // Close container
 
         return $html;

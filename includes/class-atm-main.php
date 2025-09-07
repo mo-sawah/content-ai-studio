@@ -7,6 +7,25 @@ if (!defined('ABSPATH')) {
 
 class ATM_Main {
 
+    public function enqueue_listicle_scripts() {
+        if (is_singular()) {
+            wp_enqueue_style(
+                'atm-listicle-frontend',
+                ATM_PLUGIN_URL . 'assets/css/listicle-frontend.css',
+                array(),
+                ATM_VERSION
+            );
+            
+            wp_enqueue_script(
+                'atm-listicle-frontend',
+                ATM_PLUGIN_URL . 'assets/js/listicle-frontend.js',
+                array('jquery'),
+                ATM_VERSION,
+                true
+            );
+        }
+}
+    
     public function enqueue_listicle_styles() {
         // Only enqueue on single posts/pages where listicle content might appear
         if (is_singular()) {
