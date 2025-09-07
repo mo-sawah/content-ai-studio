@@ -227,7 +227,7 @@ class ATM_Frontend {
                 <div class="atm-ep" style="--cover:url('<?php echo esc_url($cover_image); ?>');"><span>EP</span></div>
                 <div class="atm-head-meta">
                   <div class="atm-show"><?php echo esc_html($site_name); ?> Podcast</div>
-                  <div class="atm-season">Season 1</div>
+                  <div class="atm-season"><?php echo esc_html(get_option('atm_podcast_season_text', 'Season 1')); ?></div>
                 </div>
               </div>
               <div class="atm-right">
@@ -282,7 +282,7 @@ class ATM_Frontend {
 
             <?php if (!empty($playlist)) : ?>
             <div class="atm-playlist" hidden>
-              <div class="atm-pl-head">Most recent episodes</div>
+              <div class="atm-pl-head">Latest Podcasts</div>
               <ul class="atm-pl-list">
                 <?php foreach ($playlist as $item) : ?>
                   <li class="atm-pl-item" data-url="<?php echo esc_url($item['url']); ?>" data-title="<?php echo esc_attr($item['title']); ?>">

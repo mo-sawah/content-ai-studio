@@ -300,6 +300,8 @@
 .atm-podcast .atm-play-btn:hover {
   filter: brightness(1.05);
   transform: translateY(-1px) scale(1.02);
+  background: rgba(19, 26, 41, 0.9);
+  backdrop-filter: blur(12px);
 }
 
 .atm-podcast .atm-ctrl.is-on,
@@ -622,4 +624,27 @@
 
 .atm-podcast .atm-pl-toggle {
   padding: 0 !important;
+}
+
+/* Add this to podcast-player.css */
+.atm-podcast .atm-ctrl,
+.atm-podcast .atm-play-btn,
+.atm-podcast .atm-icon-btn,
+.atm-podcast .atm-pl-toggle {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth easing */
+}
+
+/* Enhance the toggle state transitions */
+.atm-podcast .atm-ctrl.is-on,
+.atm-podcast .atm-toggle.is-on {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(-1px);
+}
+
+.atm-podcast .atm-head-title {
+  transition: opacity 0.3s ease;
+}
+
+.atm-podcast .atm-ep {
+  transition: background-image 0.4s ease;
 }

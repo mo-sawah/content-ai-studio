@@ -175,15 +175,37 @@
     });
 
     // Prev/Next logic
+    // Enhanced playIndex function with loading states
     function playIndex(i) {
       idx = i;
       const track = queue[idx];
       if (!track || !track.url) return;
+
+      // Add loading state
+      const titleElement = qs(".atm-head-title", card);
+      if (titleElement) {
+        titleElement.style.opacity = "0.6";
+      }
+
       audio.src = track.url;
       audio.currentTime = 0;
-      // update download link if present
+
+      // Update UI elements
+      setTimeout(() => {
+        if (titleElement) {
+          titleElement.textContent = track.title;
+          titleElement.style.opacity = "1";
+        }
+
+        const episodeBadge = qs(".atm-ep", card);
+        if (episodeBadge && track.cover) {
+          episodeBadge.style.setProperty("--cover", `url('${track.cover}')`);
+        }
+      }, 150);
+
       const d = qs(".atm-download", card);
       if (d) d.setAttribute("data-download-url", track.url);
+
       setPlaying(true);
     }
 

@@ -319,8 +319,6 @@ class ATM_Settings {
                     <h2>🎯 AI Model Defaults</h2>
                     <table class="form-table">
                         <tr><th scope="row">Default Article Model</th><td><select name="atm_article_model"><?php foreach ($options['article_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['article_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
-                        <tr><th scope="row">Default Podcast Content Model</th><td><select name="atm_content_model"><?php foreach ($options['content_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
-                        <tr><th scope="row">Default Podcast Audio Provider</th><td><select name="atm_audio_provider"><option value="openai" <?php selected($options['audio_provider'], 'openai'); ?>>OpenAI TTS</option><option value="elevenlabs" <?php selected($options['audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option></select></td></tr>
                         <tr><th scope="row">Translation Quality Model</th><td><select name="atm_translation_model"><?php foreach ($options['translation_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['translation_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">"High Quality" is more accurate but slower and more expensive. "Fast" is good for quick drafts.</p></td></tr>
                         <tr>
                             <th scope="row">Web Search Results</th>
@@ -406,6 +404,14 @@ class ATM_Settings {
                                 <option value="elevenlabs" <?php selected($options['podcast_audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option>
                             </select>
                             <p class="description">Service provider for text-to-speech generation.</p>
+                        </td>
+                    </tr>
+                    <!-- Add this after the Podcast Audio Provider field -->
+                    <tr>
+                        <th scope="row">Season Text</th>
+                        <td>
+                            <input type="text" name="atm_podcast_season_text" value="<?php echo esc_attr($options['podcast_season_text']); ?>" class="regular-text" placeholder="Season 1" />
+                            <p class="description">Custom text displayed below the podcast name (e.g., "Season 1", "Episode Series", etc.)</p>
                         </td>
                     </tr>
                     <tr>
@@ -598,6 +604,7 @@ class ATM_Settings {
     update_option('atm_podcast_audio_provider', sanitize_text_field($_POST['atm_podcast_audio_provider']));
     update_option('atm_podcast_accent_color', sanitize_hex_color($_POST['atm_podcast_accent_color']));
     update_option('atm_podcast_gradient_end', sanitize_hex_color($_POST['atm_podcast_gradient_end']));
+    update_option('atm_podcast_season_text', sanitize_text_field($_POST['atm_podcast_season_text']));
 
     // Light theme colors
     update_option('atm_podcast_light_card_bg', sanitize_hex_color($_POST['atm_podcast_light_card_bg']));
@@ -656,6 +663,7 @@ class ATM_Settings {
         'podcast_audio_provider' => get_option('atm_podcast_audio_provider', 'openai'),
         'podcast_accent_color' => get_option('atm_podcast_accent_color', '#3b82f6'),
         'podcast_gradient_end' => get_option('atm_podcast_gradient_end', '#7c3aed'),
+        'podcast_season_text' => get_option('atm_podcast_season_text', 'Season 1'),
 
         // Light theme colors
         'podcast_light_card_bg' => get_option('atm_podcast_light_card_bg', '#ffffff'),
