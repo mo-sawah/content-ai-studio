@@ -180,12 +180,41 @@ class ATM_Frontend {
         return $items;
     }
 
+    private function generate_podcast_custom_css($theme) {
+        $css = "<style>";
+        $css .= ".atm-podcast[data-theme='$theme'] {";
+        $css .= "--atm-accent: " . get_option('atm_podcast_accent_color', '#3b82f6') . ";";
+        $css .= "--atm-grad-end: " . get_option('atm_podcast_gradient_end', '#7c3aed') . ";";
+        
+        if ($theme === 'light') {
+            $css .= "--atm-card-bg: " . get_option('atm_podcast_light_card_bg', '#ffffff') . ";";
+            $css .= "--atm-card-text: " . get_option('atm_podcast_light_text', '#0f172a') . ";";
+            $css .= "--atm-subtext: " . get_option('atm_podcast_light_subtext', '#64748b') . ";";
+            // Add other light theme variables...
+        } else {
+            $css .= "--atm-card-bg: " . get_option('atm_podcast_dark_card_bg', '#0f172a') . ";";
+            $css .= "--atm-card-text: " . get_option('atm_podcast_dark_text', '#e2e8f0') . ";";
+            $css .= "--atm-subtext: " . get_option('atm_podcast_dark_subtext', '#94a3b8') . ";";
+            // Add other dark theme variables...
+        }
+        
+        $css .= "}";
+        $css .= "</style>";
+        
+        return $css;
+    }
+    
     private function get_player_html($post, $podcast_url, $cover_image) {
         $this->print_icon_sprite_once();
 
         $site_name = get_bloginfo('name');
-        $theme     = get_option('atm_podcast_default_theme', 'light'); // now light by default
-        $accent    = get_option('atm_podcast_accent', '#3b82f6');
+        // Replace the hardcoded theme and accent values with:
+        $theme = get_option('atm_podcast_default_theme', 'light');
+        $accent = get_option('atm_podcast_accent_color', '#3b82f6');
+        $gradient_end = get_option('atm_podcast_gradient_end', '#7c3aed');
+
+        // Add CSS custom properties for the advanced colors
+        $custom_css = $this->generate_podcast_custom_css($theme);
 
         $playlist  = $this->get_recent_podcasts($post->ID, 8);
 

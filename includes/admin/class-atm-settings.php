@@ -372,6 +372,129 @@ class ATM_Settings {
                 </div>
             </div>
 
+            // Add this new card after the existing settings cards in render_settings_page()
+
+            <div class="atm-settings-card">
+                <h2>🎙️ Podcast Player Settings</h2>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Default Theme Mode</th>
+                        <td>
+                            <select name="atm_podcast_default_theme">
+                                <option value="light" <?php selected($options['podcast_default_theme'], 'light'); ?>>Light Mode</option>
+                                <option value="dark" <?php selected($options['podcast_default_theme'], 'dark'); ?>>Dark Mode</option>
+                            </select>
+                            <p class="description">Default appearance for the podcast player across your site.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Podcast Content Model</th>
+                        <td>
+                            <select name="atm_podcast_content_model">
+                                <?php foreach ($options['content_models'] as $model_id => $model_name): ?>
+                                    <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['podcast_content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="description">AI model used for generating podcast scripts and content.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Podcast Audio Provider</th>
+                        <td>
+                            <select name="atm_podcast_audio_provider">
+                                <option value="openai" <?php selected($options['podcast_audio_provider'], 'openai'); ?>>OpenAI TTS</option>
+                                <option value="elevenlabs" <?php selected($options['podcast_audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option>
+                            </select>
+                            <p class="description">Service provider for text-to-speech generation.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Primary Accent Color</th>
+                        <td>
+                            <input type="text" name="atm_podcast_accent_color" value="<?php echo esc_attr($options['podcast_accent_color']); ?>" class="atm-color-picker" />
+                            <p class="description">Main accent color for buttons, progress bars, and interactive elements.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Gradient End Color</th>
+                        <td>
+                            <input type="text" name="atm_podcast_gradient_end" value="<?php echo esc_attr($options['podcast_gradient_end']); ?>" class="atm-color-picker" />
+                            <p class="description">Secondary color for gradient backgrounds in the player header.</p>
+                        </td>
+                    </tr>
+                </table>
+                
+                <!-- Advanced Color Controls -->
+                <div class="atm-podcast-advanced-colors" style="margin-top: 25px;">
+                    <h3 style="margin-bottom: 15px; color: #1a202c;">Advanced Color Customization</h3>
+                    <div class="atm-color-grid">
+                        <div class="atm-color-group">
+                            <h4>Light Theme Colors</h4>
+                            <div class="atm-color-row">
+                                <div class="atm-color-field">
+                                    <label>Card Background</label>
+                                    <input type="text" name="atm_podcast_light_card_bg" value="<?php echo esc_attr($options['podcast_light_card_bg']); ?>" class="atm-color-picker" />
+                                </div>
+                                <div class="atm-color-field">
+                                    <label>Text Color</label>
+                                    <input type="text" name="atm_podcast_light_text" value="<?php echo esc_attr($options['podcast_light_text']); ?>" class="atm-color-picker" />
+                                </div>
+                                <div class="atm-color-field">
+                                    <label>Subtext Color</label>
+                                    <input type="text" name="atm_podcast_light_subtext" value="<?php echo esc_attr($options['podcast_light_subtext']); ?>" class="atm-color-picker" />
+                                </div>
+                            </div>
+                            <div class="atm-color-row">
+                                <div class="atm-color-field">
+                                    <label>Progress Rail</label>
+                                    <input type="text" name="atm_podcast_light_rail_bg" value="<?php echo esc_attr($options['podcast_light_rail_bg']); ?>" class="atm-color-picker" />
+                                </div>
+                                <div class="atm-color-field">
+                                    <label>Control Background</label>
+                                    <input type="text" name="atm_podcast_light_ctrl_bg" value="<?php echo esc_attr($options['podcast_light_ctrl_bg']); ?>" class="atm-color-picker" />
+                                </div>
+                                <div class="atm-color-field">
+                                    <label>Playlist Background</label>
+                                    <input type="text" name="atm_podcast_light_playlist_bg" value="<?php echo esc_attr($options['podcast_light_playlist_bg']); ?>" class="atm-color-picker" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="atm-color-group">
+                            <h4>Dark Theme Colors</h4>
+                            <div class="atm-color-row">
+                                <div class="atm-color-field">
+                                    <label>Card Background</label>
+                                    <input type="text" name="atm_podcast_dark_card_bg" value="<?php echo esc_attr($options['podcast_dark_card_bg']); ?>" class="atm-color-picker" />
+                                </div>
+                                <div class="atm-color-field">
+                                    <label>Text Color</label>
+                                    <input type="text" name="atm_podcast_dark_text" value="<?php echo esc_attr($options['podcast_dark_text']); ?>" class="atm-color-picker" />
+                                </div>
+                                <div class="atm-color-field">
+                                    <label>Subtext Color</label>
+                                    <input type="text" name="atm_podcast_dark_subtext" value="<?php echo esc_attr($options['podcast_dark_subtext']); ?>" class="atm-color-picker" />
+                                </div>
+                            </div>
+                            <div class="atm-color-row">
+                                <div class="atm-color-field">
+                                    <label>Progress Rail</label>
+                                    <input type="text" name="atm_podcast_dark_rail_bg" value="<?php echo esc_attr($options['podcast_dark_rail_bg']); ?>" class="atm-color-picker" />
+                                </div>
+                                <div class="atm-color-field">
+                                    <label>Control Background</label>
+                                    <input type="text" name="atm_podcast_dark_ctrl_bg" value="<?php echo esc_attr($options['podcast_dark_ctrl_bg']); ?>" class="atm-color-picker" />
+                                </div>
+                                <div class="atm-color-field">
+                                    <label>Playlist Background</label>
+                                    <input type="text" name="atm_podcast_dark_playlist_bg" value="<?php echo esc_attr($options['podcast_dark_playlist_bg']); ?>" class="atm-color-picker" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- NEW: Comments Generator Settings -->
             <div class="atm-settings-card">
                 <h2>💬 Comments Generator</h2>
@@ -469,6 +592,29 @@ class ATM_Settings {
     update_option('atm_web_search_results', intval($_POST['atm_web_search_results'])); // <-- ADD THIS
     update_option('atm_theme_subtitle_key', sanitize_text_field($_POST['atm_theme_subtitle_key']));
 
+    // Add these to the save_settings() method
+    update_option('atm_podcast_default_theme', sanitize_text_field($_POST['atm_podcast_default_theme']));
+    update_option('atm_podcast_content_model', sanitize_text_field($_POST['atm_podcast_content_model']));
+    update_option('atm_podcast_audio_provider', sanitize_text_field($_POST['atm_podcast_audio_provider']));
+    update_option('atm_podcast_accent_color', sanitize_hex_color($_POST['atm_podcast_accent_color']));
+    update_option('atm_podcast_gradient_end', sanitize_hex_color($_POST['atm_podcast_gradient_end']));
+
+    // Light theme colors
+    update_option('atm_podcast_light_card_bg', sanitize_hex_color($_POST['atm_podcast_light_card_bg']));
+    update_option('atm_podcast_light_text', sanitize_hex_color($_POST['atm_podcast_light_text']));
+    update_option('atm_podcast_light_subtext', sanitize_hex_color($_POST['atm_podcast_light_subtext']));
+    update_option('atm_podcast_light_rail_bg', sanitize_hex_color($_POST['atm_podcast_light_rail_bg']));
+    update_option('atm_podcast_light_ctrl_bg', sanitize_hex_color($_POST['atm_podcast_light_ctrl_bg']));
+    update_option('atm_podcast_light_playlist_bg', sanitize_hex_color($_POST['atm_podcast_light_playlist_bg']));
+
+    // Dark theme colors
+    update_option('atm_podcast_dark_card_bg', sanitize_hex_color($_POST['atm_podcast_dark_card_bg']));
+    update_option('atm_podcast_dark_text', sanitize_hex_color($_POST['atm_podcast_dark_text']));
+    update_option('atm_podcast_dark_subtext', sanitize_hex_color($_POST['atm_podcast_dark_subtext']));
+    update_option('atm_podcast_dark_rail_bg', sanitize_hex_color($_POST['atm_podcast_dark_rail_bg']));
+    update_option('atm_podcast_dark_ctrl_bg', sanitize_hex_color($_POST['atm_podcast_dark_ctrl_bg']));
+    update_option('atm_podcast_dark_playlist_bg', sanitize_hex_color($_POST['atm_podcast_dark_playlist_bg']));
+    
     // NEW: Comments Generator options (no register_settings needed)
     update_option('atm_comments_auto_on_publish', isset($_POST['atm_comments_auto_on_publish']) ? 1 : 0);
     update_option('atm_comments_default_count', max(5, min(50, intval($_POST['atm_comments_default_count'] ?? 10))));
@@ -504,6 +650,29 @@ class ATM_Settings {
         'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
         'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
 
+        // Add these to the get_settings() method return array
+        'podcast_default_theme' => get_option('atm_podcast_default_theme', 'light'),
+        'podcast_content_model' => get_option('atm_podcast_content_model', 'anthropic/claude-3-haiku'),
+        'podcast_audio_provider' => get_option('atm_podcast_audio_provider', 'openai'),
+        'podcast_accent_color' => get_option('atm_podcast_accent_color', '#3b82f6'),
+        'podcast_gradient_end' => get_option('atm_podcast_gradient_end', '#7c3aed'),
+
+        // Light theme colors
+        'podcast_light_card_bg' => get_option('atm_podcast_light_card_bg', '#ffffff'),
+        'podcast_light_text' => get_option('atm_podcast_light_text', '#0f172a'),
+        'podcast_light_subtext' => get_option('atm_podcast_light_subtext', '#64748b'),
+        'podcast_light_rail_bg' => get_option('atm_podcast_light_rail_bg', '#e5e7eb'),
+        'podcast_light_ctrl_bg' => get_option('atm_podcast_light_ctrl_bg', '#f3f4f6'),
+        'podcast_light_playlist_bg' => get_option('atm_podcast_light_playlist_bg', '#f8fafc'),
+
+        // Dark theme colors
+        'podcast_dark_card_bg' => get_option('atm_podcast_dark_card_bg', '#0f172a'),
+        'podcast_dark_text' => get_option('atm_podcast_dark_text', '#e2e8f0'),
+        'podcast_dark_subtext' => get_option('atm_podcast_dark_subtext', '#94a3b8'),
+        'podcast_dark_rail_bg' => get_option('atm_podcast_dark_rail_bg', '#1f2937'),
+        'podcast_dark_ctrl_bg' => get_option('atm_podcast_dark_ctrl_bg', '#0b1220'),
+        'podcast_dark_playlist_bg' => get_option('atm_podcast_dark_playlist_bg', '#0b1220'),
+        
         // NEW: Comments Generator defaults
         'comments_auto_on_publish'        => (bool) get_option('atm_comments_auto_on_publish', 0),
         'comments_default_count'          => intval(get_option('atm_comments_default_count', 10)),

@@ -712,3 +712,66 @@ body.post-new-php #wpfooter {
   background: #cbd5e1 !important;
   transform: translateY(-1px);
 }
+
+/* Podcast Settings Color Controls */
+.atm-podcast-advanced-colors {
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.atm-color-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+@media (max-width: 1200px) {
+  .atm-color-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.atm-color-group h4 {
+  margin: 0 0 15px 0;
+  color: #1a202c;
+  font-size: 16px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.atm-color-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+  .atm-color-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.atm-color-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.atm-color-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.atm-color-picker {
+  width: 100% !important;
+  height: 40px !important;
+  padding: 4px !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+}

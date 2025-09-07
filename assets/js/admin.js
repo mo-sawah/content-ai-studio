@@ -1240,3 +1240,18 @@ jQuery(document).ready(function ($) {
     });
   });
 });
+
+// Add this to admin.js
+jQuery(document).ready(function ($) {
+  // Initialize color pickers for podcast settings
+  if ($(".atm-color-picker").length) {
+    $(".atm-color-picker").wpColorPicker({
+      change: function (event, ui) {
+        // Optional: Add preview functionality here
+      },
+      clear: function () {
+        // Handle color clear
+      },
+    });
+  }
+});
