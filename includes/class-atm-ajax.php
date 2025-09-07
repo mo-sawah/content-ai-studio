@@ -712,7 +712,7 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
         check_ajax_referer('atm_nonce', 'nonce');
         try {
             $keyword = sanitize_text_field($_POST['keyword']);
-            $title_input = sanitize_text_field($_POST['article_title']);
+            $title_input = isset($_POST['article_title']) ? sanitize_text_field($_POST['article_title']) : '';
             $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
             $topic = !empty($title_input) ? 'the article title: "' . $title_input . '"' : 'the keyword: "' . $keyword . '"';
             if (empty($topic)) {
@@ -766,11 +766,12 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             
             **Link Formatting Rules:**
             - When including external links, NEVER use the website URL as the anchor text
-            - Use descriptive, natural keywords as anchor text instead
-            - Example: Use [digital marketing strategies](https://example.com) NOT [https://example.com](https://example.com)
-            - Anchor text should be relevant keywords that describe what the reader will find
-            - Keep anchor text concise (2-4 words maximum)
-            - Make links feel natural within the sentence flow';
+            - Use ONLY 1-2 descriptive words as anchor text
+            - Example: Use [study](https://example.com) NOT [recent comprehensive study](https://example.com)
+            - Anchor text should be: "study", "report", "research", "analysis", "source", etc.
+            - Keep anchor text extremely concise (maximum 2 words)
+            - Make links feel natural within the sentence flow
+            - Avoid long phrases as anchor text';
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
             if ($post) {
                 $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
@@ -848,13 +849,14 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
                 - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
 
-                **Link Formatting Requirements:**
+                **Link Formatting Rules:**
                 - When including external links, NEVER use the website URL as the anchor text
-                - Use descriptive, natural keywords as anchor text instead
-                - Example: Use [recent study](https://example.com) NOT [https://example.com](https://example.com)
-                - Anchor text should be relevant keywords that describe the content being linked to
-                - Keep anchor text concise and natural (2-4 words)
-                - Links should integrate seamlessly into the sentence structure
+                - Use ONLY 1-2 descriptive words as anchor text
+                - Example: Use [study](https://example.com) NOT [recent comprehensive study](https://example.com)
+                - Anchor text should be: "study", "report", "research", "analysis", "source", etc.
+                - Keep anchor text extremely concise (maximum 2 words)
+                - Make links feel natural within the sentence flow
+                - Avoid long phrases as anchor text
 
                 **Final Output Format:**
                 Your entire output MUST be a single, valid JSON object with three keys:
@@ -992,6 +994,15 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
                 - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
                 - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
+
+                **Link Formatting Rules:**
+                - When including external links, NEVER use the website URL as the anchor text
+                - Use ONLY 1-2 descriptive words as anchor text
+                - Example: Use [study](https://example.com) NOT [recent comprehensive study](https://example.com)
+                - Anchor text should be: "study", "report", "research", "analysis", "source", etc.
+                - Keep anchor text extremely concise (maximum 2 words)
+                - Make links feel natural within the sentence flow
+                - Avoid long phrases as anchor text
 
                 **Final Output Format:**
                 Your entire output MUST be a single, valid JSON object with three keys:

@@ -1255,3 +1255,22 @@ jQuery(document).ready(function ($) {
     });
   }
 });
+
+// Add this to admin.js to populate SmartMag subtitle field
+jQuery(document).ready(function ($) {
+  // Auto-populate SmartMag subtitle field on post edit pages
+  if ($("body").hasClass("post-php") || $("body").hasClass("post-new-php")) {
+    setTimeout(function () {
+      // Check for SmartMag subtitle input field
+      const subtitleInput = $('input[name="_bunyad_sub_title"]');
+      if (subtitleInput.length) {
+        // Get the current value from the field (populated by WordPress)
+        const currentValue = subtitleInput.val();
+        if (currentValue) {
+          // Force trigger change events to ensure SmartMag's JS recognizes it
+          subtitleInput.trigger("input").trigger("change");
+        }
+      }
+    }, 1000); // Wait 1 second for the page to fully load
+  }
+});
