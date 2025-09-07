@@ -323,91 +323,87 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 6px;
-    padding: 8px 12px 18px 12px; /* Reduce side padding */
+    gap: 8px;
+    padding: 8px 16px 18px 16px;
+    overflow: hidden; /* Prevent overflow */
   }
 
-  /* Volume icon - smaller */
+  /* Volume icon */
   .atm-podcast .atm-vol-ico {
     flex-shrink: 0;
-    width: 14px !important;
-    height: 14px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
 
-  /* Volume track - reduced size */
+  /* Volume track - more constrained */
   .atm-podcast .atm-vol-track {
     flex: 1;
-    min-width: 50px; /* Smaller minimum width */
-    max-width: 80px; /* Add maximum width */
-    height: 6px; /* Slightly thinner track */
+    min-width: 60px;
+    max-width: 100px; /* Limit maximum width */
+    height: 6px;
   }
 
-  /* Volume range input adjustments */
-  .atm-podcast .atm-vol-range {
-    inset: -4px 0 -4px 0; /* Adjust for thinner track */
-  }
-
-  .atm-podcast .atm-vol-range::-webkit-slider-thumb {
-    width: 12px;
-    height: 12px;
-    margin-top: -3px; /* Adjust for thinner track */
-  }
-
-  .atm-podcast .atm-vol-range::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
-  }
-
-  /* Hide volume percentage */
+  /* Hide volume percentage to save space */
   .atm-podcast .atm-vol-val {
     display: none;
   }
 
-  /* Speed dropdown - more compact */
+  /* Speed dropdown - match toggle height */
   .atm-podcast .atm-speed {
     flex-shrink: 0;
   }
 
   .atm-podcast .atm-speed .atm-speed-select {
-    padding: 3px 4px;
-    font-size: 11px;
-    min-width: 35px; /* Smaller width */
-    border-radius: 4px;
+    height: 32px; /* Fixed height to match toggle */
+    padding: 6px 8px;
+    font-size: 12px;
+    min-width: 45px;
+    max-width: 55px; /* Prevent it from growing too wide */
+    border-radius: 8px;
+    line-height: 1;
+    box-sizing: border-box;
   }
 
-  /* Playlist toggle - more compact */
+  /* Playlist toggle - match speed height */
   .atm-podcast .atm-pl-toggle {
     flex-shrink: 0;
-    padding: 4px 6px; /* Smaller padding */
-    border-radius: 6px;
+    height: 32px; /* Same height as speed select */
+    width: 32px; /* Make it square */
+    padding: 0; /* Remove padding, use fixed dimensions */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    box-sizing: border-box;
   }
 
   .atm-podcast .atm-pl-toggle .atm-ico {
-    width: 14px !important;
-    height: 14px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
 }
 
 /* For very small screens */
 @media (max-width: 480px) {
   .atm-podcast .atm-bottom {
-    gap: 4px;
-    padding: 8px 10px 18px 10px;
+    gap: 6px;
+    padding: 8px 12px 18px 12px;
   }
 
   .atm-podcast .atm-vol-track {
-    min-width: 40px;
-    max-width: 70px;
+    max-width: 80px;
   }
 
   .atm-podcast .atm-speed .atm-speed-select {
-    min-width: 32px;
-    padding: 2px 3px;
-    font-size: 10px;
+    min-width: 40px;
+    max-width: 50px;
+    height: 28px;
+    font-size: 11px;
   }
 
   .atm-podcast .atm-pl-toggle {
-    padding: 3px 5px;
+    height: 28px;
+    width: 28px;
   }
 }
 
