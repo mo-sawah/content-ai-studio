@@ -1671,7 +1671,7 @@ body.wp-admin .atm-content-body {
 body.wp-admin .atm-studio-container,
 body.wp-admin .atm-content-body {
   .components-button {
-    margin: 10px 0 !important;
+    margin: 0 !important;
 
     &:first-child {
       margin-top: 0 !important;
@@ -1684,7 +1684,7 @@ body.wp-admin .atm-content-body {
 
   /* Also target any buttons that might not have components-button class */
   button {
-    margin: 10px 0 !important;
+    margin: 0 !important;
 
     &:first-child {
       margin-top: 0 !important;
