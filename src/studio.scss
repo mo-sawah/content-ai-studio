@@ -1964,9 +1964,9 @@ body.wp-admin .atm-content-body {
 
 .atm-type-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 16px;
-  max-width: 800px;
+  max-width: 100%;
 }
 
 .atm-type-card {
