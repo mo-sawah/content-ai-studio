@@ -1975,3 +1975,24 @@ body.wp-admin
 .atm-comments-actions .components-button {
   min-width: 160px;
 }
+
+// Add to src/studio.scss
+.atm-news-tabs,
+.atm-article-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.atm-tab-button {
+  flex: 1;
+  max-width: 200px;
+  text-align: center !important;
+  justify-content: center !important;
+}
+
+.atm-tab-content {
+  padding-top: 24px;
+}

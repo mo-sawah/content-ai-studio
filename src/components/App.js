@@ -11,6 +11,7 @@ import VideoSearch from "./VideoSearch";
 import ChartGenerator from "./ChartGenerator";
 import MultipageArticlesForm from "./MultipageArticlesForm"; // --- NEW: Import Multipage component
 import CommentsGenerator from "./CommentsGenerator";
+import NewsGenerator from "./NewsGenerator";
 
 function App() {
   const [activeView, setActiveView] = useState("hub");
@@ -60,6 +61,28 @@ function App() {
             </svg>
           ),
           color: "#f59e0b", // amber-500
+        },
+        // NEW: Add Generate News
+        {
+          id: "news",
+          label: "Generate News",
+          icon: (
+            <svg
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14l2 2v12a2 2 0 01-2 2zM3 4h16M7 8h10M7 12h6"
+              />
+            </svg>
+          ),
+          color: "#059669",
         },
         {
           id: "images",
@@ -246,6 +269,8 @@ function App() {
         return <ArticleGenerator setActiveView={setActiveView} />;
       case "multipage": // --- NEW: Add routing for the component
         return <MultipageArticlesForm setActiveView={setActiveView} />;
+      case "news": // NEW: Add news routing
+        return <NewsGenerator setActiveView={setActiveView} />;
       case "images":
         return <ImageGenerator setActiveView={setActiveView} />;
       case "podcast":
@@ -272,6 +297,7 @@ function App() {
       hub: "AI Studio",
       articles: "Generate Articles",
       multipage: "Generate Multipage Article", // --- NEW
+      news: "Generate News", // NEW
       images: "Generate Images",
       podcast: "Generate Podcast",
       takeaways: "Key Takeaways",
@@ -289,6 +315,7 @@ function App() {
       hub: "Content Creation Suite",
       articles: "Create high-quality content with AI assistance",
       multipage: "Create comprehensive, multi-part guides with AI", // --- NEW
+      news: "Create News from RSS feeds and live news sources", // NEW
       images: "Generate stunning visuals powered by AI",
       podcast: "Turn content into engaging audio experiences",
       takeaways: "Extract key insights from your content",

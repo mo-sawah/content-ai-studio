@@ -20,28 +20,23 @@ function WelcomeHub({ setActiveView }) {
       gradient: "from-blue-500 to-purple-600",
       onClick: () => setActiveView("articles"),
     },
-    // --- NEW: Multipage Articles card added here ---
+    // NEW: Add news card
     {
-      id: "multipage",
-      title: "Multipage Articles",
-      description: "Create comprehensive, multi-part guides",
+      id: "news",
+      title: "Generate News",
+      description: "Create articles from RSS feeds and live news sources",
       icon: (
-        <svg
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth="2"
-            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 002-2V7a2 2 0 00-2-2H9a2 2 0 00-2 2v12a2 2 0 002 2h10z"
-          ></path>
+            strokeWidth={2}
+            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14l2 2v12a2 2 0 01-2 2zM3 4h16M7 8h10M7 12h6"
+          />
         </svg>
       ),
-      gradient: "from-yellow-500 to-amber-600",
-      onClick: () => setActiveView("multipage"),
+      gradient: "from-emerald-500 to-green-600",
+      onClick: () => setActiveView("news"),
     },
     {
       id: "images",
