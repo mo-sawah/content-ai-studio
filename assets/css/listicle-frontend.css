@@ -296,7 +296,7 @@
 }
 
 .atm-listicle-container .atm-listicle-price-amount {
-  font-size: 1.25rem !important;
+  font-size: 2.25rem !important;
   font-weight: 700 !important;
   color: #059669 !important;
   margin-bottom: 0.25rem !important;
@@ -660,8 +660,12 @@
 .atm-listicle-container .atm-listicle-rating-text {
   font-weight: 600 !important;
   color: #92400e !important;
-  font-size: 1rem !important;
+  font-size: 2rem !important;
   white-space: nowrap !important;
+}
+
+.atm-listicle-rating p {
+  margin-bottom: 0 !important;
 }
 
 /* Price box - same line as rating */
