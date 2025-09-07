@@ -340,6 +340,104 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     /**
+     * Generate listicle title
+     */
+    public static function generate_listicle_title($topic, $item_count, $category, $model_override = '') {
+        $system_prompt = "You are an expert SEO content strategist. Your task is to generate a single, compelling, SEO-friendly title for a listicle article about '{$topic}' with {$item_count} items in the {$category} category.
+
+    REQUIREMENTS:
+    - Make it clickable and engaging
+    - Include the number of items ({$item_count})
+    - Use power words that drive engagement
+    - Keep it under 60 characters for SEO
+    - Make it specific and valuable to the target audience
+
+    EXAMPLES:
+    - '10 Best Project Management Tools for Small Teams in 2024'
+    - '15 Proven Email Marketing Strategies That Boost Sales'
+    - '7 Essential WordPress Plugins Every Blogger Needs'
+
+    Return only the title, nothing else.";
+
+        $model = !empty($model_override) ? $model_override : get_option('atm_article_model', 'openai/gpt-4o');
+        
+        $generated_title = self::enhance_content_with_openrouter(
+            ['content' => $topic], 
+            $system_prompt, 
+            $model, 
+            false, 
+            true // Enable web search for current trends
+        );
+        
+        return trim($generated_title, " \t\n\r\0\x0B\"");
+    }
+
+    /**
+     * Generate listicle content
+     */
+    public static function generate_listicle_content($params) {
+        extract($params); // Extracts all variables from the params array
+        
+        $pricing_instruction = $include_pricing ? "Include pricing information where relevant." : "";
+        $rating_instruction = $include_ratings ? "Include star ratings or numerical scores for each item." : "";
+        $custom_instruction = !empty($custom_prompt) ? "Additional instructions: {$custom_prompt}" : "";
+
+        $system_prompt = "You are an expert content creator specializing in listicle articles. Your task is to create a comprehensive, engaging listicle about '{$topic}' with exactly {$item_count} items in the {$category} category.
+
+    CRITICAL INSTRUCTIONS:
+    1. Your entire response MUST be a single, valid JSON object.
+    2. Structure the JSON response exactly as follows:
+    {
+        \"subtitle\": \"Brief engaging subtitle\",
+        \"introduction\": \"Compelling introduction paragraph\",
+        \"overview\": \"Brief overview of what the list covers\",
+        \"items\": [
+            {
+                \"number\": 1,
+                \"title\": \"Item title\",
+                \"description\": \"Detailed description (2-3 sentences)\",
+                \"features\": [\"feature1\", \"feature2\", \"feature3\"],
+                \"pros\": [\"pro1\", \"pro2\"],
+                \"cons\": [\"con1\", \"con2\"],
+                \"rating\": 4.5,
+                \"price\": \"$99/month\",
+                \"why_its_great\": \"Explanation of why this item made the list\"
+            }
+        ],
+        \"conclusion\": \"Compelling conclusion paragraph\"
+    }
+
+    CONTENT REQUIREMENTS:
+    - Make each item valuable and detailed
+    - Use engaging language but keep it informative
+    - Focus on providing genuine value to readers
+    - Ensure items are ranked logically (best to good, or most important to least)
+    - {$pricing_instruction}
+    - {$rating_instruction}
+    - {$custom_instruction}
+
+    Use your web search ability to ensure all information is current and accurate. Do not include any text outside the JSON object.";
+
+        $model = !empty($model) ? $model : get_option('atm_article_model', 'openai/gpt-4o');
+
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $topic],
+            $system_prompt,
+            $model,
+            true, // JSON mode
+            true  // Enable web search
+        );
+        
+        $result = json_decode($raw_response, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['items']) || !is_array($result['items'])) {
+            error_log('Content AI Studio - Invalid JSON from Listicle API: ' . $raw_response);
+            throw new Exception('The AI returned an invalid listicle structure. Please try again.');
+        }
+
+        return $result;
+    }
+
+    /**
      * Summarizes a large block of text using a fast AI model.
      * @param string $content The long content to summarize.
      * @return string The summarized content.
