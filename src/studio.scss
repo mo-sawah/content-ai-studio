@@ -2036,3 +2036,126 @@ body.wp-admin
 .atm-content-subtitle {
   margin: 0 !important;
 }
+
+/* --- Type Selector Cards --- */
+.atm-type-selector {
+  margin-bottom: 32px;
+}
+
+.atm-type-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  max-width: 800px;
+}
+
+.atm-type-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: #8b5cf6;
+  }
+
+  &.active {
+    border-color: #8b5cf6;
+    background: linear-gradient(
+      135deg,
+      rgba(139, 92, 246, 0.02) 0%,
+      rgba(139, 92, 246, 0.05) 100%
+    );
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.15);
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%);
+    }
+
+    .atm-type-content h3 {
+      color: #8b5cf6;
+    }
+  }
+}
+
+.atm-type-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.atm-type-content {
+  flex: 1;
+  min-width: 0;
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 4px 0;
+    transition: color 0.2s ease;
+  }
+
+  p {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.4;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .atm-type-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .atm-type-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .atm-type-icon {
+    width: 40px;
+    height: 40px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .atm-type-content h3 {
+    font-size: 15px;
+  }
+
+  .atm-type-content p {
+    font-size: 12px;
+  }
+}
