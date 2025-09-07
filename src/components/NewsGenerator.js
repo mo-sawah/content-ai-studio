@@ -1,55 +1,52 @@
 // src/components/NewsGenerator.js
 import { useState } from "@wordpress/element";
-import { Button } from "@wordpress/components";
+import CustomDropdown from "./common/CustomDropdown";
 import RssForm from "./RssForm";
 import NewsForm from "./NewsForm";
 
 function NewsGenerator({ setActiveView }) {
   const [activeTab, setActiveTab] = useState("rss");
 
+  const newsTypeOptions = [
+    { value: "rss", label: "RSS Feeds" },
+    { value: "news", label: "Live News" },
+    // Ready for future expansion:
+    // { value: "social", label: "Social Media Trends" },
+    // { value: "breaking", label: "Breaking News Alerts" },
+    // { value: "financial", label: "Financial News" },
+    // { value: "sports", label: "Sports News" },
+    // { value: "tech", label: "Technology News" },
+    // { value: "business", label: "Business News" },
+  ];
+
+  const handleTypeChange = (newType) => {
+    setActiveTab(newType);
+  };
+
   return (
     <div className="atm-generator-view">
-      {/* Header with back button */}
-      <div className="atm-view-header">
-        <Button
-          className="atm-back-btn"
-          onClick={() => setActiveView("hub")}
-          icon={
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-          }
-        />
-        <h3>Generate News</h3>
+      {/* News Type Selector */}
+      <div className="atm-form-container">
+        <div className="atm-dropdown-field">
+          <label className="atm-dropdown-label">News Source Type</label>
+          <CustomDropdown
+            options={newsTypeOptions}
+            value={activeTab}
+            onChange={handleTypeChange}
+            placeholder="Select news source..."
+          />
+        </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="atm-news-tabs">
-        <Button
-          className={`atm-tab-button ${activeTab === "rss" ? "active" : ""}`}
-          onClick={() => setActiveTab("rss")}
-          variant={activeTab === "rss" ? "primary" : "secondary"}
-        >
-          RSS Feeds
-        </Button>
-        <Button
-          className={`atm-tab-button ${activeTab === "news" ? "active" : ""}`}
-          onClick={() => setActiveTab("news")}
-          variant={activeTab === "news" ? "primary" : "secondary"}
-        >
-          Live News
-        </Button>
-      </div>
-
-      {/* Tab Content */}
+      {/* Content based on selected type */}
       <div className="atm-tab-content">
         {activeTab === "rss" && <RssForm />}
         {activeTab === "news" && <NewsForm />}
+        {/* Future news types can be added here:
+        {activeTab === "social" && <SocialTrendsForm />}
+        {activeTab === "breaking" && <BreakingNewsForm />}
+        {activeTab === "financial" && <FinancialNewsForm />}
+        */}
       </div>
     </div>
   );
