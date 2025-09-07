@@ -544,4 +544,16 @@ if ($post_id) {
         dbDelta($sql_used_links);
     }
 
- 
+    public static function activate() {
+        $dirs = [
+            'css' => ATM_PLUGIN_PATH . 'assets/css',
+            'js'  => ATM_PLUGIN_PATH . 'assets/js'
+        ];
+        foreach ($dirs as $dir) {
+            if (!file_exists($dir)) {
+                wp_mkdir_p($dir);
+            }
+        }
+        self::create_campaigns_table();
+    }
+}
