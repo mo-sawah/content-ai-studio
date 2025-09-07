@@ -762,7 +762,15 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             
             **Content Rules:**
             - The `content` field must NOT start with a title or any heading (like `# Heading`). It must begin directly with the first paragraph of the introduction.
-            - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.';
+            - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
+            
+            **Link Formatting Rules:**
+            - When including external links, NEVER use the website URL as the anchor text
+            - Use descriptive, natural keywords as anchor text instead
+            - Example: Use [digital marketing strategies](https://example.com) NOT [https://example.com](https://example.com)
+            - Anchor text should be relevant keywords that describe what the reader will find
+            - Keep anchor text concise (2-4 words maximum)
+            - Make links feel natural within the sentence flow';
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
             if ($post) {
                 $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
@@ -800,12 +808,10 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             $original_content = trim($result['content']);
             $final_content = $original_content;
 
-            // Add debugging
-            error_log('ATM Debug - Post ID: ' . $post_id . ', Subtitle: "' . $subtitle . '"');
-
+            // Direct SmartMag subtitle saving
             if ($post_id > 0 && !empty($subtitle)) {
-                $final_content = ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle, $original_content);
-                error_log('ATM Debug - Subtitle saved, final content length: ' . strlen($final_content));
+                update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
+                error_log("ATM Plugin: Saved subtitle '{$subtitle}' to SmartMag field for post {$post_id}");
             }
 
             wp_send_json_success(['article_title' => $article_title, 'article_content' => $final_content, 'subtitle' => $subtitle]);
@@ -841,6 +847,14 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
                 - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
                 - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
                 - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
+
+                **Link Formatting Requirements:**
+                - When including external links, NEVER use the website URL as the anchor text
+                - Use descriptive, natural keywords as anchor text instead
+                - Example: Use [recent study](https://example.com) NOT [https://example.com](https://example.com)
+                - Anchor text should be relevant keywords that describe the content being linked to
+                - Keep anchor text concise and natural (2-4 words)
+                - Links should integrate seamlessly into the sentence structure
 
                 **Final Output Format:**
                 Your entire output MUST be a single, valid JSON object with three keys:
@@ -885,11 +899,10 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             $original_content = trim($result['content']);
             $final_content = $original_content;
 
-            error_log('ATM Debug - News Article - Post ID: ' . $post_id . ', Subtitle: "' . $subtitle . '"');
-
+            // Direct SmartMag subtitle saving
             if ($post_id > 0 && !empty($subtitle)) {
-                $final_content = ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle, $original_content);
-                error_log('ATM Debug - News subtitle saved');
+                update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
+                error_log("ATM Plugin: Saved NEWS subtitle '{$subtitle}' to SmartMag field for post {$post_id}");
             }
 
             if (empty($headline) || empty($final_content)) {
@@ -1025,11 +1038,10 @@ $final_prompt .= ' Use your web search ability to verify facts and add any recen
             $original_content = trim($result['content']);
             $final_content = $original_content;
 
-            error_log('ATM Debug - RSS Article - Post ID: ' . $post_id . ', Subtitle: "' . $subtitle . '"');
-
+            // Direct SmartMag subtitle saving
             if ($post_id > 0 && !empty($subtitle)) {
-                $final_content = ATM_Theme_Subtitle_Manager::save_subtitle($post_id, $subtitle, $original_content);
-                error_log('ATM Debug - RSS subtitle saved');
+                update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
+                error_log("ATM Plugin: Saved RSS subtitle '{$subtitle}' to SmartMag field for post {$post_id}");
             }
 
             if ($post_id > 0) {
