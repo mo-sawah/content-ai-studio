@@ -361,7 +361,7 @@ class ATM_API {
         }
     }
 
-    // Add this new method to class-atm-api.php:
+    // Replace the combine_audio_segments_improved method in class-atm-api.php:
     private static function combine_audio_segments_improved($temp_files) {
         // Sort temp files by segment index
         ksort($temp_files);
@@ -370,30 +370,33 @@ class ATM_API {
             throw new Exception("No audio segments to combine");
         }
         
+        error_log("ATM: Starting audio combination with " . count($temp_files) . " segments");
+        
         // If only one segment, return it directly
         if (count($temp_files) === 1) {
             $filepath = reset($temp_files);
             if (file_exists($filepath)) {
-                return file_get_contents($filepath);
+                $content = file_get_contents($filepath);
+                error_log("ATM: Single segment returned: " . strlen($content) . " bytes");
+                return $content;
             }
             throw new Exception("Single audio segment file not found");
         }
         
-        // For multiple segments, try a simple approach first
+        // For multiple segments, combine them
         $combined_audio = '';
         
         foreach ($temp_files as $index => $filepath) {
             if (file_exists($filepath)) {
                 $segment_content = file_get_contents($filepath);
                 if ($segment_content) {
-                    // Skip MP3 headers after the first file for better compatibility
-                    if ($index > 0) {
-                        // Remove potential ID3 tags from subsequent files
-                        $segment_content = self::remove_mp3_headers($segment_content);
-                    }
                     $combined_audio .= $segment_content;
                     error_log("ATM: Added segment $index (" . strlen($segment_content) . " bytes)");
+                } else {
+                    error_log("ATM: Warning - segment $index is empty");
                 }
+            } else {
+                error_log("ATM: Warning - segment file missing: $filepath");
             }
         }
         
@@ -764,7 +767,7 @@ public static function process_podcast_background($job_id) {
             $final_audio = self::combine_audio_segments_improved($temp_files);
                         
             // Combine audio segments
-            $final_audio = self::combine_audio_segments($temp_files);
+            $final_audio = self::combine_audio_segments_improved($temp_files);
             
             // Save final podcast
             $upload_dir = wp_upload_dir();
@@ -2248,21 +2251,6 @@ Follow these rules strictly:
         if (empty($audio_segments)) {
             throw new Exception('No valid audio segments found in script. Please check script format.');
         }
-
-        // --- START: ADD CUSTOM PODCAST INTRO (Direct File Method) ---
-        // ⬇️ IMPORTANT: Change 'my-intro.mp3' to the exact filename of your uploaded intro.
-        $intro_file_path = ATM_PLUGIN_PATH . 'assets/audio/intro.mp3'; 
-
-        if (file_exists($intro_file_path)) {
-            $intro_audio_content = file_get_contents($intro_file_path);
-            if ($intro_audio_content) {
-                // Add the intro music as the first part of the final audio.
-                $final_audio_parts[] = $intro_audio_content;
-                // Add a brief pause after the intro for better pacing.
-                $final_audio_parts[] = self::generate_silence(750); 
-            }
-        }
-        // --- END: ADD CUSTOM PODCAST INTRO ---
 
         foreach ($audio_segments as $segment) {
             $voice = ($segment['speaker'] === 'HOST_A') ? $voice_a : $voice_b;
