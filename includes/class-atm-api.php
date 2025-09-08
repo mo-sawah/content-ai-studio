@@ -2558,13 +2558,18 @@ Follow these rules strictly:
             $payload['response_format'] = [ 'type' => 'json_object' ];
         }
 
-        // CORRECT: Use OpenRouter's web search plugin
+        // Replace this section in enhance_content_with_openrouter function (around line 1169):
+
+        // CORRECT: Use OpenRouter's web search plugin (array format)
         $max_results = intval(get_option('atm_web_search_results', 0));
         if ($enable_web_search && $max_results > 0) {
             $payload['plugins'] = [
-                'web' => [
-                    'max_results' => $max_results,
-                    'search_prompt' => 'Find the most recent and relevant information from ' . date('Y') . ' about: {query}. Focus on current events and latest developments.'
+                [
+                    'id' => 'web',
+                    'config' => [
+                        'max_results' => $max_results,
+                        'search_prompt' => 'Find the most recent and relevant information from ' . date('Y') . ' about: {query}. Focus on current events and latest developments.'
+                    ]
                 ]
             ];
         }
