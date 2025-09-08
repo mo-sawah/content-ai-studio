@@ -1322,6 +1322,11 @@ private static function create_segment_prompt($title, $content, $language, $segm
 - **ALEX CHEN**: Primary host - analytical, insightful, authoritative
 - **JORDAN RIVERA**: Co-host - relatable, dynamic, practical
 
+**SPEAKER FORMAT:**
+- Use clean speaker names: ALEX: and JORDAN:
+- Do NOT use markdown formatting like **ALEX:** 
+- Each speaker line must start with SPEAKER_NAME: followed by their dialogue
+
 **PODCAST NAME:** {$podcast_name}
 ";
 
@@ -2901,12 +2906,13 @@ Follow these rules strictly:
 
         // Enhanced speaker detection - more flexible patterns
         $speaker_patterns = [
-            '/^(ALEX|HOST_A):\s*(.+)/i',           // ALEX: or HOST_A:
-            '/^(JORDAN|HOST_B):\s*(.+)/i',         // JORDAN: or HOST_B:
-            '/^(Host\s*A|Host\s*1):\s*(.+)/i',     // Host A: or Host 1:
-            '/^(Host\s*B|Host\s*2):\s*(.+)/i',     // Host B: or Host 2:
-            '/^([A-Z][A-Z\s]{2,15}):\s*(.+)/',     // Any CAPS NAME: (3-16 chars)
-        ];
+        '/^\*\*(ALEX|JORDAN|HOST_A|HOST_B)\s*[A-Z\s]*\*\*:\s*(.+)/i',  // **ALEX:** or **JORDAN:**
+        '/^(ALEX|HOST_A):\s*(.+)/i',           // ALEX: or HOST_A:
+        '/^(JORDAN|HOST_B):\s*(.+)/i',         // JORDAN: or HOST_B:
+        '/^(Host\s*A|Host\s*1):\s*(.+)/i',     // Host A: or Host 1:
+        '/^(Host\s*B|Host\s*2):\s*(.+)/i',     // Host B: or Host 2:
+        '/^([A-Z][A-Z\s]{2,15}):\s*(.+)/',     // Any CAPS NAME: (3-16 chars)
+    ];
 
         $matched = false;
         foreach ($speaker_patterns as $pattern) {
