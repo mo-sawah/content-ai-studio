@@ -340,7 +340,8 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     public static function generate_advanced_podcast_script($title, $content, $language, $duration = 'medium') {
-        
+    
+        // Much more conservative duration mapping to fit TTS limits
         $duration_specs = [
             'short' => '5-7 minutes (approximately 750-1050 words total)',
             'medium' => '8-12 minutes (approximately 1200-1800 words total)', 
@@ -351,36 +352,45 @@ class ATM_API {
 
         $system_prompt = "You are creating a professional, engaging podcast script between two experienced hosts discussing '{$title}'. 
 
-    **CRITICAL CONSTRAINT**: Each individual speaking turn MUST be maximum 1-2 sentences (under 200 characters each). This is essential for technical processing.
-
     **HOST PERSONALITIES:**
-    - **ALEX CHEN**: The primary presenter - analytical, guides conversation
-    - **JORDAN RIVERA**: The co-host - enthusiastic, asks questions, provides reactions
+    - **ALEX CHEN**: The primary presenter - analytical, well-researched, guides the conversation
+    - **JORDAN RIVERA**: The co-host - enthusiastic, relatable, provides real-world examples
 
-    **STRICT REQUIREMENTS:**
+    **CRITICAL REQUIREMENTS:**
 
-    1. **Speaking Pattern**: 
-    - Each speaker turn: 1-2 sentences MAXIMUM
-    - Frequent back-and-forth exchanges
-    - NO long paragraphs or monologues
-    - Break complex thoughts into multiple short exchanges
+    1. **Script Length**: Target {$target_duration}
+    - IMPORTANT: Keep individual speaking segments SHORT (maximum 2-3 sentences each)
+    - Frequent back-and-forth between hosts
+    - No long monologues - break up longer thoughts into multiple exchanges
 
-    2. **Script Length**: Target {$target_duration}
-    - Achieve length through MANY short exchanges, not long speeches
-    - Quick ping-pong conversation style
+    2. **Conversation Structure**:
+    - **Opening** (60 seconds): Brief greeting and topic introduction
+    - **Main Discussion** (80% of content): Multiple short exchanges covering key points
+    - **Closing** (60 seconds): Quick summary and sign-off
 
-    3. **Format Example**:
-    ALEX: [ENTHUSIASTIC] Welcome to Deep Dive Discussions! I'm Alex Chen.
-    JORDAN: [FRIENDLY] And I'm Jordan Rivera. Today we're exploring the Dead Internet Theory.
-    ALEX: [NODDING] This theory suggests AI is taking over online content. What's your take?
-    JORDAN: [THOUGHTFUL] It's fascinating but concerning. The idea is that authentic human voices are disappearing.
-    ALEX: [AGREEMENT] Exactly. Let's break this down step by step.
+    3. **Speaking Patterns**:
+    - Each speaker turn should be 1-3 sentences maximum
+    - Frequent interruptions and natural flow: [INTERRUPTING], [CHUCKLES]
+    - Short reactions: 'Exactly!', 'That's interesting', 'I see what you mean'
+    - Keep responses conversational and concise
 
-    4. **Language**: Write entirely in {$language}
+    4. **Content Guidelines**:
+    - Cover the main points from the article
+    - Include current context from web research
+    - Keep explanations clear but brief
+    - Use natural transitions between topics
 
-    **REMEMBER**: Keep every single speaking turn SHORT. Never write long paragraphs for one speaker.
+    5. **Output Format**:
+    ALEX: [ENTHUSIASTIC] Welcome to Deep Dive Discussions! I'm Alex Chen...
+    JORDAN: [FRIENDLY] And I'm Jordan Rivera. Today we're looking at...
+    ALEX: [NODDING] Right. So let's start with the basics...
+    JORDAN: [AGREEMENT] That makes sense. What's really interesting is...
 
-    Research the topic thoroughly but present information in very short, conversational exchanges.";
+    6. **Language**: Write entirely in {$language}
+
+    **IMPORTANT**: Focus on creating natural conversation with SHORT exchanges. Avoid long paragraphs or speeches. Think of it as a real conversation where people interrupt and respond quickly.
+
+    Research the topic thoroughly but present information in bite-sized, conversational chunks.";
 
         $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
         
@@ -388,8 +398,8 @@ class ATM_API {
             ['title' => $title, 'content' => $content],
             $system_prompt,
             $model,
-            false,
-            true
+            false, // not JSON mode
+            true   // enable web search for research
         );
 
         return $script;
@@ -1720,7 +1730,7 @@ Follow these rules strictly:
             if (empty($clean_text)) continue;
 
             // Split long segments into smaller chunks (OpenAI limit is 4096 chars)
-            $max_chunk_size = $provider === 'openai' ? 3000 : 4000; // Much more conservative
+            $max_chunk_size = $provider === 'openai' ? 3500 : 4000; // Much more conservative
             $text_chunks = self::split_text_into_chunks($clean_text, $max_chunk_size);
             
             foreach ($text_chunks as $chunk) {
