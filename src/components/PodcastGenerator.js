@@ -227,7 +227,9 @@ function GeneratorView({
         }
         disabled={isLoading}
       >
-        {isLoading && statusMessage.includes("script") ? (
+        {isLoading &&
+        (statusMessage.includes("script") ||
+          statusMessage.includes("Analyzing")) ? (
           <>
             <CustomSpinner /> Generating Advanced Script...
           </>
@@ -238,10 +240,10 @@ function GeneratorView({
 
       <TextareaControl
         label="Podcast Script"
-        help="The generated two-person conversational script will appear here. You can edit it before generating the audio. Look for HOST_A: and HOST_B: dialogue markers."
+        help="The generated two-person conversational script will appear here featuring Alex Chen (analytical host) and Jordan Rivera (enthusiastic co-host). You can edit it before generating the audio."
         value={scriptContent}
         onChange={setScriptContent}
-        rows="20"
+        rows="25" // Increased for longer scripts
         disabled={isLoading}
         className="atm-podcast-script-textarea"
       />
@@ -352,6 +354,8 @@ function PodcastGenerator({ setActiveView }) {
       );
       return;
     }
+
+    // Set loading state immediately
     setIsLoading(true);
     setStatusMessage(
       "Analyzing article content and researching additional information..."

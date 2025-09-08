@@ -341,59 +341,76 @@ class ATM_API {
 
     public static function generate_advanced_podcast_script($title, $content, $language, $duration = 'medium') {
     
-        // Duration mapping
+        // Duration mapping with more specific word counts
         $duration_specs = [
-            'short' => '5-7 minutes (approximately 750-1000 words)',
-            'medium' => '8-12 minutes (approximately 1200-1800 words)', 
-            'long' => '15-20 minutes (approximately 2000-3000 words)'
+            'short' => '7-9 minutes (approximately 1000-1350 words)',
+            'medium' => '10-15 minutes (approximately 1500-2250 words)', 
+            'long' => '18-25 minutes (approximately 2700-3750 words)'
         ];
         
         $target_duration = $duration_specs[$duration] ?? $duration_specs['medium'];
 
         $system_prompt = "You are creating a professional, engaging podcast script between two experienced hosts discussing '{$title}'. 
 
+    **HOST PERSONALITIES:**
+    - **ALEX CHEN**: The primary presenter - analytical, well-researched, asks probing questions, slightly more formal but warm
+    - **JORDAN RIVERA**: The co-host - enthusiastic, relatable, provides real-world examples, more conversational and reactive
+
     **CRITICAL REQUIREMENTS:**
 
-    1. **Two-Person Format**: Create a natural conversation between:
-    - HOST_A: The primary presenter (slightly more knowledgeable, guides discussion)
-    - HOST_B: The co-host (asks good questions, provides different perspectives, reactions)
+    1. **Script Length**: Target {$target_duration}
+    - You MUST write enough content to reach the target duration
+    - Each minute of podcast = approximately 150 words of dialogue
+    - Include natural pauses, reactions, and conversational elements
 
-    2. **Script Structure** (Target: {$target_duration}):
-    - **Opening** (30-45 seconds): Natural greeting, topic introduction
-    - **Main Discussion** (80% of content): Deep dive with back-and-forth conversation
-    - **Closing** (30-45 seconds): Summary and sign-off
+    2. **Script Structure**:
+    - **Opening** (60-90 seconds): Natural greeting, topic introduction, brief preview
+    - **Main Discussion** (85% of content): Deep dive with extensive back-and-forth conversation
+    - **Segments**: Break into 3-4 distinct discussion segments with smooth transitions
+    - **Closing** (60-90 seconds): Comprehensive summary and engaging sign-off
 
     3. **Conversation Elements**:
-    - Natural interruptions and overlaps: [INTERRUPTING], [OVERLAPPING]
-    - Emotional reactions: [LAUGHS], [CHUCKLES], [SURPRISED], [THOUGHTFUL PAUSE]
-    - Conversational fillers: 'Um', 'Well', 'You know', 'Actually'
-    - Questions between hosts: 'What do you think?', 'Have you experienced this?'
-    - Agreements/disagreements: 'Exactly!', 'Hmm, I'm not sure about that'
+    - Natural interruptions: [ALEX INTERRUPTING], [JORDAN OVERLAPPING]
+    - Emotional reactions: [LAUGHS], [CHUCKLES], [SURPRISED], [THOUGHTFUL PAUSE], [EXCITED]
+    - Conversational fillers: 'Um', 'Well', 'You know what's interesting?', 'Actually', 'Here's the thing'
+    - Cross-talk: 'What's your take on this?', 'Have you seen this before?', 'That's fascinating'
+    - Agreements/disagreements: 'Exactly!', 'I'm not entirely convinced', 'Here's where I disagree'
 
-    4. **Research Integration**: Use web search to find:
-    - Recent developments on the topic
-    - Statistics and data points
-    - Expert opinions or quotes
-    - Related examples or case studies
-    - Contrary viewpoints for balanced discussion
+    4. **Content Expansion Requirements**:
+    - Include multiple real-world examples and case studies
+    - Add personal anecdotes and hypothetical scenarios
+    - Discuss implications, consequences, and future predictions
+    - Include counterarguments and different perspectives
+    - Add statistical data and research findings
+    - Mention related topics and tangents (but bring it back to main topic)
 
-    5. **Output Format**:
-    HOST_A: [ENTHUSIASTIC] Welcome back to the show! I'm [Host A name]
-    HOST_B: [FRIENDLY] And I'm [Host B name]. Today we're diving into something really interesting...
-    HOST_A: [AGREEMENT] Absolutely! So let's start with...
-    [Continue with natural conversation]
+    5. **Research Integration**: Use web search extensively to find:
+    - Latest developments and news on the topic
+    - Statistics, data points, and research studies
+    - Expert opinions, quotes, and industry insights
+    - Related examples, case studies, and success stories
+    - Contrary viewpoints and debates for balanced discussion
+    - Historical context and evolution of the topic
 
-    6. **Language**: Write entirely in {$language}
+    6. **Output Format**:
+    ALEX: [ENTHUSIASTIC] Welcome back to Deep Dive Discussions! I'm Alex Chen...
+    JORDAN: [FRIENDLY] And I'm Jordan Rivera. Today we're exploring something that's been on everyone's mind lately...
+    ALEX: [AGREEMENT] Absolutely, Jordan! And what makes this particularly interesting is...
+    [Continue with extensive natural conversation]
+
+    7. **Language**: Write entirely in {$language}
 
     **Content Guidelines**:
-    - Make it sound like two real people having an informed conversation
-    - Include personal anecdotes or hypothetical scenarios
-    - Add transitional phrases: 'Speaking of which...', 'That reminds me...'
-    - Include listener engagement: 'Let us know what you think'
-    - Balance information with entertainment
-    - Use contemporary language and references
+    - Make conversations feel like two knowledgeable friends discussing a fascinating topic
+    - Include listener engagement: 'Let us know in the comments', 'We'd love to hear your thoughts'
+    - Add transitional phrases: 'Speaking of which...', 'That reminds me of...', 'Building on that...'
+    - Include current references and contemporary language
+    - Add preview teasers: 'We'll get into that in just a moment', 'More on that coming up'
+    - Use storytelling techniques: 'Picture this scenario...', 'Here's what happened...'
 
-    **Research the article topic thoroughly before writing the script to ensure accuracy and add current context.**";
+    **IMPORTANT**: This podcast must feel substantial and informative. Don't rush through topics - explore them deeply, add examples, discuss implications, and make it conversational but comprehensive. The hosts should sound like experts who are genuinely excited about the topic.
+
+    **Research the article topic extensively before writing the script to ensure accuracy, current context, and comprehensive coverage that justifies the target duration.**";
 
         // Use the most capable model for this complex task
         $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
@@ -1758,10 +1775,14 @@ Follow these rules strictly:
             $line = trim($line);
             if (empty($line)) continue;
             
-            // Check if line starts with HOST_A: or HOST_B:
-            if (preg_match('/^(HOST_[AB]):\s*(.+)/', $line, $matches)) {
+            // Check for both old format (HOST_A/HOST_B) and new format (ALEX/JORDAN)
+            if (preg_match('/^(HOST_[AB]|ALEX|JORDAN):\s*(.+)/', $line, $matches)) {
                 $speaker = $matches[1];
                 $text = $matches[2];
+                
+                // Map names to voice assignments
+                if ($speaker === 'ALEX') $speaker = 'HOST_A';
+                if ($speaker === 'JORDAN') $speaker = 'HOST_B';
                 
                 // Add pause if speaker changed
                 $add_pause = ($current_speaker && $current_speaker !== $speaker);
