@@ -587,14 +587,17 @@ function PodcastGenerator({ setActiveView }) {
       return;
     }
 
-    // Updated validation to check for both old and new formats
-    const hasOldFormat =
+    // Updated validation - more flexible format checking
+    const hasHostFormat =
       script.includes("HOST_A:") && script.includes("HOST_B:");
-    const hasNewFormat = script.includes("ALEX:") && script.includes("JORDAN:");
+    const hasNameFormat =
+      script.includes("ALEX:") && script.includes("JORDAN:");
+    const hasGenericFormat =
+      script.includes(":") && script.split(":").length > 3; // At least some dialogue format
 
-    if (!hasOldFormat && !hasNewFormat) {
+    if (!hasHostFormat && !hasNameFormat && !hasGenericFormat) {
       alert(
-        "The script doesn't appear to be in the correct two-person format. Please regenerate the script first."
+        "The script doesn't appear to be in a valid dialogue format. Please regenerate the script first."
       );
       return;
     }
