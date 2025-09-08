@@ -611,6 +611,7 @@ public function translate_text() {
         add_action('wp_ajax_get_post_subtitle', array($this, 'get_post_subtitle'));
         add_action('wp_ajax_populate_subtitle_field', array($this, 'populate_subtitle_field'));
         add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
+        
 
         // --- MULTIPAGE ACTIONS ---
         add_action('wp_ajax_generate_multipage_title', array($this, 'generate_multipage_title'));
@@ -671,6 +672,7 @@ public function translate_text() {
     }
 }
 
+    // In class-atm-ajax.php - replace generate_podcast() method:
     public function generate_podcast() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key to use this feature.');
@@ -685,23 +687,17 @@ public function translate_text() {
             $host_a_voice = sanitize_text_field($_POST['host_a_voice'] ?? 'alloy');
             $host_b_voice = sanitize_text_field($_POST['host_b_voice'] ?? 'nova');
             
-            // Validation
             if (empty($script) || empty($post_id)) {
                 throw new Exception("Script and Post ID are required.");
             }
 
-            // Start chunked generation
-            $job_id = ATM_API::start_chunked_podcast_generation(
-                $post_id, 
-                $script, 
-                $host_a_voice, 
-                $host_b_voice, 
-                $provider
-            );
+            // Start background processing with WordPress cron
+            $job_id = ATM_API::queue_podcast_generation($post_id, $script, $host_a_voice, $host_b_voice, $provider);
 
             wp_send_json_success([
                 'job_id' => $job_id,
-                'message' => 'Podcast generation started. Please wait...'
+                'message' => 'Podcast generation started in background...',
+                'status' => 'processing'
             ]);
 
         } catch (Exception $e) {

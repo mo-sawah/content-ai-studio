@@ -339,6 +339,127 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    // Add to class-atm-api.php:
+public static function queue_podcast_generation($post_id, $script, $voice_a, $voice_b, $provider) {
+    global $wpdb;
+    
+    $job_id = uniqid('podcast_', true);
+    $segments = self::split_script_into_segments($script, 500);
+    $table_name = $wpdb->prefix . 'atm_podcast_jobs';
+    
+    // Create job record
+    $result = $wpdb->insert($table_name, [
+        'post_id' => $post_id,
+        'job_id' => $job_id,
+        'script' => $script,
+        'voice_a' => $voice_a,
+        'voice_b' => $voice_b,
+        'provider' => $provider,
+        'total_segments' => count($segments),
+        'status' => 'processing'
+    ]);
+    
+    if ($result === false) {
+        throw new Exception("Failed to create job record: " . $wpdb->last_error);
+    }
+    
+    // Schedule immediate background processing
+    wp_schedule_single_event(time() + 5, 'atm_process_podcast_background', [$job_id]);
+    
+    return $job_id;
+}
+
+public static function process_podcast_background($job_id) {
+    // Set unlimited execution time for background processing
+    set_time_limit(0);
+    ignore_user_abort(true);
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'atm_podcast_jobs';
+    
+    try {
+        $job = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE job_id = %s",
+            $job_id
+        ), ARRAY_A);
+        
+        if (!$job) {
+            error_log("ATM: Background job $job_id not found");
+            return;
+        }
+        
+        error_log("ATM: Starting background processing for job $job_id");
+        
+        $segments = self::split_script_into_segments($job['script'], 500);
+        $temp_files = [];
+        
+        // Process all segments
+        for ($i = 0; $i < count($segments); $i++) {
+            error_log("ATM: Background processing segment $i of " . count($segments));
+            
+            $segment_script = $segments[$i];
+            $audio_content = self::generate_two_person_podcast_audio(
+                $segment_script,
+                $job['voice_a'],
+                $job['voice_b'],
+                $job['provider']
+            );
+            
+            $temp_file = self::save_temp_audio_segment($audio_content, $job_id, $i);
+            $temp_files[$i] = $temp_file;
+            
+            // Update progress
+            $wpdb->update($table_name, [
+                'completed_segments' => $i + 1,
+                'temp_files' => json_encode($temp_files)
+            ], ['job_id' => $job_id]);
+            
+            error_log("ATM: Background completed segment $i");
+        }
+        
+        // Combine segments
+        error_log("ATM: Combining segments for job $job_id");
+        $final_audio = self::combine_audio_segments($temp_files);
+        
+        // Save final podcast
+        $upload_dir = wp_upload_dir();
+        $filename = 'podcast-' . $job['post_id'] . '-' . time() . '.mp3';
+        $filepath = $upload_dir['path'] . '/' . $filename;
+        
+        if (file_put_contents($filepath, $final_audio) === false) {
+            throw new Exception("Failed to save final podcast");
+        }
+        
+        $file_url = $upload_dir['url'] . '/' . $filename;
+        
+        // Update post meta
+        update_post_meta($job['post_id'], '_atm_podcast_url', $file_url);
+        update_post_meta($job['post_id'], '_atm_podcast_script', $job['script']);
+        update_post_meta($job['post_id'], '_atm_podcast_voice', $job['voice_a']);
+        update_post_meta($job['post_id'], '_atm_podcast_host_b_voice', $job['voice_b']);
+        update_post_meta($job['post_id'], '_atm_podcast_provider', $job['provider']);
+        
+        // Mark job complete
+        $wpdb->update($table_name, ['status' => 'completed'], ['job_id' => $job_id]);
+        
+        // Clean up temp files
+        foreach ($temp_files as $temp_file) {
+            if (file_exists($temp_file)) {
+                unlink($temp_file);
+            }
+        }
+        
+        error_log("ATM: Background job $job_id completed successfully");
+        
+    } catch (Exception $e) {
+        error_log("ATM: Background job $job_id failed: " . $e->getMessage());
+        $wpdb->update($table_name, [
+            'status' => 'failed',
+            'error_message' => $e->getMessage()
+        ], ['job_id' => $job_id]);
+    }
+}
+
     /**
      * Start chunked podcast generation
      */
@@ -565,24 +686,38 @@ class ATM_API {
     /**
      * Combine audio segments into final file
      */
+    // Replace the combine_audio_segments method in class-atm-api.php:
     private static function combine_audio_segments($temp_files) {
         $combined_audio = '';
         
-        // Sort by segment index
+        // Add intro first (if it exists)
+        $intro_file_path = ATM_PLUGIN_PATH . 'assets/audio/intro.mp3';
+        if (file_exists($intro_file_path)) {
+            $intro_content = file_get_contents($intro_file_path);
+            if ($intro_content) {
+                $combined_audio .= $intro_content;
+                error_log("ATM: Added intro audio (" . strlen($intro_content) . " bytes)");
+            }
+        }
+        
+        // Sort temp files by segment index
         ksort($temp_files);
         
         foreach ($temp_files as $index => $filepath) {
             if (file_exists($filepath)) {
                 $segment_content = file_get_contents($filepath);
-                $combined_audio .= $segment_content;
-                
-                // Add small silence between segments for smoother transitions
-                if ($index < count($temp_files) - 1) {
-                    $combined_audio .= self::generate_silence(300); // 300ms
+                if ($segment_content) {
+                    $combined_audio .= $segment_content;
+                    error_log("ATM: Added segment $index (" . strlen($segment_content) . " bytes)");
+                } else {
+                    error_log("ATM: Warning - segment $index is empty");
                 }
+            } else {
+                error_log("ATM: Warning - segment file missing: $filepath");
             }
         }
         
+        error_log("ATM: Final combined audio size: " . strlen($combined_audio) . " bytes");
         return $combined_audio;
     }
 

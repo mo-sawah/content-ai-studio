@@ -399,6 +399,9 @@ class ATM_Main {
         add_action('atm_process_podcast_segment', array('ATM_API', 'process_podcast_segment'), 10, 2);
         add_action('atm_finalize_podcast', array('ATM_API', 'finalize_podcast'));
         add_action('atm_cleanup_podcast_jobs', array('ATM_Main', 'cleanup_old_podcast_jobs'));
+        add_action('atm_process_podcast_background', array('ATM_API', 'process_podcast_background'));
+        add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
+
 
         // License check - only add meta boxes if licensed and meta box class exists
         if (class_exists('ATM_Licensing') && ATM_Licensing::is_license_active() && $meta_box) {
