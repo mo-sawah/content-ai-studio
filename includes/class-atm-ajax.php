@@ -5,6 +5,85 @@ if (!defined('ABSPATH')) {
 }
 
 class ATM_Ajax {
+
+    public function search_live_news() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 180);
+
+        try {
+            $keyword = sanitize_text_field($_POST['keyword']);
+            $force_fresh = isset($_POST['force_fresh']) && $_POST['force_fresh'] === 'true';
+
+            if (empty($keyword)) {
+                throw new Exception('Keyword is required for live news search.');
+            }
+
+            $categories = ATM_API::search_live_news_with_openrouter($keyword, $force_fresh);
+
+            wp_send_json_success([
+                'categories' => $categories,
+                'keyword' => $keyword,
+                'cached' => !$force_fresh
+            ]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    /**
+     * Generate article from live news category
+     */
+    public function generate_article_from_live_news() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 300);
+
+        try {
+            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+            $keyword = sanitize_text_field($_POST['keyword']);
+            $category_title = sanitize_text_field($_POST['category_title']);
+            $category_sources = isset($_POST['category_sources']) ? $_POST['category_sources'] : [];
+
+            if (empty($keyword) || empty($category_title) || empty($category_sources)) {
+                throw new Exception('Missing required parameters for article generation.');
+            }
+
+            // Get previous angles for this keyword to ensure uniqueness
+            $previous_angles = get_option('atm_live_news_angles_' . md5($keyword), []);
+
+            $result = ATM_API::generate_live_news_article($keyword, $category_title, $category_sources, $previous_angles);
+
+            // Store the new angle to prevent duplication in future generations
+            if (!empty($result['angle'])) {
+                $previous_angles[] = $result['angle'];
+                // Keep only the last 10 angles to prevent unlimited growth
+                $previous_angles = array_slice($previous_angles, -10);
+                update_option('atm_live_news_angles_' . md5($keyword), $previous_angles);
+            }
+
+            // Save subtitle if provided
+            if ($post_id > 0 && !empty($result['subtitle'])) {
+                update_post_meta($post_id, '_bunyad_sub_title', $result['subtitle']);
+                error_log("ATM Plugin: Saved Live News subtitle '{$result['subtitle']}' to SmartMag field for post {$post_id}");
+            }
+
+            wp_send_json_success([
+                'article_title' => $result['title'],
+                'article_content' => $result['content'],
+                'subtitle' => $result['subtitle'] ?? '',
+                'angle' => $result['angle'] ?? ''
+            ]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
     
 
     // Add this new AJAX function to force subtitle population
@@ -611,7 +690,11 @@ public function translate_text() {
         add_action('wp_ajax_get_post_subtitle', array($this, 'get_post_subtitle'));
         add_action('wp_ajax_populate_subtitle_field', array($this, 'populate_subtitle_field'));
         add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
-        
+
+        // NEW: Live News actions
+        add_action('wp_ajax_search_live_news', array($this, 'search_live_news'));
+        add_action('wp_ajax_generate_article_from_live_news', array($this, 'generate_article_from_live_news'));
+
 
         // --- MULTIPAGE ACTIONS ---
         add_action('wp_ajax_generate_multipage_title', array($this, 'generate_multipage_title'));

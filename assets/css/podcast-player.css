@@ -442,13 +442,13 @@
 
 /* Playlist toggle positioned above (half outside) */
 .playlist-toggle-floating {
-  margin-bottom: -65px;
+  margin-bottom: -55px;
   position: absolute;
   bottom: 0;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 66px;
-  height: 66px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: var(--color-bg-alt);
   border: 3px solid var(--color-border);

@@ -340,6 +340,216 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     /**
+     * Search live news using OpenRouter web search with categorization
+     */
+    public static function search_live_news_with_openrouter($keyword, $force_fresh = false) {
+        $cache_key = 'atm_live_news_' . md5($keyword);
+        $cache_duration = 3 * HOUR_IN_SECONDS; // 3 hours cache
+        
+        // Check cache first unless force refresh is requested
+        if (!$force_fresh) {
+            $cached_result = get_transient($cache_key);
+            if ($cached_result !== false) {
+                error_log("ATM Live News: Returning cached results for keyword: $keyword");
+                return $cached_result;
+            }
+        } else {
+            delete_transient($cache_key);
+        }
+        
+        $system_prompt = "You are an expert news researcher and categorization specialist. Your task is to search for the latest news about '{$keyword}' and organize the results into logical categories.
+
+    CRITICAL INSTRUCTIONS:
+    1. Use your web search ability to find the latest news about '{$keyword}' from the past 48 hours
+    2. Group related articles into 3-5 main topic categories
+    3. For each category, include 3-5 relevant articles
+    4. Extract key information for each article: title, source, date, summary, and thumbnail URL if available
+
+    Your response MUST be a valid JSON object with this exact structure:
+    {
+        \"categories\": [
+            {
+                \"title\": \"Category name (e.g., 'Immigration Policy', 'Trade Relations')\",
+                \"articles\": [
+                    {
+                        \"title\": \"Article headline\",
+                        \"source\": \"Source name (e.g., 'CNN', 'Reuters')\",
+                        \"date\": \"Formatted date (e.g., 'Dec 15, 2024')\",
+                        \"summary\": \"Brief 1-2 sentence summary\",
+                        \"thumbnail\": \"Image URL or empty string\",
+                        \"url\": \"Article URL\"
+                    }
+                ]
+            }
+        ]
+    }
+
+    Focus on:
+    - Recent, credible news sources
+    - Diverse perspectives and angles
+    - Clear categorization by topic/theme
+    - Quality over quantity - choose the most relevant articles
+
+    Return only the JSON object, no additional text.";
+
+        try {
+            $model = get_option('atm_article_model', 'openai/gpt-4o');
+            
+            $raw_response = self::enhance_content_with_openrouter(
+                ['content' => $keyword],
+                $system_prompt,
+                $model,
+                true, // JSON mode
+                true  // Enable web search
+            );
+            
+            $result = json_decode($raw_response, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['categories'])) {
+                error_log('ATM Live News - Invalid JSON response: ' . $raw_response);
+                throw new Exception('Invalid response format from news search API');
+            }
+            
+            $categories = $result['categories'];
+            
+            // Validate and clean the results
+            $cleaned_categories = [];
+            foreach ($categories as $category) {
+                if (!isset($category['title']) || !isset($category['articles']) || !is_array($category['articles'])) {
+                    continue;
+                }
+                
+                $cleaned_articles = [];
+                foreach ($category['articles'] as $article) {
+                    // Ensure required fields exist
+                    $cleaned_article = [
+                        'title' => sanitize_text_field($article['title'] ?? 'Untitled'),
+                        'source' => sanitize_text_field($article['source'] ?? 'Unknown Source'),
+                        'date' => sanitize_text_field($article['date'] ?? date('M j, Y')),
+                        'summary' => sanitize_textarea_field($article['summary'] ?? ''),
+                        'thumbnail' => esc_url_raw($article['thumbnail'] ?? ''),
+                        'url' => esc_url_raw($article['url'] ?? '')
+                    ];
+                    
+                    // Only include articles with meaningful content
+                    if (!empty($cleaned_article['title']) && $cleaned_article['title'] !== 'Untitled') {
+                        $cleaned_articles[] = $cleaned_article;
+                    }
+                }
+                
+                if (!empty($cleaned_articles)) {
+                    $cleaned_categories[] = [
+                        'title' => sanitize_text_field($category['title']),
+                        'articles' => $cleaned_articles
+                    ];
+                }
+            }
+            
+            // Cache the results
+            set_transient($cache_key, $cleaned_categories, $cache_duration);
+            
+            error_log("ATM Live News: Found " . count($cleaned_categories) . " categories for keyword: $keyword");
+            
+            return $cleaned_categories;
+            
+        } catch (Exception $e) {
+            error_log('ATM Live News Error: ' . $e->getMessage());
+            throw new Exception('Failed to search live news: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate article from live news category with unique angle
+     */
+    public static function generate_live_news_article($keyword, $category_title, $category_sources, $previous_angles = []) {
+        // Prepare the source content
+        $sources_text = "CATEGORY: {$category_title}\n\n";
+        $sources_text .= "LATEST NEWS SOURCES:\n";
+        
+        foreach ($category_sources as $index => $source) {
+            $sources_text .= "\n" . ($index + 1) . ". {$source['title']}\n";
+            $sources_text .= "   Source: {$source['source']} | {$source['date']}\n";
+            if (!empty($source['summary'])) {
+                $sources_text .= "   Summary: {$source['summary']}\n";
+            }
+            if (!empty($source['url'])) {
+                $sources_text .= "   URL: {$source['url']}\n";
+            }
+        }
+        
+        // Build angle differentiation prompt
+        $angle_context = '';
+        if (!empty($previous_angles)) {
+            $angle_context = "\n\nPREVIOUS ANGLES ALREADY COVERED for '{$keyword}':\n";
+            foreach ($previous_angles as $i => $angle) {
+                $angle_context .= "- " . ($i + 1) . ". " . $angle . "\n";
+            }
+            $angle_context .= "\nYou MUST create a completely different perspective that hasn't been covered before.";
+        }
+        
+        $system_prompt = "You are a professional journalist writing about the latest developments regarding '{$keyword}', specifically focusing on the '{$category_title}' aspect.
+
+    {$angle_context}
+
+    TASK:
+    Create a comprehensive, well-researched news article using the provided sources. Focus on delivering unique insights and a fresh perspective on this specific aspect of '{$keyword}'.
+
+    REQUIREMENTS:
+    1. Generate a compelling, SEO-friendly headline
+    2. Create an engaging subtitle that complements the main title
+    3. Write a substantial article (800-1200 words) with proper structure
+    4. Use journalistic style: objective, fact-based, and engaging
+    5. Include relevant details from the provided sources
+    6. Add your own analysis and context where appropriate
+    7. Use Markdown formatting with proper headings (## for H2, ### for H3)
+    8. DO NOT start with the title in the content - begin directly with the article text
+
+    OUTPUT FORMAT:
+    Your response MUST be a valid JSON object:
+    {
+        \"title\": \"Compelling headline for the article\",
+        \"subtitle\": \"Engaging one-sentence subtitle\",
+        \"content\": \"Full article content in Markdown format\",
+        \"angle\": \"Brief description of the unique angle/perspective taken\"
+    }
+
+    Write in an authoritative yet accessible tone. Make the article informative and engaging for a general audience while maintaining journalistic integrity.";
+
+        try {
+            $model = get_option('atm_article_model', 'openai/gpt-4o');
+            
+            $raw_response = self::enhance_content_with_openrouter(
+                ['content' => $sources_text],
+                $system_prompt,
+                $model,
+                true, // JSON mode
+                true  // Enable web search for additional context
+            );
+            
+            $result = json_decode($raw_response, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+                error_log('ATM Live News Article - Invalid JSON response: ' . $raw_response);
+                throw new Exception('Invalid response format from article generation API');
+            }
+            
+            // Validate required fields
+            if (empty($result['title']) || empty($result['content'])) {
+                throw new Exception('Generated article is missing required fields');
+            }
+            
+            return [
+                'title' => sanitize_text_field($result['title']),
+                'subtitle' => sanitize_text_field($result['subtitle'] ?? ''),
+                'content' => wp_kses_post($result['content']),
+                'angle' => sanitize_text_field($result['angle'] ?? '')
+            ];
+            
+        } catch (Exception $e) {
+            error_log('ATM Live News Article Generation Error: ' . $e->getMessage());
+            throw new Exception('Failed to generate article: ' . $e->getMessage());
+        }
+    }
+
+    /**
  * Queue script generation for background processing
  */
 public static function queue_script_generation($post_id, $language, $duration) {
@@ -1562,7 +1772,7 @@ Generate ONLY the script dialogue, no stage directions.";
      * Generate lifelike comments grounded in article content.
      * Returns a list of [{author_name, text, parent_index|null}]
      */
-    public static function generate_lifelike_comments($title, $content, $count = 7, $threaded = true, $model_override = '') {
+    public static function generate_lifelike_comments($title, $content, $count = 7, $threaded = true, $model_override = '', $post_id = 0) {
         // Allow up to 50
         $count = max(5, min(50, intval($count)));
 
@@ -1570,31 +1780,35 @@ Generate ONLY the script dialogue, no stage directions.";
             ? "- Some comments should be direct replies to earlier ones. Use `parent_index` to reference the zero-based index of the parent comment. Replies MUST reference an earlier index.\n"
             : "- All comments must be top-level (no replies). Set `parent_index` to null.\n";
 
-        // Strong realism, variety, and no links
+        // Create a unique seed based on post ID and title for name diversity
+        $name_seed = $post_id ? "post_$post_id" : substr(md5($title), 0, 8);
+        
         $system_prompt = "You are a diverse group of real readers reacting to an article.
-Produce a realistic discussion thread with natural, varied voices: short reactions, longer takes, questions, counterpoints, and follow-ups.
+    Produce a realistic discussion thread with natural, varied voices: short reactions, longer takes, questions, counterpoints, and follow-ups.
 
-CRITICAL RULES:
-- Read and internalize the article context below. Stay specific to it.
-- Vary tone and style (casual, thoughtful, skeptical, appreciative). Keep it conversational and human.
-- Avoid generic filler like 'Great post' or robotic phrasing. Be concrete and grounded in the article.
-- Mix lengths: 1–2 sentences up to short paragraphs. No walls of text.
-- Light use of emojis or slang is okay, but not overused. No profanity or hate.
-$threading_rule
-- Names must look organic and varied. Use a mix of formats: single names (\"Maya\"), nicknames/usernames (\"el_rondo\", \"N3ll\"), hyphenated (\"Sam-Lee\"), two names (\"João Pereira\"), initials-before (\"K. Martinez\"), or first+last.
-- DO NOT repeat the same naming pattern across all comments. At most ~30% may be 'Firstname + initial'.
-- STRICTLY FORBIDDEN: any links, URLs, domain names, or markdown links. Do not include emails. If referencing sources, paraphrase without URLs.
-- Do NOT include timestamps, likes, or extra fields.
+    CRITICAL RULES:
+    - Read and internalize the article context below. Stay specific to it.
+    - Vary tone and style (casual, thoughtful, skeptical, appreciative). Keep it conversational and human.
+    - Avoid generic filler like 'Great post' or robotic phrasing. Be concrete and grounded in the article.
+    - Mix lengths: 1–2 sentences up to short paragraphs. No walls of text.
+    - Light use of emojis or slang is okay, but not overused. No profanity or hate.
+    $threading_rule
+    - NAME UNIQUENESS SEED: $name_seed - Use this to generate completely unique names for this specific content. Names should be globally diverse and distinctive.
+    - REQUIRED: Each name must be unique and culturally diverse. Examples: Sakura Tanaka, Olumide Adebayo, Astrid Larsson, Joaquín Morales, Noor Al-Zahra, Raj Patel, Chloe Dubois, Aleksandr Volkov, Anya Kozlov, Liu Wei.
+    - Avoid Western-only names. Include names from: Asia, Africa, Middle East, Latin America, Europe, etc.
+    - Mix formats but ensure global representation: Full names, usernames with cultural elements, nicknames from various languages.
+    - STRICTLY FORBIDDEN: any links, URLs, domain names, or markdown links. Do not include emails.
+    - Do NOT include timestamps, likes, or extra fields.
 
-OUTPUT FORMAT (MANDATORY):
-Return ONLY a JSON object with a single key `comments`:
-{
-  \"comments\": [
-    { \"author_name\": \"...\", \"text\": \"...\", \"parent_index\": null|number },
-    ...
-  ]
-}
-Generate exactly $count items. No extra commentary or code fences.";
+    OUTPUT FORMAT (MANDATORY):
+    Return ONLY a JSON object with a single key `comments`:
+    {
+    \"comments\": [
+        { \"author_name\": \"...\", \"text\": \"...\", \"parent_index\": null|number },
+        ...
+    ]
+    }
+    Generate exactly $count items. No extra commentary or code fences.";
 
         $article_payload = [
             'title'   => (string) $title,

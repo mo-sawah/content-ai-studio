@@ -12,6 +12,7 @@ import ChartGenerator from "./ChartGenerator";
 import MultipageArticlesForm from "./MultipageArticlesForm";
 import CommentsGenerator from "./CommentsGenerator";
 import NewsGenerator from "./NewsGenerator";
+import LiveNewsForm from "./LiveNewsForm";
 
 function App() {
   const [activeView, setActiveView] = useState("hub");

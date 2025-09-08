@@ -2,6 +2,7 @@
 import { useState } from "@wordpress/element";
 import RssForm from "./RssForm";
 import NewsForm from "./NewsForm";
+import LiveNewsForm from "./LiveNewsForm";
 
 function NewsGenerator({ setActiveView }) {
   const [activeTab, setActiveTab] = useState("rss");
@@ -30,9 +31,9 @@ function NewsGenerator({ setActiveView }) {
       gradient: "from-orange-500 to-red-600",
     },
     {
-      id: "news",
-      title: "Live News",
-      description: "Create articles from live news sources",
+      id: "apis",
+      title: "APIs News",
+      description: "Create articles from news API sources",
       icon: (
         <svg
           fill="none"
@@ -50,6 +51,28 @@ function NewsGenerator({ setActiveView }) {
         </svg>
       ),
       gradient: "from-emerald-500 to-green-600",
+    },
+    {
+      id: "live",
+      title: "Live News",
+      description: "Search and categorize latest news with AI",
+      icon: (
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21L16.514 16.506M19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z"
+          />
+        </svg>
+      ),
+      gradient: "from-blue-500 to-purple-600",
     },
   ];
 
@@ -81,7 +104,8 @@ function NewsGenerator({ setActiveView }) {
       {/* Content based on selected type */}
       <div className="atm-tab-content">
         {activeTab === "rss" && <RssForm />}
-        {activeTab === "news" && <NewsForm />}
+        {activeTab === "apis" && <NewsForm />}
+        {activeTab === "live" && <LiveNewsForm />}
       </div>
     </div>
   );
