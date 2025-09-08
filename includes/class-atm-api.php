@@ -1844,49 +1844,49 @@ Follow these rules strictly:
     }
 
     private static function parse_podcast_script($script) {
-        $lines = explode("\n", trim($script));
-        $segments = [];
-        $current_segment = null;
+    $lines = explode("\n", trim($script));
+    $segments = [];
+    $current_segment = null;
 
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (empty($line)) continue;
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line)) continue;
 
-            // Check if the line indicates a new speaker
-            if (preg_match('/^(HOST_[AB]|ALEX|JORDAN):\s*(.+)/i', $line, $matches)) {
-                // If there's a current segment being built, save it first.
-                if ($current_segment) {
-                    $segments[] = $current_segment;
-                }
-
-                $speaker = strtoupper($matches[1]);
-                $text = trim($matches[2]);
-
-                // Map names to voice assignments
-                if ($speaker === 'ALEX') $speaker = 'HOST_A';
-                if ($speaker === 'JORDAN') $speaker = 'HOST_B';
-
-                $is_new_speaker = empty($segments) || end($segments)['speaker'] !== $speaker;
-
-                // Start a new segment
-                $current_segment = [
-                    'speaker' => $speaker,
-                    'text' => $text,
-                    'add_pause' => $is_new_speaker,
-                ];
-            } elseif ($current_segment) {
-                // This line is a continuation of the previous speaker's text
-                $current_segment['text'] .= ' ' . $line;
+        // Check if the line indicates a new speaker
+        if (preg_match('/^(HOST_[AB]|ALEX|JORDAN):\s*(.+)/i', $line, $matches)) {
+            // If there's a current segment being built, save it first.
+            if ($current_segment) {
+                $segments[] = $current_segment;
             }
-        }
 
-        // Add the very last segment after the loop finishes
-        if ($current_segment) {
-            $segments[] = $current_segment;
-        }
+            $speaker = strtoupper($matches[1]);
+            $text = trim($matches[2]);
 
-        return $segments;
+            // Map names to voice assignments
+            if ($speaker === 'ALEX') $speaker = 'HOST_A';
+            if ($speaker === 'JORDAN') $speaker = 'HOST_B';
+
+            $is_new_speaker = empty($segments) || end($segments)['speaker'] !== $speaker;
+
+            // Start a new segment
+            $current_segment = [
+                'speaker' => $speaker,
+                'text' => $text,
+                'add_pause' => $is_new_speaker,
+            ];
+        } elseif ($current_segment) {
+            // This line is a continuation of the previous speaker's text
+            $current_segment['text'] .= ' ' . $line;
+        }
     }
+
+    // Add the very last segment after the loop finishes
+    if ($current_segment) {
+        $segments[] = $current_segment;
+    }
+
+    return $segments;
+}
 
     private static function generate_silence($milliseconds) {
         // Generate brief silence - this is a simplified implementation
