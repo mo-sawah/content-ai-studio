@@ -30,6 +30,7 @@ class ATM_Podcast_Settings {
         register_setting('atm_podcast_settings', 'atm_auto_embed');
         register_setting('atm_podcast_settings', 'atm_podcast_season_text');
         register_setting('atm_podcast_settings', 'atm_default_image');
+        register_setting('atm_podcast_settings', 'atm_podcast_position');
         
         // Color settings
         register_setting('atm_podcast_settings', 'atm_podcast_accent_color');
@@ -98,6 +99,14 @@ class ATM_Podcast_Settings {
             'atm_podcast_season_text',
             'Season Text',
             array($this, 'season_text_field'),
+            'atm_podcast_settings',
+            'atm_podcast_general'
+        );
+
+        add_settings_field(
+            'atm_podcast_position',
+            'Player Position',
+            array($this, 'position_field'),
             'atm_podcast_settings',
             'atm_podcast_general'
         );
@@ -218,6 +227,8 @@ class ATM_Podcast_Settings {
             'atm_podcast_dark_colors'
         );
     }
+
+    
 
     // Section callbacks
     public function general_section_callback() {

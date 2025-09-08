@@ -129,27 +129,35 @@ class ATM_Frontend {
     }
 
     public function embed_podcast_in_content($content) {
-        if (!is_single() || !in_the_loop() || !is_main_query() || !get_option('atm_auto_embed', 1)) {
-            return $content;
-        }
+      if (!is_single() || !in_the_loop() || !is_main_query() || !get_option('atm_auto_embed', 1)) {
+          return $content;
+      }
 
-        global $post;
-        $podcast_url = get_post_meta($post->ID, '_atm_podcast_url', true);
+      global $post;
+      $podcast_url = get_post_meta($post->ID, '_atm_podcast_url', true);
 
-        if ($podcast_url) {
-            $podcast_image = get_post_meta($post->ID, '_atm_podcast_image', true);
-            $asset_default = ATM_PLUGIN_URL . 'assets/images/pody.jpg';
-            if (empty($podcast_image)) {
-                $opt_default   = get_option('atm_default_image', '');
-                $podcast_image = !empty($opt_default) ? $opt_default : $asset_default;
-            }
+      if ($podcast_url) {
+          $podcast_image = get_post_meta($post->ID, '_atm_podcast_image', true);
+          $asset_default = ATM_PLUGIN_URL . 'assets/images/pody.jpg';
+          if (empty($podcast_image)) {
+              $opt_default   = get_option('atm_default_image', '');
+              $podcast_image = !empty($opt_default) ? $opt_default : $asset_default;
+          }
 
-            $player_html = $this->get_player_html($post, $podcast_url, $podcast_image);
-            return $player_html . $content;
-        }
+          $player_html = $this->get_player_html($post, $podcast_url, $podcast_image);
+          
+          // Check position setting (default to bottom)
+          $position = get_option('atm_podcast_position', 'bottom');
+          
+          if ($position === 'top') {
+              return $player_html . $content;
+          } else {
+              return $content . $player_html;
+          }
+      }
 
-        return $content;
-    }
+      return $content;
+  }
 
     private function print_icon_sprite_once() {
         if (self::$sprite_printed) return;
@@ -406,7 +414,6 @@ class ATM_Frontend {
 
                 <?php if (!empty($playlist)) : ?>
                 <section class="playlist-container" id="playlistContainer" aria-label="Playlist">
-                    <h2 class="playlist-header">Up Next</h2>
                     <ul class="playlist-list" id="playlistList">
                         <?php foreach ($playlist as $index => $item) : ?>
                         <li class="playlist-item" data-url="<?php echo esc_url($item['url']); ?>" data-title="<?php echo esc_attr($item['title']); ?>">
