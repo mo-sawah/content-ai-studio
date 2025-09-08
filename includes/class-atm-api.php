@@ -339,6 +339,39 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    // Add this method to reduce TTS costs:
+    private static function optimize_tts_costs($script, $voice_a, $voice_b, $provider) {
+        $segments = self::parse_podcast_script($script);
+        $audio_parts = [];
+        $total_cost_estimate = 0;
+        
+        foreach ($segments as $segment) {
+            $text = preg_replace('/\[([^\]]+)\]/', '', $segment['text']); // Remove stage directions
+            $voice = ($segment['speaker'] === 'HOST_A') ? $voice_a : $voice_b;
+            
+            // Estimate cost before generating
+            $char_count = strlen($text);
+            if ($provider === 'openai') {
+                $cost_estimate = ($char_count / 1000) * 0.015; // $15 per 1M characters
+                $total_cost_estimate += $cost_estimate;
+            }
+            
+            error_log("ATM: Segment cost estimate: $" . number_format($cost_estimate, 4) . " for $char_count characters");
+            
+            // Generate audio only for this specific segment
+            if ($provider === 'elevenlabs') {
+                $audio_content = self::generate_audio_with_elevenlabs($text, $voice);
+            } else {
+                $audio_content = self::generate_audio_with_openai_tts($text, $voice);
+            }
+            
+            $audio_parts[] = $audio_content;
+        }
+        
+        error_log("ATM: Total estimated TTS cost: $" . number_format($total_cost_estimate, 4));
+        return implode('', $audio_parts);
+    }
+
     // Add this method to class-atm-api.php for debugging:
     public static function debug_audio_segments($job_id) {
         global $wpdb;
@@ -874,55 +907,113 @@ public static function process_podcast_background($job_id) {
     
         // More aggressive duration mapping for longer podcasts
         $duration_specs = [
-            'short' => '8-10 minutes (approximately 1200-1500 words total)',
-            'medium' => '15-20 minutes (approximately 2250-3000 words total)', 
-            'long' => '25-30 minutes (approximately 3750-4500 words total)'
+            'short' => '10-15 minutes (approximately 2000-2500 words total)',
+            'medium' => '15-25 minutes (approximately 2500-4500 words total)', 
+            'long' => '25-40 minutes (approximately 4500-8000 words total)'
         ];
         
         $target_duration = $duration_specs[$duration] ?? $duration_specs['medium'];
 
-        $system_prompt = "You are creating a professional, engaging podcast script between two experienced hosts discussing '{$title}'. 
+        $system_prompt = "You are creating a professional, engaging podcast script between two expert hosts discussing '{$title}' for {$website_name}. 
 
-    **HOST PERSONALITIES:**
-    - **ALEX CHEN**: The primary presenter - analytical, well-researched, guides the conversation
-    - **JORDAN RIVERA**: The co-host - enthusiastic, relatable, provides real-world examples
+**CRITICAL DURATION REQUIREMENT**: 
+Generate a script matching {$duration_length} duration:
+- Short: 10-15 minutes (2000-2500 words)
+- Medium: 15-25 minutes (2500-4500 words) 
+- Long: 25-40 minutes (4500-8000 words)
 
-    **CRITICAL REQUIREMENTS:**
+**HOST PERSONALITIES & SPEECH PATTERNS:**
+- **ALEX CHEN**: Primary host - analytical, insightful, authoritative
+  * Uses evidence-backed statements and research references
+  * Employs thoughtful pauses and reflective questions
+  * Transitions with phrases like 'What's particularly fascinating is...' or 'The research clearly shows...'
+  * Emotional range: curious → analytical → impressed → contemplative → decisive
+  
+- **JORDAN RIVERA**: Co-host - relatable, dynamic, practical
+  * Connects concepts to real-world applications
+  * Uses analogies and metaphors to explain complex ideas
+  * Adds personal perspective with phrases like 'In my experience...' or 'Think about it this way...'
+  * Emotional range: enthusiastic → surprised → concerned → amused → inspired
 
-    1. **Script Length**: Target {$target_duration}
-    - IMPORTANT: This should be a SUBSTANTIAL conversation
-    - Each speaking turn should be 2-4 sentences 
-    - Include detailed discussions, examples, and back-and-forth dialogue
-    - Don't rush through topics - explore them thoroughly
+**COMPREHENSIVE SCRIPT STRUCTURE:**
 
-    2. **Conversation Structure**:
-    - **Opening** (2-3 minutes): Detailed greeting and topic introduction with context
-    - **Main Discussion** (80% of content): Deep dive into multiple aspects with examples
-    - **Closing** (2-3 minutes): Comprehensive summary and thoughtful conclusion
+1. **PODCAST INTRO (20-40 seconds):**
+[SOUND EFFECT: Professional intro music] ALEX: [WELCOMING] Welcome to {$website_name} Podcast, where we explore the ideas shaping our world. I'm your host, Alex Chen. JORDAN: [ENTHUSIASTIC] And I'm Jordan Rivera. Today, we're diving deep into {$title} - a topic that's [relevant context/timeliness]. ALEX: [INTERESTED] This is something that affects [mention target audience and why they should care]. We've researched this extensively to bring you the most comprehensive discussion. JORDAN: [ENGAGED] We'll cover everything from [preview main topics] to practical applications you can use right away. Let's get started!
+2. **BACKGROUND CONTEXT (3-5 minutes):**
+- Historical development of the topic (minimum 3 key milestones)
+- Current landscape and importance (with specific statistics/data points)
+- Why this matters now (timeliness, relevance, impact)
 
-    3. **Content Depth**:
-    - Provide detailed explanations and real-world examples
-    - Include relevant statistics, studies, or expert opinions
-    - Add personal anecdotes and relatable scenarios
-    - Discuss implications and future considerations
+3. **MAIN DISCUSSION (70-75% of content):**
+- Minimum 6-8 distinct subtopics, each thoroughly explored
+- For EACH subtopic include:
+  * Detailed explanation with supporting evidence/research
+  * At least 2 specific examples or case studies
+  * Different perspectives/viewpoints (pros, cons, alternatives)
+  * Real-world implications and applications
 
-    4. **Speaking Patterns**:
-    - Each speaker turn should be 2-4 sentences (not just 1-2)
-    - Include natural conversation flow with interruptions: [INTERRUPTING], [CHUCKLES]
-    - Add thoughtful pauses and reactions
-    - Include follow-up questions and deeper exploration
+4. **PRACTICAL SEGMENT (10-15% of content):**
+- Actionable advice for listeners (minimum 5 specific recommendations)
+- How to apply insights in different contexts (personal, professional, societal)
+- Common challenges and solutions
 
-    5. **Output Format**:
-    ALEX: [ENTHUSIASTIC] Welcome to Deep Dive Discussions! I'm Alex Chen...
-    JORDAN: [FRIENDLY] And I'm Jordan Rivera. Today we're really excited to explore...
-    ALEX: [NODDING] Right. This is such a fascinating topic because...
-    JORDAN: [AGREEMENT] Absolutely! What really caught my attention was...
+5. **FUTURE OUTLOOK (3-5 minutes):**
+- Emerging trends and developments
+- Expert predictions with reasoning
+- Potential impact on different stakeholders
 
-    6. **Language**: Write entirely in {$language}
+6. **PODCAST OUTRO (1-2 minutes):**
+ALEX: [SATISFIED] This has been such an insightful discussion on {$title}. Jordan, any final thoughts? JORDAN: [THOUGHTFUL] I think what stands out most is [key takeaway]. Listeners should really consider [final piece of advice]. ALEX: [APPRECIATIVE] Thank you for joining us for this episode of the {$website_name} Podcast. JORDAN: [FRIENDLY] For more episodes like this, research materials, and additional resources, visit {$website_url}. If you enjoyed this discussion, remember to subscribe and share! ALEX: [CLOSING] Until next time, I'm Alex Chen... JORDAN: And I'm Jordan Rivera. Stay curious! [SOUND EFFECT: Outro music]
 
-    **IMPORTANT**: Focus on creating a comprehensive, detailed discussion. Think of this as an in-depth exploration, not a quick summary. Each topic should be thoroughly discussed with multiple perspectives and examples.
+**CONVERSATIONAL QUALITY REQUIREMENTS:**
 
-    Research the topic thoroughly and present information in substantial, conversational chunks that feel like a real deep-dive podcast.";
+1. **AUTHENTICITY:**
+- Each host turn MUST be 3-5 sentences minimum
+- Include natural speech patterns with occasional:
+  * Brief pauses [pause]
+  * Thinking moments [thinking]
+  * Reactions to the other host [agreeing] [surprised]
+- Vary sentence length and structure to sound natural
+- Include occasional brief agreements ('That's right,' 'Exactly,' 'Great point')
+
+2. **DEPTH AND RICHNESS:**
+- For each major point include:
+  * Primary explanation
+  * Supporting evidence (research, statistics, expert opinions)
+  * Real-world example or case study
+  * Implications or applications
+  * Connection to broader themes
+- Use specific details rather than generalizations
+- Include both mainstream and alternative perspectives
+
+3. **CONTENT ACCURACY:**
+- Present information as if researched from authoritative sources
+- When referencing research or statistics, include specific sources where possible
+- Acknowledge areas where information may be evolving or contested
+- Present balanced viewpoints on controversial aspects
+
+4. **ENGAGEMENT TECHNIQUES:**
+- Incorporate rhetorical questions to engage listeners
+- Use storytelling elements (setup, challenge, resolution)
+- Create 'visualization' moments ('Imagine if...' or 'Picture this scenario...')
+- Include occasional callbacks to earlier discussion points
+- Develop compelling analogies to explain complex concepts
+
+**EXAMPLES OF PROPERLY DEVELOPED EXCHANGES:**
+
+ALEX: [ANALYTICAL] When we look at the data from the past five years, there's a clear pattern emerging in how {specific topic aspect} is evolving. The Stanford Research Institute found that adoption rates have increased by 237% since 2022, which is unprecedented in this sector. What's particularly notable is the demographic shift – it's not just younger users anymore. [THOUGHTFUL] The implications of this spread across multiple industries, particularly in {specific industry}, where we're seeing fundamental business models being challenged.
+
+JORDAN: [SURPRISED] Those numbers are remarkable, Alex! To put that in perspective for our listeners, that's like going from a niche interest to mainstream adoption in record time. [ENTHUSIASTIC] I recently spoke with {industry expert}, who explained it using a brilliant analogy – it's similar to how smartphones transformed from luxury items to essentials in the mid-2000s. [REFLECTIVE] But there's an interesting tension here between opportunity and disruption. For example, in {specific company or case study}, they've had to completely reimagine their approach to {business process} while maintaining their core values.
+
+**FINAL REQUIREMENTS:**
+- Write entirely in {$language}
+- Maintain consistent host personalities throughout
+- Ensure the full script meets the specified word count for the selected duration
+- Balance technical information with accessibility
+- Create a natural conversation flow rather than alternating monologues
+- Include elements that would make for engaging listening (tensions, revelations, surprising facts)
+
+Remember, this script must be comprehensive, engaging, and substantive enough to fill the entire specified duration without feeling rushed or padded.";
 
         $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
         
