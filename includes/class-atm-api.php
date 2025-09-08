@@ -340,12 +340,12 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     public static function generate_advanced_podcast_script($title, $content, $language, $duration = 'medium') {
-    
-        // Duration mapping with more specific word counts
+        
+        // Much more conservative duration mapping to fit TTS limits
         $duration_specs = [
-            'short' => '7-9 minutes (approximately 1000-1350 words)',
-            'medium' => '10-15 minutes (approximately 1500-2250 words)', 
-            'long' => '18-25 minutes (approximately 2700-3750 words)'
+            'short' => '5-7 minutes (approximately 750-1050 words total)',
+            'medium' => '8-12 minutes (approximately 1200-1800 words total)', 
+            'long' => '15-18 minutes (approximately 2250-2700 words total)'
         ];
         
         $target_duration = $duration_specs[$duration] ?? $duration_specs['medium'];
@@ -353,66 +353,45 @@ class ATM_API {
         $system_prompt = "You are creating a professional, engaging podcast script between two experienced hosts discussing '{$title}'. 
 
     **HOST PERSONALITIES:**
-    - **ALEX CHEN**: The primary presenter - analytical, well-researched, asks probing questions, slightly more formal but warm
-    - **JORDAN RIVERA**: The co-host - enthusiastic, relatable, provides real-world examples, more conversational and reactive
+    - **ALEX CHEN**: The primary presenter - analytical, well-researched, guides the conversation
+    - **JORDAN RIVERA**: The co-host - enthusiastic, relatable, provides real-world examples
 
     **CRITICAL REQUIREMENTS:**
 
     1. **Script Length**: Target {$target_duration}
-    - You MUST write enough content to reach the target duration
-    - Each minute of podcast = approximately 150 words of dialogue
-    - Include natural pauses, reactions, and conversational elements
+    - IMPORTANT: Keep individual speaking segments SHORT (maximum 2-3 sentences each)
+    - Frequent back-and-forth between hosts
+    - No long monologues - break up longer thoughts into multiple exchanges
 
-    2. **Script Structure**:
-    - **Opening** (60-90 seconds): Natural greeting, topic introduction, brief preview
-    - **Main Discussion** (85% of content): Deep dive with extensive back-and-forth conversation
-    - **Segments**: Break into 3-4 distinct discussion segments with smooth transitions
-    - **Closing** (60-90 seconds): Comprehensive summary and engaging sign-off
+    2. **Conversation Structure**:
+    - **Opening** (60 seconds): Brief greeting and topic introduction
+    - **Main Discussion** (80% of content): Multiple short exchanges covering key points
+    - **Closing** (60 seconds): Quick summary and sign-off
 
-    3. **Conversation Elements**:
-    - Natural interruptions: [ALEX INTERRUPTING], [JORDAN OVERLAPPING]
-    - Emotional reactions: [LAUGHS], [CHUCKLES], [SURPRISED], [THOUGHTFUL PAUSE], [EXCITED]
-    - Conversational fillers: 'Um', 'Well', 'You know what's interesting?', 'Actually', 'Here's the thing'
-    - Cross-talk: 'What's your take on this?', 'Have you seen this before?', 'That's fascinating'
-    - Agreements/disagreements: 'Exactly!', 'I'm not entirely convinced', 'Here's where I disagree'
+    3. **Speaking Patterns**:
+    - Each speaker turn should be 1-3 sentences maximum
+    - Frequent interruptions and natural flow: [INTERRUPTING], [CHUCKLES]
+    - Short reactions: 'Exactly!', 'That's interesting', 'I see what you mean'
+    - Keep responses conversational and concise
 
-    4. **Content Expansion Requirements**:
-    - Include multiple real-world examples and case studies
-    - Add personal anecdotes and hypothetical scenarios
-    - Discuss implications, consequences, and future predictions
-    - Include counterarguments and different perspectives
-    - Add statistical data and research findings
-    - Mention related topics and tangents (but bring it back to main topic)
+    4. **Content Guidelines**:
+    - Cover the main points from the article
+    - Include current context from web research
+    - Keep explanations clear but brief
+    - Use natural transitions between topics
 
-    5. **Research Integration**: Use web search extensively to find:
-    - Latest developments and news on the topic
-    - Statistics, data points, and research studies
-    - Expert opinions, quotes, and industry insights
-    - Related examples, case studies, and success stories
-    - Contrary viewpoints and debates for balanced discussion
-    - Historical context and evolution of the topic
+    5. **Output Format**:
+    ALEX: [ENTHUSIASTIC] Welcome to Deep Dive Discussions! I'm Alex Chen...
+    JORDAN: [FRIENDLY] And I'm Jordan Rivera. Today we're looking at...
+    ALEX: [NODDING] Right. So let's start with the basics...
+    JORDAN: [AGREEMENT] That makes sense. What's really interesting is...
 
-    6. **Output Format**:
-    ALEX: [ENTHUSIASTIC] Welcome back to Deep Dive Discussions! I'm Alex Chen...
-    JORDAN: [FRIENDLY] And I'm Jordan Rivera. Today we're exploring something that's been on everyone's mind lately...
-    ALEX: [AGREEMENT] Absolutely, Jordan! And what makes this particularly interesting is...
-    [Continue with extensive natural conversation]
+    6. **Language**: Write entirely in {$language}
 
-    7. **Language**: Write entirely in {$language}
+    **IMPORTANT**: Focus on creating natural conversation with SHORT exchanges. Avoid long paragraphs or speeches. Think of it as a real conversation where people interrupt and respond quickly.
 
-    **Content Guidelines**:
-    - Make conversations feel like two knowledgeable friends discussing a fascinating topic
-    - Include listener engagement: 'Let us know in the comments', 'We'd love to hear your thoughts'
-    - Add transitional phrases: 'Speaking of which...', 'That reminds me of...', 'Building on that...'
-    - Include current references and contemporary language
-    - Add preview teasers: 'We'll get into that in just a moment', 'More on that coming up'
-    - Use storytelling techniques: 'Picture this scenario...', 'Here's what happened...'
+    Research the topic thoroughly but present information in bite-sized, conversational chunks.";
 
-    **IMPORTANT**: This podcast must feel substantial and informative. Don't rush through topics - explore them deeply, add examples, discuss implications, and make it conversational but comprehensive. The hosts should sound like experts who are genuinely excited about the topic.
-
-    **Research the article topic extensively before writing the script to ensure accuracy, current context, and comprehensive coverage that justifies the target duration.**";
-
-        // Use the most capable model for this complex task
         $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
         
         $script = self::enhance_content_with_openrouter(
@@ -1751,7 +1730,7 @@ public static function generate_two_person_podcast_audio($script, $voice_a, $voi
         if (empty($clean_text)) continue;
 
         // Split long segments into smaller chunks (OpenAI limit is 4096 chars)
-        $max_chunk_size = $provider === 'openai' ? 3800 : 4000; // Leave some buffer
+        $max_chunk_size = $provider === 'openai' ? 3500 : 4000; // Leave some buffer
         $text_chunks = self::split_text_into_chunks($clean_text, $max_chunk_size);
         
         foreach ($text_chunks as $chunk) {
@@ -1794,6 +1773,45 @@ public static function generate_two_person_podcast_audio($script, $voice_a, $voi
             return [$text];
         }
         
+        $chunks = [];
+        
+        // First try to split by sentences
+        $sentences = preg_split('/(?<=[.!?])\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
+        $current_chunk = '';
+        
+        foreach ($sentences as $sentence) {
+            $test_chunk = $current_chunk . ($current_chunk ? ' ' : '') . $sentence;
+            
+            if (strlen($test_chunk) > $max_length) {
+                if (!empty($current_chunk)) {
+                    $chunks[] = trim($current_chunk);
+                    $current_chunk = $sentence;
+                    
+                    // If single sentence is still too long, split by words
+                    if (strlen($current_chunk) > $max_length) {
+                        $word_chunks = self::split_by_words($current_chunk, $max_length);
+                        $chunks = array_merge($chunks, array_slice($word_chunks, 0, -1));
+                        $current_chunk = end($word_chunks);
+                    }
+                } else {
+                    // Single sentence too long, split by words
+                    $word_chunks = self::split_by_words($sentence, $max_length);
+                    $chunks = array_merge($chunks, $word_chunks);
+                    $current_chunk = '';
+                }
+            } else {
+                $current_chunk = $test_chunk;
+            }
+        }
+        
+        if (!empty($current_chunk)) {
+            $chunks[] = trim($current_chunk);
+        }
+        
+        return array_filter($chunks); // Remove empty chunks
+    }
+
+    private static function split_by_words($text, $max_length) {
         $chunks = [];
         $words = explode(' ', $text);
         $current_chunk = '';
