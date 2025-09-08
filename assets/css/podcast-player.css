@@ -1,735 +1,634 @@
-/* Content AI Studio — Podcast Player (Frontend)
-   Complete style sheet for the podcast player UI rendered by class-atm-frontend.php.
-   Covers: light/dark themes, gradient header, controls, hover states, playlist,
-   custom range sliders, responsiveness, and high-contrast accessibility.
+/* Content AI Studio - Modern Podcast Player CSS
+   Matches your original design exactly with theme and color customization
 */
 
-/* Root tokens and theming */
-.atm-podcast {
-  --atm-radius-xl: 16px;
-  --atm-radius-lg: 12px;
-  --atm-radius-md: 10px;
-  --atm-shadow-1: 0 8px 24px rgba(0, 0, 0, 0.15);
-  --atm-shadow-2: 0 20px 60px rgba(0, 0, 0, 0.18);
-  --atm-border: 1px solid rgba(0, 0, 0, 0.08);
-
-  /* Accent is injected from PHP (atm_podcast_settings) as inline CSS var on wrapper */
-  --atm-accent: #3b82f6;
-
-  /* Gradient endpoints (fallback) */
-  --atm-grad-start: var(--atm-accent);
-  --atm-grad-end: #7c3aed;
-
-  /* LIGHT THEME DEFAULTS */
-  --atm-card-bg: #ffffff;
-  --atm-card-text: #0f172a;
-  --atm-subtext: #64748b;
-  --atm-rail-bg: #e5e7eb;
-  --atm-rail-fill: var(--atm-accent);
-  --atm-rail-knob: #2563eb;
-  --atm-chip-bg: #f1f5f9;
-  --atm-chip-border: #e2e8f0;
-  --atm-chip-text: #0f172a;
-  --atm-icon-btn-bg: rgba(255, 255, 255, 0.35);
-  --atm-icon-btn-border: rgba(255, 255, 255, 0.55);
-  --atm-icon-btn-hover: rgba(255, 255, 255, 0.5);
-
-  /* Divider under header */
-  --atm-divider: #e5e7eb;
-
-  /* Playlist */
-  --atm-pl-bg: #f8fafc;
-  --atm-pl-border: #e2e8f0;
-
-  /* Transport button */
-  --atm-ctrl-bg: #f3f4f6;
-  --atm-ctrl-text: #111827;
-  --atm-ctrl-hover: #e5e7eb;
-
-  /* Volume slider track */
-  --atm-vol-track: #e5e7eb;
-  --atm-vol-fill: var(--atm-accent);
+/* Demo container wrapper */
+.demo-container {
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
 }
 
-.atm-podcast[data-theme="dark"] {
-  --atm-card-bg: #0f172a;
-  --atm-card-text: #e2e8f0;
-  --atm-subtext: #94a3b8;
-  --atm-rail-bg: #1f2937;
-  --atm-rail-fill: var(--atm-accent);
-  --atm-rail-knob: #93c5fd;
-  --atm-chip-bg: #111827;
-  --atm-chip-border: #1f2937;
-  --atm-chip-text: #e5e7eb;
-  --atm-icon-btn-bg: rgba(255, 255, 255, 0.12);
-  --atm-icon-btn-border: rgba(255, 255, 255, 0.25);
-  --atm-icon-btn-hover: rgba(255, 255, 255, 0.2);
-  --atm-divider: #1f2937;
-  --atm-pl-bg: #0b1220;
-  --atm-pl-border: #1f2433;
-  --atm-ctrl-bg: #0b1220;
-  --atm-ctrl-text: #e5e7eb;
-  --atm-ctrl-hover: #131a2a;
-  --atm-vol-track: #1f2937;
-  --atm-vol-fill: var(--atm-accent);
+/* CSS Variables - will be overridden by dynamic styles from PHP */
+:root {
+  --color-bg: #f5f7fa;
+  --color-bg-alt: #ffffff;
+  --color-bg-alt2: #f9fafb;
+  --color-border: #dfe3e8;
+  --color-border-strong: #cfd4da;
+  --color-text: #1f2933;
+  --color-text-soft: #616d79;
+  --color-text-softer: #9aa4af;
+  --color-accent: #2979ff;
+  --color-accent-hover: #1d63d6;
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+  --radius-lg: 24px;
+  --radius-md: 14px;
+  --radius-sm: 6px;
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.1);
+  --transition: 0.25s cubic-bezier(0.4, 0.2, 0.2, 1);
+  font-synthesis: none;
 }
 
-/* Modern CSS color-mix to auto-derive a nicer gradient end if supported */
-@supports (background: color-mix(in srgb, #000, #fff)) {
-  .atm-podcast {
-    --atm-grad-end: color-mix(in srgb, var(--atm-accent) 65%, #6d28d9);
-  }
+/* Dark theme overrides */
+.podcast-player[data-theme="dark"] {
+  --color-bg: #111827;
+  --color-bg-alt: #1f2732;
+  --color-bg-alt2: #1a2330;
+  --color-border: #2b3541;
+  --color-border-strong: #3a4653;
+  --color-text: #f2f6fa;
+  --color-text-soft: #a5b1bc;
+  --color-text-softer: #6e7a86;
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
-/* Card wrapper */
-.atm-podcast .atm-card {
-  background: var(--atm-card-bg);
-  color: var(--atm-card-text);
-  border-radius: var(--atm-radius-xl);
-  box-shadow: var(--atm-shadow-2);
-  overflow: hidden;
-  border: var(--atm-border);
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-/* Header */
-.atm-podcast .atm-header {
+.podcast-player {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  background: var(--color-bg-alt);
+  color: var(--color-text);
   position: relative;
-  padding: 18px 20px 16px 20px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 16px;
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-lg);
+  padding: 40px 36px 48px;
+  box-shadow: var(--shadow-md);
+  overflow: initial;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition);
+}
+
+.playlist-container:not(.open) {
+  border-top-color: transparent;
+}
+
+.player-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.podcast-artwork {
+  width: 128px;
+  height: 128px;
+  margin: 0 auto 16px;
+  border-radius: 28px;
   background: linear-gradient(
     135deg,
-    var(--atm-grad-start) 0%,
-    var(--atm-grad-end) 100%
+    var(--color-accent) 0%,
+    var(--color-accent-hover) 70%
   );
-  color: #fff;
-}
-
-/* Left and right header sections */
-.atm-podcast .atm-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.atm-podcast .atm-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Episode badge (EP) */
-.atm-podcast .atm-ep {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background:
-    var(--cover, none), linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  background-size: cover;
-  background-position: center;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-}
-
-.atm-podcast .atm-head-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.atm-podcast .atm-show {
-  font-weight: 700;
-  font-size: 14px;
-  color: #fff;
-}
-
-.atm-podcast .atm-season {
-  font-weight: 500;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-/* Header title + sub */
-.atm-podcast .atm-head-title {
-  grid-column: 1 / -1;
-  margin: 6px 0 2px 0;
-  font-size: 20px;
-  font-weight: 800;
-  color: #fff;
-  line-height: 1.25;
-}
-
-.atm-podcast .atm-head-sub {
-  grid-column: 1 / -1;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* Header icon buttons */
-.atm-podcast .atm-icon-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 1px solid var(--atm-icon-btn-border);
-  background: var(--atm-icon-btn-bg);
-  color: #fff;
-  transition: all 0.2s ease;
-}
-
-.atm-podcast .atm-icon-btn:hover {
-  transform: translateY(-1px);
-  background: var(--atm-icon-btn-hover);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-}
-
-.atm-podcast .atm-icon-btn .atm-ico {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-  color: currentColor;
-}
-
-/* Divider under header */
-.atm-podcast .atm-progress {
-  border-top: 1px solid var(--atm-divider);
-  padding: 14px 16px 6px 16px;
-}
-
-/* Seek rail */
-.atm-podcast .atm-rail {
-  position: relative;
-  width: 100%;
-  height: 8px;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.atm-podcast .atm-rail-bg {
-  position: absolute;
-  inset: 0;
-  background: var(--atm-rail-bg);
-  border-radius: 999px;
-}
-
-.atm-podcast .atm-rail-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 0%;
-  border-radius: 999px;
-  background: var(--atm-rail-fill);
-  transition: width 80ms linear;
-}
-
-.atm-podcast .atm-rail-knob {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: var(--atm-rail-knob);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-  pointer-events: none;
-}
-
-.atm-podcast .atm-rail:hover .atm-rail-knob {
-  box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.17);
-}
-
-/* Time labels */
-.atm-podcast .atm-times {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--atm-subtext);
-  user-select: none;
-}
-
-/* Transport controls row */
-.atm-podcast .atm-transport {
-  padding: 12px 16px 6px 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-/* Transport buttons */
-.atm-podcast .atm-ctrl,
-.atm-podcast .atm-play-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-  border: 1px solid var(--atm-chip-border);
-  background: var(--atm-ctrl-bg);
-  color: var(--atm-ctrl-text);
-  transition: all 0.15s ease;
-  box-shadow: 0 2px 4px rgba(2, 6, 23, 0.08);
-}
-
-.atm-podcast .atm-ctrl:hover,
-.atm-podcast .atm-play-btn:hover {
-  background: var(--atm-ctrl-hover);
-  transform: translateY(-1px);
-}
-
-.atm-podcast .atm-play-btn {
-  width: 52px;
-  height: 52px;
-  border: none;
-  background: var(--atm-accent);
-  color: #fff;
-  box-shadow: 0 10px 26px color-mix(in srgb, var(--atm-accent) 40%, transparent);
-}
-
-.atm-podcast .atm-play-btn:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px) scale(1.02);
-  background: rgba(19, 26, 41, 0.9);
-  backdrop-filter: blur(12px);
-}
-
-.atm-podcast .atm-ctrl.is-on,
-.atm-podcast .atm-toggle.is-on {
-  outline: 2px solid color-mix(in srgb, var(--atm-accent) 30%, transparent);
-}
-
-/* Bottom bar: volume, speed, playlist toggle */
-.atm-podcast .atm-bottom {
-  padding: 8px 16px 18px 16px;
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 12px 16px;
-  align-items: center;
-}
-
-@media (max-width: 620px) {
-  .atm-podcast .atm-bottom {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px 18px 16px;
-    overflow: hidden; /* Prevent overflow */
-  }
-
-  /* Volume icon */
-  .atm-podcast .atm-vol-ico {
-    flex-shrink: 0;
-    width: 16px !important;
-    height: 16px !important;
-  }
-
-  /* Volume track - more constrained */
-  .atm-podcast .atm-vol-track {
-    flex: 1;
-    min-width: 60px;
-    max-width: 100px; /* Limit maximum width */
-    height: 6px;
-  }
-
-  /* Hide volume percentage to save space */
-  .atm-podcast .atm-vol-val {
-    display: none;
-  }
-
-  /* Speed dropdown - match toggle height */
-  .atm-podcast .atm-speed {
-    flex-shrink: 0;
-  }
-
-  .atm-podcast .atm-speed .atm-speed-select {
-    height: 32px; /* Fixed height to match toggle */
-    padding: 0;
-    font-size: 12px;
-    min-width: 45px;
-    max-width: 55px; /* Prevent it from growing too wide */
-    border-radius: 8px;
-    line-height: 1;
-    box-sizing: border-box;
-  }
-
-  /* Playlist toggle - match speed height */
-  .atm-podcast .atm-pl-toggle {
-    flex-shrink: 0;
-    height: 32px; /* Same height as speed select */
-    width: 32px; /* Make it square */
-    padding: 0; /* Remove padding, use fixed dimensions */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    box-sizing: border-box;
-  }
-
-  .atm-podcast .atm-pl-toggle .atm-ico {
-    width: 16px !important;
-    height: 16px !important;
-  }
-}
-
-/* For very small screens */
-@media (max-width: 480px) {
-  .atm-podcast .atm-bottom {
-    gap: 6px;
-    padding: 8px 12px 18px 12px;
-  }
-
-  .atm-podcast .atm-vol-track {
-    max-width: 80px;
-  }
-
-  .atm-podcast .atm-speed .atm-speed-select {
-    min-width: 40px;
-    max-width: 50px;
-    height: 28px;
-    font-size: 11px;
-    padding: 0;
-  }
-
-  .atm-podcast .atm-pl-toggle {
-    height: 28px;
-    width: 28px;
-  }
-}
-
-/* Volume group */
-.atm-podcast .atm-volume {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 240px;
-}
-
-.atm-podcast .atm-vol-track {
+  box-shadow: 0 10px 26px -4px rgba(41, 121, 255, 0.5);
   position: relative;
-  height: 8px;
-  flex: 1 1 auto;
-  background: var(--atm-vol-track);
-  border-radius: 999px;
   overflow: hidden;
 }
 
-.atm-podcast .atm-vol-fill {
+.podcast-artwork svg {
+  width: 64px;
+  height: 64px;
+  color: #fff;
+}
+
+.artwork-pulse {
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 75%;
-  background: var(--atm-vol-fill);
-  border-radius: 999px;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 255, 255, 0.35) 0%,
+    transparent 72%
+  );
+  animation: pulse 2.2s ease-in-out infinite;
+  animation-play-state: paused;
+  mix-blend-mode: screen;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.85;
+  }
+  60% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+.podcast-title {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-bottom: 6px;
+}
+
+.podcast-author {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.45px;
+  color: var(--color-text-soft);
+  text-transform: uppercase;
+}
+
+.waveform-container {
+  position: relative;
+  margin: 28px 0 14px;
+  height: 78px;
+  background: var(--color-bg-alt2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  overflow: hidden;
+  user-select: none;
+  transition: var(--transition);
+}
+
+.waveform-container:hover {
+  border-color: var(--color-accent);
+}
+
+.waveform {
+  display: flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  padding: 0 18px;
+  height: 100%;
+}
+
+.wave-bar {
+  width: 3px;
+  background: var(--color-text-softer);
+  opacity: 0.55;
+  border-radius: 2px;
+  transform-origin: center;
+  transition: 0.25s;
+}
+
+.wave-bar.active {
+  background: var(--color-accent);
+  opacity: 1;
+}
+
+.waveform.playing .wave-bar {
+  animation: wave 1.05s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0% {
+    transform: scaleY(0.2);
+  }
+  25% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.5);
+  }
+  75% {
+    transform: scaleY(0.8);
+  }
+  100% {
+    transform: scaleY(0.2);
+  }
+}
+
+.progress-overlay {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: linear-gradient(
+    90deg,
+    rgba(41, 121, 255, 0.18),
+    rgba(41, 121, 255, 0.07)
+  );
+  pointer-events: none;
+  transition: width 0.15s linear;
+}
+
+.scrub-handle {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--color-accent);
+  border: 2px solid var(--color-bg-alt);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  left: 0%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transition: var(--transition);
   pointer-events: none;
 }
 
-/* Native range overlay for accessibility; fully styled */
-.atm-podcast .atm-vol-range {
-  -webkit-appearance: none;
-  appearance: none;
-  position: absolute;
-  inset: -6px 0 -6px 0;
-  width: 100%;
-  background: transparent;
-  cursor: pointer;
-  outline: none;
-}
-.atm-podcast .atm-vol-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: #ffffff;
-  border: 2px solid var(--atm-vol-fill);
-  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.2);
-  margin-top: -4px;
-}
-.atm-podcast .atm-vol-range::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--atm-vol-fill);
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.2);
-}
-.atm-podcast .atm-vol-range::-webkit-slider-runnable-track {
-  height: 8px;
-  background: transparent;
-}
-.atm-podcast .atm-vol-val {
-  min-width: 44px;
-  text-align: right;
-  font-size: 12px;
-  color: var(--atm-subtext);
+.waveform-container:hover .scrub-handle {
+  opacity: 1;
 }
 
-/* Speed select */
-.atm-podcast .atm-speed .atm-speed-select {
-  border: 1px solid var(--atm-chip-border);
-  background: var(--atm-chip-bg);
-  color: var(--atm-chip-text);
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-weight: 600;
-  outline: none;
-  transition: all 0.15s ease;
-}
-.atm-podcast .atm-speed .atm-speed-select:hover {
-  border-color: color-mix(
-    in srgb,
-    var(--atm-accent) 25%,
-    var(--atm-chip-border)
-  );
-}
-
-/* Playlist toggle button */
-.atm-podcast .atm-pl-toggle {
-  justify-self: end;
-  display: inline-grid;
-  place-items: center;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: var(--atm-chip-bg);
-  color: var(--atm-chip-text);
-  border: 1px solid var(--atm-chip-border);
-  transition: all 0.15s ease;
-}
-.atm-podcast .atm-pl-toggle:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(
-    in srgb,
-    var(--atm-accent) 35%,
-    var(--atm-chip-border)
-  );
-}
-
-/* Playlist panel */
-.atm-podcast .atm-playlist {
-  background: var(--atm-pl-bg);
-  border-top: 1px solid var(--atm-pl-border);
-  padding: 12px;
-}
-
-.atm-podcast .atm-pl-head {
-  font-weight: 700;
-  color: var(--atm-card-text);
-  margin-bottom: 10px;
-}
-
-.atm-podcast .atm-pl-list {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  max-height: 320px;
-  overflow: auto;
-}
-
-.atm-podcast .atm-pl-item {
-  display: grid;
-  grid-template-columns: 52px 1fr auto;
-  gap: 12px;
-  align-items: center;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid var(--atm-pl-border);
-  background: color-mix(in srgb, var(--atm-pl-bg) 85%, #ffffff);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.atm-podcast .atm-pl-item:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--atm-accent) 25%, var(--atm-pl-border));
-  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.08);
-}
-
-.atm-podcast .atm-pl-item img {
-  width: 52px;
-  height: 52px;
-  border-radius: 10px;
-  object-fit: cover;
-  box-shadow: 0 4px 12px rgba(2, 6, 23, 0.22);
-}
-
-.atm-podcast .atm-pl-meta {
+.time-display {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--color-text-soft);
+  margin-bottom: 22px;
+}
+
+.player-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.icon-btn {
+  --size: 44px;
+  width: var(--size);
+  height: var(--size);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-soft);
+  cursor: pointer;
+  position: relative;
+  transition: var(--transition);
+}
+
+.podcast-player[data-theme="dark"] .icon-btn {
+  background: var(--color-bg-alt2);
+}
+
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.9;
+}
+
+.icon-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  background: var(--color-bg-alt);
+}
+
+.icon-btn[data-role="primary"] {
+  --size: 56px;
+  background: var(--color-accent);
+  color: #fff;
+  border: 1px solid var(--color-accent);
+  box-shadow: 0 6px 18px -4px rgba(41, 121, 255, 0.55);
+}
+
+.icon-btn[data-role="primary"]:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px -6px rgba(29, 99, 214, 0.55);
+}
+
+.icon-btn.active:not([data-role="primary"]) {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+.icon-btn.active:not([data-role="primary"]) svg {
+  stroke: currentColor;
+  color: #fff;
+}
+
+.repeat-mode-one::after {
+  content: "1";
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #fff;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.secondary-controls {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.volume-wrapper,
+.actions-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.volume-track {
+  position: relative;
+  width: 120px;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.volume-track:hover {
+  background: var(--color-border-strong);
+}
+
+.volume-fill {
+  position: absolute;
+  inset: 0;
+  width: 70%;
+  background: linear-gradient(
+    90deg,
+    var(--color-accent),
+    var(--color-accent-hover)
+  );
+  border-radius: inherit;
+}
+
+.volume-handle {
+  position: absolute;
+  top: 50%;
+  left: 70%;
+  width: 14px;
+  height: 14px;
+  background: var(--color-bg-alt);
+  border: 2px solid var(--color-accent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  transition: var(--transition);
+  cursor: grab;
+}
+
+.action-btn {
+  --size: 42px;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+}
+
+.podcast-player[data-theme="dark"] .action-btn {
+  background: var(--color-bg-alt2);
+}
+
+.action-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.action-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.9;
+}
+
+.action-btn.liked {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #fff;
+  box-shadow: 0 6px 18px -6px rgba(239, 68, 68, 0.55);
+}
+
+.action-btn.liked:hover {
+  background: var(--color-danger-hover);
+  border-color: var(--color-danger-hover);
+}
+
+/* Playlist toggle positioned above (half outside) */
+.playlist-toggle-floating {
+  margin-bottom: -65px;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: var(--color-bg-alt);
+  border: 3px solid var(--color-border);
+  box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  color: var(--color-accent);
+  transition: var(--transition);
+}
+
+.playlist-toggle-floating:hover {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+  transform: translate(-50%, -55%) scale(1.05);
+}
+
+.playlist-toggle-floating svg {
+  width: 26px;
+  height: 26px;
+  transition: var(--transition);
+}
+
+.playlist-toggle-floating.open svg {
+  transform: rotate(180deg);
+}
+
+.playlist-container {
+  background: var(--color-bg-alt2);
+  margin: 32px -36px -36px;
+  padding: 0 36px;
+  max-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--color-border);
+  transition:
+    max-height 0.55s cubic-bezier(0.65, 0.05, 0.36, 1),
+    padding 0.55s;
+}
+
+.playlist-container.open {
+  max-height: 460px;
+  padding: 34px 36px 42px;
+}
+
+.playlist-header {
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
+.playlist-list {
+  list-style: none;
+}
+
+.playlist-item {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: var(--transition);
+}
+
+.playlist-item:not(:last-child) {
+  margin-bottom: 8px;
+}
+
+.playlist-item:hover {
+  background: rgba(41, 121, 255, 0.08);
+}
+
+.playlist-item.active {
+  border-color: var(--color-accent);
+  background: rgba(41, 121, 255, 0.15);
+  box-shadow: 0 4px 12px -4px rgba(41, 121, 255, 0.45);
+}
+
+.playlist-artwork {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    var(--color-accent) 0%,
+    var(--color-accent-hover) 70%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 6px 12px -4px rgba(41, 121, 255, 0.45);
+  flex-shrink: 0;
+}
+
+.playlist-artwork svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.8;
+}
+
+.playlist-meta {
+  flex: 1;
   min-width: 0;
 }
 
-.atm-podcast .atm-pl-title {
-  font-weight: 700;
-  color: var(--atm-card-text);
-  font-size: 14px;
+.playlist-title {
+  font-size: 13.5px;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 2px;
 }
 
-.atm-podcast .atm-pl-sub {
+.playlist-author {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--color-text-soft);
+}
+
+.playlist-duration {
   font-size: 12px;
-  color: var(--atm-subtext);
+  font-weight: 600;
+  letter-spacing: 0.45px;
+  color: var(--color-text-soft);
+  margin-left: 6px;
 }
 
-/* Utility states */
-.atm-podcast .atm-like.is-on .atm-ico use {
-  color: #ef4444;
-  fill: #ef4444;
+/* Focus states */
+:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
-.atm-podcast .atm-shuffle.is-on,
-.atm-podcast .atm-loop.is-on {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--atm-accent) 30%, transparent)
-    inset;
-}
-
-/* Loading pulse for async audio load */
-@keyframes atm-pulse {
-  0%,
-  100% {
-    opacity: 1;
+/* Mobile responsiveness */
+@media (max-width: 560px) {
+  .podcast-player {
+    padding: 60px 22px 54px;
   }
-  50% {
-    opacity: 0.6;
+  .playlist-container {
+    margin: 32px -22px -22px;
+    padding: 0 22px;
   }
-}
-.atm-podcast .atm-loading {
-  animation: atm-pulse 1.4s ease-in-out infinite;
-}
-
-/* Accessibility focus */
-.atm-podcast .atm-icon-btn:focus,
-.atm-podcast .atm-ctrl:focus,
-.atm-podcast .atm-play-btn:focus,
-.atm-podcast .atm-pl-toggle:focus,
-.atm-podcast .atm-speed-select:focus {
-  outline: 3px solid color-mix(in srgb, var(--atm-accent) 35%, transparent);
-  outline-offset: 2px;
-}
-
-/* Compact responsiveness */
-@media (max-width: 860px) {
-  .atm-podcast .atm-head-title {
-    font-size: 18px;
+  .playlist-container.open {
+    padding: 28px 22px 36px;
   }
-  .atm-podcast .atm-header {
-    padding: 16px;
+  .player-controls {
+    gap: 12px;
+  }
+  .icon-btn {
+    --size: 42px;
+  }
+  .icon-btn[data-role="primary"] {
+    --size: 54px;
+  }
+  .secondary-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .volume-wrapper,
+  .actions-wrapper {
+    justify-content: center;
+    width: 100%;
   }
 }
 
-/* Ensure SVG icons always render crisp */
-.atm-podcast .atm-ico {
-  display: block;
-}
-
-/* Small helpers for any text selection prevention where needed */
-.atm-podcast .atm-rail,
-.atm-podcast .atm-ctrl,
-.atm-podcast .atm-play-btn,
-.atm-podcast .atm-icon-btn,
-.atm-podcast .atm-pl-toggle {
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-
-/* Podcast Player — Icon reset overrides
-   Load AFTER assets/css/podcast-player.css
-   Purpose: prevent theme/global rules from inflating icons.
-*/
-
-/* 1) Force consistent icon sizing and coloring inside the player */
-.atm-podcast svg,
-.atm-podcast .atm-ico,
-.atm-podcast i[class*="icon"],
-.atm-podcast i[class*="uicon"],
-.atm-podcast [class*="icon"] > svg {
-  width: 18px !important;
-  height: 18px !important;
-  min-width: 18px !important;
-  min-height: 18px !important;
-  max-width: 18px !important;
-  max-height: 18px !important;
-  display: inline-block !important;
-  line-height: 0 !important;
-  color: currentColor !important;
-  fill: currentColor !important;
-  stroke: currentColor !important;
-  pointer-events: none; /* icons shouldn’t block clicks */
-}
-
-/* Slightly larger play glyph for better balance */
-.atm-podcast .atm-play-btn svg,
-.atm-podcast .atm-play-btn .atm-ico {
-  width: 22px !important;
-  height: 22px !important;
-}
-
-/* 2) Ensure buttons clip any oversized content just in case */
-.atm-podcast .atm-ctrl,
-.atm-podcast .atm-play-btn,
-.atm-podcast .atm-icon-btn,
-.atm-podcast .atm-pl-toggle {
-  overflow: hidden;
-  font-size: 0; /* avoid em-based svg sizing from fonts */
-  line-height: 0;
-}
-
-/* 3) Give the transport row a stacking context to keep it above backgrounds */
-.atm-podcast .atm-transport {
-  position: relative;
-  z-index: 1;
-  margin-top: -20px;
-}
-
-/* 4) Safety: keep header icons consistent too */
-.atm-podcast .atm-icon-btn .atm-ico {
-  width: 18px !important;
-  height: 18px !important;
-}
-
-.atm-podcast input[type="submit"],
-.atm-podcast button,
-.atm-podcast input[type="reset"] input[type="button"],
-.atm-podcast .ts-button {
-  padding: 0 !important;
-}
-
-.atm-podcast .atm-pl-toggle {
-  padding: 0 !important;
-}
-
-/* Add this to podcast-player.css */
-.atm-podcast .atm-ctrl,
-.atm-podcast .atm-play-btn,
-.atm-podcast .atm-icon-btn,
-.atm-podcast .atm-pl-toggle {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth easing */
-}
-
-/* Enhance the toggle state transitions */
-.atm-podcast .atm-ctrl.is-on,
-.atm-podcast .atm-toggle.is-on {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translateY(-1px);
-}
-
-.atm-podcast .atm-head-title {
-  transition: opacity 0.3s ease;
-}
-
-.atm-podcast .atm-ep {
-  transition: background-image 0.4s ease;
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }

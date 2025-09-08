@@ -1,6 +1,6 @@
 <?php
 // /includes/class-atm-frontend.php
-// Updated: default theme = light; uses settings; unchanged functionality otherwise.
+// Updated with modern podcast player matching your design
 
 if (!defined('ABSPATH')) {
     exit;
@@ -28,7 +28,7 @@ class ATM_Frontend {
                 ATM_VERSION
             );
 
-            // NEW podcast player assets
+            // NEW modern podcast player assets
             wp_enqueue_style(
                 'atm-podcast-style',
                 ATM_PLUGIN_URL . 'assets/css/podcast-player.css',
@@ -43,14 +43,8 @@ class ATM_Frontend {
                 true
             );
 
-            // Settings to JS (optional)
-            $default_theme = get_option('atm_podcast_default_theme', 'light'); // default = light
-            $accent_color  = get_option('atm_podcast_accent', '#3b82f6');
-
-            wp_localize_script('atm-podcast-script', 'atm_podcast_settings', array(
-                'theme'  => $default_theme,
-                'accent' => $accent_color,
-            ));
+            // Pass settings to JavaScript
+            $this->localize_podcast_settings();
 
             // Charts / Multipage unchanged...
             global $post;
@@ -77,6 +71,31 @@ class ATM_Frontend {
                 ]);
             }
         }
+    }
+
+    private function localize_podcast_settings() {
+        // Get all settings from database with fallbacks
+        $settings = array(
+            'theme' => get_option('atm_podcast_default_theme', 'light'),
+            'accent_color' => get_option('atm_podcast_accent_color', '#2979ff'),
+            'gradient_end' => get_option('atm_podcast_gradient_end', '#1d63d6'),
+            
+            // Light theme colors
+            'light_card_bg' => get_option('atm_podcast_light_card_bg', '#ffffff'),
+            'light_text' => get_option('atm_podcast_light_text', '#1f2933'),
+            'light_subtext' => get_option('atm_podcast_light_subtext', '#616d79'),
+            'light_border' => get_option('atm_podcast_light_border', '#dfe3e8'),
+            'light_bg_alt' => get_option('atm_podcast_light_bg_alt', '#f9fafb'),
+            
+            // Dark theme colors  
+            'dark_card_bg' => get_option('atm_podcast_dark_card_bg', '#1f2732'),
+            'dark_text' => get_option('atm_podcast_dark_text', '#f2f6fa'),
+            'dark_subtext' => get_option('atm_podcast_dark_subtext', '#a5b1bc'),
+            'dark_border' => get_option('atm_podcast_dark_border', '#2b3541'),
+            'dark_bg_alt' => get_option('atm_podcast_dark_bg_alt', '#1a2330'),
+        );
+
+        wp_localize_script('atm-podcast-script', 'atm_podcast_settings', $settings);
     }
 
     // Restored so filters work
@@ -134,11 +153,70 @@ class ATM_Frontend {
 
     private function print_icon_sprite_once() {
         if (self::$sprite_printed) return;
-        $sprite_path = ATM_PLUGIN_PATH . 'assets/img/atm-podcast-icons.svg';
-        if (file_exists($sprite_path)) {
-            $svg = file_get_contents($sprite_path);
-            echo '<div class="atm-icon-sprite" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">'.$svg.'</div>';
-        }
+        
+        // Modern SVG sprite with all needed icons
+        echo '<div style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <symbol id="atm-play" viewBox="0 0 24 24">
+                        <path d="M8 5v14l10-7z" fill="currentColor"/>
+                    </symbol>
+                    <symbol id="atm-pause" viewBox="0 0 24 24">
+                        <path d="M9 5v14M15 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-prev" viewBox="0 0 24 24">
+                        <path d="M6 5v14M18 7l-7 5 7 5V7Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-next" viewBox="0 0 24 24">
+                        <path d="M18 19V5M6 17l7-5-7-5v10Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-shuffle" viewBox="0 0 24 24">
+                        <path d="M3 5h3.5a4 4 0 0 1 3.2 1.6l4.6 6A4 4 0 0 0 17.5 15H21M3 19h3.5a4 4 0 0 0 3.2-1.6l.3-.4m3.2-4.4.6.8A4 4 0 0 0 17.5 15H21M21 5h-3.5a4 4 0 0 0-3.2 1.6l-.6.8M18 2l3 3-3 3M18 14l3 3-3 3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-repeat" viewBox="0 0 24 24">
+                        <path d="M4 7v6a5 5 0 0 0 5 5h6m0 0-2-2m2 2-2 2M20 17V11a5 5 0 0 0-5-5H9m0 0 2 2M9 6l2-2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-volume" viewBox="0 0 24 24">
+                        <path d="M11 5 6 9H3v6h3l5 4V5Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <path d="M16 9a3 3 0 0 1 0 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-volume-mute" viewBox="0 0 24 24">
+                        <path d="M11 5 6 9H3v6h3l5 4V5Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <path d="m16 9 4 6M20 9l-4 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-heart" viewBox="0 0 24 24">
+                        <path d="M16.5 3a5.5 5.5 0 0 0-4.5 2.4A5.5 5.5 0 0 0 7.5 3 5.5 5.5 0 0 0 2 8.5c0 7 9 12.5 10 12.5s10-5.5 10-12.5A5.5 5.5 0 0 0 16.5 3Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-heart-fill" viewBox="0 0 24 24">
+                        <path d="M11.998 21.003c-.516 0-9.998-5.727-9.998-12.503A5.5 5.5 0 0 1 7.5 3a5.5 5.5 0 0 1 4.498 2.4A5.5 5.5 0 0 1 16.496 3 5.5 5.5 0 0 1 22 8.5c0 6.776-9.482 12.503-10 12.503Z" fill="currentColor"/>
+                    </symbol>
+                    <symbol id="atm-share" viewBox="0 0 24 24">
+                        <path d="M7 17a4 4 0 0 1 0-8M17 21a4 4 0 0 0 0-8M12 7V3m0 0 3 3m-3-3L9 6m3 4v6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-download" viewBox="0 0 24 24">
+                        <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-list" viewBox="0 0 24 24">
+                        <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-headphones" viewBox="0 0 24 24">
+                        <path d="M4 13v5a3 3 0 0 0 3 3h1v-8H7a3 3 0 0 0-3 3Zm13 0h-1v8h1a3 3 0 0 0 3-3v-5a3 3 0 0 0-3-3ZM6 13V11A6 6 0 0 1 12 5v0a6 6 0 0 1 6 6v2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-mic" viewBox="0 0 24 24">
+                        <path d="M12 15a4 4 0 0 0 4-4V7a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Z" stroke="currentColor" fill="none"/>
+                        <path d="M19 11a7 7 0 0 1-14 0M12 18v3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-briefcase" viewBox="0 0 24 24">
+                        <path d="M3 10h18v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-7Z" stroke="currentColor" fill="none"/>
+                        <path d="M3 10a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                    <symbol id="atm-rocket" viewBox="0 0 24 24">
+                        <path d="M5 15c-1-4 1-9 5-12 4 3 6 8 5 12M10 6v3m0 4h0M9 19c1.6 1 4.4 1 6 0M8 15h8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </symbol>
+                </defs>
+            </svg>
+        </div>';
+        
         self::$sprite_printed = true;
     }
 
@@ -169,10 +247,15 @@ class ATM_Frontend {
                 $cover = get_post_meta($pid, '_atm_podcast_image', true);
                 if (empty($cover)) { $cover = ATM_PLUGIN_URL . 'assets/images/pody.jpg'; }
 
+                // Get duration from audio file if possible
+                $duration = $this->get_audio_duration($url);
+
                 $items[] = array(
                     'title' => get_the_title($pid),
                     'url'   => $url,
                     'cover' => $cover,
+                    'duration' => $duration,
+                    'author' => get_bloginfo('name')
                 );
             }
             wp_reset_postdata();
@@ -180,127 +263,199 @@ class ATM_Frontend {
         return $items;
     }
 
-    private function generate_podcast_custom_css($theme) {
-        $css = "<style>";
-        $css .= ".atm-podcast[data-theme='$theme'] {";
-        $css .= "--atm-accent: " . get_option('atm_podcast_accent_color', '#3b82f6') . ";";
-        $css .= "--atm-grad-end: " . get_option('atm_podcast_gradient_end', '#7c3aed') . ";";
-        
-        if ($theme === 'light') {
-            $css .= "--atm-card-bg: " . get_option('atm_podcast_light_card_bg', '#ffffff') . ";";
-            $css .= "--atm-card-text: " . get_option('atm_podcast_light_text', '#0f172a') . ";";
-            $css .= "--atm-subtext: " . get_option('atm_podcast_light_subtext', '#64748b') . ";";
-            // Add other light theme variables...
-        } else {
-            $css .= "--atm-card-bg: " . get_option('atm_podcast_dark_card_bg', '#0f172a') . ";";
-            $css .= "--atm-card-text: " . get_option('atm_podcast_dark_text', '#e2e8f0') . ";";
-            $css .= "--atm-subtext: " . get_option('atm_podcast_dark_subtext', '#94a3b8') . ";";
-            // Add other dark theme variables...
+    private function get_audio_duration($url) {
+        // Try to get duration from WordPress attachment if it's a local file
+        if (strpos($url, home_url()) === 0) {
+            $attachment_id = attachment_url_to_postid($url);
+            if ($attachment_id) {
+                $metadata = wp_get_attachment_metadata($attachment_id);
+                if (isset($metadata['length_formatted'])) {
+                    return $metadata['length_formatted'];
+                }
+                if (isset($metadata['length'])) {
+                    return $this->format_duration($metadata['length']);
+                }
+            }
         }
-        
-        $css .= "}";
-        $css .= "</style>";
-        
-        return $css;
+        return '0:00'; // Default fallback
+    }
+
+    private function format_duration($seconds) {
+        $minutes = floor($seconds / 60);
+        $seconds = floor($seconds % 60);
+        return sprintf('%d:%02d', $minutes, $seconds);
+    }
+
+    private function get_playlist_icon($index) {
+        $icons = ['headphones', 'mic', 'briefcase', 'rocket'];
+        return $icons[$index % count($icons)];
     }
     
     private function get_player_html($post, $podcast_url, $cover_image) {
         $this->print_icon_sprite_once();
 
         $site_name = get_bloginfo('name');
-        // Replace the hardcoded theme and accent values with:
         $theme = get_option('atm_podcast_default_theme', 'light');
-        $accent = get_option('atm_podcast_accent_color', '#3b82f6');
-        $gradient_end = get_option('atm_podcast_gradient_end', '#7c3aed');
-
-        // Add CSS custom properties for the advanced colors
-        $custom_css = $this->generate_podcast_custom_css($theme);
-
-        $playlist  = $this->get_recent_podcasts($post->ID, 8);
+        
+        $playlist = $this->get_recent_podcasts($post->ID, 4); // Get 4 recent episodes
 
         ob_start();
         ?>
-        <div class="atm-podcast" data-theme="<?php echo esc_attr($theme); ?>" style="--atm-accent: <?php echo esc_attr($accent); ?>;">
-          <div class="atm-card" data-current-title="<?php echo esc_attr($post->post_title); ?>" data-current-cover="<?php echo esc_url($cover_image); ?>">
-            <div class="atm-header">
-              <div class="atm-left">
-                <div class="atm-ep" style="--cover:url('<?php echo esc_url($cover_image); ?>');"><span>EP</span></div>
-                <div class="atm-head-meta">
-                  <div class="atm-show"><?php echo esc_html($site_name); ?> Podcast</div>
-                  <div class="atm-season"><?php echo esc_html(get_option('atm_podcast_season_text', 'Season 1')); ?></div>
-                </div>
-              </div>
-              <div class="atm-right">
-                <button class="atm-icon-btn atm-like" aria-label="Like"><svg class="atm-ico"><use href="#atm-i-heart"/></svg></button>
-                <button class="atm-icon-btn atm-share" aria-label="Share"><svg class="atm-ico"><use href="#atm-i-share"/></svg></button>
-                <button class="atm-icon-btn atm-download" aria-label="Download"><svg class="atm-ico"><use href="#atm-i-download"/></svg></button>
-              </div>
-              <div class="atm-head-title"><?php echo esc_html($post->post_title); ?></div>
-              <div class="atm-head-sub">Powered by Content AI Studio</div>
-            </div>
-
-            <div class="atm-progress">
-              <div class="atm-rail">
-                <div class="atm-rail-bg"></div>
-                <div class="atm-rail-fill" style="width:0%"></div>
-                <div class="atm-rail-knob" style="left:0%"></div>
-              </div>
-              <div class="atm-times">
-                <span class="atm-tl">0:00</span>
-                <span class="atm-tr">0:00</span>
-              </div>
-            </div>
-
-            <div class="atm-transport">
-              <button class="atm-ctrl atm-toggle atm-loop" aria-label="Loop"><svg class="atm-ico"><use href="#atm-i-repeat"/></svg></button>
-              <button class="atm-ctrl atm-prev" aria-label="Previous"><svg class="atm-ico"><use href="#atm-i-prev"/></svg></button>
-              <button class="atm-play-btn" aria-label="Play"><svg class="atm-ico"><use href="#atm-i-play"/></svg></button>
-              <button class="atm-ctrl atm-next" aria-label="Next"><svg class="atm-ico"><use href="#atm-i-next"/></svg></button>
-              <button class="atm-ctrl atm-toggle atm-shuffle" aria-label="Shuffle"><svg class="atm-ico"><use href="#atm-i-shuffle"/></svg></button>
-            </div>
-
-            <div class="atm-bottom">
-              <div class="atm-volume">
-                <svg class="atm-ico atm-vol-ico"><use href="#atm-i-volume"/></svg>
-                <div class="atm-vol-track">
-                  <input type="range" min="0" max="100" value="75" class="atm-vol-range" />
-                  <div class="atm-vol-fill" style="width:75%"></div>
-                </div>
-                <span class="atm-vol-val">75%</span>
-              </div>
-              <div class="atm-speed">
-                <select class="atm-speed-select">
-                  <option>0.75x</option>
-                  <option selected>1x</option>
-                  <option>1.25x</option>
-                  <option>1.5x</option>
-                  <option>2x</option>
-                </select>
-              </div>
-              <button class="atm-icon-btn atm-pl-toggle" aria-label="Toggle playlist"><svg class="atm-ico"><use href="#atm-i-list"/></svg></button>
-            </div>
-
-            <?php if (!empty($playlist)) : ?>
-            <div class="atm-playlist" hidden>
-              <div class="atm-pl-head">Latest Podcasts</div>
-              <ul class="atm-pl-list">
-                <?php foreach ($playlist as $item) : ?>
-                  <li class="atm-pl-item" data-url="<?php echo esc_url($item['url']); ?>" data-title="<?php echo esc_attr($item['title']); ?>">
-                    <img src="<?php echo esc_url($item['cover']); ?>" alt="" />
-                    <div class="atm-pl-meta">
-                      <div class="atm-pl-title"><?php echo esc_html($item['title']); ?></div>
-                      <div class="atm-pl-sub"><?php echo esc_html($site_name); ?> Podcast</div>
+        <div class="demo-container">
+            <main class="podcast-player" data-theme="<?php echo esc_attr($theme); ?>" aria-label="Podcast Player">
+                <section class="player-header">
+                    <div class="podcast-artwork" id="artwork" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8">
+                            <path d="M4 13v5a3 3 0 0 0 3 3h1v-8H7a3 3 0 0 0-3 3Zm13 0h-1v8h1a3 3 0 0 0 3-3v-5a3 3 0 0 0-3-3ZM6 13V11A6 6 0 0 1 12 5v0a6 6 0 0 1 6 6v2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <div class="artwork-pulse" id="artworkPulse"></div>
                     </div>
-                    <button class="atm-pl-more" aria-label="More"></button>
-                  </li>
-                <?php endforeach; ?>
-              </ul>
-            </div>
-            <?php endif; ?>
+                    <h1 class="podcast-title" id="episodeTitle"><?php echo esc_html($post->post_title); ?></h1>
+                    <p class="podcast-author" id="episodeAuthor">Powered by Content AI Studio</p>
+                </section>
 
-            <audio class="atm-audio" src="<?php echo esc_url($podcast_url); ?>" preload="metadata"></audio>
-          </div>
+                <div class="waveform-container"
+                     id="waveformContainer"
+                     role="slider"
+                     aria-label="Seek"
+                     aria-valuemin="0"
+                     aria-valuemax="0"
+                     aria-valuenow="0"
+                     tabindex="0">
+                    <div class="progress-overlay" id="progressOverlay"></div>
+                    <div class="scrub-handle" id="scrubHandle"></div>
+                    <div class="waveform" id="waveform"></div>
+                </div>
+
+                <div class="time-display">
+                    <span id="currentTimeLabel">0:00</span>
+                    <span id="totalTimeLabel">0:00</span>
+                </div>
+
+                <div class="player-controls" aria-label="Playback controls">
+                    <button class="icon-btn" id="btnShuffle" aria-label="Shuffle (off)" data-state="off">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
+                            <use href="#atm-shuffle"></use>
+                        </svg>
+                    </button>
+                    <button class="icon-btn" id="btnPrev" aria-label="Previous episode">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
+                            <use href="#atm-prev"></use>
+                        </svg>
+                    </button>
+                    <button class="icon-btn" data-role="primary" id="btnPlayPause" aria-label="Play">
+                        <svg id="iconPlay" viewBox="0 0 24 24" stroke="currentColor" fill="currentColor">
+                            <use href="#atm-play"></use>
+                        </svg>
+                        <svg id="iconPause" viewBox="0 0 24 24" stroke="currentColor" fill="none" style="display:none;">
+                            <use href="#atm-pause"></use>
+                        </svg>
+                    </button>
+                    <button class="icon-btn" id="btnNext" aria-label="Next episode">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
+                            <use href="#atm-next"></use>
+                        </svg>
+                    </button>
+                    <button class="icon-btn" id="btnRepeat" aria-label="Repeat (off)" data-mode="off">
+                        <svg id="repeatIcon" viewBox="0 0 24 24" stroke="currentColor" fill="none">
+                            <use href="#atm-repeat"></use>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="secondary-controls">
+                    <div class="volume-wrapper">
+                        <button class="action-btn" id="btnMute" aria-label="Mute">
+                            <svg id="iconVolume" viewBox="0 0 24 24" stroke="currentColor" fill="none">
+                                <use href="#atm-volume"></use>
+                            </svg>
+                        </button>
+                        <div class="volume-track" id="volumeTrack" aria-label="Volume" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70" tabindex="0">
+                            <div class="volume-fill" id="volumeFill"></div>
+                            <div class="volume-handle" id="volumeHandle"></div>
+                        </div>
+                    </div>
+
+                    <div class="actions-wrapper">
+                        <button class="action-btn" id="btnLike" aria-label="Like">
+                            <svg id="iconHeartOutline" viewBox="0 0 24 24" stroke="currentColor" fill="none">
+                                <use href="#atm-heart"></use>
+                            </svg>
+                            <svg id="iconHeartFilled" viewBox="0 0 24 24" stroke="none" fill="currentColor" style="display:none;">
+                                <use href="#atm-heart-fill"></use>
+                            </svg>
+                        </button>
+                        <button class="action-btn" id="btnShare" aria-label="Share">
+                            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
+                                <use href="#atm-share"></use>
+                            </svg>
+                        </button>
+                        <button class="action-btn" id="btnDownload" aria-label="Download">
+                            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
+                                <use href="#atm-download"></use>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button class="playlist-toggle-floating" id="playlistToggleBtn" aria-expanded="false" aria-controls="playlistContainer" aria-label="Toggle playlist">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
+                        <use href="#atm-list"></use>
+                    </svg>
+                </button>
+
+                <?php if (!empty($playlist)) : ?>
+                <section class="playlist-container" id="playlistContainer" aria-label="Playlist">
+                    <h2 class="playlist-header">Up Next</h2>
+                    <ul class="playlist-list" id="playlistList">
+                        <?php foreach ($playlist as $index => $item) : ?>
+                        <li class="playlist-item" data-url="<?php echo esc_url($item['url']); ?>" data-title="<?php echo esc_attr($item['title']); ?>">
+                            <div class="playlist-artwork">
+                                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8">
+                                    <use href="#atm-<?php echo esc_attr($this->get_playlist_icon($index)); ?>"></use>
+                                </svg>
+                            </div>
+                            <div class="playlist-meta">
+                                <div class="playlist-title"><?php echo esc_html($item['title']); ?></div>
+                                <div class="playlist-author"><?php echo esc_html($item['author']); ?></div>
+                            </div>
+                            <div class="playlist-duration"><?php echo esc_html($item['duration']); ?></div>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </section>
+                <?php endif; ?>
+
+                <audio id="audioEl" src="<?php echo esc_url($podcast_url); ?>" preload="metadata" hidden></audio>
+            </main>
         </div>
+
+        <style id="atm-podcast-dynamic-styles">
+        :root {
+            --color-accent: <?php echo esc_attr(get_option('atm_podcast_accent_color', '#2979ff')); ?>;
+            --color-accent-hover: <?php echo esc_attr(get_option('atm_podcast_gradient_end', '#1d63d6')); ?>;
+        }
+        
+        <?php if ($theme === 'light') : ?>
+        .podcast-player[data-theme="light"] {
+            --color-bg: <?php echo esc_attr(get_option('atm_podcast_light_card_bg', '#f5f7fa')); ?>;
+            --color-bg-alt: <?php echo esc_attr(get_option('atm_podcast_light_bg_alt', '#ffffff')); ?>;
+            --color-bg-alt2: <?php echo esc_attr(get_option('atm_podcast_light_bg_alt', '#f9fafb')); ?>;
+            --color-border: <?php echo esc_attr(get_option('atm_podcast_light_border', '#dfe3e8')); ?>;
+            --color-text: <?php echo esc_attr(get_option('atm_podcast_light_text', '#1f2933')); ?>;
+            --color-text-soft: <?php echo esc_attr(get_option('atm_podcast_light_subtext', '#616d79')); ?>;
+        }
+        <?php else : ?>
+        .podcast-player[data-theme="dark"] {
+            --color-bg: <?php echo esc_attr(get_option('atm_podcast_dark_card_bg', '#111827')); ?>;
+            --color-bg-alt: <?php echo esc_attr(get_option('atm_podcast_dark_bg_alt', '#1f2732')); ?>;
+            --color-bg-alt2: <?php echo esc_attr(get_option('atm_podcast_dark_bg_alt', '#1a2330')); ?>;
+            --color-border: <?php echo esc_attr(get_option('atm_podcast_dark_border', '#2b3541')); ?>;
+            --color-text: <?php echo esc_attr(get_option('atm_podcast_dark_text', '#f2f6fa')); ?>;
+            --color-text-soft: <?php echo esc_attr(get_option('atm_podcast_dark_subtext', '#a5b1bc')); ?>;
+        }
+        <?php endif; ?>
+        </style>
         <?php
         return ob_get_clean();
     }
