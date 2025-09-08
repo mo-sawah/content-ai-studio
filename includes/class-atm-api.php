@@ -1718,7 +1718,22 @@ Follow these rules strictly:
         // Parse the script to separate HOST_A and HOST_B lines
         $audio_segments = self::parse_podcast_script($script);
         $final_audio_parts = [];
-        
+
+        // --- START: ADD CUSTOM PODCAST INTRO (Direct File Method) ---
+        // ⬇️ IMPORTANT: Change 'my-intro.mp3' to the exact filename of your uploaded intro.
+        $intro_file_path = ATM_PLUGIN_PATH . 'assets/audio/intro.mp3'; 
+
+        if (file_exists($intro_file_path)) {
+            $intro_audio_content = file_get_contents($intro_file_path);
+            if ($intro_audio_content) {
+                // Add the intro music as the first part of the final audio.
+                $final_audio_parts[] = $intro_audio_content;
+                // Add a brief pause after the intro for better pacing.
+                $final_audio_parts[] = self::generate_silence(750); 
+            }
+        }
+        // --- END: ADD CUSTOM PODCAST INTRO ---
+
         foreach ($audio_segments as $segment) {
             $voice = ($segment['speaker'] === 'HOST_A') ? $voice_a : $voice_b;
             $text = $segment['text'];
@@ -1730,7 +1745,7 @@ Follow these rules strictly:
             if (empty($clean_text)) continue;
 
             // Split long segments into smaller chunks (OpenAI limit is 4096 chars)
-            $max_chunk_size = $provider === 'openai' ? 3500 : 4000; // Much more conservative
+            $max_chunk_size = $provider === 'openai' ? 3500 : 4000; // A conservative limit
             $text_chunks = self::split_text_into_chunks($clean_text, $max_chunk_size);
             
             foreach ($text_chunks as $chunk) {
@@ -1756,18 +1771,18 @@ Follow these rules strictly:
                     
                 } catch (Exception $e) {
                     error_log('Content AI Studio - Audio generation error for chunk: ' . $e->getMessage());
-                    // Continue with next chunk instead of failing completely
+                    // Continue with the next chunk instead of failing completely
                     continue;
                 }
             }
             
-            // Add pause between different speakers
+            // Add a pause between different speakers
             if (isset($segment['add_pause']) && $segment['add_pause']) {
                 $final_audio_parts[] = self::generate_silence(500); // 500ms
             }
         }
 
-        // Combine all audio parts
+        // Combine all audio parts into the final MP3 file content
         return implode('', $final_audio_parts);
     }
 
