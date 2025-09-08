@@ -341,7 +341,6 @@ class ATM_API {
 
     public static function generate_advanced_podcast_script($title, $content, $language, $duration = 'medium') {
         
-        // Much more conservative duration mapping to fit TTS limits
         $duration_specs = [
             'short' => '5-7 minutes (approximately 750-1050 words total)',
             'medium' => '8-12 minutes (approximately 1200-1800 words total)', 
@@ -352,45 +351,36 @@ class ATM_API {
 
         $system_prompt = "You are creating a professional, engaging podcast script between two experienced hosts discussing '{$title}'. 
 
+    **CRITICAL CONSTRAINT**: Each individual speaking turn MUST be maximum 1-2 sentences (under 200 characters each). This is essential for technical processing.
+
     **HOST PERSONALITIES:**
-    - **ALEX CHEN**: The primary presenter - analytical, well-researched, guides the conversation
-    - **JORDAN RIVERA**: The co-host - enthusiastic, relatable, provides real-world examples
+    - **ALEX CHEN**: The primary presenter - analytical, guides conversation
+    - **JORDAN RIVERA**: The co-host - enthusiastic, asks questions, provides reactions
 
-    **CRITICAL REQUIREMENTS:**
+    **STRICT REQUIREMENTS:**
 
-    1. **Script Length**: Target {$target_duration}
-    - IMPORTANT: Keep individual speaking segments SHORT (maximum 2-3 sentences each)
-    - Frequent back-and-forth between hosts
-    - No long monologues - break up longer thoughts into multiple exchanges
+    1. **Speaking Pattern**: 
+    - Each speaker turn: 1-2 sentences MAXIMUM
+    - Frequent back-and-forth exchanges
+    - NO long paragraphs or monologues
+    - Break complex thoughts into multiple short exchanges
 
-    2. **Conversation Structure**:
-    - **Opening** (60 seconds): Brief greeting and topic introduction
-    - **Main Discussion** (80% of content): Multiple short exchanges covering key points
-    - **Closing** (60 seconds): Quick summary and sign-off
+    2. **Script Length**: Target {$target_duration}
+    - Achieve length through MANY short exchanges, not long speeches
+    - Quick ping-pong conversation style
 
-    3. **Speaking Patterns**:
-    - Each speaker turn should be 1-3 sentences maximum
-    - Frequent interruptions and natural flow: [INTERRUPTING], [CHUCKLES]
-    - Short reactions: 'Exactly!', 'That's interesting', 'I see what you mean'
-    - Keep responses conversational and concise
+    3. **Format Example**:
+    ALEX: [ENTHUSIASTIC] Welcome to Deep Dive Discussions! I'm Alex Chen.
+    JORDAN: [FRIENDLY] And I'm Jordan Rivera. Today we're exploring the Dead Internet Theory.
+    ALEX: [NODDING] This theory suggests AI is taking over online content. What's your take?
+    JORDAN: [THOUGHTFUL] It's fascinating but concerning. The idea is that authentic human voices are disappearing.
+    ALEX: [AGREEMENT] Exactly. Let's break this down step by step.
 
-    4. **Content Guidelines**:
-    - Cover the main points from the article
-    - Include current context from web research
-    - Keep explanations clear but brief
-    - Use natural transitions between topics
+    4. **Language**: Write entirely in {$language}
 
-    5. **Output Format**:
-    ALEX: [ENTHUSIASTIC] Welcome to Deep Dive Discussions! I'm Alex Chen...
-    JORDAN: [FRIENDLY] And I'm Jordan Rivera. Today we're looking at...
-    ALEX: [NODDING] Right. So let's start with the basics...
-    JORDAN: [AGREEMENT] That makes sense. What's really interesting is...
+    **REMEMBER**: Keep every single speaking turn SHORT. Never write long paragraphs for one speaker.
 
-    6. **Language**: Write entirely in {$language}
-
-    **IMPORTANT**: Focus on creating natural conversation with SHORT exchanges. Avoid long paragraphs or speeches. Think of it as a real conversation where people interrupt and respond quickly.
-
-    Research the topic thoroughly but present information in bite-sized, conversational chunks.";
+    Research the topic thoroughly but present information in very short, conversational exchanges.";
 
         $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
         
@@ -398,8 +388,8 @@ class ATM_API {
             ['title' => $title, 'content' => $content],
             $system_prompt,
             $model,
-            false, // not JSON mode
-            true   // enable web search for research
+            false,
+            true
         );
 
         return $script;
@@ -1714,59 +1704,62 @@ Follow these rules strictly:
         return $audio_content;
     }
 
-public static function generate_two_person_podcast_audio($script, $voice_a, $voice_b, $provider = 'openai') {
-    // Parse the script to separate HOST_A and HOST_B lines
-    $audio_segments = self::parse_podcast_script($script);
-    $final_audio_parts = [];
-    
-    foreach ($audio_segments as $segment) {
-        $voice = ($segment['speaker'] === 'HOST_A') ? $voice_a : $voice_b;
-        $text = $segment['text'];
+    public static function generate_two_person_podcast_audio($script, $voice_a, $voice_b, $provider = 'openai') {
+        // Parse the script to separate HOST_A and HOST_B lines
+        $audio_segments = self::parse_podcast_script($script);
+        $final_audio_parts = [];
         
-        // Clean up emotions and stage directions for TTS
-        $clean_text = preg_replace('/\[([^\]]+)\]/', '', $text);
-        $clean_text = trim($clean_text);
-        
-        if (empty($clean_text)) continue;
-
-        // Split long segments into smaller chunks (OpenAI limit is 4096 chars)
-        $max_chunk_size = $provider === 'openai' ? 3500 : 4000; // Leave some buffer
-        $text_chunks = self::split_text_into_chunks($clean_text, $max_chunk_size);
-        
-        foreach ($text_chunks as $chunk) {
-            if (empty(trim($chunk))) continue;
+        foreach ($audio_segments as $segment) {
+            $voice = ($segment['speaker'] === 'HOST_A') ? $voice_a : $voice_b;
+            $text = $segment['text'];
             
-            try {
-                // Generate audio for this chunk
-                if ($provider === 'elevenlabs') {
-                    $segment_audio = self::generate_audio_with_elevenlabs($chunk, $voice);
-                } else {
-                    $segment_audio = self::generate_audio_with_openai_tts($chunk, $voice);
+            // Clean up emotions and stage directions for TTS
+            $clean_text = preg_replace('/\[([^\]]+)\]/', '', $text);
+            $clean_text = trim($clean_text);
+            
+            if (empty($clean_text)) continue;
+
+            // Split long segments into smaller chunks (OpenAI limit is 4096 chars)
+            $max_chunk_size = $provider === 'openai' ? 3000 : 4000; // Much more conservative
+            $text_chunks = self::split_text_into_chunks($clean_text, $max_chunk_size);
+            
+            foreach ($text_chunks as $chunk) {
+                if (empty(trim($chunk))) continue;
+                
+                try {
+                    // Log the chunk size for debugging
+                    error_log('Content AI Studio - Processing chunk of ' . strlen($chunk) . ' characters');
+                    
+                    // Generate audio for this chunk
+                    if ($provider === 'elevenlabs') {
+                        $segment_audio = self::generate_audio_with_elevenlabs($chunk, $voice);
+                    } else {
+                        $segment_audio = self::generate_audio_with_openai_tts($chunk, $voice);
+                    }
+                    
+                    $final_audio_parts[] = $segment_audio;
+                    
+                    // Add small pause between chunks from the same speaker
+                    if (count($text_chunks) > 1) {
+                        $final_audio_parts[] = self::generate_silence(200); // 200ms
+                    }
+                    
+                } catch (Exception $e) {
+                    error_log('Content AI Studio - Audio generation error for chunk: ' . $e->getMessage());
+                    // Continue with next chunk instead of failing completely
+                    continue;
                 }
-                
-                $final_audio_parts[] = $segment_audio;
-                
-                // Add small pause between chunks from the same speaker
-                if (count($text_chunks) > 1) {
-                    $final_audio_parts[] = self::generate_silence(200); // 200ms
-                }
-                
-            } catch (Exception $e) {
-                error_log('Content AI Studio - Audio generation error for chunk: ' . $e->getMessage());
-                // Continue with next chunk instead of failing completely
-                continue;
+            }
+            
+            // Add pause between different speakers
+            if (isset($segment['add_pause']) && $segment['add_pause']) {
+                $final_audio_parts[] = self::generate_silence(500); // 500ms
             }
         }
-        
-        // Add pause between different speakers
-        if (isset($segment['add_pause']) && $segment['add_pause']) {
-            $final_audio_parts[] = self::generate_silence(500); // 500ms
-        }
-    }
 
-    // Combine all audio parts
-    return implode('', $final_audio_parts);
-}
+        // Combine all audio parts
+        return implode('', $final_audio_parts);
+    }
 
     private static function split_text_into_chunks($text, $max_length) {
         if (strlen($text) <= $max_length) {
@@ -1858,16 +1851,41 @@ public static function generate_two_person_podcast_audio($script, $voice_a, $voi
                 if ($speaker === 'ALEX') $speaker = 'HOST_A';
                 if ($speaker === 'JORDAN') $speaker = 'HOST_B';
                 
-                // Add pause if speaker changed
-                $add_pause = ($current_speaker && $current_speaker !== $speaker);
+                // CRITICAL: Split long speaker segments into smaller chunks
+                $sentences = preg_split('/(?<=[.!?])\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
+                $current_segment = '';
                 
-                $segments[] = [
-                    'speaker' => $speaker,
-                    'text' => $text,
-                    'add_pause' => $add_pause
-                ];
+                foreach ($sentences as $sentence) {
+                    $test_segment = $current_segment . ($current_segment ? ' ' : '') . $sentence;
+                    
+                    // If adding this sentence would make the segment too long, save current and start new
+                    if (strlen($test_segment) > 3000) { // Conservative limit
+                        if (!empty($current_segment)) {
+                            $add_pause = ($current_speaker && $current_speaker !== $speaker);
+                            $segments[] = [
+                                'speaker' => $speaker,
+                                'text' => trim($current_segment),
+                                'add_pause' => $add_pause
+                            ];
+                            $current_speaker = $speaker;
+                            $add_pause = false; // Only first segment gets pause
+                        }
+                        $current_segment = $sentence;
+                    } else {
+                        $current_segment = $test_segment;
+                    }
+                }
                 
-                $current_speaker = $speaker;
+                // Add the remaining segment
+                if (!empty($current_segment)) {
+                    $add_pause = ($current_speaker && $current_speaker !== $speaker);
+                    $segments[] = [
+                        'speaker' => $speaker,
+                        'text' => trim($current_segment),
+                        'add_pause' => $add_pause
+                    ];
+                    $current_speaker = $speaker;
+                }
             }
         }
         
