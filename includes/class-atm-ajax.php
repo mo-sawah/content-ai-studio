@@ -700,7 +700,7 @@ public function translate_text() {
             }
 
             // Check if this is a two-person script
-            $is_two_person = (strpos($script, 'HOST_A:') !== false && strpos($script, 'HOST_B:') !== false);
+            $is_two_person = (strpos($script, 'HOST_A:') !== false && strpos($script, 'HOST_B:') !== false) || (stripos($script, 'ALEX:') !== false && stripos($script, 'JORDAN:') !== false);
             
             if ($is_two_person) {
                 // Generate two-person audio
