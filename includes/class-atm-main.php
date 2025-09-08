@@ -423,7 +423,7 @@ class ATM_Main {
         if ($frontend) {
             add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'), 99);
             add_filter('the_content', array($frontend, 'embed_takeaways_in_content'));
-            add_filter('the_content', array($this, 'add_podcast_player_to_content'));
+            add_filter('the_content', array($frontend, 'embed_podcast_in_content'));
         }
 
         // Schedule cleanup to run daily

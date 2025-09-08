@@ -8,72 +8,6 @@ if (!defined('ABSPATH')) {
 
 class ATM_Frontend {
 
-  private function get_modern_player_html() {
-      // This is the HTML structure from your pody-test.html file
-      ob_start();
-      ?>
-      <div class="demo-container">
-          <div class="theme-toggle">
-              <button class="toggle-btn" id="themeToggleBtn" aria-label="Toggle dark mode">
-                  <span id="themeToggleIcon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path stroke-linecap="round" d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.07 7.07-1.42-1.42M8.35 8.35 6.93 6.93m0 10.14 1.42-1.42m9.3-9.3 1.42 1.42"/></svg></span>
-                  <span id="themeToggleText">Dark Mode</span>
-              </button>
-          </div>
-          <main class="podcast-player" aria-label="Podcast Player">
-              <section class="player-header">
-                  <div class="podcast-artwork" id="artwork" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8"><path d="M4 13v5a3 3 0 0 0 3 3h1v-8H7a3 3 0 0 0-3 3Zm13 0h-1v8h1a3 3 0 0 0 3-3v-5a3 3 0 0 0-3-3ZM6 13V11A6 6 0 0 1 12 5v0a6 6 0 0 1 6 6v2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                      <div class="artwork-pulse" id="artworkPulse"></div>
-                  </div>
-                  <h1 class="podcast-title" id="episodeTitle"></h1>
-                  <p class="podcast-author" id="episodeAuthor"></p>
-              </section>
-              <div class="waveform-container" id="waveformContainer" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" tabindex="0">
-                  <div class="progress-overlay" id="progressOverlay"></div>
-                  <div class="scrub-handle" id="scrubHandle"></div>
-                  <div class="waveform" id="waveform"></div>
-              </div>
-              <div class="time-display">
-                  <span id="currentTimeLabel">0:00</span>
-                  <span id="totalTimeLabel">0:00</span>
-              </div>
-              <div class="player-controls" aria-label="Playback controls">
-                  <button class="icon-btn" id="btnShuffle" aria-label="Shuffle (off)" data-state="off"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M3 5h3.5a4 4 0 0 1 3.2 1.6l4.6 6A4 4 0 0 0 17.5 15H21M3 19h3.5a4 4 0 0 0 3.2-1.6l.3-.4m3.2-4.4.6.8A4 4 0 0 0 17.5 15H21M21 5h-3.5a4 4 0 0 0-3.2 1.6l-.6.8M18 2l3 3-3 3M18 14l3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                  <button class="icon-btn" id="btnPrev" aria-label="Previous episode"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M6 5v14M18 7l-7 5 7 5V7Z" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                  <button class="icon-btn" data-role="primary" id="btnPlayPause" aria-label="Play">
-                      <svg id="iconPlay" viewBox="0 0 24 24" stroke="currentColor" fill="currentColor"><path d="M8 5v14l10-7z"/></svg>
-                      <svg id="iconPause" viewBox="0 0 24 24" stroke="currentColor" fill="none" style="display:none;"><path d="M9 5v14M15 5v14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                  <button class="icon-btn" id="btnNext" aria-label="Next episode"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M18 19V5M6 17l7-5-7-5v10Z" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                  <button class="icon-btn" id="btnRepeat" aria-label="Repeat (off)" data-mode="off"><svg id="repeatIcon" viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M4 7v6a5 5 0 0 0 5 5h6m0 0-2-2m2 2-2 2M20 17V11a5 5 0 0 0-5-5H9m0 0 2 2M9 6l2-2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-              </div>
-              <div class="secondary-controls">
-                  <div class="volume-wrapper">
-                      <button class="action-btn" id="btnMute" aria-label="Mute"><svg id="iconVolume" viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M11 5 6 9H3v6h3l5 4V5Z" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 9a3 3 0 0 1 0 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                      <div class="volume-track" id="volumeTrack" aria-label="Volume" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70" tabindex="0">
-                          <div class="volume-fill" id="volumeFill"></div>
-                          <div class="volume-handle" id="volumeHandle"></div>
-                      </div>
-                  </div>
-                  <div class="actions-wrapper">
-                      <button class="action-btn" id="btnLike" aria-label="Like"><svg id="iconHeartOutline" viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M16.5 3a5.5 5.5 0 0 0-4.5 2.4A5.5 5.5 0 0 0 7.5 3 5.5 5.5 0 0 0 2 8.5c0 7 9 12.5 10 12.5s10-5.5 10-12.5A5.5 5.5 0 0 0 16.5 3Z" stroke-linecap="round" stroke-linejoin="round"/></svg><svg id="iconHeartFilled" viewBox="0 0 24 24" stroke="none" fill="currentColor" style="display:none;"><path d="M11.998 21.003c-.516 0-9.998-5.727-9.998-12.503A5.5 5.5 0 0 1 7.5 3a5.5 5.5 0 0 1 4.498 2.4A5.5 5.5 0 0 1 16.496 3 5.5 5.5 0 0 1 22 8.5c0 6.776-9.482 12.503-10 12.503Z"/></svg></button>
-                      <button class="action-btn" id="btnShare" aria-label="Share"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M7 17a4 4 0 0 1 0-8M17 21a4 4 0 0 0 0-8M12 7V3m0 0 3 3m-3-3L9 6m3 4v6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                      <button class="action-btn" id="btnDownload" aria-label="Download"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                  </div>
-              </div>
-              <button class="playlist-toggle-floating" id="playlistToggleBtn" aria-expanded="false" aria-controls="playlistContainer" aria-label="Toggle playlist"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg></button>
-              <section class="playlist-container" id="playlistContainer" aria-label="Playlist">
-                  <h2 class="playlist-header">Up Next</h2>
-                  <ul class="playlist-list" id="playlistList"></ul>
-              </section>
-              <audio id="audioEl" preload="metadata" hidden></audio>
-          </main>
-      </div>
-      <?php
-      return ob_get_clean();
-  }
-
-
     private static $sprite_printed = false;
 
     public function enqueue_frontend_scripts() {
@@ -175,55 +109,28 @@ class ATM_Frontend {
         return ob_get_clean() . $content;
     }
 
-    // In includes/class-atm-frontend.php
+    public function embed_podcast_in_content($content) {
+        if (!is_single() || !in_the_loop() || !is_main_query() || !get_option('atm_auto_embed', 1)) {
+            return $content;
+        }
 
-public function add_podcast_player_to_content($content) {
-    if (!is_singular() || !in_the_loop() || !is_main_query()) {
+        global $post;
+        $podcast_url = get_post_meta($post->ID, '_atm_podcast_url', true);
+
+        if ($podcast_url) {
+            $podcast_image = get_post_meta($post->ID, '_atm_podcast_image', true);
+            $asset_default = ATM_PLUGIN_URL . 'assets/images/pody.jpg';
+            if (empty($podcast_image)) {
+                $opt_default   = get_option('atm_default_image', '');
+                $podcast_image = !empty($opt_default) ? $opt_default : $asset_default;
+            }
+
+            $player_html = $this->get_player_html($post, $podcast_url, $podcast_image);
+            return $player_html . $content;
+        }
+
         return $content;
     }
-
-    $post_id = get_the_ID();
-    $podcast_url = get_post_meta($post_id, '_atm_podcast_url', true);
-
-    // Only proceed if a podcast URL exists for this post
-    if (empty($podcast_url)) {
-        return $content;
-    }
-
-    // --- ENQUEUE ASSETS AND PASS DATA ---
-    // We now use the existing file names.
-    wp_enqueue_style('atm-podcast-player', ATM_PLUGIN_URL . 'assets/css/podcast-player.css', [], ATM_VERSION);
-    wp_enqueue_script('atm-podcast-player', ATM_PLUGIN_URL . 'assets/js/podcast-player.js', [], ATM_VERSION, true);
-
-    $post = get_post($post_id);
-    $episodes = [
-        [
-            'id' => 0,
-            'title' => esc_html($post->post_title),
-            'author' => 'Powered by Content AI Studio',
-            'src' => esc_url($podcast_url),
-            'duration' => 0, // You can store and retrieve this from post meta if available
-            'icon' => 'headphones'
-        ]
-    ];
-
-    // Pass the episode data to our JavaScript file
-    wp_localize_script('atm-podcast-player', 'casPlayerData', ['episodes' => $episodes]);
-    // --- END ENQUEUE ---
-
-
-    // Get the new player HTML
-    $player_html = $this->get_modern_player_html();
-
-    // Get the default theme from plugin settings
-    $theme_class = get_option('atm_podcast_theme', 'light') === 'dark' ? 'dark-theme' : '';
-
-    // Wrap the player HTML in our high-specificity, isolated container
-    $player_wrapper = '<div class="cas-player-modern ' . esc_attr($theme_class) . '">' . $player_html . '</div>';
-
-    // **IMPORTANT**: Append the player to the end of the content
-    return $content . $player_wrapper;
-}
 
     private function print_icon_sprite_once() {
         if (self::$sprite_printed) return;
