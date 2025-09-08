@@ -1844,61 +1844,47 @@ Follow these rules strictly:
     }
 
     private static function parse_podcast_script($script) {
-        $lines = explode("\n", $script);
+        $lines = explode("\n", trim($script));
         $segments = [];
-        $current_speaker = null;
-        
+        $current_segment = null;
+
         foreach ($lines as $line) {
             $line = trim($line);
             if (empty($line)) continue;
-            
-            // Check for both old format (HOST_A/HOST_B) and new format (ALEX/JORDAN)
+
+            // Check if the line indicates a new speaker
             if (preg_match('/^(HOST_[AB]|ALEX|JORDAN):\s*(.+)/i', $line, $matches)) {
-                $speaker = strtoupper($matches[1]); // Normalize to uppercase
-                $text = $matches[2];
-                
+                // If there's a current segment being built, save it first.
+                if ($current_segment) {
+                    $segments[] = $current_segment;
+                }
+
+                $speaker = strtoupper($matches[1]);
+                $text = trim($matches[2]);
+
                 // Map names to voice assignments
                 if ($speaker === 'ALEX') $speaker = 'HOST_A';
                 if ($speaker === 'JORDAN') $speaker = 'HOST_B';
-                
-                // CRITICAL: Split long speaker segments into smaller chunks
-                $sentences = preg_split('/(?<=[.!?])\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
-                $current_segment = '';
-                
-                foreach ($sentences as $sentence) {
-                    $test_segment = $current_segment . ($current_segment ? ' ' : '') . $sentence;
-                    
-                    // If adding this sentence would make the segment too long, save current and start new
-                    if (strlen($test_segment) > 3000) { // Conservative limit
-                        if (!empty($current_segment)) {
-                            $add_pause = ($current_speaker && $current_speaker !== $speaker);
-                            $segments[] = [
-                                'speaker' => $speaker,
-                                'text' => trim($current_segment),
-                                'add_pause' => $add_pause
-                            ];
-                            $current_speaker = $speaker;
-                            $add_pause = false; // Only first segment gets pause
-                        }
-                        $current_segment = $sentence;
-                    } else {
-                        $current_segment = $test_segment;
-                    }
-                }
-                
-                // Add the remaining segment
-                if (!empty($current_segment)) {
-                    $add_pause = ($current_speaker && $current_speaker !== $speaker);
-                    $segments[] = [
-                        'speaker' => $speaker,
-                        'text' => trim($current_segment),
-                        'add_pause' => $add_pause
-                    ];
-                    $current_speaker = $speaker;
-                }
+
+                $is_new_speaker = empty($segments) || end($segments)['speaker'] !== $speaker;
+
+                // Start a new segment
+                $current_segment = [
+                    'speaker' => $speaker,
+                    'text' => $text,
+                    'add_pause' => $is_new_speaker,
+                ];
+            } elseif ($current_segment) {
+                // This line is a continuation of the previous speaker's text
+                $current_segment['text'] .= ' ' . $line;
             }
         }
-        
+
+        // Add the very last segment after the loop finishes
+        if ($current_segment) {
+            $segments[] = $current_segment;
+        }
+
         return $segments;
     }
 
