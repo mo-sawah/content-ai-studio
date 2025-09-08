@@ -9,6 +9,7 @@ class ATM_Main {
     private static $instance = null;
     private static $hooks_initialized = false;
 
+    
     public static function create_podcast_progress_table() {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
@@ -613,22 +614,21 @@ class ATM_Main {
     }
 
     // Add this to your activate() method in class-atm-main.php:
-public static function activate() {
-    $dirs = [
-        'css' => ATM_PLUGIN_PATH . 'assets/css',
-        'js'  => ATM_PLUGIN_PATH . 'assets/js'
-    ];
-    
-    foreach ($dirs as $dir) {
-        if (!file_exists($dir)) {
-            wp_mkdir_p($dir);
+    public static function activate() {
+        $dirs = [
+            'css' => ATM_PLUGIN_PATH . 'assets/css',
+            'js'  => ATM_PLUGIN_PATH . 'assets/js'
+        ];
+        
+        foreach ($dirs as $dir) {
+            if (!file_exists($dir)) {
+                wp_mkdir_p($dir);
+            }
         }
+        
+        self::create_campaigns_table();
+        self::create_podcast_progress_table(); // Add this line
     }
-    
-    // Create tables
-    self::create_campaigns_table();
-    self::create_podcast_progress_table(); // Add this line
-}
 
 // Also add a cleanup function to remove old temp files:
 public static function cleanup_old_podcast_jobs() {
