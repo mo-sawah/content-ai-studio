@@ -632,3 +632,10 @@
     transition: none !important;
   }
 }
+
+.podcast-player input[type="submit"],
+.podcast-player button,
+.podcast-player input[type="reset"] input[type="button"],
+.podcast-player .ts-button {
+  padding: 0 !important;
+}
