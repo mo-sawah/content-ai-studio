@@ -1767,38 +1767,38 @@ Follow these rules strictly:
     }
 
     private static function parse_podcast_script($script) {
-        $lines = explode("\n", $script);
-        $segments = [];
-        $current_speaker = null;
+    $lines = explode("\n", $script);
+    $segments = [];
+    $current_speaker = null;
+    
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line)) continue;
         
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (empty($line)) continue;
+        // Check for both old format (HOST_A/HOST_B) and new format (ALEX/JORDAN)
+        if (preg_match('/^(HOST_[AB]|ALEX|JORDAN):\s*(.+)/i', $line, $matches)) {
+            $speaker = strtoupper($matches[1]); // Normalize to uppercase
+            $text = $matches[2];
             
-            // Check for both old format (HOST_A/HOST_B) and new format (ALEX/JORDAN)
-            if (preg_match('/^(HOST_[AB]|ALEX|JORDAN):\s*(.+)/', $line, $matches)) {
-                $speaker = $matches[1];
-                $text = $matches[2];
-                
-                // Map names to voice assignments
-                if ($speaker === 'ALEX') $speaker = 'HOST_A';
-                if ($speaker === 'JORDAN') $speaker = 'HOST_B';
-                
-                // Add pause if speaker changed
-                $add_pause = ($current_speaker && $current_speaker !== $speaker);
-                
-                $segments[] = [
-                    'speaker' => $speaker,
-                    'text' => $text,
-                    'add_pause' => $add_pause
-                ];
-                
-                $current_speaker = $speaker;
-            }
+            // Map names to voice assignments
+            if ($speaker === 'ALEX') $speaker = 'HOST_A';
+            if ($speaker === 'JORDAN') $speaker = 'HOST_B';
+            
+            // Add pause if speaker changed
+            $add_pause = ($current_speaker && $current_speaker !== $speaker);
+            
+            $segments[] = [
+                'speaker' => $speaker,
+                'text' => $text,
+                'add_pause' => $add_pause
+            ];
+            
+            $current_speaker = $speaker;
         }
-        
-        return $segments;
     }
+    
+    return $segments;
+}
 
     private static function generate_silence($milliseconds) {
         // Generate brief silence - simple implementation

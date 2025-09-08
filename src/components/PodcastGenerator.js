@@ -397,7 +397,12 @@ function PodcastGenerator({ setActiveView }) {
       return;
     }
 
-    if (!script.includes("HOST_A:") || !script.includes("HOST_B:")) {
+    // Updated validation to check for both old and new formats
+    const hasOldFormat =
+      script.includes("HOST_A:") && script.includes("HOST_B:");
+    const hasNewFormat = script.includes("ALEX:") && script.includes("JORDAN:");
+
+    if (!hasOldFormat && !hasNewFormat) {
       alert(
         "The script doesn't appear to be in the correct two-person format. Please regenerate the script first."
       );
@@ -433,26 +438,6 @@ function PodcastGenerator({ setActiveView }) {
       setIsLoading(false);
     }
   };
-
-  return (
-    <div className="atm-generator-view">
-      {existingPodcastUrl ? (
-        <PlayerView
-          podcastUrl={existingPodcastUrl}
-          onRegenerate={handleGenerateAudio}
-          postId={postId}
-        />
-      ) : (
-        <GeneratorView
-          handleGenerateScript={handleGenerateScript}
-          handleGenerateAudio={handleGenerateAudio}
-          statusMessage={statusMessage}
-          isLoading={isLoading}
-        />
-      )}
-      {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
-    </div>
-  );
 }
 
 export default PodcastGenerator;
