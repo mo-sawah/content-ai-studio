@@ -809,8 +809,9 @@ public function translate_text() {
             
             **Link Formatting Rules:**
             - When including external links, NEVER use the website URL as the anchor text
-            - Use ONLY 1-2 descriptive words as anchor text
-            - Example: Use [study](https://example.com) NOT [recent comprehensive study](https://example.com)
+            - Use ONLY 1-3 descriptive words as anchor text
+            - Example: railway that [had a deadly crash](https://reuters.com/specific-article) last week and will...
+            - Do NOT use generic phrases like "click here", "read more", or "this article" as anchor text
             - Anchor text should be relevant keywords from the article topic (e.g., marketing, design, finance, AI)
             - Keep anchor text extremely concise (maximum 2 words)
             - Make links feel natural within the sentence flow
@@ -904,9 +905,12 @@ public function translate_text() {
 
                 **Link Formatting Rules:**
                 - When including external links, NEVER use the website URL as the anchor text
-                - Use ONLY 1-2 descriptive words as anchor text
-                - Example: Use [study](https://example.com) NOT [recent comprehensive study](https://example.com)
-                - Anchor text should be: "study", "report", "research", "analysis", "source", etc.
+                - Use ONLY 1-3 descriptive words as anchor text
+                - Example: railway that [had a deadly crash](https://reuters.com/specific-article) last week and will...
+                - Example: Example: [Reuters](https://reuters.com/actual-article-url) reported that...
+                - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+                - Do NOT use generic phrases like "click here", "read more", or "this article" as anchor text
+                - Anchor text should be relevant keywords from the article topic (e.g., marketing, design, finance, AI)
                 - Keep anchor text extremely concise (maximum 2 words)
                 - Make links feel natural within the sentence flow
                 - Avoid long phrases as anchor text
@@ -1055,9 +1059,12 @@ public function translate_text() {
 
                 **Link Formatting Rules:**
                 - When including external links, NEVER use the website URL as the anchor text
-                - Use ONLY 1-2 descriptive words as anchor text
-                - Example: Use [study](https://example.com) NOT [recent comprehensive study](https://example.com)
-                - Anchor text should be: "study", "report", "research", "analysis", "source", etc.
+                - Use ONLY 1-3 descriptive words as anchor text
+                - Example: railway that [had a deadly crash](https://reuters.com/specific-article) last week and will...
+                - Example: Example: [Reuters](https://reuters.com/actual-article-url) reported that...
+                - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+                - Do NOT use generic phrases like "click here", "read more", or "this article" as anchor text
+                - Anchor text should be relevant keywords from the article topic (e.g., marketing, design, finance, AI)
                 - Keep anchor text extremely concise (maximum 2 words)
                 - Make links feel natural within the sentence flow
                 - Avoid long phrases as anchor text
