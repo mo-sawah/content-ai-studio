@@ -96,6 +96,7 @@ function GeneratorView({
   isLoading,
 }) {
   const [scriptContent, setScriptContent] = useState("");
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [selectedLanguageLabel, setSelectedLanguageLabel] = useState("English");
   const [duration, setDuration] = useState("medium");
@@ -105,20 +106,31 @@ function GeneratorView({
   const [hostBVoice, setHostBVoice] = useState("nova");
   const [hostBVoiceLabel, setHostBVoiceLabel] = useState("Nova");
   const [audioProvider, setAudioProvider] = useState(
-    atm_studio_data.audio_provider || "openai"
+    atm_studio_data?.audio_provider || "openai"
   );
   const [audioProviderLabel, setAudioProviderLabel] = useState(
-    atm_studio_data.audio_provider === "elevenlabs"
+    atm_studio_data?.audio_provider === "elevenlabs"
       ? "ElevenLabs"
       : "OpenAI TTS"
   );
 
-  const openaiVoices = Object.entries(atm_studio_data.tts_voices).map(
-    ([value, label]) => ({ label, value })
-  );
-  const elevenlabsVoices = Object.entries(
-    atm_studio_data.elevenlabs_voices
-  ).map(([value, label]) => ({ label, value }));
+  // Safe fallbacks for voice options
+  const openaiVoices = atm_studio_data?.tts_voices
+    ? Object.entries(atm_studio_data.tts_voices).map(([value, label]) => ({
+        label,
+        value,
+      }))
+    : [
+        { label: "Alloy", value: "alloy" },
+        { label: "Nova", value: "nova" },
+      ];
+
+  const elevenlabsVoices = atm_studio_data?.elevenlabs_voices
+    ? Object.entries(atm_studio_data.elevenlabs_voices).map(
+        ([value, label]) => ({ label, value })
+      )
+    : [];
+
   const voiceOptions =
     audioProvider === "elevenlabs" ? elevenlabsVoices : openaiVoices;
 
@@ -176,7 +188,6 @@ function GeneratorView({
       // Update Host B voice if not found in current options
       const hostBMatch = voiceOptions.find((opt) => opt.value === hostBVoice);
       if (!hostBMatch) {
-        // Try to select a different voice for Host B
         const differentVoice =
           voiceOptions.find((opt) => opt.value !== hostAVoice) ||
           voiceOptions[0];
@@ -205,7 +216,7 @@ function GeneratorView({
             setSelectedLanguage(option.value);
             setSelectedLanguageLabel(option.label);
           }}
-          disabled={isLoading}
+          disabled={isLoading || isGeneratingScript}
         />
         <CustomDropdown
           label="Podcast Duration"
@@ -215,7 +226,7 @@ function GeneratorView({
             setDuration(option.value);
             setDurationLabel(option.label);
           }}
-          disabled={isLoading}
+          disabled={isLoading || isGeneratingScript}
           helpText="Target length for the podcast episode"
         />
       </div>
@@ -223,13 +234,16 @@ function GeneratorView({
       <Button
         isSecondary
         onClick={() =>
-          handleGenerateScript(selectedLanguage, duration, setScriptContent)
+          handleGenerateScript(
+            selectedLanguage,
+            duration,
+            setScriptContent,
+            setIsGeneratingScript
+          )
         }
-        disabled={isLoading}
+        disabled={isLoading || isGeneratingScript}
       >
-        {isLoading &&
-        (statusMessage.includes("script") ||
-          statusMessage.includes("Analyzing")) ? (
+        {isGeneratingScript ? (
           <>
             <CustomSpinner /> Generating Advanced Script...
           </>
@@ -243,8 +257,8 @@ function GeneratorView({
         help="The generated two-person conversational script will appear here featuring Alex Chen (analytical host) and Jordan Rivera (enthusiastic co-host). You can edit it before generating the audio."
         value={scriptContent}
         onChange={setScriptContent}
-        rows="25" // Increased for longer scripts
-        disabled={isLoading}
+        rows="25"
+        disabled={isLoading || isGeneratingScript}
         className="atm-podcast-script-textarea"
       />
 
@@ -294,7 +308,6 @@ function GeneratorView({
 
         {hostAVoice === hostBVoice && voiceOptions.length > 1 && (
           <p
-            className="atm-warning-message"
             style={{
               color: "#d97706",
               fontSize: "0.9rem",
@@ -318,7 +331,11 @@ function GeneratorView({
           )
         }
         disabled={
-          isLoading || !scriptContent.trim() || !hostAVoice || !hostBVoice
+          isLoading ||
+          isGeneratingScript ||
+          !scriptContent.trim() ||
+          !hostAVoice ||
+          !hostBVoice
         }
       >
         {isLoading && statusMessage.includes("audio") ? (
@@ -346,17 +363,24 @@ function PodcastGenerator({ setActiveView }) {
     []
   );
 
-  const handleGenerateScript = async (language, duration, setScriptContent) => {
-    const editorContent = wp.data.select("core/editor").getEditedPostContent();
-    if (!editorContent.trim()) {
+  const handleGenerateScript = async (
+    language,
+    duration,
+    setScriptContent,
+    setIsGeneratingScript
+  ) => {
+    const editorContent = wp.data
+      ?.select("core/editor")
+      ?.getEditedPostContent();
+    if (!editorContent || !editorContent.trim()) {
       alert(
         "Please write some content in the editor before generating a script."
       );
       return;
     }
 
-    // Set loading state immediately
     setIsLoading(true);
+    setIsGeneratingScript(true);
     setStatusMessage(
       "Analyzing article content and researching additional information..."
     );
@@ -383,6 +407,7 @@ function PodcastGenerator({ setActiveView }) {
       setStatusMessage(`Error generating script: ${error.message}`);
     } finally {
       setIsLoading(false);
+      setIsGeneratingScript(false);
     }
   };
 
@@ -438,6 +463,26 @@ function PodcastGenerator({ setActiveView }) {
       setIsLoading(false);
     }
   };
+
+  return (
+    <div className="atm-generator-view">
+      {existingPodcastUrl ? (
+        <PlayerView
+          podcastUrl={existingPodcastUrl}
+          onRegenerate={handleGenerateAudio}
+          postId={postId}
+        />
+      ) : (
+        <GeneratorView
+          handleGenerateScript={handleGenerateScript}
+          handleGenerateAudio={handleGenerateAudio}
+          statusMessage={statusMessage}
+          isLoading={isLoading}
+        />
+      )}
+      {statusMessage && <p className="atm-status-message">{statusMessage}</p>}
+    </div>
+  );
 }
 
 export default PodcastGenerator;
