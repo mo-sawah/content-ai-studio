@@ -639,3 +639,8 @@
 .podcast-player .ts-button {
   padding: 0 !important;
 }
+
+.podcast-player ul,
+.podcast-player ol {
+  margin: 0 !important;
+}
