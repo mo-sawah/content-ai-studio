@@ -117,6 +117,12 @@ function GeneratorView({
       : "OpenAI TTS"
   );
 
+  // NEW: Add podcast generation progress state
+  const [podcastProgress, setPodcastProgress] = useState(0);
+  const [podcastCurrentSegment, setPodcastCurrentSegment] = useState("");
+  const [totalPodcastSegments, setTotalPodcastSegments] = useState(0);
+  const [completedPodcastSegments, setCompletedPodcastSegments] = useState(0);
+
   // Safe fallbacks for voice options
   const openaiVoices = atm_studio_data?.tts_voices
     ? Object.entries(atm_studio_data.tts_voices).map(([value, label]) => ({
@@ -261,16 +267,30 @@ function GeneratorView({
     setTimeout(checkProgress, 3000);
   };
 
-  // Progress display component
-  const renderScriptProgress = () => {
-    if (!isGeneratingScript) return null;
+  // Updated renderProgress function to handle both script and podcast progress
+  const renderProgress = (isScript = true) => {
+    const isGenerating = isScript ? isGeneratingScript : isLoading;
+    const progress = isScript ? scriptProgress : podcastProgress;
+    const currentSeg = isScript ? currentSegment : podcastCurrentSegment;
 
-    const segmentNames = {
-      intro_and_context: "Introduction & Context",
-      main_discussion_part1: "Main Discussion (Part 1)",
-      main_discussion_part2: "Main Discussion (Part 2)",
-      conclusion_and_outro: "Conclusion & Outro",
-    };
+    if (!isGenerating) return null;
+
+    const segmentNames = isScript
+      ? {
+          intro_and_context: "Introduction & Context",
+          main_discussion_part1: "Main Discussion (Part 1)",
+          main_discussion_part2: "Main Discussion (Part 2)",
+          conclusion_and_outro: "Conclusion & Outro",
+        }
+      : {
+          // Podcast segment names can be more generic
+          processing: "Processing Audio",
+          generating: "Generating Segments",
+          combining: "Combining Audio",
+        };
+
+    const title = isScript ? "Generating Script..." : "Generating Podcast...";
+    const progressColor = isScript ? "#10b981" : "#8b5cf6";
 
     return (
       <div
@@ -292,7 +312,7 @@ function GeneratorView({
         >
           <CustomSpinner />
           <span style={{ fontWeight: "600" }}>
-            Generating Script... {scriptProgress}%
+            {title} {progress}%
           </span>
         </div>
 
@@ -309,16 +329,17 @@ function GeneratorView({
         >
           <div
             style={{
-              width: `${scriptProgress}%`,
+              width: `${progress}%`,
               height: "100%",
-              backgroundColor: "#10b981",
+              backgroundColor: progressColor,
               transition: "width 0.3s ease",
               borderRadius: "4px",
             }}
           />
         </div>
 
-        {currentSegment && (
+        {/* Show segment info for scripts, segment count for podcasts */}
+        {currentSeg && (
           <div
             style={{
               fontSize: "14px",
@@ -326,7 +347,9 @@ function GeneratorView({
               fontStyle: "italic",
             }}
           >
-            Current: {segmentNames[currentSegment] || currentSegment}
+            {isScript
+              ? `Current: ${segmentNames[currentSeg] || currentSeg}`
+              : `Progress: ${completedPodcastSegments}/${totalPodcastSegments} segments complete`}
           </div>
         )}
       </div>
@@ -390,8 +413,8 @@ function GeneratorView({
         )}
       </Button>
 
-      {/* Progress display for long scripts */}
-      {renderScriptProgress()}
+      {/* Script progress */}
+      {renderProgress(true)}
 
       <TextareaControl
         label="Podcast Script"
@@ -472,7 +495,11 @@ function GeneratorView({
             scriptContent,
             hostAVoice,
             hostBVoice,
-            audioProvider
+            audioProvider,
+            setPodcastProgress,
+            setPodcastCurrentSegment,
+            setTotalPodcastSegments,
+            setCompletedPodcastSegments
           )
         }
         disabled={
@@ -483,7 +510,7 @@ function GeneratorView({
           !hostBVoice
         }
       >
-        {isLoading && statusMessage.includes("audio") ? (
+        {isLoading ? (
           <>
             <CustomSpinner /> Generating Two-Person Audio...
           </>
@@ -491,6 +518,9 @@ function GeneratorView({
           "Step 2: Generate Professional Podcast Audio"
         )}
       </Button>
+
+      {/* Podcast progress */}
+      {renderProgress(false)}
     </div>
   );
 }
@@ -576,26 +606,31 @@ function PodcastGenerator({ setActiveView }) {
     }
   };
 
+  // Updated handleGenerateAudio with progress tracking
   const handleGenerateAudio = async (
     script,
     hostAVoice,
     hostBVoice,
-    provider
+    provider,
+    setPodcastProgress,
+    setPodcastCurrentSegment,
+    setTotalPodcastSegments,
+    setCompletedPodcastSegments
   ) => {
     if (!script.trim()) {
       alert("Script cannot be empty.");
       return;
     }
 
-    // Updated validation - more flexible format checking
+    // Validation...
     const hasHostFormat =
       script.includes("HOST_A:") && script.includes("HOST_B:");
     const hasNameFormat =
       script.includes("ALEX:") && script.includes("JORDAN:");
-    const hasGenericFormat =
-      script.includes(":") && script.split(":").length > 3; // At least some dialogue format
+    const hasMarkdownFormat =
+      script.includes("**ALEX") && script.includes("**JORDAN");
 
-    if (!hasHostFormat && !hasNameFormat && !hasGenericFormat) {
+    if (!hasHostFormat && !hasNameFormat && !hasMarkdownFormat) {
       alert(
         "The script doesn't appear to be in a valid dialogue format. Please regenerate the script first."
       );
@@ -604,9 +639,10 @@ function PodcastGenerator({ setActiveView }) {
 
     setIsLoading(true);
     setStatusMessage("Starting podcast generation...");
+    setPodcastProgress(0);
+    setPodcastCurrentSegment("");
 
     try {
-      // Start the generation process
       const response = await jQuery.ajax({
         url: atm_studio_data.ajax_url,
         type: "POST",
@@ -628,18 +664,29 @@ function PodcastGenerator({ setActiveView }) {
       const jobId = response.data.job_id;
       setStatusMessage("Podcast generation in progress. Please wait...");
 
-      // Start polling for progress
-      await pollProgress(jobId);
+      // Start polling for progress with the new progress setters
+      await pollPodcastProgress(
+        jobId,
+        setPodcastProgress,
+        setTotalPodcastSegments,
+        setCompletedPodcastSegments
+      );
     } catch (error) {
       setStatusMessage(`Error: ${error.message}`);
       setIsLoading(false);
+      setPodcastProgress(0);
     }
   };
 
-  // Add this new function to your PodcastGenerator.js component:
-  const pollProgress = async (jobId) => {
+  // Updated polling function to use the new progress state
+  const pollPodcastProgress = async (
+    jobId,
+    setPodcastProgress,
+    setTotalPodcastSegments,
+    setCompletedPodcastSegments
+  ) => {
     let attempts = 0;
-    const maxAttempts = 120; // 10 minutes max (5-second intervals)
+    const maxAttempts = 120;
 
     const checkProgress = async () => {
       try {
@@ -661,10 +708,10 @@ function PodcastGenerator({ setActiveView }) {
 
         const progress = response.data;
 
-        // Update status message with progress
-        setStatusMessage(
-          `Generating podcast: ${progress.completed_segments}/${progress.total_segments} segments complete (${progress.progress_percentage}%)`
-        );
+        // Update progress using the new state setters
+        setPodcastProgress(progress.progress_percentage);
+        setTotalPodcastSegments(progress.total_segments);
+        setCompletedPodcastSegments(progress.completed_segments);
 
         if (progress.status === "completed") {
           setStatusMessage("Podcast generation completed! Reloading page...");
@@ -680,16 +727,15 @@ function PodcastGenerator({ setActiveView }) {
           throw new Error("Generation timed out. Please try again.");
         }
 
-        // Continue polling
-        setTimeout(checkProgress, 5000); // Check every 5 seconds
+        setTimeout(checkProgress, 5000);
       } catch (error) {
         setStatusMessage(`Error: ${error.message}`);
         setIsLoading(false);
+        setPodcastProgress(0);
       }
     };
 
-    // Start checking
-    setTimeout(checkProgress, 5000); // First check after 5 seconds
+    setTimeout(checkProgress, 5000);
   };
 
   return (

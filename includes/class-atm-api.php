@@ -2558,17 +2558,14 @@ Follow these rules strictly:
             $payload['response_format'] = [ 'type' => 'json_object' ];
         }
 
-        // UPDATED: Use OpenRouter's web search according to their documentation
-        if ($enable_web_search) {
-            // Add web search instruction to the system prompt
-            $web_search_instruction = "\n\nIMPORTANT: Use your web search capabilities to find current, accurate information about this topic before responding. Search for recent developments, statistics, and relevant context.";
-            $payload['messages'][0]['content'] .= $web_search_instruction;
-            
-            // Enable the provider's web search tools
-            $payload['provider'] = [
-                'allow_fallbacks' => false,
-                'require_parameters' => true,
-                'data_collection' => 'deny'
+        // CORRECT: Use OpenRouter's web search plugin
+        $max_results = intval(get_option('atm_web_search_results', 0));
+        if ($enable_web_search && $max_results > 0) {
+            $payload['plugins'] = [
+                'web' => [
+                    'max_results' => $max_results,
+                    'search_prompt' => 'Find the most recent and relevant information from ' . date('Y') . ' about: {query}. Focus on current events and latest developments.'
+                ]
             ];
         }
 
