@@ -2247,3 +2247,28 @@ body.wp-admin .atm-content-body {
 body.wp-admin .components-base-control .atm-podcast-script-textarea {
   margin-top: 25px !important;
 }
+
+.atm-studio-container .atm-podcast-script-textarea {
+  margin-top: 35px !important;
+}
+
+/* Target the textarea component more specifically */
+.atm-studio-container
+  .components-textarea-control__input.atm-podcast-script-textarea {
+  margin-top: 35px !important;
+}
+
+/* Alternative approach - target by the wrapper */
+.atm-studio-container .atm-podcast-script-textarea {
+  margin-top: 35px !important;
+}
+
+/* Most specific approach - target the actual textarea element */
+.atm-studio-container textarea.atm-podcast-script-textarea {
+  margin-top: 35px !important;
+}
+
+/* If the above don't work, try targeting the base control wrapper */
+.atm-studio-container .components-base-control.atm-podcast-script-textarea {
+  margin-top: 35px !important;
+}

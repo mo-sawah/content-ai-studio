@@ -2746,14 +2746,19 @@ Follow these rules strictly:
         if (empty($script) || empty($voice_a) || empty($voice_b)) {
             throw new Exception('Invalid parameters: script, voice_a, and voice_b are required');
         }
+        
         // Parse the script to separate HOST_A and HOST_B lines
         $audio_segments = self::parse_podcast_script($script);
-        $final_audio_parts = [];
-
+        
         // Add validation for parsed segments
         if (empty($audio_segments)) {
+            error_log("ATM: Script parsing failed. Script preview: " . substr($script, 0, 500));
             throw new Exception('No valid audio segments found in script. Please check script format.');
         }
+        
+        error_log("ATM: Successfully parsed " . count($audio_segments) . " audio segments");
+        
+        $final_audio_parts = [];
 
         foreach ($audio_segments as $segment) {
             $voice = ($segment['speaker'] === 'HOST_A') ? $voice_a : $voice_b;
@@ -2884,36 +2889,61 @@ Follow these rules strictly:
     $segments = [];
     $current_segment = null;
 
-    foreach ($lines as $line) {
+    // Add debug logging to see what we're working with
+    error_log("ATM: Parsing script with " . count($lines) . " lines. First 5 lines:");
+    for ($i = 0; $i < min(5, count($lines)); $i++) {
+        error_log("ATM: Line $i: " . trim($lines[$i]));
+    }
+
+    foreach ($lines as $line_num => $line) {
         $line = trim($line);
         if (empty($line)) continue;
 
-        // Check if the line indicates a new speaker
-        if (preg_match('/^(HOST_[AB]|ALEX|JORDAN):\s*(.+)/i', $line, $matches)) {
-            // If there's a current segment being built, save it first.
-            if ($current_segment) {
-                $segments[] = $current_segment;
+        // Enhanced speaker detection - more flexible patterns
+        $speaker_patterns = [
+            '/^(ALEX|HOST_A):\s*(.+)/i',           // ALEX: or HOST_A:
+            '/^(JORDAN|HOST_B):\s*(.+)/i',         // JORDAN: or HOST_B:
+            '/^(Host\s*A|Host\s*1):\s*(.+)/i',     // Host A: or Host 1:
+            '/^(Host\s*B|Host\s*2):\s*(.+)/i',     // Host B: or Host 2:
+            '/^([A-Z][A-Z\s]{2,15}):\s*(.+)/',     // Any CAPS NAME: (3-16 chars)
+        ];
+
+        $matched = false;
+        foreach ($speaker_patterns as $pattern) {
+            if (preg_match($pattern, $line, $matches)) {
+                $speaker_raw = trim($matches[1]);
+                $text = trim($matches[2]);
+                
+                // Normalize speaker names
+                $speaker = self::normalize_speaker_name($speaker_raw);
+                
+                // If there's a current segment being built, save it first
+                if ($current_segment) {
+                    $segments[] = $current_segment;
+                }
+
+                // Determine if this is a new speaker (for pause insertion)
+                $is_new_speaker = empty($segments) || (end($segments) && end($segments)['speaker'] !== $speaker);
+
+                // Start a new segment
+                $current_segment = [
+                    'speaker' => $speaker,
+                    'text' => $text,
+                    'add_pause' => $is_new_speaker,
+                ];
+                
+                $matched = true;
+                error_log("ATM: Found speaker '$speaker_raw' -> '$speaker' with text: " . substr($text, 0, 50) . "...");
+                break;
             }
+        }
 
-            $speaker = strtoupper($matches[1]);
-            $text = trim($matches[2]);
-
-            // Map names to voice assignments
-            if ($speaker === 'ALEX') $speaker = 'HOST_A';
-            if ($speaker === 'JORDAN') $speaker = 'HOST_B';
-
-            // FIX: Add safety check here
-            $is_new_speaker = empty($segments) || (end($segments) && end($segments)['speaker'] !== $speaker);
-
-            // Start a new segment
-            $current_segment = [
-                'speaker' => $speaker,
-                'text' => $text,
-                'add_pause' => $is_new_speaker,
-            ];
-        } elseif ($current_segment) {
-            // This line is a continuation of the previous speaker's text
-            $current_segment['text'] .= ' ' . $line;
+        // If no speaker pattern matched, this might be a continuation line
+        if (!$matched && $current_segment) {
+            // Skip lines that look like stage directions or section headers
+            if (!self::is_stage_direction($line)) {
+                $current_segment['text'] .= ' ' . $line;
+            }
         }
     }
 
@@ -2922,7 +2952,63 @@ Follow these rules strictly:
         $segments[] = $current_segment;
     }
 
+    error_log("ATM: Parsed " . count($segments) . " segments from script");
+    
+    // Log first few segments for debugging
+    foreach (array_slice($segments, 0, 3) as $i => $segment) {
+        error_log("ATM: Segment $i - Speaker: {$segment['speaker']}, Text: " . substr($segment['text'], 0, 100) . "...");
+    }
+
     return $segments;
+}
+
+/**
+ * Normalize speaker names to consistent format
+ */
+private static function normalize_speaker_name($speaker_raw) {
+    $speaker = strtoupper(trim($speaker_raw));
+    
+    // Normalize variations to standard format
+    $mappings = [
+        'ALEX' => 'HOST_A',
+        'ALEX CHEN' => 'HOST_A', 
+        'HOST A' => 'HOST_A',
+        'HOST 1' => 'HOST_A',
+        'JORDAN' => 'HOST_B',
+        'JORDAN RIVERA' => 'HOST_B',
+        'HOST B' => 'HOST_B', 
+        'HOST 2' => 'HOST_B',
+    ];
+    
+    return $mappings[$speaker] ?? $speaker;
+}
+
+/**
+ * Check if a line is a stage direction that should be ignored
+ */
+private static function is_stage_direction($line) {
+    $stage_patterns = [
+        '/^\[.*\]$/',                    // [stage direction]
+        '/^\(.*\)$/',                    // (stage direction)  
+        '/^-{3,}/',                      // --- dividers
+        '/^={3,}/',                      // === dividers
+        '/^\*{3,}/',                     // *** dividers
+        '/^##/',                         // ## headers
+        '/^INTRO/',                      // INTRO/OUTRO sections
+        '/^OUTRO/',
+        '/^CONCLUSION/',
+        '/^BACKGROUND/',
+        '/^MAIN DISCUSSION/',
+        '/^\d+\.\s*/',                   // 1. numbered sections
+    ];
+    
+    foreach ($stage_patterns as $pattern) {
+        if (preg_match($pattern, trim($line))) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
     private static function generate_silence($milliseconds) {
