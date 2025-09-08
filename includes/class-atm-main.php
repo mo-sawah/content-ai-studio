@@ -9,6 +9,35 @@ class ATM_Main {
     private static $instance = null;
     private static $hooks_initialized = false;
 
+    public static function create_podcast_progress_table() {
+        global $wpdb;
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        $table_name = $wpdb->prefix . 'atm_podcast_jobs';
+        $sql = "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            post_id bigint(20) NOT NULL,
+            job_id varchar(32) NOT NULL,
+            script longtext NOT NULL,
+            voice_a varchar(50) NOT NULL,
+            voice_b varchar(50) NOT NULL,
+            provider varchar(20) NOT NULL,
+            total_segments int(11) NOT NULL,
+            completed_segments int(11) DEFAULT 0,
+            status varchar(20) DEFAULT 'pending',
+            temp_files longtext,
+            error_message text,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY job_id (job_id),
+            KEY post_id (post_id)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+    }
+    
     public function __construct() {
         // Prevent multiple instances
         if (self::$instance !== null) {
@@ -366,6 +395,9 @@ class ATM_Main {
         add_action('init', array($this, 'register_shortcodes'));
         add_action('transition_post_status', array($this, 'maybe_schedule_comments_on_publish'), 10, 3);
         add_action('atm_generate_comments_for_post', array($this, 'handle_generate_comments_for_post'));
+        add_action('atm_process_podcast_segment', array('ATM_API', 'process_podcast_segment'), 10, 2);
+        add_action('atm_finalize_podcast', array('ATM_API', 'finalize_podcast'));
+        add_action('atm_cleanup_podcast_jobs', array('ATM_Main', 'cleanup_old_podcast_jobs'));
 
         // License check - only add meta boxes if licensed and meta box class exists
         if (class_exists('ATM_Licensing') && ATM_Licensing::is_license_active() && $meta_box) {
@@ -383,6 +415,11 @@ class ATM_Main {
             add_action('wp_enqueue_scripts', array($frontend, 'enqueue_frontend_scripts'), 99);
             add_filter('the_content', array($frontend, 'embed_takeaways_in_content'));
             add_filter('the_content', array($frontend, 'embed_podcast_in_content'));
+        }
+
+        // Schedule cleanup to run daily
+        if (!wp_next_scheduled('atm_cleanup_podcast_jobs')) {
+            wp_schedule_event(time(), 'daily', 'atm_cleanup_podcast_jobs');
         }
         
         add_action('wp_enqueue_scripts', array($this, 'enqueue_listicle_styles'), 100);
@@ -575,18 +612,50 @@ class ATM_Main {
         dbDelta($sql_used_links);
     }
 
-    public static function activate() {
-        $dirs = [
-            'css' => ATM_PLUGIN_PATH . 'assets/css',
-            'js'  => ATM_PLUGIN_PATH . 'assets/js'
-        ];
-        
-        foreach ($dirs as $dir) {
-            if (!file_exists($dir)) {
-                wp_mkdir_p($dir);
+    // Add this to your activate() method in class-atm-main.php:
+public static function activate() {
+    $dirs = [
+        'css' => ATM_PLUGIN_PATH . 'assets/css',
+        'js'  => ATM_PLUGIN_PATH . 'assets/js'
+    ];
+    
+    foreach ($dirs as $dir) {
+        if (!file_exists($dir)) {
+            wp_mkdir_p($dir);
+        }
+    }
+    
+    // Create tables
+    self::create_campaigns_table();
+    self::create_podcast_progress_table(); // Add this line
+}
+
+// Also add a cleanup function to remove old temp files:
+public static function cleanup_old_podcast_jobs() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'atm_podcast_jobs';
+    
+    // Delete jobs older than 24 hours
+    $wpdb->query($wpdb->prepare(
+        "DELETE FROM $table_name WHERE created_at < %s",
+        date('Y-m-d H:i:s', strtotime('-24 hours'))
+    ));
+    
+    // Clean up temp directory
+    $upload_dir = wp_upload_dir();
+    $temp_dir = $upload_dir['basedir'] . '/podcast-temp';
+    
+    if (is_dir($temp_dir)) {
+        $files = glob($temp_dir . '/*');
+        foreach ($files as $file) {
+            if (is_file($file) && filemtime($file) < strtotime('-24 hours')) {
+                unlink($file);
             }
         }
-        
-        self::create_campaigns_table();
     }
+}
+
+
+
+    
 }

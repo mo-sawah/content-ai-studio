@@ -610,6 +610,7 @@ public function translate_text() {
         add_action('wp_ajax_save_key_takeaways', array($this, 'save_key_takeaways'));
         add_action('wp_ajax_get_post_subtitle', array($this, 'get_post_subtitle'));
         add_action('wp_ajax_populate_subtitle_field', array($this, 'populate_subtitle_field'));
+        add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
 
         // --- MULTIPAGE ACTIONS ---
         add_action('wp_ajax_generate_multipage_title', array($this, 'generate_multipage_title'));
@@ -676,72 +677,49 @@ public function translate_text() {
         }
 
         check_ajax_referer('atm_nonce', 'nonce');
-        @ini_set('max_execution_time', 300);
         
         try {
             $post_id = intval($_POST['post_id']);
             $script = wp_unslash($_POST['script']);
             $provider = sanitize_text_field($_POST['provider'] ?? 'openai');
-            
-            // Handle both old single voice and new dual voice parameters
-            $host_a_voice = sanitize_text_field($_POST['host_a_voice'] ?? $_POST['voice'] ?? 'alloy');
+            $host_a_voice = sanitize_text_field($_POST['host_a_voice'] ?? 'alloy');
             $host_b_voice = sanitize_text_field($_POST['host_b_voice'] ?? 'nova');
             
-            // Fallback if voices are empty
-            if (empty($host_a_voice)) $host_a_voice = 'alloy';
-            if (empty($host_b_voice)) $host_b_voice = 'nova';
-
-            if (empty($script)) {
-                throw new Exception("Script content is required.");
+            // Validation
+            if (empty($script) || empty($post_id)) {
+                throw new Exception("Script and Post ID are required.");
             }
 
-            $post = get_post($post_id);
-            if (!$post) {
-                throw new Exception("Post not found.");
-            }
+            // Start chunked generation
+            $job_id = ATM_API::start_chunked_podcast_generation(
+                $post_id, 
+                $script, 
+                $host_a_voice, 
+                $host_b_voice, 
+                $provider
+            );
 
-            // Check if this is a two-person script
-            $is_two_person = (strpos($script, 'HOST_A:') !== false && strpos($script, 'HOST_B:') !== false) || (stripos($script, 'ALEX:') !== false && stripos($script, 'JORDAN:') !== false);
-            
-            if ($is_two_person) {
-                // Generate two-person audio
-                $final_audio_content = ATM_API::generate_two_person_podcast_audio(
-                    $script, 
-                    $host_a_voice, 
-                    $host_b_voice, 
-                    $provider
-                );
-            } else {
-                // Fallback to single voice generation
-                if ($provider === 'elevenlabs') {
-                    $final_audio_content = ATM_API::generate_audio_with_elevenlabs($script, $host_a_voice);
-                } else {
-                    $final_audio_content = ATM_API::generate_audio_with_openai_tts($script, $host_a_voice);
-                }
-            }
-
-            // Save the audio file (rest of your existing save logic)
-            $upload_dir = wp_upload_dir();
-            $filename = 'podcast-' . $post_id . '-' . time() . '.mp3';
-            $file_path = $upload_dir['path'] . '/' . $filename;
-            
-            if (file_put_contents($file_path, $final_audio_content) === false) {
-                throw new Exception("Failed to save audio file.");
-            }
-
-            $file_url = $upload_dir['url'] . '/' . $filename;
-            
-            // Update post meta
-            update_post_meta($post_id, '_atm_podcast_url', $file_url);
-            update_post_meta($post_id, '_atm_podcast_script', $script);
-            update_post_meta($post_id, '_atm_podcast_voice', $host_a_voice);
-            update_post_meta($post_id, '_atm_podcast_host_b_voice', $host_b_voice);
-            update_post_meta($post_id, '_atm_podcast_provider', $provider);
-
-            wp_send_json_success(['audio_url' => $file_url]);
+            wp_send_json_success([
+                'job_id' => $job_id,
+                'message' => 'Podcast generation started. Please wait...'
+            ]);
 
         } catch (Exception $e) {
             error_log('Content AI Studio - Podcast generation error: ' . $e->getMessage());
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    // Add this new method for progress checking
+    public function check_podcast_progress() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        
+        try {
+            $job_id = sanitize_text_field($_POST['job_id']);
+            $progress = ATM_API::get_podcast_progress($job_id);
+            
+            wp_send_json_success($progress);
+        } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
     }

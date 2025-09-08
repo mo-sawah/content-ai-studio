@@ -339,6 +339,279 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    /**
+     * Start chunked podcast generation
+     */
+    public static function start_chunked_podcast_generation($post_id, $script, $voice_a, $voice_b, $provider) {
+        global $wpdb;
+        
+        // Generate unique job ID
+        $job_id = wp_generate_uuid4();
+        
+        // Split script into manageable segments (about 500 words each)
+        $segments = self::split_script_into_segments($script, 500);
+        
+        // Create job record
+        $table_name = $wpdb->prefix . 'atm_podcast_jobs';
+        $wpdb->insert($table_name, [
+            'post_id' => $post_id,
+            'job_id' => $job_id,
+            'script' => $script,
+            'voice_a' => $voice_a,
+            'voice_b' => $voice_b,
+            'provider' => $provider,
+            'total_segments' => count($segments),
+            'status' => 'processing'
+        ]);
+        
+        // Schedule processing
+        wp_schedule_single_event(time() + 5, 'atm_process_podcast_segment', [$job_id, 0]);
+        
+        return $job_id;
+    }
+
+    /**
+     * Split script into segments of roughly equal word count
+     */
+    private static function split_script_into_segments($script, $target_words = 500) {
+        $lines = explode("\n", trim($script));
+        $segments = [];
+        $current_segment = '';
+        $current_word_count = 0;
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+            
+            $words_in_line = str_word_count($line);
+            
+            // If adding this line would exceed target, start new segment
+            if ($current_word_count > 0 && ($current_word_count + $words_in_line) > $target_words) {
+                if (!empty($current_segment)) {
+                    $segments[] = trim($current_segment);
+                }
+                $current_segment = $line;
+                $current_word_count = $words_in_line;
+            } else {
+                $current_segment .= "\n" . $line;
+                $current_word_count += $words_in_line;
+            }
+        }
+        
+        // Add the last segment
+        if (!empty($current_segment)) {
+            $segments[] = trim($current_segment);
+        }
+        
+        return $segments;
+    }
+
+    /**
+     * Process a single segment
+     */
+    public static function process_podcast_segment($job_id, $segment_index) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_podcast_jobs';
+        
+        try {
+            // Get job details
+            $job = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $table_name WHERE job_id = %s",
+                $job_id
+            ), ARRAY_A);
+            
+            if (!$job) {
+                error_log("ATM: Job $job_id not found");
+                return;
+            }
+            
+            // Get segments
+            $segments = self::split_script_into_segments($job['script'], 500);
+            
+            if (!isset($segments[$segment_index])) {
+                error_log("ATM: Segment $segment_index not found for job $job_id");
+                return;
+            }
+            
+            $segment_script = $segments[$segment_index];
+            
+            // Generate audio for this segment
+            $audio_content = self::generate_two_person_podcast_audio(
+                $segment_script,
+                $job['voice_a'],
+                $job['voice_b'],
+                $job['provider']
+            );
+            
+            // Save segment to temporary file
+            $temp_file = self::save_temp_audio_segment($audio_content, $job_id, $segment_index);
+            
+            // Update job progress
+            $temp_files = $job['temp_files'] ? json_decode($job['temp_files'], true) : [];
+            $temp_files[$segment_index] = $temp_file;
+            
+            $wpdb->update($table_name, [
+                'completed_segments' => $segment_index + 1,
+                'temp_files' => json_encode($temp_files),
+                'updated_at' => current_time('mysql')
+            ], ['job_id' => $job_id]);
+            
+            // Schedule next segment or finalize
+            if ($segment_index + 1 < count($segments)) {
+                // Process next segment
+                wp_schedule_single_event(time() + 2, 'atm_process_podcast_segment', [$job_id, $segment_index + 1]);
+            } else {
+                // All segments complete, finalize
+                wp_schedule_single_event(time() + 2, 'atm_finalize_podcast', [$job_id]);
+            }
+            
+        } catch (Exception $e) {
+            error_log("ATM: Segment processing failed for job $job_id, segment $segment_index: " . $e->getMessage());
+            
+            // Update job with error
+            $wpdb->update($table_name, [
+                'status' => 'failed',
+                'error_message' => $e->getMessage()
+            ], ['job_id' => $job_id]);
+        }
+    }
+
+    /**
+     * Save temporary audio segment
+     */
+    private static function save_temp_audio_segment($audio_content, $job_id, $segment_index) {
+        $upload_dir = wp_upload_dir();
+        $temp_dir = $upload_dir['basedir'] . '/podcast-temp';
+        
+        if (!file_exists($temp_dir)) {
+            wp_mkdir_p($temp_dir);
+        }
+        
+        $filename = "segment-{$job_id}-{$segment_index}.mp3";
+        $filepath = $temp_dir . '/' . $filename;
+        
+        if (file_put_contents($filepath, $audio_content) === false) {
+            throw new Exception("Failed to save temporary audio segment");
+        }
+        
+        return $filepath;
+    }
+
+    /**
+     * Finalize podcast by combining all segments
+     */
+    public static function finalize_podcast($job_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_podcast_jobs';
+        
+        try {
+            // Get job details
+            $job = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $table_name WHERE job_id = %s",
+                $job_id
+            ), ARRAY_A);
+            
+            if (!$job) {
+                throw new Exception("Job not found");
+            }
+            
+            $temp_files = json_decode($job['temp_files'], true) ?: [];
+            
+            // Combine audio segments
+            $final_audio = self::combine_audio_segments($temp_files);
+            
+            // Save final podcast
+            $upload_dir = wp_upload_dir();
+            $filename = 'podcast-' . $job['post_id'] . '-' . time() . '.mp3';
+            $filepath = $upload_dir['path'] . '/' . $filename;
+            
+            if (file_put_contents($filepath, $final_audio) === false) {
+                throw new Exception("Failed to save final podcast");
+            }
+            
+            $file_url = $upload_dir['url'] . '/' . $filename;
+            
+            // Update post meta
+            update_post_meta($job['post_id'], '_atm_podcast_url', $file_url);
+            update_post_meta($job['post_id'], '_atm_podcast_script', $job['script']);
+            update_post_meta($job['post_id'], '_atm_podcast_voice', $job['voice_a']);
+            update_post_meta($job['post_id'], '_atm_podcast_host_b_voice', $job['voice_b']);
+            update_post_meta($job['post_id'], '_atm_podcast_provider', $job['provider']);
+            
+            // Update job status
+            $wpdb->update($table_name, [
+                'status' => 'completed'
+            ], ['job_id' => $job_id]);
+            
+            // Clean up temporary files
+            foreach ($temp_files as $temp_file) {
+                if (file_exists($temp_file)) {
+                    unlink($temp_file);
+                }
+            }
+            
+            error_log("ATM: Podcast generation completed for job $job_id");
+            
+        } catch (Exception $e) {
+            error_log("ATM: Finalization failed for job $job_id: " . $e->getMessage());
+            
+            $wpdb->update($table_name, [
+                'status' => 'failed',
+                'error_message' => $e->getMessage()
+            ], ['job_id' => $job_id]);
+        }
+    }
+
+    /**
+     * Combine audio segments into final file
+     */
+    private static function combine_audio_segments($temp_files) {
+        $combined_audio = '';
+        
+        // Sort by segment index
+        ksort($temp_files);
+        
+        foreach ($temp_files as $index => $filepath) {
+            if (file_exists($filepath)) {
+                $segment_content = file_get_contents($filepath);
+                $combined_audio .= $segment_content;
+                
+                // Add small silence between segments for smoother transitions
+                if ($index < count($temp_files) - 1) {
+                    $combined_audio .= self::generate_silence(300); // 300ms
+                }
+            }
+        }
+        
+        return $combined_audio;
+    }
+
+    /**
+     * Get podcast generation progress
+     */
+    public static function get_podcast_progress($job_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_podcast_jobs';
+        
+        $job = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE job_id = %s",
+            $job_id
+        ), ARRAY_A);
+        
+        if (!$job) {
+            throw new Exception("Job not found");
+        }
+        
+        return [
+            'status' => $job['status'],
+            'total_segments' => intval($job['total_segments']),
+            'completed_segments' => intval($job['completed_segments']),
+            'progress_percentage' => $job['total_segments'] > 0 ? 
+                round(($job['completed_segments'] / $job['total_segments']) * 100) : 0,
+            'error_message' => $job['error_message']
+        ];
+    }
+
     public static function generate_advanced_podcast_script($title, $content, $language, $duration = 'medium') {
     
         // Much more conservative duration mapping to fit TTS limits

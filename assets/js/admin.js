@@ -1211,3 +1211,107 @@ window.testRSSFeed = function (feedUrl, keyword = "") {
     },
   });
 };
+
+// Add this to your React component or admin.js file:
+
+// Updated handleGenerateAudio function in your PodcastGenerator.js
+const handleGenerateAudio = async (
+  script,
+  hostAVoice,
+  hostBVoice,
+  provider
+) => {
+  if (!script.trim()) {
+    alert("Script cannot be empty.");
+    return;
+  }
+
+  setIsLoading(true);
+  setStatusMessage("Starting podcast generation...");
+
+  try {
+    // Start the generation process
+    const response = await jQuery.ajax({
+      url: atm_studio_data.ajax_url,
+      type: "POST",
+      data: {
+        action: "generate_podcast",
+        nonce: atm_studio_data.nonce,
+        post_id: postId,
+        script: script,
+        host_a_voice: hostAVoice,
+        host_b_voice: hostBVoice,
+        provider: provider,
+      },
+    });
+
+    if (!response.success) {
+      throw new Error(response.data);
+    }
+
+    const jobId = response.data.job_id;
+    setStatusMessage("Podcast generation in progress. Please wait...");
+
+    // Start polling for progress
+    await pollProgress(jobId);
+  } catch (error) {
+    setStatusMessage(`Error: ${error.message}`);
+    setIsLoading(false);
+  }
+};
+
+// Progress polling function
+const pollProgress = async (jobId) => {
+  let attempts = 0;
+  const maxAttempts = 120; // 10 minutes max (5-second intervals)
+
+  const checkProgress = async () => {
+    try {
+      attempts++;
+
+      const response = await jQuery.ajax({
+        url: atm_studio_data.ajax_url,
+        type: "POST",
+        data: {
+          action: "check_podcast_progress",
+          nonce: atm_studio_data.nonce,
+          job_id: jobId,
+        },
+      });
+
+      if (!response.success) {
+        throw new Error(response.data);
+      }
+
+      const progress = response.data;
+
+      // Update status message with progress
+      setStatusMessage(
+        `Generating podcast: ${progress.completed_segments}/${progress.total_segments} segments complete (${progress.progress_percentage}%)`
+      );
+
+      if (progress.status === "completed") {
+        setStatusMessage("Podcast generation completed! Reloading page...");
+        setTimeout(() => window.location.reload(), 2000);
+        return;
+      }
+
+      if (progress.status === "failed") {
+        throw new Error(progress.error_message || "Generation failed");
+      }
+
+      if (attempts >= maxAttempts) {
+        throw new Error("Generation timed out. Please try again.");
+      }
+
+      // Continue polling
+      setTimeout(checkProgress, 5000); // Check every 5 seconds
+    } catch (error) {
+      setStatusMessage(`Error: ${error.message}`);
+      setIsLoading(false);
+    }
+  };
+
+  // Start checking
+  setTimeout(checkProgress, 5000); // First check after 5 seconds
+};
