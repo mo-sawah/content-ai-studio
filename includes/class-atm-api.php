@@ -339,6 +339,79 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    // Add this method to class-atm-api.php for debugging:
+    public static function debug_audio_segments($job_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_podcast_jobs';
+        
+        $job = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE job_id = %s",
+            $job_id
+        ), ARRAY_A);
+        
+        if ($job && $job['temp_files']) {
+            $temp_files = json_decode($job['temp_files'], true);
+            foreach ($temp_files as $index => $filepath) {
+                if (file_exists($filepath)) {
+                    $size = filesize($filepath);
+                    $first_bytes = bin2hex(substr(file_get_contents($filepath), 0, 10));
+                    error_log("ATM Debug: Segment $index - Size: $size bytes, First bytes: $first_bytes");
+                }
+            }
+        }
+    }
+
+    // Add this new method to class-atm-api.php:
+    private static function combine_audio_segments_improved($temp_files) {
+        // Sort temp files by segment index
+        ksort($temp_files);
+        
+        if (empty($temp_files)) {
+            throw new Exception("No audio segments to combine");
+        }
+        
+        // If only one segment, return it directly
+        if (count($temp_files) === 1) {
+            $filepath = reset($temp_files);
+            if (file_exists($filepath)) {
+                return file_get_contents($filepath);
+            }
+            throw new Exception("Single audio segment file not found");
+        }
+        
+        // For multiple segments, try a simple approach first
+        $combined_audio = '';
+        
+        foreach ($temp_files as $index => $filepath) {
+            if (file_exists($filepath)) {
+                $segment_content = file_get_contents($filepath);
+                if ($segment_content) {
+                    // Skip MP3 headers after the first file for better compatibility
+                    if ($index > 0) {
+                        // Remove potential ID3 tags from subsequent files
+                        $segment_content = self::remove_mp3_headers($segment_content);
+                    }
+                    $combined_audio .= $segment_content;
+                    error_log("ATM: Added segment $index (" . strlen($segment_content) . " bytes)");
+                }
+            }
+        }
+        
+        error_log("ATM: Final combined audio size: " . strlen($combined_audio) . " bytes");
+        return $combined_audio;
+    }
+
+    // Add this helper method:
+    private static function remove_mp3_headers($mp3_data) {
+        // Very basic ID3 tag removal - look for ID3 at start
+        if (substr($mp3_data, 0, 3) === 'ID3') {
+            // Skip ID3v2 tag
+            $size = (ord($mp3_data[6]) << 21) | (ord($mp3_data[7]) << 14) | (ord($mp3_data[8]) << 7) | ord($mp3_data[9]);
+            $mp3_data = substr($mp3_data, 10 + $size);
+        }
+        return $mp3_data;
+    }
+
     // Add to class-atm-api.php:
 public static function queue_podcast_generation($post_id, $script, $voice_a, $voice_b, $provider) {
     global $wpdb;
@@ -405,7 +478,27 @@ public static function process_podcast_background($job_id) {
                 $job['provider']
             );
             
+            // Add validation for audio content
+            if (strlen($audio_content) < 1000) { // Less than 1KB is probably an error
+                throw new Exception("Generated audio segment $i is too small (possible generation failure): " . strlen($audio_content) . " bytes");
+            }
+            
+            error_log("ATM: Generated segment $i audio: " . strlen($audio_content) . " bytes");
+            
             $temp_file = self::save_temp_audio_segment($audio_content, $job_id, $i);
+            
+            // Validate temp file was saved correctly
+            if (!file_exists($temp_file)) {
+                throw new Exception("Failed to save audio segment $i - file does not exist");
+            }
+            
+            $file_size = filesize($temp_file);
+            if ($file_size < 1000) {
+                throw new Exception("Saved audio segment $i is too small: $file_size bytes");
+            }
+            
+            error_log("ATM: Saved segment $i to file: " . $file_size . " bytes");
+            
             $temp_files[$i] = $temp_file;
             
             // Update progress
@@ -417,9 +510,24 @@ public static function process_podcast_background($job_id) {
             error_log("ATM: Background completed segment $i");
         }
         
+        // Validate we have all segments before combining
+        if (count($temp_files) !== count($segments)) {
+            throw new Exception("Mismatch in segment count: expected " . count($segments) . ", got " . count($temp_files));
+        }
+        
+        // Add debug information before combining
+        self::debug_audio_segments($job_id);
+        
         // Combine segments
         error_log("ATM: Combining segments for job $job_id");
-        $final_audio = self::combine_audio_segments($temp_files);
+        $final_audio = self::combine_audio_segments_improved($temp_files);
+        
+        // Validate final audio
+        if (strlen($final_audio) < 10000) { // Less than 10KB is suspicious for a podcast
+            throw new Exception("Final combined audio is too small: " . strlen($final_audio) . " bytes");
+        }
+        
+        error_log("ATM: Final audio size: " . strlen($final_audio) . " bytes");
         
         // Save final podcast
         $upload_dir = wp_upload_dir();
@@ -427,8 +535,20 @@ public static function process_podcast_background($job_id) {
         $filepath = $upload_dir['path'] . '/' . $filename;
         
         if (file_put_contents($filepath, $final_audio) === false) {
-            throw new Exception("Failed to save final podcast");
+            throw new Exception("Failed to save final podcast to: $filepath");
         }
+        
+        // Verify final file was saved
+        if (!file_exists($filepath)) {
+            throw new Exception("Final podcast file was not created: $filepath");
+        }
+        
+        $final_file_size = filesize($filepath);
+        if ($final_file_size < 10000) {
+            throw new Exception("Final podcast file is too small: $final_file_size bytes");
+        }
+        
+        error_log("ATM: Final podcast saved: $filepath ($final_file_size bytes)");
         
         $file_url = $upload_dir['url'] . '/' . $filename;
         
@@ -446,6 +566,7 @@ public static function process_podcast_background($job_id) {
         foreach ($temp_files as $temp_file) {
             if (file_exists($temp_file)) {
                 unlink($temp_file);
+                error_log("ATM: Cleaned up temp file: $temp_file");
             }
         }
         
@@ -637,7 +758,11 @@ public static function process_podcast_background($job_id) {
             }
             
             $temp_files = json_decode($job['temp_files'], true) ?: [];
-            
+
+            // Add this line in finalize_podcast() before combining:
+            self::debug_audio_segments($job_id);
+            $final_audio = self::combine_audio_segments_improved($temp_files);
+                        
             // Combine audio segments
             $final_audio = self::combine_audio_segments($temp_files);
             
@@ -683,22 +808,11 @@ public static function process_podcast_background($job_id) {
         }
     }
 
-    /**
-     * Combine audio segments into final file
-     */
     // Replace the combine_audio_segments method in class-atm-api.php:
     private static function combine_audio_segments($temp_files) {
         $combined_audio = '';
         
-        // Add intro first (if it exists)
-        $intro_file_path = ATM_PLUGIN_PATH . 'assets/audio/intro.mp3';
-        if (file_exists($intro_file_path)) {
-            $intro_content = file_get_contents($intro_file_path);
-            if ($intro_content) {
-                $combined_audio .= $intro_content;
-                error_log("ATM: Added intro audio (" . strlen($intro_content) . " bytes)");
-            }
-        }
+        // REMOVED: Intro audio code - we'll add this back later once basic generation works
         
         // Sort temp files by segment index
         ksort($temp_files);
@@ -720,7 +834,6 @@ public static function process_podcast_background($job_id) {
         error_log("ATM: Final combined audio size: " . strlen($combined_audio) . " bytes");
         return $combined_audio;
     }
-
     /**
      * Get podcast generation progress
      */
