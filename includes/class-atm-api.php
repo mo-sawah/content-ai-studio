@@ -905,56 +905,81 @@ public static function process_podcast_background($job_id) {
 
     public static function generate_advanced_podcast_script($title, $content, $language, $duration = 'medium') {
     
-        // More aggressive duration mapping for longer podcasts
-        $duration_specs = [
-            'short' => '10-15 minutes (approximately 2000-2500 words total)',
-            'medium' => '15-25 minutes (approximately 2500-4500 words total)', 
-            'long' => '25-40 minutes (approximately 4500-8000 words total)'
-        ];
-        
-        $target_duration = $duration_specs[$duration] ?? $duration_specs['medium'];
+    // Get website name for podcast branding
+    $site_name = get_bloginfo('name');
+    $podcast_name = $site_name . ' Podcast';
+    
+    // Fixed duration mapping with proper word counts
+    $duration_specs = [
+        'short' => [
+            'description' => '10-15 minutes',
+            'word_count' => '2000-2500 words total',
+            'segments' => 3
+        ],
+        'medium' => [
+            'description' => '15-25 minutes', 
+            'word_count' => '3500-4500 words total',
+            'segments' => 4
+        ],
+        'long' => [
+            'description' => '25-40 minutes',
+            'word_count' => '6000-8000 words total', 
+            'segments' => 6
+        ]
+    ];
+    
+    $spec = $duration_specs[$duration] ?? $duration_specs['medium'];
+    $target_duration = $spec['description'];
+    $target_words = $spec['word_count'];
+    $segments = $spec['segments'];
 
-        $system_prompt = "You are creating a professional, engaging podcast script between two expert hosts discussing '{$title}' for {$website_name}. 
+    // Check if we need to split into multiple requests for long scripts
+    if ($duration === 'long') {
+        return self::generate_long_podcast_script($title, $content, $language, $spec);
+    }
+
+    $system_prompt = "You are creating a professional, engaging podcast script between two expert hosts discussing '{$title}' for {$podcast_name}. 
 
 **CRITICAL DURATION REQUIREMENT**: 
-Generate a script matching {$duration_length} duration:
-- Short: 10-15 minutes (2000-2500 words)
-- Medium: 15-25 minutes (2500-4500 words) 
-- Long: 25-40 minutes (4500-8000 words)
+Generate a script for exactly {$target_duration} duration ({$target_words}).
+This is MANDATORY - the script must be long enough to fill this time when spoken at normal pace.
 
 **HOST PERSONALITIES & SPEECH PATTERNS:**
 - **ALEX CHEN**: Primary host - analytical, insightful, authoritative
   * Uses evidence-backed statements and research references
   * Employs thoughtful pauses and reflective questions
   * Transitions with phrases like 'What's particularly fascinating is...' or 'The research clearly shows...'
-  * Emotional range: curious → analytical → impressed → contemplative → decisive
   
 - **JORDAN RIVERA**: Co-host - relatable, dynamic, practical
   * Connects concepts to real-world applications
   * Uses analogies and metaphors to explain complex ideas
   * Adds personal perspective with phrases like 'In my experience...' or 'Think about it this way...'
-  * Emotional range: enthusiastic → surprised → concerned → amused → inspired
 
 **COMPREHENSIVE SCRIPT STRUCTURE:**
 
-1. **PODCAST INTRO (20-40 seconds):**
-[SOUND EFFECT: Professional intro music] ALEX: [WELCOMING] Welcome to {$website_name} Podcast, where we explore the ideas shaping our world. I'm your host, Alex Chen. JORDAN: [ENTHUSIASTIC] And I'm Jordan Rivera. Today, we're diving deep into {$title} - a topic that's [relevant context/timeliness]. ALEX: [INTERESTED] This is something that affects [mention target audience and why they should care]. We've researched this extensively to bring you the most comprehensive discussion. JORDAN: [ENGAGED] We'll cover everything from [preview main topics] to practical applications you can use right away. Let's get started!
+1. **PODCAST INTRO (1-2 minutes):**
+ALEX: Welcome to {$podcast_name}, where we explore the ideas shaping our world. I'm your host, Alex Chen.
+JORDAN: And I'm Jordan Rivera. Today, we're diving deep into {$title} - a topic that's incredibly relevant right now.
+ALEX: This is something that affects many people, and we've researched this extensively to bring you the most comprehensive discussion.
+JORDAN: We'll cover everything from the fundamentals to practical applications you can use right away. Let's get started!
+
 2. **BACKGROUND CONTEXT (3-5 minutes):**
 - Historical development of the topic (minimum 3 key milestones)
 - Current landscape and importance (with specific statistics/data points)
 - Why this matters now (timeliness, relevance, impact)
 
-3. **MAIN DISCUSSION (70-75% of content):**
-- Minimum 6-8 distinct subtopics, each thoroughly explored
+3. **MAIN DISCUSSION (70-75% of content - THIS IS THE BULK):**
+- Minimum {$segments} distinct subtopics, each thoroughly explored
 - For EACH subtopic include:
   * Detailed explanation with supporting evidence/research
   * At least 2 specific examples or case studies
   * Different perspectives/viewpoints (pros, cons, alternatives)
   * Real-world implications and applications
+  * Extended back-and-forth discussion between hosts
 
 4. **PRACTICAL SEGMENT (10-15% of content):**
 - Actionable advice for listeners (minimum 5 specific recommendations)
-- How to apply insights in different contexts (personal, professional, societal)
+- How to apply insights in different contexts
 - Common challenges and solutions
 
 5. **FUTURE OUTLOOK (3-5 minutes):**
@@ -963,70 +988,238 @@ Generate a script matching {$duration_length} duration:
 - Potential impact on different stakeholders
 
 6. **PODCAST OUTRO (1-2 minutes):**
-ALEX: [SATISFIED] This has been such an insightful discussion on {$title}. Jordan, any final thoughts? JORDAN: [THOUGHTFUL] I think what stands out most is [key takeaway]. Listeners should really consider [final piece of advice]. ALEX: [APPRECIATIVE] Thank you for joining us for this episode of the {$website_name} Podcast. JORDAN: [FRIENDLY] For more episodes like this, research materials, and additional resources, visit {$website_url}. If you enjoyed this discussion, remember to subscribe and share! ALEX: [CLOSING] Until next time, I'm Alex Chen... JORDAN: And I'm Jordan Rivera. Stay curious! [SOUND EFFECT: Outro music]
+ALEX: This has been such an insightful discussion on {$title}. Jordan, any final thoughts?
+JORDAN: I think what stands out most is [key takeaway]. Listeners should really consider [final piece of advice].
+ALEX: Thank you for joining us for this episode of {$podcast_name}.
+JORDAN: For more episodes like this and additional resources, visit {$site_name}.
+ALEX: If you enjoyed this discussion, remember to subscribe and share!
+JORDAN: Until next time, I'm Jordan Rivera...
+ALEX: And I'm Alex Chen. Stay curious!
 
 **CONVERSATIONAL QUALITY REQUIREMENTS:**
 
 1. **AUTHENTICITY:**
-- Each host turn MUST be 3-5 sentences minimum
-- Include natural speech patterns with occasional:
-  * Brief pauses [pause]
-  * Thinking moments [thinking]
-  * Reactions to the other host [agreeing] [surprised]
+- Each host turn MUST be 4-8 sentences minimum for main discussion points
+- Include natural speech patterns with occasional brief pauses
 - Vary sentence length and structure to sound natural
 - Include occasional brief agreements ('That's right,' 'Exactly,' 'Great point')
 
 2. **DEPTH AND RICHNESS:**
 - For each major point include:
-  * Primary explanation
+  * Primary explanation (2-3 sentences)
   * Supporting evidence (research, statistics, expert opinions)
-  * Real-world example or case study
-  * Implications or applications
+  * Real-world example or case study (detailed, not just mentioned)
+  * Implications or applications (2-3 sentences)
   * Connection to broader themes
 - Use specific details rather than generalizations
-- Include both mainstream and alternative perspectives
 
-3. **CONTENT ACCURACY:**
-- Present information as if researched from authoritative sources
-- When referencing research or statistics, include specific sources where possible
-- Acknowledge areas where information may be evolving or contested
-- Present balanced viewpoints on controversial aspects
+3. **EXTENDED DISCUSSIONS:**
+- Create natural back-and-forth exchanges
+- Each main topic should have 8-12 speaking turns between hosts
+- Build on each other's points progressively
+- Ask follow-up questions that lead to deeper exploration
 
-4. **ENGAGEMENT TECHNIQUES:**
-- Incorporate rhetorical questions to engage listeners
-- Use storytelling elements (setup, challenge, resolution)
-- Create 'visualization' moments ('Imagine if...' or 'Picture this scenario...')
-- Include occasional callbacks to earlier discussion points
-- Develop compelling analogies to explain complex concepts
-
-**EXAMPLES OF PROPERLY DEVELOPED EXCHANGES:**
-
-ALEX: [ANALYTICAL] When we look at the data from the past five years, there's a clear pattern emerging in how {specific topic aspect} is evolving. The Stanford Research Institute found that adoption rates have increased by 237% since 2022, which is unprecedented in this sector. What's particularly notable is the demographic shift – it's not just younger users anymore. [THOUGHTFUL] The implications of this spread across multiple industries, particularly in {specific industry}, where we're seeing fundamental business models being challenged.
-
-JORDAN: [SURPRISED] Those numbers are remarkable, Alex! To put that in perspective for our listeners, that's like going from a niche interest to mainstream adoption in record time. [ENTHUSIASTIC] I recently spoke with {industry expert}, who explained it using a brilliant analogy – it's similar to how smartphones transformed from luxury items to essentials in the mid-2000s. [REFLECTIVE] But there's an interesting tension here between opportunity and disruption. For example, in {specific company or case study}, they've had to completely reimagine their approach to {business process} while maintaining their core values.
+**MANDATORY WORD COUNT:**
+The final script MUST contain {$target_words}. This is not optional. Each main discussion point should be 400-600 words of dialogue to reach the target length.
 
 **FINAL REQUIREMENTS:**
 - Write entirely in {$language}
 - Maintain consistent host personalities throughout
-- Ensure the full script meets the specified word count for the selected duration
-- Balance technical information with accessibility
+- NO sound effect references like [SOUND EFFECT:] - remove all such references
 - Create a natural conversation flow rather than alternating monologues
-- Include elements that would make for engaging listening (tensions, revelations, surprising facts)
+- Include elements that would make for engaging listening
+- Always reference the podcast as '{$podcast_name}' when mentioned
 
-Remember, this script must be comprehensive, engaging, and substantive enough to fill the entire specified duration without feeling rushed or padded.";
+Remember, this script must be comprehensive, engaging, and substantive enough to fill exactly {$target_duration} without feeling rushed or padded.";
 
-        $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
-        
-        $script = self::enhance_content_with_openrouter(
-            ['title' => $title, 'content' => $content],
-            $system_prompt,
-            $model,
-            false, // not JSON mode
-            true   // enable web search for research
+    $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
+    
+    $script = self::enhance_content_with_openrouter(
+        ['title' => $title, 'content' => $content],
+        $system_prompt,
+        $model,
+        false, // not JSON mode
+        true   // enable web search for research
+    );
+
+    return $script;
+}
+
+// New method for handling long podcast scripts with multiple requests
+private static function generate_long_podcast_script($title, $content, $language, $spec) {
+    // For long scripts, generate in segments and combine
+    $segments = [
+        'intro_and_context' => [
+            'description' => 'Podcast introduction and background context',
+            'target_words' => '800-1000 words',
+            'time' => '5-6 minutes'
+        ],
+        'main_discussion_part1' => [
+            'description' => 'First half of main discussion covering primary aspects',
+            'target_words' => '2000-2500 words', 
+            'time' => '12-15 minutes'
+        ],
+        'main_discussion_part2' => [
+            'description' => 'Second half of main discussion with practical applications',
+            'target_words' => '2000-2500 words',
+            'time' => '12-15 minutes'  
+        ],
+        'conclusion_and_outro' => [
+            'description' => 'Future outlook, practical advice, and podcast conclusion',
+            'target_words' => '800-1000 words',
+            'time' => '5-6 minutes'
+        ]
+    ];
+
+    $full_script = '';
+    $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
+
+    foreach ($segments as $segment_key => $segment_info) {
+        $segment_prompt = self::create_segment_prompt(
+            $title, 
+            $content, 
+            $language, 
+            $segment_key, 
+            $segment_info,
+            $segment_key === 'intro_and_context' // is_first_segment
         );
 
-        return $script;
+        $segment_script = self::enhance_content_with_openrouter(
+            ['title' => $title, 'content' => $content],
+            $segment_prompt,
+            $model,
+            false,
+            true
+        );
+
+        $full_script .= $segment_script . "\n\n";
+
+        // Add small delay between requests to avoid rate limiting
+        sleep(2);
     }
+
+    return trim($full_script);
+}
+
+// Helper method to create segment-specific prompts
+private static function create_segment_prompt($title, $content, $language, $segment_key, $segment_info, $is_first_segment) {
+    $site_name = get_bloginfo('name');
+    $podcast_name = $site_name . ' Podcast';
+    
+    $base_hosts = "
+**HOST PERSONALITIES:**
+- **ALEX CHEN**: Primary host - analytical, insightful, authoritative
+- **JORDAN RIVERA**: Co-host - relatable, dynamic, practical
+
+**PODCAST NAME:** {$podcast_name}
+";
+
+    $continuation_note = $is_first_segment ? '' : "**NOTE:** This is a continuation of {$podcast_name}. Begin naturally without re-introducing the hosts or topic.";
+
+    switch ($segment_key) {
+        case 'intro_and_context':
+            return "You are creating the introduction and background context section of {$podcast_name} about '{$title}'.
+
+{$base_hosts}
+
+**REQUIREMENTS:**
+- Generate exactly {$segment_info['target_words']} for {$segment_info['time']}
+- Include full podcast introduction with host introductions
+- Mention the podcast name: {$podcast_name}
+- Provide comprehensive background context
+- NO sound effect references
+- Write entirely in {$language}
+
+**STRUCTURE:**
+1. Welcome to {$podcast_name} and host introductions (1 minute)
+2. Topic introduction and why it matters (2-3 minutes) 
+3. Historical context and current landscape (2-3 minutes)
+
+Generate ONLY the script dialogue, no stage directions or sound effects.";
+
+        case 'conclusion_and_outro':
+            return "You are creating the conclusion and outro segment of {$podcast_name} about '{$title}'.
+
+{$base_hosts}
+
+{$continuation_note}
+
+**REQUIREMENTS:**
+- Generate exactly {$segment_info['target_words']} for {$segment_info['time']}
+- Provide future outlook and emerging trends
+- Give actionable advice for listeners
+- Include natural podcast conclusion mentioning {$podcast_name}
+- Reference {$site_name} for more content
+- NO sound effect references
+- Write entirely in {$language}
+
+**STRUCTURE:**
+1. Future trends and predictions (2-3 minutes)
+2. Practical takeaways for listeners (2 minutes)  
+3. Natural conclusion thanking listeners for joining {$podcast_name} and sign-off (1 minute)
+
+Generate ONLY the script dialogue, no stage directions.";
+
+        case 'main_discussion_part1':
+            return "You are creating the first main discussion segment of a professional podcast about '{$title}'.
+
+{$base_hosts}
+
+{$continuation_note}
+
+**REQUIREMENTS:**
+- Generate exactly {$segment_info['target_words']} for {$segment_info['time']}
+- Cover the primary aspects and fundamentals of the topic
+- Include detailed explanations, examples, and evidence
+- Create natural back-and-forth discussion
+- NO sound effect references
+- Write entirely in {$language}
+
+Generate ONLY the script dialogue, no stage directions.";
+
+        case 'main_discussion_part2': 
+            return "You are creating the second main discussion segment of a professional podcast about '{$title}'.
+
+{$base_hosts}
+
+{$continuation_note}
+
+**REQUIREMENTS:**
+- Generate exactly {$segment_info['target_words']} for {$segment_info['time']}
+- Focus on practical applications and real-world implications
+- Include case studies and detailed examples
+- Address different perspectives and potential challenges
+- NO sound effect references  
+- Write entirely in {$language}
+
+Generate ONLY the script dialogue, no stage directions.";
+
+        case 'conclusion_and_outro':
+            return "You are creating the conclusion and outro segment of a professional podcast about '{$title}'.
+
+{$base_hosts}
+
+{$continuation_note}
+
+**REQUIREMENTS:**
+- Generate exactly {$segment_info['target_words']} for {$segment_info['time']}
+- Provide future outlook and emerging trends
+- Give actionable advice for listeners
+- Include natural podcast conclusion
+- NO sound effect references
+- Write entirely in {$language}
+
+**STRUCTURE:**
+1. Future trends and predictions (2-3 minutes)
+2. Practical takeaways for listeners (2 minutes)  
+3. Natural conclusion and sign-off (1 minute)
+
+Generate ONLY the script dialogue, no stage directions.";
+
+        default:
+            return '';
+    }
+}
 
     /**
      * Generate listicle title

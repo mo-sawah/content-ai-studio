@@ -636,7 +636,7 @@ public function translate_text() {
     }
 
     public function generate_podcast_script() {
-    @set_time_limit(300); // <-- ADD THIS LINE (300 seconds = 5 minutes)
+    @set_time_limit(600); // <-- ADD THIS LINE (600 seconds = 10 minutes)
     if (!ATM_Licensing::is_license_active()) {
         wp_send_json_error('Please activate your license key to use this feature.');
     }
