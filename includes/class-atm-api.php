@@ -420,7 +420,7 @@ public static function queue_podcast_generation($post_id, $script, $voice_a, $vo
     global $wpdb;
     
     $job_id = uniqid('podcast_', true);
-    $segments = self::split_script_into_segments($script, 500);
+    $segments = self::split_script_into_segments($script, 1000);
     $table_name = $wpdb->prefix . 'atm_podcast_jobs';
     
     // Create job record
@@ -619,6 +619,11 @@ public static function process_podcast_background($job_id) {
      * Split script into segments of roughly equal word count
      */
     private static function split_script_into_segments($script, $target_words = 500) {
+        // Add debug info about the original script
+        $total_words = str_word_count($script);
+        $total_lines = count(explode("\n", trim($script)));
+        error_log("ATM: Original script - Words: $total_words, Lines: $total_lines");
+        
         $lines = explode("\n", trim($script));
         $segments = [];
         $current_segment = '';
@@ -630,10 +635,10 @@ public static function process_podcast_background($job_id) {
             
             $words_in_line = str_word_count($line);
             
-            // If adding this line would exceed target, start new segment
             if ($current_word_count > 0 && ($current_word_count + $words_in_line) > $target_words) {
                 if (!empty($current_segment)) {
                     $segments[] = trim($current_segment);
+                    error_log("ATM: Created segment " . (count($segments)) . " with " . str_word_count($current_segment) . " words");
                 }
                 $current_segment = $line;
                 $current_word_count = $words_in_line;
@@ -643,10 +648,12 @@ public static function process_podcast_background($job_id) {
             }
         }
         
-        // Add the last segment
         if (!empty($current_segment)) {
             $segments[] = trim($current_segment);
+            error_log("ATM: Created final segment " . count($segments) . " with " . str_word_count($current_segment) . " words");
         }
+        
+        error_log("ATM: Split into " . count($segments) . " segments, total words distributed: " . array_sum(array_map('str_word_count', $segments)));
         
         return $segments;
     }
@@ -865,11 +872,11 @@ public static function process_podcast_background($job_id) {
 
     public static function generate_advanced_podcast_script($title, $content, $language, $duration = 'medium') {
     
-        // Much more conservative duration mapping to fit TTS limits
+        // More aggressive duration mapping for longer podcasts
         $duration_specs = [
-            'short' => '5-7 minutes (approximately 750-1050 words total)',
-            'medium' => '8-12 minutes (approximately 1200-1800 words total)', 
-            'long' => '15-18 minutes (approximately 2250-2700 words total)'
+            'short' => '8-10 minutes (approximately 1200-1500 words total)',
+            'medium' => '15-20 minutes (approximately 2250-3000 words total)', 
+            'long' => '25-30 minutes (approximately 3750-4500 words total)'
         ];
         
         $target_duration = $duration_specs[$duration] ?? $duration_specs['medium'];
@@ -883,38 +890,39 @@ public static function process_podcast_background($job_id) {
     **CRITICAL REQUIREMENTS:**
 
     1. **Script Length**: Target {$target_duration}
-    - IMPORTANT: Keep individual speaking segments SHORT (maximum 2-3 sentences each)
-    - Frequent back-and-forth between hosts
-    - No long monologues - break up longer thoughts into multiple exchanges
+    - IMPORTANT: This should be a SUBSTANTIAL conversation
+    - Each speaking turn should be 2-4 sentences 
+    - Include detailed discussions, examples, and back-and-forth dialogue
+    - Don't rush through topics - explore them thoroughly
 
     2. **Conversation Structure**:
-    - **Opening** (60 seconds): Brief greeting and topic introduction
-    - **Main Discussion** (80% of content): Multiple short exchanges covering key points
-    - **Closing** (60 seconds): Quick summary and sign-off
+    - **Opening** (2-3 minutes): Detailed greeting and topic introduction with context
+    - **Main Discussion** (80% of content): Deep dive into multiple aspects with examples
+    - **Closing** (2-3 minutes): Comprehensive summary and thoughtful conclusion
 
-    3. **Speaking Patterns**:
-    - Each speaker turn should be 1-3 sentences maximum
-    - Frequent interruptions and natural flow: [INTERRUPTING], [CHUCKLES]
-    - Short reactions: 'Exactly!', 'That's interesting', 'I see what you mean'
-    - Keep responses conversational and concise
+    3. **Content Depth**:
+    - Provide detailed explanations and real-world examples
+    - Include relevant statistics, studies, or expert opinions
+    - Add personal anecdotes and relatable scenarios
+    - Discuss implications and future considerations
 
-    4. **Content Guidelines**:
-    - Cover the main points from the article
-    - Include current context from web research
-    - Keep explanations clear but brief
-    - Use natural transitions between topics
+    4. **Speaking Patterns**:
+    - Each speaker turn should be 2-4 sentences (not just 1-2)
+    - Include natural conversation flow with interruptions: [INTERRUPTING], [CHUCKLES]
+    - Add thoughtful pauses and reactions
+    - Include follow-up questions and deeper exploration
 
     5. **Output Format**:
     ALEX: [ENTHUSIASTIC] Welcome to Deep Dive Discussions! I'm Alex Chen...
-    JORDAN: [FRIENDLY] And I'm Jordan Rivera. Today we're looking at...
-    ALEX: [NODDING] Right. So let's start with the basics...
-    JORDAN: [AGREEMENT] That makes sense. What's really interesting is...
+    JORDAN: [FRIENDLY] And I'm Jordan Rivera. Today we're really excited to explore...
+    ALEX: [NODDING] Right. This is such a fascinating topic because...
+    JORDAN: [AGREEMENT] Absolutely! What really caught my attention was...
 
     6. **Language**: Write entirely in {$language}
 
-    **IMPORTANT**: Focus on creating natural conversation with SHORT exchanges. Avoid long paragraphs or speeches. Think of it as a real conversation where people interrupt and respond quickly.
+    **IMPORTANT**: Focus on creating a comprehensive, detailed discussion. Think of this as an in-depth exploration, not a quick summary. Each topic should be thoroughly discussed with multiple perspectives and examples.
 
-    Research the topic thoroughly but present information in bite-sized, conversational chunks.";
+    Research the topic thoroughly and present information in substantial, conversational chunks that feel like a real deep-dive podcast.";
 
         $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
         
