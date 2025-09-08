@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Content AI Studio
  * Description: Your all-in-one AI toolkit to transform articles into compelling images, podcasts, and more.
- * Version: 1.6.262
+ * Version: 1.6.263
  * Author: Mohamed Sawah
  * Author URI: https://sawahsolutions.com/content-ai-studio
  * Text Domain: content-ai-studio
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('ATM_VERSION', '1.6.262');
+define('ATM_VERSION', '1.6.263');
 define('ATM_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('ATM_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
