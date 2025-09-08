@@ -1547,14 +1547,17 @@ Follow these rules strictly:
             $payload['response_format'] = [ 'type' => 'json_object' ];
         }
 
-        // Conditionally include web search plugin
-        $max_results = intval(get_option('atm_web_search_results', 0));
-        if ($enable_web_search && $max_results > 0) {
-            $payload['plugins'] = [
-                [
-                    'id' => 'web',
-                    'config' => [ 'max_results' => $max_results ],
-                ]
+        // UPDATED: Use OpenRouter's web search according to their documentation
+        if ($enable_web_search) {
+            // Add web search instruction to the system prompt
+            $web_search_instruction = "\n\nIMPORTANT: Use your web search capabilities to find current, accurate information about this topic before responding. Search for recent developments, statistics, and relevant context.";
+            $payload['messages'][0]['content'] .= $web_search_instruction;
+            
+            // Enable the provider's web search tools
+            $payload['provider'] = [
+                'allow_fallbacks' => false,
+                'require_parameters' => true,
+                'data_collection' => 'deny'
             ];
         }
 
@@ -1562,8 +1565,10 @@ Follow these rules strictly:
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
                 'Content-Type'  => 'application/json',
+                'HTTP-Referer' => home_url(), // Required by OpenRouter
+                'X-Title' => get_bloginfo('name'), // Optional but recommended
             ],
-            'timeout' => 60,
+            'timeout' => 120, // Increased timeout for web search
             'body'    => wp_json_encode($payload),
         ]);
 
@@ -1730,80 +1735,132 @@ Follow these rules strictly:
         return $audio_content;
     }
 
-    public static function generate_two_person_podcast_audio($script, $voice_a, $voice_b, $provider = 'openai') {
-        // Parse the script to separate HOST_A and HOST_B lines
-        $audio_segments = self::parse_podcast_script($script);
-        $final_audio_content = '';
+public static function generate_two_person_podcast_audio($script, $voice_a, $voice_b, $provider = 'openai') {
+    // Parse the script to separate HOST_A and HOST_B lines
+    $audio_segments = self::parse_podcast_script($script);
+    $final_audio_parts = [];
+    
+    foreach ($audio_segments as $segment) {
+        $voice = ($segment['speaker'] === 'HOST_A') ? $voice_a : $voice_b;
+        $text = $segment['text'];
         
-        // Add intro silence
-        $final_audio_content .= base64_decode('SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGllbmRhcmQgTG9wZXogaW4gT25lVHJpY2sBTQuelleAAAAANFaAAAAAAAAAAAAAAAAAAAAD/8AAAAAAAADw==');
+        // Clean up emotions and stage directions for TTS
+        $clean_text = preg_replace('/\[([^\]]+)\]/', '', $text);
+        $clean_text = trim($clean_text);
+        
+        if (empty($clean_text)) continue;
 
-        foreach ($audio_segments as $segment) {
-            $voice = ($segment['speaker'] === 'HOST_A') ? $voice_a : $voice_b;
-            $text = $segment['text'];
+        // Split long segments into smaller chunks (OpenAI limit is 4096 chars)
+        $max_chunk_size = $provider === 'openai' ? 3800 : 4000; // Leave some buffer
+        $text_chunks = self::split_text_into_chunks($clean_text, $max_chunk_size);
+        
+        foreach ($text_chunks as $chunk) {
+            if (empty(trim($chunk))) continue;
             
-            // Clean up emotions and stage directions for TTS
-            $clean_text = preg_replace('/\[([^\]]+)\]/', '', $text);
-            $clean_text = trim($clean_text);
-            
-            if (empty($clean_text)) continue;
-
-            // Generate audio for this segment
-            if ($provider === 'elevenlabs') {
-                $segment_audio = self::generate_audio_with_elevenlabs($clean_text, $voice);
-            } else {
-                $segment_audio = self::generate_audio_with_openai_tts($clean_text, $voice);
-            }
-            
-            $final_audio_content .= $segment_audio;
-            
-            // Add small pause between speakers (0.3 seconds of silence)
-            if (isset($segment['add_pause']) && $segment['add_pause']) {
-                $final_audio_content .= self::generate_silence(300); // 300ms
+            try {
+                // Generate audio for this chunk
+                if ($provider === 'elevenlabs') {
+                    $segment_audio = self::generate_audio_with_elevenlabs($chunk, $voice);
+                } else {
+                    $segment_audio = self::generate_audio_with_openai_tts($chunk, $voice);
+                }
+                
+                $final_audio_parts[] = $segment_audio;
+                
+                // Add small pause between chunks from the same speaker
+                if (count($text_chunks) > 1) {
+                    $final_audio_parts[] = self::generate_silence(200); // 200ms
+                }
+                
+            } catch (Exception $e) {
+                error_log('Content AI Studio - Audio generation error for chunk: ' . $e->getMessage());
+                // Continue with next chunk instead of failing completely
+                continue;
             }
         }
+        
+        // Add pause between different speakers
+        if (isset($segment['add_pause']) && $segment['add_pause']) {
+            $final_audio_parts[] = self::generate_silence(500); // 500ms
+        }
+    }
 
-        return $final_audio_content;
+    // Combine all audio parts
+    return implode('', $final_audio_parts);
+}
+
+    private static function split_text_into_chunks($text, $max_length) {
+        if (strlen($text) <= $max_length) {
+            return [$text];
+        }
+        
+        $chunks = [];
+        $words = explode(' ', $text);
+        $current_chunk = '';
+        
+        foreach ($words as $word) {
+            $test_chunk = $current_chunk . ($current_chunk ? ' ' : '') . $word;
+            
+            if (strlen($test_chunk) > $max_length) {
+                if (!empty($current_chunk)) {
+                    $chunks[] = trim($current_chunk);
+                    $current_chunk = $word;
+                } else {
+                    // Single word is too long, force split
+                    $chunks[] = substr($word, 0, $max_length);
+                    $current_chunk = substr($word, $max_length);
+                }
+            } else {
+                $current_chunk = $test_chunk;
+            }
+        }
+        
+        if (!empty($current_chunk)) {
+            $chunks[] = trim($current_chunk);
+        }
+        
+        return $chunks;
     }
 
     private static function parse_podcast_script($script) {
-    $lines = explode("\n", $script);
-    $segments = [];
-    $current_speaker = null;
-    
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if (empty($line)) continue;
+        $lines = explode("\n", $script);
+        $segments = [];
+        $current_speaker = null;
         
-        // Check for both old format (HOST_A/HOST_B) and new format (ALEX/JORDAN)
-        if (preg_match('/^(HOST_[AB]|ALEX|JORDAN):\s*(.+)/i', $line, $matches)) {
-            $speaker = strtoupper($matches[1]); // Normalize to uppercase
-            $text = $matches[2];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
             
-            // Map names to voice assignments
-            if ($speaker === 'ALEX') $speaker = 'HOST_A';
-            if ($speaker === 'JORDAN') $speaker = 'HOST_B';
-            
-            // Add pause if speaker changed
-            $add_pause = ($current_speaker && $current_speaker !== $speaker);
-            
-            $segments[] = [
-                'speaker' => $speaker,
-                'text' => $text,
-                'add_pause' => $add_pause
-            ];
-            
-            $current_speaker = $speaker;
+            // Check for both old format (HOST_A/HOST_B) and new format (ALEX/JORDAN)
+            if (preg_match('/^(HOST_[AB]|ALEX|JORDAN):\s*(.+)/i', $line, $matches)) {
+                $speaker = strtoupper($matches[1]); // Normalize to uppercase
+                $text = $matches[2];
+                
+                // Map names to voice assignments
+                if ($speaker === 'ALEX') $speaker = 'HOST_A';
+                if ($speaker === 'JORDAN') $speaker = 'HOST_B';
+                
+                // Add pause if speaker changed
+                $add_pause = ($current_speaker && $current_speaker !== $speaker);
+                
+                $segments[] = [
+                    'speaker' => $speaker,
+                    'text' => $text,
+                    'add_pause' => $add_pause
+                ];
+                
+                $current_speaker = $speaker;
+            }
         }
+        
+        return $segments;
     }
-    
-    return $segments;
-}
 
     private static function generate_silence($milliseconds) {
-        // Generate brief silence - simple implementation
+        // Generate brief silence - this is a simplified implementation
         // For a more sophisticated approach, you'd generate actual audio silence
-        return str_repeat(chr(0), intval($milliseconds * 0.044)); // Rough approximation
+        $silence_length = intval($milliseconds * 0.044); // Rough approximation for audio data
+        return str_repeat(chr(0), $silence_length);
     }
     
     private static function save_audio_file($audio_content, $post_id, $extension) {
