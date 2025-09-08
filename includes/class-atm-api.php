@@ -1715,9 +1715,18 @@ Follow these rules strictly:
     }
 
     public static function generate_two_person_podcast_audio($script, $voice_a, $voice_b, $provider = 'openai') {
+        // Add validation at the start
+        if (empty($script) || empty($voice_a) || empty($voice_b)) {
+            throw new Exception('Invalid parameters: script, voice_a, and voice_b are required');
+        }
         // Parse the script to separate HOST_A and HOST_B lines
         $audio_segments = self::parse_podcast_script($script);
         $final_audio_parts = [];
+
+        // Add validation for parsed segments
+        if (empty($audio_segments)) {
+            throw new Exception('No valid audio segments found in script. Please check script format.');
+        }
 
         // --- START: ADD CUSTOM PODCAST INTRO (Direct File Method) ---
         // ⬇️ IMPORTANT: Change 'my-intro.mp3' to the exact filename of your uploaded intro.
@@ -1881,7 +1890,8 @@ Follow these rules strictly:
             if ($speaker === 'ALEX') $speaker = 'HOST_A';
             if ($speaker === 'JORDAN') $speaker = 'HOST_B';
 
-            $is_new_speaker = empty($segments) || end($segments)['speaker'] !== $speaker;
+            // FIX: Add safety check here
+            $is_new_speaker = empty($segments) || (end($segments) && end($segments)['speaker'] !== $speaker);
 
             // Start a new segment
             $current_segment = [
