@@ -247,6 +247,15 @@ class ATM_Podcast_Settings {
         echo '<p class="description">Automatically embed the podcast player at the top of posts with podcasts.</p>';
     }
 
+    public function position_field() {
+        $value = get_option('atm_podcast_position', 'bottom');
+        echo '<select name="atm_podcast_position">';
+        echo '<option value="top"' . selected('top', $value, false) . '>Top of Article</option>';
+        echo '<option value="bottom"' . selected('bottom', $value, false) . '>Bottom of Article</option>';
+        echo '</select>';
+        echo '<p class="description">Choose where to display the podcast player in relation to your article content.</p>';
+    }
+
     public function season_text_field() {
         $value = get_option('atm_podcast_season_text', 'Season 1');
         echo '<input type="text" name="atm_podcast_season_text" value="' . esc_attr($value) . '" class="regular-text" />';

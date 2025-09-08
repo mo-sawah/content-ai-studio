@@ -406,6 +406,7 @@ class ATM_Frontend {
 
                 <?php if (!empty($playlist)) : ?>
                 <section class="playlist-container" id="playlistContainer" aria-label="Playlist">
+                    <h2 class="playlist-header">Up Next</h2>
                     <ul class="playlist-list" id="playlistList">
                         <?php foreach ($playlist as $index => $item) : ?>
                         <li class="playlist-item" data-url="<?php echo esc_url($item['url']); ?>" data-title="<?php echo esc_attr($item['title']); ?>">
