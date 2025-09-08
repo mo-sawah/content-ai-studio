@@ -97,6 +97,9 @@ function GeneratorView({
 }) {
   const [scriptContent, setScriptContent] = useState("");
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+  const [scriptProgress, setScriptProgress] = useState(0);
+  const [currentSegment, setCurrentSegment] = useState("");
+  const [scriptJobId, setScriptJobId] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [selectedLanguageLabel, setSelectedLanguageLabel] = useState("English");
   const [duration, setDuration] = useState("medium");
@@ -155,7 +158,7 @@ function GeneratorView({
   const durationOptions = [
     { label: "Short (5-7 minutes)", value: "short" },
     { label: "Medium (8-12 minutes)", value: "medium" },
-    { label: "Long (15-20 minutes)", value: "long" },
+    { label: "Long (25-40 minutes)", value: "long" },
   ];
 
   const providerOptions = [
@@ -199,6 +202,137 @@ function GeneratorView({
     }
   }, [audioProvider, voiceOptions]);
 
+  // Polling function for script progress
+  const pollScriptProgress = async (jobId, setScriptContent) => {
+    let attempts = 0;
+    const maxAttempts = 200; // 10 minutes max (3-second intervals)
+
+    const checkProgress = async () => {
+      try {
+        attempts++;
+
+        const response = await jQuery.ajax({
+          url: atm_studio_data.ajax_url,
+          type: "POST",
+          data: {
+            action: "check_script_progress",
+            nonce: atm_studio_data.nonce,
+            job_id: jobId,
+          },
+        });
+
+        if (!response.success) {
+          throw new Error(response.data);
+        }
+
+        const progress = response.data;
+
+        // Update progress
+        setScriptProgress(progress.progress);
+        setCurrentSegment(progress.current_segment || "");
+
+        if (progress.status === "completed") {
+          setScriptContent(progress.script);
+          setIsGeneratingScript(false);
+          setScriptProgress(100);
+          setCurrentSegment("Complete!");
+          return;
+        }
+
+        if (progress.status === "failed") {
+          throw new Error(progress.error_message || "Script generation failed");
+        }
+
+        if (attempts >= maxAttempts) {
+          throw new Error("Script generation timed out. Please try again.");
+        }
+
+        // Continue polling
+        setTimeout(checkProgress, 3000); // Check every 3 seconds
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+        setIsGeneratingScript(false);
+        setScriptProgress(0);
+        setCurrentSegment("");
+      }
+    };
+
+    // Start checking after 3 seconds
+    setTimeout(checkProgress, 3000);
+  };
+
+  // Progress display component
+  const renderScriptProgress = () => {
+    if (!isGeneratingScript) return null;
+
+    const segmentNames = {
+      intro_and_context: "Introduction & Context",
+      main_discussion_part1: "Main Discussion (Part 1)",
+      main_discussion_part2: "Main Discussion (Part 2)",
+      conclusion_and_outro: "Conclusion & Outro",
+    };
+
+    return (
+      <div
+        style={{
+          marginTop: "16px",
+          padding: "16px",
+          backgroundColor: "#f8fafc",
+          borderRadius: "8px",
+          border: "1px solid #e2e8f0",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            marginBottom: "12px",
+            gap: "12px",
+          }}
+        >
+          <CustomSpinner />
+          <span style={{ fontWeight: "600" }}>
+            Generating Script... {scriptProgress}%
+          </span>
+        </div>
+
+        {/* Progress bar */}
+        <div
+          style={{
+            width: "100%",
+            height: "8px",
+            backgroundColor: "#e2e8f0",
+            borderRadius: "4px",
+            overflow: "hidden",
+            marginBottom: "8px",
+          }}
+        >
+          <div
+            style={{
+              width: `${scriptProgress}%`,
+              height: "100%",
+              backgroundColor: "#10b981",
+              transition: "width 0.3s ease",
+              borderRadius: "4px",
+            }}
+          />
+        </div>
+
+        {currentSegment && (
+          <div
+            style={{
+              fontSize: "14px",
+              color: "#6b7280",
+              fontStyle: "italic",
+            }}
+          >
+            Current: {segmentNames[currentSegment] || currentSegment}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="atm-form-container">
       <h4>Two-Person Podcast Configuration</h4>
@@ -238,7 +372,11 @@ function GeneratorView({
             selectedLanguage,
             duration,
             setScriptContent,
-            setIsGeneratingScript
+            setIsGeneratingScript,
+            setScriptProgress,
+            setCurrentSegment,
+            setScriptJobId,
+            pollScriptProgress
           )
         }
         disabled={isLoading || isGeneratingScript}
@@ -252,9 +390,16 @@ function GeneratorView({
         )}
       </Button>
 
+      {/* Progress display for long scripts */}
+      {renderScriptProgress()}
+
       <TextareaControl
         label="Podcast Script"
-        help="The generated two-person conversational script will appear here featuring Alex Chen (analytical host) and Jordan Rivera (enthusiastic co-host). You can edit it before generating the audio."
+        help={
+          duration === "long"
+            ? "Long scripts are generated in the background and may take several minutes. The script will appear here when complete."
+            : "The generated two-person conversational script will appear here featuring Alex Chen (analytical host) and Jordan Rivera (enthusiastic co-host). You can edit it before generating the audio."
+        }
         value={scriptContent}
         onChange={setScriptContent}
         rows="25"
@@ -367,7 +512,11 @@ function PodcastGenerator({ setActiveView }) {
     language,
     duration,
     setScriptContent,
-    setIsGeneratingScript
+    setIsGeneratingScript,
+    setScriptProgress,
+    setCurrentSegment,
+    setScriptJobId,
+    pollScriptProgress
   ) => {
     const editorContent = wp.data
       ?.select("core/editor")
@@ -381,6 +530,8 @@ function PodcastGenerator({ setActiveView }) {
 
     setIsLoading(true);
     setIsGeneratingScript(true);
+    setScriptProgress(0);
+    setCurrentSegment("");
     setStatusMessage(
       "Analyzing article content and researching additional information..."
     );
@@ -398,16 +549,30 @@ function PodcastGenerator({ setActiveView }) {
           duration: duration,
         },
       });
+
       if (!response.success) throw new Error(response.data);
-      setScriptContent(response.data.script);
-      setStatusMessage(
-        "Script generated successfully! Review the two-person conversation below, then generate audio."
-      );
+
+      // Check if this is a background job (long scripts)
+      if (response.data.job_id) {
+        setScriptJobId(response.data.job_id);
+        setStatusMessage("Long script generation started in background...");
+        // Start polling for progress
+        await pollScriptProgress(response.data.job_id, setScriptContent);
+      } else {
+        // Immediate response for short/medium scripts
+        setScriptContent(response.data.script);
+        setStatusMessage(
+          "Script generated successfully! Review the two-person conversation below, then generate audio."
+        );
+        setIsGeneratingScript(false);
+      }
     } catch (error) {
       setStatusMessage(`Error generating script: ${error.message}`);
+      setIsGeneratingScript(false);
+      setScriptProgress(0);
+      setCurrentSegment("");
     } finally {
       setIsLoading(false);
-      setIsGeneratingScript(false);
     }
   };
 

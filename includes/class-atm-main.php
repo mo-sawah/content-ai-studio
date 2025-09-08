@@ -401,6 +401,11 @@ class ATM_Main {
         add_action('atm_cleanup_podcast_jobs', array('ATM_Main', 'cleanup_old_podcast_jobs'));
         add_action('atm_process_podcast_background', array('ATM_API', 'process_podcast_background'));
         add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
+        add_action('atm_process_script_background', array('ATM_API', 'process_script_background'));
+        add_action('wp_ajax_check_script_progress', array($ajax, 'check_script_progress'));
+
+        // Add cleanup for script jobs
+        add_action('atm_cleanup_script_jobs', array('ATM_Main', 'cleanup_old_script_jobs'));
 
 
         // License check - only add meta boxes if licensed and meta box class exists
@@ -433,6 +438,17 @@ class ATM_Main {
         if (class_exists('ATM_Campaign_Manager')) {
             ATM_Campaign_Manager::schedule_main_cron();
         }
+    }
+
+    public static function cleanup_old_script_jobs() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_script_jobs';
+        
+        // Delete jobs older than 24 hours
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM $table_name WHERE created_at < %s",
+            date('Y-m-d H:i:s', strtotime('-24 hours'))
+        ));
     }
     
     public function enqueue_admin_scripts($hook) {
@@ -631,7 +647,40 @@ class ATM_Main {
         
         self::create_campaigns_table();
         self::create_podcast_progress_table(); // Add this line
+        self::create_script_jobs_table(); // Add this line
     }
+
+    /**
+ * Create script jobs table
+ */
+public static function create_script_jobs_table() {
+    global $wpdb;
+    $charset_collate = $wpdb->get_charset_collate();
+    
+    $table_name = $wpdb->prefix . 'atm_script_jobs';
+    $sql = "CREATE TABLE $table_name (
+        id mediumint(9) NOT NULL AUTO_INCREMENT,
+        post_id bigint(20) NOT NULL,
+        job_id varchar(32) NOT NULL,
+        article_title text NOT NULL,
+        article_content longtext NOT NULL,
+        language varchar(20) NOT NULL,
+        duration varchar(20) NOT NULL,
+        status varchar(20) DEFAULT 'pending',
+        progress int(11) DEFAULT 0,
+        current_segment varchar(50),
+        script longtext,
+        error_message text,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY job_id (job_id),
+        KEY post_id (post_id)
+    ) $charset_collate;";
+    
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+}
 
 // Also add a cleanup function to remove old temp files:
 public static function cleanup_old_podcast_jobs() {

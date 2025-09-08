@@ -636,41 +636,69 @@ public function translate_text() {
     }
 
     public function generate_podcast_script() {
-    @set_time_limit(600); // <-- ADD THIS LINE (600 seconds = 10 minutes)
-    if (!ATM_Licensing::is_license_active()) {
-        wp_send_json_error('Please activate your license key to use this feature.');
-    }
-
-    check_ajax_referer('atm_nonce', 'nonce');
-    @ini_set('max_execution_time', 300); // Extended for research
-    
-    try {
-        $article_content = wp_strip_all_tags(stripslashes($_POST['content']));
-        $language = sanitize_text_field($_POST['language']);
-        $post_id = intval($_POST['post_id']);
-        $duration = isset($_POST['duration']) ? sanitize_text_field($_POST['duration']) : 'medium'; // short, medium, long
-
-        if (empty($article_content)) {
-            throw new Exception("Article content is empty. Please write your article first.");
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key to use this feature.');
         }
 
-        $post = get_post($post_id);
-        $article_title = $post ? $post->post_title : 'Article';
+        check_ajax_referer('atm_nonce', 'nonce');
+        
+        try {
+            $article_content = wp_strip_all_tags(stripslashes($_POST['content']));
+            $language = sanitize_text_field($_POST['language']);
+            $post_id = intval($_POST['post_id']);
+            $duration = isset($_POST['duration']) ? sanitize_text_field($_POST['duration']) : 'medium';
 
-        // Generate advanced two-person podcast script
-        $generated_script = ATM_API::generate_advanced_podcast_script(
-            $article_title,
-            $article_content,
-            $language,
-            $duration
-        );
+            if (empty($article_content)) {
+                throw new Exception("Article content is empty. Please write your article first.");
+            }
 
-        wp_send_json_success(['script' => $generated_script]);
+            // For long scripts, use background processing
+            if ($duration === 'long') {
+                $job_id = ATM_API::queue_script_generation($post_id, $language, $duration);
+                
+                wp_send_json_success([
+                    'job_id' => $job_id,
+                    'message' => 'Long script generation started in background...',
+                    'status' => 'processing'
+                ]);
+                return;
+            }
 
-    } catch (Exception $e) {
-        wp_send_json_error($e->getMessage());
+            // For short/medium scripts, process immediately but with extended timeout
+            @set_time_limit(300);
+            
+            $post = get_post($post_id);
+            $article_title = $post ? $post->post_title : 'Article';
+
+            $generated_script = ATM_API::generate_advanced_podcast_script(
+                $article_title,
+                $article_content,
+                $language,
+                $duration
+            );
+
+            wp_send_json_success(['script' => $generated_script]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
     }
-}
+
+    /**
+     * Check script generation progress
+     */
+    public function check_script_progress() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        
+        try {
+            $job_id = sanitize_text_field($_POST['job_id']);
+            $progress = ATM_API::get_script_progress($job_id);
+            
+            wp_send_json_success($progress);
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
 
     // In class-atm-ajax.php - replace generate_podcast() method:
     public function generate_podcast() {

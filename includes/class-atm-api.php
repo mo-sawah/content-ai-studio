@@ -339,6 +339,217 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    /**
+ * Queue script generation for background processing
+ */
+public static function queue_script_generation($post_id, $language, $duration) {
+    global $wpdb;
+    
+    $job_id = uniqid('script_', true);
+    $table_name = $wpdb->prefix . 'atm_script_jobs';
+    
+    // Get post content for script generation
+    $post = get_post($post_id);
+    if (!$post) {
+        throw new Exception('Post not found');
+    }
+    
+    $article_content = wp_strip_all_tags($post->post_content);
+    $article_title = $post->post_title;
+    
+    // Create job record
+    $result = $wpdb->insert($table_name, [
+        'post_id' => $post_id,
+        'job_id' => $job_id,
+        'article_title' => $article_title,
+        'article_content' => $article_content,
+        'language' => $language,
+        'duration' => $duration,
+        'status' => 'processing'
+    ]);
+    
+    if ($result === false) {
+        throw new Exception("Failed to create script job record: " . $wpdb->last_error);
+    }
+    
+    // Schedule immediate background processing
+    wp_schedule_single_event(time() + 5, 'atm_process_script_background', [$job_id]);
+    
+    return $job_id;
+}
+
+/**
+ * Process script generation in background
+ */
+public static function process_script_background($job_id) {
+    // Set unlimited execution time for background processing
+    set_time_limit(0);
+    ignore_user_abort(true);
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'atm_script_jobs';
+    
+    try {
+        $job = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE job_id = %s",
+            $job_id
+        ), ARRAY_A);
+        
+        if (!$job) {
+            error_log("ATM: Background script job $job_id not found");
+            return;
+        }
+        
+        error_log("ATM: Starting background script processing for job $job_id");
+        
+        // Update status to indicate processing has started
+        $wpdb->update($table_name, [
+            'status' => 'generating',
+            'progress' => 10
+        ], ['job_id' => $job_id]);
+        
+        // Generate the script
+        if ($job['duration'] === 'long') {
+            // Use segmented generation for long scripts
+            $script = self::generate_long_podcast_script_background(
+                $job['article_title'],
+                $job['article_content'],
+                $job['language'],
+                $job_id
+            );
+        } else {
+            // Use single request for short/medium scripts
+            $script = self::generate_advanced_podcast_script(
+                $job['article_title'],
+                $job['article_content'],
+                $job['language'],
+                $job['duration']
+            );
+        }
+        
+        // Update progress to 90%
+        $wpdb->update($table_name, [
+            'progress' => 90
+        ], ['job_id' => $job_id]);
+        
+        // Save the generated script
+        update_post_meta($job['post_id'], '_atm_podcast_script', $script);
+        
+        // Mark job complete
+        $wpdb->update($table_name, [
+            'status' => 'completed',
+            'progress' => 100,
+            'script' => $script
+        ], ['job_id' => $job_id]);
+        
+        error_log("ATM: Background script job $job_id completed successfully");
+        
+    } catch (Exception $e) {
+        error_log("ATM: Background script job $job_id failed: " . $e->getMessage());
+        $wpdb->update($table_name, [
+            'status' => 'failed',
+            'error_message' => $e->getMessage()
+        ], ['job_id' => $job_id]);
+    }
+}
+
+/**
+ * Generate long script with progress updates
+ */
+private static function generate_long_podcast_script_background($title, $content, $language, $job_id) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'atm_script_jobs';
+    
+    $segments = [
+        'intro_and_context' => [
+            'description' => 'Podcast introduction and background context',
+            'target_words' => '800-1000 words',
+            'time' => '5-6 minutes',
+            'progress' => 25
+        ],
+        'main_discussion_part1' => [
+            'description' => 'First half of main discussion covering primary aspects',
+            'target_words' => '2000-2500 words', 
+            'time' => '12-15 minutes',
+            'progress' => 45
+        ],
+        'main_discussion_part2' => [
+            'description' => 'Second half of main discussion with practical applications',
+            'target_words' => '2000-2500 words',
+            'time' => '12-15 minutes',
+            'progress' => 70
+        ],
+        'conclusion_and_outro' => [
+            'description' => 'Future outlook, practical advice, and podcast conclusion',
+            'target_words' => '800-1000 words',
+            'time' => '5-6 minutes',
+            'progress' => 85
+        ]
+    ];
+
+    $full_script = '';
+    $model = get_option('atm_podcast_content_model', 'openai/gpt-4o');
+
+    foreach ($segments as $segment_key => $segment_info) {
+        error_log("ATM: Generating segment: $segment_key for job $job_id");
+        
+        // Update progress
+        $wpdb->update($table_name, [
+            'progress' => $segment_info['progress'],
+            'current_segment' => $segment_key
+        ], ['job_id' => $job_id]);
+        
+        $segment_prompt = self::create_segment_prompt(
+            $title, 
+            $content, 
+            $language, 
+            $segment_key, 
+            $segment_info,
+            $segment_key === 'intro_and_context'
+        );
+
+        $segment_script = self::enhance_content_with_openrouter(
+            ['title' => $title, 'content' => $content],
+            $segment_prompt,
+            $model,
+            false,
+            true
+        );
+
+        $full_script .= $segment_script . "\n\n";
+
+        // Add delay between requests to avoid rate limiting
+        sleep(3);
+    }
+
+    return trim($full_script);
+}
+
+/**
+ * Get script generation progress
+ */
+public static function get_script_progress($job_id) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'atm_script_jobs';
+    
+    $job = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $table_name WHERE job_id = %s",
+        $job_id
+    ), ARRAY_A);
+    
+    if (!$job) {
+        throw new Exception("Script job not found");
+    }
+    
+    return [
+        'status' => $job['status'],
+        'progress' => intval($job['progress']),
+        'current_segment' => $job['current_segment'] ?? '',
+        'error_message' => $job['error_message'],
+        'script' => $job['script'] ?? ''
+    ];
+}
+
     // Add this method to reduce TTS costs:
     private static function optimize_tts_costs($script, $voice_a, $voice_b, $provider) {
         $segments = self::parse_podcast_script($script);
