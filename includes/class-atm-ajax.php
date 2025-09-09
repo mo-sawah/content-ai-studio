@@ -6,7 +6,76 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
-    
+    // Add these methods to class-atm-ajax.php
+
+    public function search_google_news() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+
+        try {
+            $query = sanitize_text_field($_POST['query']);
+            
+            if (empty($query)) {
+                throw new Exception('Search query is required.');
+            }
+
+            $articles = ATM_API::search_google_news_direct($query);
+            
+            wp_send_json_success([
+                'articles' => $articles,
+                'query' => $query
+            ]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
+    public function generate_article_from_news_source() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 300);
+
+        try {
+            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+            $source_url = esc_url_raw($_POST['source_url']);
+            $source_title = sanitize_text_field($_POST['source_title']);
+            $source_snippet = wp_kses_post($_POST['source_snippet']);
+            $source_date = sanitize_text_field($_POST['source_date']);
+            $source_domain = sanitize_text_field($_POST['source_domain']);
+
+            if (empty($source_url) || empty($source_title)) {
+                throw new Exception('Source URL and title are required.');
+            }
+
+            $result = ATM_API::generate_article_from_news_source(
+                $source_url,
+                $source_title,
+                $source_snippet,
+                $source_date,
+                $source_domain
+            );
+
+            // Save subtitle if provided
+            if ($post_id > 0 && !empty($result['subtitle'])) {
+                update_post_meta($post_id, '_bunyad_sub_title', $result['subtitle']);
+                error_log("ATM Plugin: Saved News Search subtitle '{$result['subtitle']}' to SmartMag field for post {$post_id}");
+            }
+
+            wp_send_json_success([
+                'article_title' => $result['title'],
+                'article_content' => $result['content'],
+                'subtitle' => $result['subtitle'] ?? ''
+            ]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
 
     public function search_live_news() {
         if (!ATM_Licensing::is_license_active()) {
@@ -698,6 +767,9 @@ public function translate_text() {
         add_action('wp_ajax_get_post_subtitle', array($this, 'get_post_subtitle'));
         add_action('wp_ajax_populate_subtitle_field', array($this, 'populate_subtitle_field'));
         add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
+
+        add_action('wp_ajax_search_google_news', array($this, 'search_google_news'));
+        add_action('wp_ajax_generate_article_from_news_source', array($this, 'generate_article_from_news_source'));
 
         // NEW: Live News actions
         add_action('wp_ajax_search_live_news', array($this, 'search_live_news'));

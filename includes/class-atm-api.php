@@ -339,6 +339,231 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    /**
+     * Search Google News directly using Custom Search API
+     */
+    public static function search_google_news_direct($query) {
+        $api_key = get_option('atm_google_news_search_api_key');
+        $search_engine_id = get_option('atm_google_news_cse_id');
+        
+        if (empty($api_key) || empty($search_engine_id)) {
+            throw new Exception('Google Custom Search API key and Search Engine ID must be configured.');
+        }
+
+        $url = 'https://www.googleapis.com/customsearch/v1?' . http_build_query([
+            'key' => $api_key,
+            'cx' => $search_engine_id,
+            'q' => $query,
+            'num' => 10, // Return up to 10 results
+            'sort' => 'date', // Sort by date (newest first)
+            'dateRestrict' => 'd7', // Last 7 days
+            'safe' => 'medium',
+            'lr' => 'lang_en', // English language
+        ]);
+
+        $response = wp_remote_get($url, [
+            'timeout' => 30,
+            'headers' => [
+                'User-Agent' => get_bloginfo('name') . ' WordPress Plugin'
+            ]
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Failed to connect to Google Search API: ' . $response->get_error_message());
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $result = json_decode($body, true);
+        $response_code = wp_remote_retrieve_response_code($response);
+
+        if ($response_code !== 200) {
+            $error_message = isset($result['error']['message']) 
+                ? $result['error']['message'] 
+                : 'Unknown Google API error';
+            throw new Exception('Google Search API Error: ' . $error_message);
+        }
+
+        if (!isset($result['items']) || empty($result['items'])) {
+            return [];
+        }
+
+        $articles = [];
+        foreach ($result['items'] as $item) {
+            // Extract source domain
+            $source_domain = parse_url($item['link'], PHP_URL_HOST);
+            $source_name = self::format_source_name($source_domain);
+            
+            // Format date if available
+            $formatted_date = 'Recent';
+            if (isset($item['pagemap']['metatags'][0]['article:published_time'])) {
+                $date = $item['pagemap']['metatags'][0]['article:published_time'];
+                $formatted_date = date('M j, Y', strtotime($date));
+            } elseif (isset($item['pagemap']['metatags'][0]['publishedtime'])) {
+                $date = $item['pagemap']['metatags'][0]['publishedtime'];
+                $formatted_date = date('M j, Y', strtotime($date));
+            }
+
+            // Extract image if available
+            $image_url = '';
+            if (isset($item['pagemap']['cse_image'][0]['src'])) {
+                $image_url = $item['pagemap']['cse_image'][0]['src'];
+            } elseif (isset($item['pagemap']['metatags'][0]['og:image'])) {
+                $image_url = $item['pagemap']['metatags'][0]['og:image'];
+            }
+
+            $articles[] = [
+                'title' => sanitize_text_field($item['title']),
+                'link' => esc_url_raw($item['link']),
+                'snippet' => sanitize_text_field($item['snippet']),
+                'source' => sanitize_text_field($source_name),
+                'domain' => sanitize_text_field($source_domain),
+                'date' => sanitize_text_field($formatted_date),
+                'image' => esc_url_raw($image_url)
+            ];
+        }
+
+        return $articles;
+    }
+
+    /**
+     * Generate article from a specific news source
+     */
+    public static function generate_article_from_news_source($source_url, $source_title, $source_snippet, $source_date, $source_domain) {
+        // First, try to get full article content
+        $full_content = '';
+        try {
+            $full_content = self::fetch_full_article_content($source_url);
+        } catch (Exception $e) {
+            error_log('ATM News Search: Could not scrape full content, using snippet: ' . $e->getMessage());
+            $full_content = $source_snippet;
+        }
+
+        // If we still don't have enough content, fall back to snippet
+        if (strlen($full_content) < 200) {
+            $full_content = $source_snippet;
+        }
+
+        $system_prompt = 'You are a professional news reporter and editor. Using the following source material, write a clear, engaging, and well-structured news article in English. **Use your web search ability to verify the information and add any missing context.**
+
+            Follow these strict guidelines:
+            - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
+            - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
+            - **Length**: Aim for 800–1200 words.
+            - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+            - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
+            - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
+
+            **Link Formatting Rules:**
+            - When including external links, NEVER use the website URL as the anchor text
+            - Use ONLY 1-3 descriptive words as anchor text
+            - Example: [Reuters](https://reuters.com/actual-article-url) reported that...
+            - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+            - Do NOT use generic phrases like "click here", "read more", or "this article" as anchor text
+            - Anchor text should be relevant keywords from the article topic
+            - Keep anchor text extremely concise (maximum 2 words)
+            - Make links feel natural within the sentence flow
+
+            **Final Output Format:**
+            Your entire output MUST be a single, valid JSON object with three keys:
+            1. "title": A concise, factual, and compelling headline for the new article.
+            2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
+            3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.
+
+            **SOURCE INFORMATION:**
+            Original Title: ' . $source_title . '
+            Source: ' . $source_domain . '
+            Date: ' . $source_date . '
+            URL: ' . $source_url . '
+
+            **SOURCE CONTENT:**
+            ' . $full_content;
+
+        $model = get_option('atm_article_model', 'openai/gpt-4o');
+        
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $full_content],
+            $system_prompt,
+            $model,
+            true, // JSON mode
+            true  // Enable web search for verification
+        );
+        
+        // Parse JSON response
+        $json_string = trim($raw_response);
+        if (!str_starts_with($json_string, '{')) {
+            if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                $json_string = $matches[0];
+            } else {
+                throw new Exception('The AI returned a non-JSON response. Please try again.');
+            }
+        }
+
+        $result = json_decode($json_string, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+            error_log('ATM Plugin - Invalid JSON from News Search AI: ' . $json_string);
+            throw new Exception('The AI returned an invalid response structure. Please try again.');
+        }
+
+        // Extract fields
+        $headline = '';
+        if (isset($result['title']) && !empty(trim($result['title']))) {
+            $headline = trim($result['title']);
+        } elseif (isset($result['headline']) && !empty(trim($result['headline']))) {
+            $headline = trim($result['headline']);
+        } else {
+            throw new Exception('No headline found in AI response.');
+        }
+
+        $subtitle = '';
+        if (isset($result['subheadline']) && !empty(trim($result['subheadline']))) {
+            $subtitle = trim($result['subheadline']);
+        } elseif (isset($result['subtitle']) && !empty(trim($result['subtitle']))) {
+            $subtitle = trim($result['subtitle']);
+        }
+
+        $content = trim($result['content']);
+
+        if (empty($headline) || empty($content)) {
+            throw new Exception('Generated title or content is empty.');
+        }
+
+        return [
+            'title' => $headline,
+            'content' => $content,
+            'subtitle' => $subtitle
+        ];
+    }
+
+    /**
+     * Format source domain name to be more readable
+     */
+    private static function format_source_name($domain) {
+        // Remove www. prefix
+        $domain = preg_replace('/^www\./', '', $domain);
+        
+        // Common news source mappings
+        $source_mappings = [
+            'cnn.com' => 'CNN',
+            'bbc.com' => 'BBC',
+            'reuters.com' => 'Reuters',
+            'apnews.com' => 'AP News',
+            'nytimes.com' => 'The New York Times',
+            'washingtonpost.com' => 'The Washington Post',
+            'theguardian.com' => 'The Guardian',
+            'wsj.com' => 'The Wall Street Journal',
+            'bloomberg.com' => 'Bloomberg',
+            'foxnews.com' => 'Fox News',
+            'nbcnews.com' => 'NBC News',
+            'abcnews.go.com' => 'ABC News',
+            'cbsnews.com' => 'CBS News',
+            'usatoday.com' => 'USA Today'
+        ];
+        
+        return isset($source_mappings[$domain]) 
+            ? $source_mappings[$domain] 
+            : ucwords(str_replace('.com', '', $domain));
+    }
+
     public static function debug_web_search_settings() {
         $settings = [
             'atm_web_search_results' => get_option('atm_web_search_results', 'NOT_SET'),

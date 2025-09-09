@@ -310,6 +310,20 @@ class ATM_Settings {
                     <tr><th scope="row">GNews API Key</th><td><input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p></td></tr>
                     <tr><th scope="row">The Guardian API Key</th><td><input type="password" name="atm_guardian_api_key" value="<?php echo esc_attr($options['guardian_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://open-platform.theguardian.com/" target="_blank">The Guardian</a>.</p></td></tr>
                     <tr><th scope="row">Google API Key (for YouTube Search)</th><td><input type="password" name="atm_google_youtube_api_key" value="<?php echo esc_attr($options['google_youtube_key']); ?>" class="regular-text" /><p class="description">Required for the Video Search feature. Get a key from the <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p></td></tr>
+<tr>
+    <th scope="row">Google Custom Search API Key</th>
+    <td>
+        <input type="password" name="atm_google_news_search_api_key" value="<?php echo esc_attr($options['google_news_search_api_key']); ?>" class="regular-text" />
+        <p class="description">Required for News Search feature. Get a key from <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p>
+    </td>
+</tr>
+<tr>
+    <th scope="row">Google Custom Search Engine ID</th>
+    <td>
+        <input type="text" name="atm_google_news_cse_id" value="<?php echo esc_attr($options['google_news_cse_id']); ?>" class="regular-text" />
+        <p class="description">Create a Custom Search Engine at <a href="https://cse.google.com/" target="_blank">Google CSE</a> configured for news sites.</p>
+    </td>
+</tr>
                     <tr><th scope="row">ScrapingAnt API Key</th><td><input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" /><p class="description">Required for RSS scraping. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p></td></tr>
                 </table>
             </div>
@@ -606,6 +620,10 @@ class ATM_Settings {
     update_option('atm_podcast_gradient_end', sanitize_hex_color($_POST['atm_podcast_gradient_end']));
     update_option('atm_podcast_season_text', sanitize_text_field($_POST['atm_podcast_season_text']));
 
+    // And add these to the save_settings() method:
+    update_option('atm_google_news_search_api_key', sanitize_text_field($_POST['atm_google_news_search_api_key']));
+    update_option('atm_google_news_cse_id', sanitize_text_field($_POST['atm_google_news_cse_id']));
+
     // Light theme colors
     update_option('atm_podcast_light_card_bg', sanitize_hex_color($_POST['atm_podcast_light_card_bg']));
     update_option('atm_podcast_light_text', sanitize_hex_color($_POST['atm_podcast_light_text']));
@@ -656,6 +674,10 @@ class ATM_Settings {
         'flux_model'       => get_option('atm_flux_model', 'flux-1-schnell'), // <-- FIX IS HERE
         'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
         'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
+
+        // And add these to the get_settings() method:
+        'google_news_search_api_key' => get_option('atm_google_news_search_api_key', ''),
+        'google_news_cse_id' => get_option('atm_google_news_cse_id', ''),
 
         // Add these to the get_settings() method return array
         'podcast_default_theme' => get_option('atm_podcast_default_theme', 'light'),
