@@ -158,9 +158,24 @@ function LiveNewsForm() {
 
         setStatusMessage("Generating featured image...");
         try {
+          // Create a news-specific image prompt
+          const newsImagePrompt = `Create a professional, photojournalistic image for a breaking news article titled: "${response.data.article_title}". 
+
+The image should be:
+- Photorealistic and suitable for a news website
+- Related to the article "${response.data.article_title}" and the topic ${keyword}
+- Professional news photography style
+- High quality, sharp focus, natural lighting
+- Appropriate for editorial use
+- 16:9 aspect ratio for featured image use
+
+Style: Documentary photography, news photography, editorial style
+Avoid: Text overlays, logos, watermarks, amateur photography
+Focus on: Visual storytelling, immediate relevance to the news story`;
+
           const imageResponse = await callAjax("generate_featured_image", {
             post_id: postId,
-            prompt: "", // Use default prompt
+            prompt: newsImagePrompt, // Use specific news prompt instead of default
           });
 
           if (!imageResponse.success) {
