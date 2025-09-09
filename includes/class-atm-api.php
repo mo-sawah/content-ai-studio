@@ -350,30 +350,30 @@ class ATM_API {
         return $settings;
     }
     
-    /**
-     * Search live news using OpenRouter web search with categorization
-     */
-    public static function search_live_news_with_openrouter($keyword, $force_fresh = false) {
-            // Debug current settings
-        $web_search_setting = get_option('atm_web_search_results', 0);
-        error_log("ATM Live News Debug - Web search setting: " . $web_search_setting);
-        error_log("ATM Live News Debug - Keyword: " . $keyword);
-        error_log("ATM Live News Debug - Force fresh: " . ($force_fresh ? 'true' : 'false'));
-        $cache_key = 'atm_live_news_' . md5($keyword);
-        $cache_duration = 3 * HOUR_IN_SECONDS; // 3 hours cache
-        
-        // Check cache first unless force refresh is requested
-        if (!$force_fresh) {
-            $cached_result = get_transient($cache_key);
-            if ($cached_result !== false) {
-                error_log("ATM Live News: Returning cached results for keyword: $keyword");
-                return $cached_result;
-            }
-        } else {
-            delete_transient($cache_key);
+/**
+ * Search live news using OpenRouter web search with categorization
+ */
+public static function search_live_news_with_openrouter($keyword, $force_fresh = false) {
+    // Debug current settings
+    $web_search_setting = get_option('atm_web_search_results', 0);
+    error_log("ATM Live News Debug - Web search setting: " . $web_search_setting);
+    error_log("ATM Live News Debug - Keyword: " . $keyword);
+    error_log("ATM Live News Debug - Force fresh: " . ($force_fresh ? 'true' : 'false'));
+    $cache_key = 'atm_live_news_' . md5($keyword);
+    $cache_duration = 3 * HOUR_IN_SECONDS; // 3 hours cache
+    
+    // Check cache first unless force refresh is requested
+    if (!$force_fresh) {
+        $cached_result = get_transient($cache_key);
+        if ($cached_result !== false) {
+            error_log("ATM Live News: Returning cached results for keyword: $keyword");
+            return $cached_result;
         }
-        
-        $system_prompt = "You are an expert news researcher and categorization specialist. Your task is to search for the latest news about '{$keyword}' and organize the results into logical categories.
+    } else {
+        delete_transient($cache_key);
+    }
+    
+    $system_prompt = "You are an expert news researcher and categorization specialist. Your task is to search for the latest news about '{$keyword}' and organize the results into logical categories.
 
 CRITICAL INSTRUCTIONS:
 1. Use your web search ability to find the latest news about '{$keyword}' from the past 48 hours
@@ -415,189 +415,284 @@ CATEGORIZATION GUIDELINES:
 
 Return only the JSON object, no additional text.";
 
-        try {
-            $model = get_option('atm_article_model', 'openai/gpt-4o');
-            
-            $raw_response = self::enhance_content_with_openrouter(
-                ['content' => $keyword],
-                $system_prompt,
-                $model,
-                true, // JSON mode
-                true  // Enable web search
-            );
-            
-            $result = json_decode($raw_response, true);
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['categories'])) {
-                error_log('ATM Live News - Invalid JSON response: ' . $raw_response);
-                throw new Exception('Invalid response format from news search API');
+    try {
+        $model = get_option('atm_article_model', 'openai/gpt-4o');
+        
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $keyword],
+            $system_prompt,
+            $model,
+            true, // JSON mode
+            true  // Enable web search
+        );
+        
+        $result = json_decode($raw_response, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['categories'])) {
+            error_log('ATM Live News - Invalid JSON response: ' . $raw_response);
+            throw new Exception('Invalid response format from news search API');
+        }
+        
+        $categories = $result['categories'];
+        
+        // Validate and clean the results
+        $cleaned_categories = [];
+        foreach ($categories as $category) {
+            if (!isset($category['title']) || !isset($category['articles']) || !is_array($category['articles'])) {
+                continue;
             }
             
-            $categories = $result['categories'];
-            
-            // Validate and clean the results
-            $cleaned_categories = [];
-            foreach ($categories as $category) {
-                if (!isset($category['title']) || !isset($category['articles']) || !is_array($category['articles'])) {
-                    continue;
-                }
+            $cleaned_articles = [];
+            foreach ($category['articles'] as $article) {
+                // Ensure required fields exist
+                $cleaned_article = [
+                    'title' => sanitize_text_field($article['title'] ?? 'Untitled'),
+                    'source' => sanitize_text_field($article['source'] ?? 'Unknown Source'),
+                    'date' => sanitize_text_field($article['date'] ?? date('M j, Y')),
+                    'summary' => sanitize_textarea_field($article['summary'] ?? ''),
+                    'thumbnail' => esc_url_raw($article['thumbnail'] ?? ''),
+                    'url' => esc_url_raw($article['url'] ?? '')
+                ];
                 
-                $cleaned_articles = [];
-                foreach ($category['articles'] as $article) {
-                    // Ensure required fields exist
-                    $cleaned_article = [
-                        'title' => sanitize_text_field($article['title'] ?? 'Untitled'),
-                        'source' => sanitize_text_field($article['source'] ?? 'Unknown Source'),
-                        'date' => sanitize_text_field($article['date'] ?? date('M j, Y')),
-                        'summary' => sanitize_textarea_field($article['summary'] ?? ''),
-                        'thumbnail' => esc_url_raw($article['thumbnail'] ?? ''),
-                        'url' => esc_url_raw($article['url'] ?? '')
-                    ];
-                    
-                    // Only include articles with meaningful content
-                    if (!empty($cleaned_article['title']) && $cleaned_article['title'] !== 'Untitled') {
-                        $cleaned_articles[] = $cleaned_article;
-                    }
-                }
-                
-                if (!empty($cleaned_articles)) {
-                    $cleaned_categories[] = [
-                        'title' => sanitize_text_field($category['title']),
-                        'articles' => $cleaned_articles
-                    ];
+                // Only include articles with meaningful content
+                if (!empty($cleaned_article['title']) && $cleaned_article['title'] !== 'Untitled') {
+                    $cleaned_articles[] = $cleaned_article;
                 }
             }
             
-            // Cache the results
-            set_transient($cache_key, $cleaned_categories, $cache_duration);
-            
-            error_log("ATM Live News: Found " . count($cleaned_categories) . " categories for keyword: $keyword");
-            
-            return $cleaned_categories;
-            
-        } catch (Exception $e) {
-            error_log('ATM Live News Error: ' . $e->getMessage());
-            throw new Exception('Failed to search live news: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Generate article from live news category with unique angle
-     */
-    /**
-     * Generate article from live news category with focus on specific news events
-     */
-    public static function generate_live_news_article($keyword, $category_title, $category_sources, $previous_angles = []) {
-        // Prepare detailed source content for analysis
-        $sources_text = "BREAKING NEWS SOURCES:\n\n";
-        
-        foreach ($category_sources as $index => $source) {
-            $sources_text .= "SOURCE " . ($index + 1) . ":\n";
-            $sources_text .= "Headline: {$source['title']}\n";
-            $sources_text .= "Publisher: {$source['source']} | Date: {$source['date']}\n";
-            if (!empty($source['summary'])) {
-                $sources_text .= "Summary: {$source['summary']}\n";
+            if (!empty($cleaned_articles)) {
+                $cleaned_categories[] = [
+                    'title' => sanitize_text_field($category['title']),
+                    'articles' => $cleaned_articles
+                ];
             }
-            if (!empty($source['url'])) {
-                $sources_text .= "URL: {$source['url']}\n";
-            }
-            $sources_text .= "---\n";
         }
         
-        // Build angle differentiation context
-        $angle_context = '';
-        if (!empty($previous_angles)) {
-            $angle_context = "\n\nPREVIOUS ANGLES ALREADY COVERED for '{$keyword}':\n";
-            foreach ($previous_angles as $i => $angle) {
-                $angle_context .= "- " . ($i + 1) . ". " . $angle . "\n";
-            }
-            $angle_context .= "\nYou MUST create a completely different angle that hasn't been covered before.";
+        // Cache the results
+        set_transient($cache_key, $cleaned_categories, $cache_duration);
+        
+        error_log("ATM Live News: Found " . count($cleaned_categories) . " categories for keyword: $keyword");
+        
+        return $cleaned_categories;
+        
+    } catch (Exception $e) {
+        error_log('ATM Live News Error: ' . $e->getMessage());
+        throw new Exception('Failed to search live news: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Generate article from live news category with focus on specific news events
+ */
+public static function generate_live_news_article($keyword, $category_title, $category_sources, $previous_angles = []) {
+    // Prepare detailed source content for analysis
+    $sources_text = "BREAKING NEWS SOURCES:\n\n";
+    
+    foreach ($category_sources as $index => $source) {
+        $sources_text .= "SOURCE " . ($index + 1) . ":\n";
+        $sources_text .= "Headline: {$source['title']}\n";
+        $sources_text .= "Publisher: {$source['source']} | Date: {$source['date']}\n";
+        if (!empty($source['summary'])) {
+            $sources_text .= "Summary: {$source['summary']}\n";
+        }
+        if (!empty($source['url'])) {
+            $sources_text .= "URL: {$source['url']}\n";
+        }
+        $sources_text .= "---\n";
+    }
+    
+    // Build angle differentiation context
+    $angle_context = '';
+    if (!empty($previous_angles)) {
+        $angle_context = "\n\nPREVIOUS ANGLES ALREADY COVERED for '{$keyword}':\n";
+        foreach ($previous_angles as $i => $angle) {
+            $angle_context .= "- " . ($i + 1) . ". " . $angle . "\n";
+        }
+        $angle_context .= "\nYou MUST create a completely different angle that hasn't been covered before.";
+    }
+    
+    $system_prompt = "You are a breaking news journalist. Your task is to analyze these specific news sources and write a focused news article about ONE specific event or development.
+
+{$angle_context}
+
+CRITICAL ANALYSIS REQUIREMENTS:
+1. Read ALL the provided sources carefully
+2. Identify the MOST NEWSWORTHY single event, development, or breaking story from the sources
+3. Focus on ONE specific happening, not a general overview of multiple topics
+4. Write about what's actually happening RIGHT NOW based on these sources
+
+HEADLINE GENERATION RULES:
+- Write headlines like actual breaking news: \"Netanyahu Faces Military Pressure Over Gaza Strategy\" 
+- NOT generic reports like: \"Israel Faces Intensified Pressure as Crisis Escalates\"
+- Focus on WHO is doing WHAT, WHEN it's happening
+- Use specific names, places, and actions from the sources
+- Make it immediate and specific to today's developments
+
+ARTICLE REQUIREMENTS:
+1. Choose ONE main story thread from the sources (the most urgent/recent)
+2. Write a 900-1200 word breaking news article focused on that specific event
+3. Lead with the most important new development
+4. Include specific details: names, dates, quotes, numbers from the sources
+5. Explain what happened, why it matters, and what comes next
+6. Use the other sources as supporting context, not co-equal stories
+
+FORMATTING RULES:
+- NO H1 headings (# format) in content
+- Start content directly with the lead paragraph
+- Use only H2 (##) and H3 (###) subheadings
+- Content should be pure article text with no title repetition
+
+Link Formatting Rules:
+- When including external links, NEVER use the website URL as the anchor text
+- Use ONLY 1-3 descriptive words as anchor text
+- Example: railway that [had a deadly crash](https://reuters.com/specific-article) last week and will...
+- Example: Example: [Reuters](https://reuters.com/actual-article-url) reported that...
+- Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+- Do NOT use generic phrases like 'click here', 'read more', or 'this article' as anchor text
+- Anchor text should be relevant keywords from the article topic (e.g., marketing, design, finance, AI)
+- Keep anchor text extremely concise (maximum 2 words)
+- Make links feel natural within the sentence flow
+- Avoid long phrases as anchor text
+
+WRITING STYLE:
+- Breaking news tone: immediate, urgent, factual
+- Present tense for ongoing situations
+- Past tense for completed events
+- Include attribution: \"according to CNN\", \"Reuters reported\", etc.
+- Focus on the human impact and immediate consequences
+
+OUTPUT FORMAT (JSON):
+{
+    \"title\": \"Specific breaking news headline about ONE main event\",
+    \"subtitle\": \"Additional context or latest development from the story\",
+    \"content\": \"Full news article in Markdown (no H1, start with paragraph)\",
+    \"angle\": \"Brief description of the specific event/angle chosen\"
+}
+
+Remember: You're writing about a SPECIFIC NEWS EVENT, not a general topic overview. Pick the most compelling, recent, or urgent story from the sources and focus entirely on that.";
+
+    try {
+        $model = get_option('atm_article_model', 'openai/gpt-4o');
+        
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $sources_text],
+            $system_prompt,
+            $model,
+            true, // JSON mode
+            true // Keep web search enabled for additional context
+        );
+        
+        $result = json_decode($raw_response, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+            error_log('ATM Live News Article - Invalid JSON response: ' . $raw_response);
+            throw new Exception('Invalid response format from article generation API');
         }
         
-        $system_prompt = "You are a breaking news journalist. Your task is to analyze these specific news sources and write a focused news article about ONE specific event or development.
-
-    {$angle_context}
-
-    CRITICAL ANALYSIS REQUIREMENTS:
-    1. Read ALL the provided sources carefully
-    2. Identify the MOST NEWSWORTHY single event, development, or breaking story from the sources
-    3. Focus on ONE specific happening, not a general overview of multiple topics
-    4. Write about what's actually happening RIGHT NOW based on these sources
-
-    HEADLINE GENERATION RULES:
-    - Write headlines like actual breaking news: \"Netanyahu Faces Military Pressure Over Gaza Strategy\" 
-    - NOT generic reports like: \"Israel Faces Intensified Pressure as Crisis Escalates\"
-    - Focus on WHO is doing WHAT, WHEN it's happening
-    - Use specific names, places, and actions from the sources
-    - Make it immediate and specific to today's developments
-
-    ARTICLE REQUIREMENTS:
-    1. Choose ONE main story thread from the sources (the most urgent/recent)
-    2. Write a 900-1200 word breaking news article focused on that specific event
-    3. Lead with the most important new development
-    4. Include specific details: names, dates, quotes, numbers from the sources
-    5. Explain what happened, why it matters, and what comes next
-    6. Use the other sources as supporting context, not co-equal stories
-
-    FORMATTING RULES:
-    - NO H1 headings (# format) in content
-    - Start content directly with the lead paragraph
-    - Use only H2 (##) and H3 (###) subheadings
-    - Content should be pure article text with no title repetition
-
-    WRITING STYLE:
-    - Breaking news tone: immediate, urgent, factual
-    - Present tense for ongoing situations
-    - Past tense for completed events
-    - Include attribution: \"according to CNN\", \"Reuters reported\", etc.
-    - Focus on the human impact and immediate consequences
-
-    OUTPUT FORMAT (JSON):
-    {
-        \"title\": \"Specific breaking news headline about ONE main event\",
-        \"subtitle\": \"Additional context or latest development from the story\",
-        \"content\": \"Full news article in Markdown (no H1, start with paragraph)\",
-        \"angle\": \"Brief description of the specific event/angle chosen\"
-    }
-
-    Remember: You're writing about a SPECIFIC NEWS EVENT, not a general topic overview. Pick the most compelling, recent, or urgent story from the sources and focus entirely on that.";
-
-        try {
-            $model = get_option('atm_article_model', 'openai/gpt-4o');
-            
-            $raw_response = self::enhance_content_with_openrouter(
-                ['content' => $sources_text],
-                $system_prompt,
-                $model,
-                true, // JSON mode
-                true // Disable additional web search to focus on provided sources
-            );
-            
-            $result = json_decode($raw_response, true);
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
-                error_log('ATM Live News Article - Invalid JSON response: ' . $raw_response);
-                throw new Exception('Invalid response format from article generation API');
-            }
-            
-            // Validate required fields
-            if (empty($result['title']) || empty($result['content'])) {
-                throw new Exception('Generated article is missing required fields');
-            }
-            
-            // Log the generated headline for debugging
-            error_log("ATM Live News: Generated headline: " . $result['title']);
-            
-            return [
-                'title' => sanitize_text_field($result['title']),
-                'subtitle' => sanitize_text_field($result['subtitle'] ?? ''),
-                'content' => wp_kses_post($result['content']),
-                'angle' => sanitize_text_field($result['angle'] ?? '')
-            ];
-            
-        } catch (Exception $e) {
-            error_log('ATM Live News Article Generation Error: ' . $e->getMessage());
-            throw new Exception('Failed to generate article: ' . $e->getMessage());
+        // Validate required fields
+        if (empty($result['title']) || empty($result['content'])) {
+            throw new Exception('Generated article is missing required fields');
         }
+        
+        // Log the generated headline for debugging
+        error_log("ATM Live News: Generated headline: " . $result['title']);
+        
+        return [
+            'title' => sanitize_text_field($result['title']),
+            'subtitle' => sanitize_text_field($result['subtitle'] ?? ''),
+            'content' => wp_kses_post($result['content']),
+            'angle' => sanitize_text_field($result['angle'] ?? '')
+        ];
+        
+    } catch (Exception $e) {
+        error_log('ATM Live News Article Generation Error: ' . $e->getMessage());
+        throw new Exception('Failed to generate article: ' . $e->getMessage());
     }
+}
+
+/**
+ * Create an optimized image prompt for live news articles
+ */
+public static function create_live_news_image_prompt($article_title, $category_title, $keyword) {
+    // Create a news-appropriate image prompt
+    $base_prompt = "Create a professional, photojournalistic image for a breaking news article titled: '{$article_title}'. 
+
+The image should be:
+- Photorealistic and suitable for a news website
+- Related to {$article_title} and {$keyword}
+- Professional news photography style
+- High quality, sharp focus, natural lighting
+- Appropriate for editorial use
+- 16:9 aspect ratio for featured image use
+
+Style: Documentary photography, news photography, editorial style
+Avoid: Text overlays, logos, watermarks, amateur photography
+Focus on: Visual storytelling, immediate relevance to the news story";
+
+    return $base_prompt;
+}
+
+/**
+ * Generate featured image for live news article
+ */
+public static function generate_live_news_featured_image($post_id, $image_prompt) {
+    try {
+        $provider = get_option('atm_image_provider', 'openai');
+        $size = get_option('atm_image_size', '1792x1024'); // 16:9 aspect ratio for news
+        $quality = get_option('atm_image_quality', 'hd');
+        
+        $image_data = null;
+        $is_url = false;
+
+        switch ($provider) {
+            case 'google':
+                $image_data = self::generate_image_with_google_imagen($image_prompt, $size);
+                $is_url = false;
+                break;
+            case 'blockflow':
+                $image_data = self::generate_image_with_blockflow($image_prompt, '', $size);
+                $is_url = false;
+                break;
+            case 'openai':
+            default:
+                $image_data = self::generate_image_with_openai($image_prompt, $size, $quality);
+                $is_url = true;
+                break;
+        }
+
+        if (!$image_data) {
+            throw new Exception('Failed to generate image data');
+        }
+
+        // Create attachment using existing functionality
+        $ajax_handler = new ATM_Ajax();
+        
+        if ($is_url) {
+            $attachment_id = $ajax_handler->set_image_from_url($image_data, $post_id);
+        } else {
+            $attachment_id = $ajax_handler->set_image_from_data($image_data, $post_id, $image_prompt);
+        }
+
+        if (is_wp_error($attachment_id)) {
+            throw new Exception($attachment_id->get_error_message());
+        }
+
+        // Set as featured image
+        set_post_thumbnail($post_id, $attachment_id);
+        
+        error_log("ATM Live News: Generated featured image for post {$post_id}, attachment ID: {$attachment_id}");
+
+        return [
+            'success' => true,
+            'attachment_id' => $attachment_id
+        ];
+
+    } catch (Exception $e) {
+        error_log('ATM Live News Image Error: ' . $e->getMessage());
+        return [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+}
 
     /**
  * Queue script generation for background processing

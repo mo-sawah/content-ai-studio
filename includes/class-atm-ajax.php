@@ -6,6 +6,8 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    
+
     public function search_live_news() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key.');
@@ -49,6 +51,7 @@ class ATM_Ajax {
             $keyword = sanitize_text_field($_POST['keyword']);
             $category_title = sanitize_text_field($_POST['category_title']);
             $category_sources = isset($_POST['category_sources']) ? $_POST['category_sources'] : [];
+            $generate_image = isset($_POST['generate_image']) && $_POST['generate_image'] === true;
 
             if (empty($keyword) || empty($category_title) || empty($category_sources)) {
                 throw new Exception('Missing required parameters for article generation.');
@@ -73,17 +76,42 @@ class ATM_Ajax {
                 error_log("ATM Plugin: Saved Live News subtitle '{$result['subtitle']}' to SmartMag field for post {$post_id}");
             }
 
-            wp_send_json_success([
+            $response_data = [
                 'article_title' => $result['title'],
                 'article_content' => $result['content'],
                 'subtitle' => $result['subtitle'] ?? '',
                 'angle' => $result['angle'] ?? ''
-            ]);
+            ];
+
+            // Generate featured image if requested
+            if ($generate_image && $post_id > 0) {
+                try {
+                    // Create an image prompt based on the article title and category
+                    $image_prompt = ATM_API::create_live_news_image_prompt($result['title'], $category_title, $keyword);
+                    
+                    // Generate the image using existing functionality
+                    $image_result = ATM_API::generate_live_news_featured_image($post_id, $image_prompt);
+                    
+                    if ($image_result['success']) {
+                        $response_data['image_generated'] = true;
+                        $response_data['image_attachment_id'] = $image_result['attachment_id'];
+                    } else {
+                        $response_data['image_generated'] = false;
+                        $response_data['image_error'] = $image_result['error'];
+                    }
+                } catch (Exception $image_error) {
+                    error_log('ATM Live News Image Generation Error: ' . $image_error->getMessage());
+                    $response_data['image_generated'] = false;
+                    $response_data['image_error'] = $image_error->getMessage();
+                }
+            }
+
+            wp_send_json_success($response_data);
 
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
-    }
+}
     
 
     // Add this new AJAX function to force subtitle population
@@ -694,6 +722,7 @@ public function translate_text() {
         // NEW: Live News actions
         add_action('wp_ajax_search_live_news', array($this, 'search_live_news'));
         add_action('wp_ajax_generate_article_from_live_news', array($this, 'generate_article_from_live_news'));
+        
 
 
         // --- MULTIPAGE ACTIONS ---

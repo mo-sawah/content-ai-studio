@@ -124,6 +124,7 @@ function LiveNewsForm() {
         keyword,
         category_title: category.title,
         category_sources: category.articles,
+        generate_image: generateImage,
       });
 
       if (!response.success) {
@@ -144,6 +145,17 @@ function LiveNewsForm() {
         );
         await savePost();
         setStatusMessage("✅ Article and subtitle saved!");
+      }
+
+      // Handle image generation
+      if (generateImage) {
+        if (response.data.image_generated) {
+          setStatusMessage("✅ Article and featured image generated!");
+        } else if (response.data.image_error) {
+          setStatusMessage(
+            `✅ Article generated! Image failed: ${response.data.image_error}`
+          );
+        }
       }
     } catch (error) {
       setStatusMessage(`Error: ${error.message}`);
