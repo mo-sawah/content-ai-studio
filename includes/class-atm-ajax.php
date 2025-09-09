@@ -16,16 +16,21 @@ class ATM_Ajax {
 
         try {
             $query = sanitize_text_field($_POST['query']);
+            $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
+            $per_page = isset($_POST['per_page']) ? max(1, min(50, intval($_POST['per_page']))) : 10;
             
             if (empty($query)) {
                 throw new Exception('Search query is required.');
             }
 
-            $articles = ATM_API::search_google_news_direct($query);
+            $articles = ATM_API::search_google_news_direct($query, $page, $per_page);
             
             wp_send_json_success([
-                'articles' => $articles,
-                'query' => $query
+                'articles' => $articles['results'],
+                'query' => $query,
+                'page' => $page,
+                'per_page' => $per_page,
+                'total' => $articles['total_results'] ?? count($articles['results'])
             ]);
 
         } catch (Exception $e) {
@@ -33,6 +38,7 @@ class ATM_Ajax {
         }
     }
 
+    // Update this method in class-atm-ajax.php
     public function generate_article_from_news_source() {
         if (!ATM_Licensing::is_license_active()) {
             wp_send_json_error('Please activate your license key.');
@@ -47,6 +53,7 @@ class ATM_Ajax {
             $source_snippet = wp_kses_post($_POST['source_snippet']);
             $source_date = sanitize_text_field($_POST['source_date']);
             $source_domain = sanitize_text_field($_POST['source_domain']);
+            $generate_image = isset($_POST['generate_image']) && $_POST['generate_image'] === 'true';
 
             if (empty($source_url) || empty($source_title)) {
                 throw new Exception('Source URL and title are required.');
@@ -66,11 +73,40 @@ class ATM_Ajax {
                 error_log("ATM Plugin: Saved News Search subtitle '{$result['subtitle']}' to SmartMag field for post {$post_id}");
             }
 
-            wp_send_json_success([
+            $response_data = [
                 'article_title' => $result['title'],
                 'article_content' => $result['content'],
                 'subtitle' => $result['subtitle'] ?? ''
-            ]);
+            ];
+
+            // Generate featured image if requested
+            if ($generate_image && $post_id > 0) {
+                try {
+                    $image_response = ATM_API::generate_image_with_openai(
+                        ATM_API::get_default_image_prompt(),
+                        '',
+                        '',
+                        ''
+                    );
+                    
+                    $ajax_handler = new ATM_Ajax();
+                    $attachment_id = $ajax_handler->set_image_from_url($image_response, $post_id);
+                    
+                    if (!is_wp_error($attachment_id)) {
+                        set_post_thumbnail($post_id, $attachment_id);
+                        $response_data['featured_image_generated'] = true;
+                        $response_data['featured_image_id'] = $attachment_id;
+                    } else {
+                        error_log('ATM: Featured image generation failed: ' . $attachment_id->get_error_message());
+                        $response_data['featured_image_error'] = $attachment_id->get_error_message();
+                    }
+                } catch (Exception $e) {
+                    error_log('ATM: Featured image generation failed: ' . $e->getMessage());
+                    $response_data['featured_image_error'] = $e->getMessage();
+                }
+            }
+
+            wp_send_json_success($response_data);
 
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());

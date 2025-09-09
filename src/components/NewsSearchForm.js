@@ -66,8 +66,14 @@ function NewsSearchForm() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [generatingIndex, setGeneratingIndex] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+  const [imageCheckboxes, setImageCheckboxes] = useState({});
 
-  const handleSearch = async () => {
+  const resultsPerPage = 10;
+  const totalPages = Math.ceil(totalResults / resultsPerPage);
+
+  const handleSearch = async (page = 1) => {
     if (!searchQuery.trim()) {
       alert("Please enter a search term.");
       return;
@@ -75,11 +81,16 @@ function NewsSearchForm() {
 
     setIsSearching(true);
     setStatusMessage("Searching Google News...");
-    setSearchResults([]);
+    if (page === 1) {
+      setSearchResults([]);
+      setImageCheckboxes({});
+    }
 
     try {
       const response = await callAjax("search_google_news", {
         query: searchQuery,
+        page: page,
+        per_page: resultsPerPage,
       });
 
       if (!response.success) {
@@ -87,12 +98,17 @@ function NewsSearchForm() {
       }
 
       setSearchResults(response.data.articles || []);
+      setTotalResults(
+        response.data.total || response.data.articles?.length || 0
+      );
+      setCurrentPage(page);
       setStatusMessage(
-        `Found ${response.data.articles?.length || 0} news articles`
+        `Found ${response.data.total || response.data.articles?.length || 0} news articles`
       );
     } catch (error) {
       setStatusMessage(`Error: ${error.message}`);
       setSearchResults([]);
+      setTotalResults(0);
     } finally {
       setIsSearching(false);
     }
@@ -107,6 +123,8 @@ function NewsSearchForm() {
       .getElementById("atm-studio-root")
       .getAttribute("data-post-id");
 
+    const shouldGenerateImage = imageCheckboxes[index] || false;
+
     try {
       const response = await callAjax("generate_article_from_news_source", {
         post_id: postId,
@@ -115,6 +133,7 @@ function NewsSearchForm() {
         source_snippet: article.snippet,
         source_date: article.date,
         source_domain: article.source,
+        generate_image: shouldGenerateImage,
       });
 
       if (!response.success) {
@@ -132,12 +151,113 @@ function NewsSearchForm() {
 
       // Remove this result from the list
       setSearchResults((prev) => prev.filter((_, i) => i !== index));
+
+      // Clear the checkbox state for this item
+      setImageCheckboxes((prev) => {
+        const newState = { ...prev };
+        delete newState[index];
+        return newState;
+      });
     } catch (error) {
       setStatusMessage(`Error: ${error.message}`);
     } finally {
       setIsGenerating(false);
       setGeneratingIndex(null);
     }
+  };
+
+  const handleImageCheckboxChange = (index, checked) => {
+    setImageCheckboxes((prev) => ({
+      ...prev,
+      [index]: checked,
+    }));
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages && !isSearching) {
+      handleSearch(page);
+    }
+  };
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const showPages = 5; // Number of page buttons to show
+    let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
+    let endPage = Math.min(totalPages, startPage + showPages - 1);
+
+    // Adjust start page if we're near the end
+    if (endPage - startPage + 1 < showPages) {
+      startPage = Math.max(1, endPage - showPages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div className="atm-news-pagination">
+        <button
+          className="atm-pagination-btn"
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1 || isSearching}
+        >
+          ← Previous
+        </button>
+
+        {startPage > 1 && (
+          <>
+            <button
+              className="atm-pagination-btn"
+              onClick={() => handlePageChange(1)}
+              disabled={isSearching}
+            >
+              1
+            </button>
+            {startPage > 2 && <span className="atm-pagination-info">...</span>}
+          </>
+        )}
+
+        {pages.map((page) => (
+          <button
+            key={page}
+            className={`atm-pagination-btn ${page === currentPage ? "active" : ""}`}
+            onClick={() => handlePageChange(page)}
+            disabled={isSearching}
+          >
+            {page}
+          </button>
+        ))}
+
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && (
+              <span className="atm-pagination-info">...</span>
+            )}
+            <button
+              className="atm-pagination-btn"
+              onClick={() => handlePageChange(totalPages)}
+              disabled={isSearching}
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
+
+        <button
+          className="atm-pagination-btn"
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages || isSearching}
+        >
+          Next →
+        </button>
+
+        <div className="atm-pagination-info">
+          Page {currentPage} of {totalPages} ({totalResults} results)
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -154,7 +274,7 @@ function NewsSearchForm() {
 
         <Button
           isPrimary
-          onClick={handleSearch}
+          onClick={() => handleSearch(1)}
           disabled={isSearching || isGenerating || !searchQuery.trim()}
           className="atm-search-news-btn"
         >
@@ -198,77 +318,116 @@ function NewsSearchForm() {
         <div className="atm-news-search-results">
           <div className="atm-results-header">
             <h3>News Search Results for "{searchQuery}"</h3>
-            <p>Found {searchResults.length} recent articles</p>
+            <p>Found {totalResults} recent articles</p>
           </div>
 
-          <div className="atm-news-results-list">
+          <div className="atm-news-results-grid">
             {searchResults.map((article, index) => (
-              <div key={index} className="atm-news-result-item">
-                <div className="atm-news-thumbnail">
-                  {article.image ? (
-                    <img src={article.image} alt={article.title} />
-                  ) : (
-                    <div className="atm-news-placeholder">
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
+              <div
+                key={index}
+                className={`atm-news-item-card ${generatingIndex === index ? "atm-news-item-generating" : ""}`}
+              >
+                <div className="atm-news-content-wrapper">
+                  <div className="atm-news-thumbnail">
+                    {article.image ? (
+                      <img src={article.image} alt={article.title} />
+                    ) : (
+                      <div className="atm-news-placeholder">
+                        <svg
+                          width="32"
+                          height="32"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="atm-news-text-content">
+                    <h4 className="atm-news-title">{article.title}</h4>
+
+                    <div className="atm-news-meta">
+                      <span className="atm-news-source">{article.source}</span>
+                      <span className="atm-news-date">{article.date}</span>
+                      <a
+                        href={article.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="atm-view-source-link"
                       >
-                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
-                      </svg>
+                        View Source
+                      </a>
                     </div>
-                  )}
+
+                    <p className="atm-news-description">{article.snippet}</p>
+                  </div>
                 </div>
 
-                <div className="atm-news-content">
-                  <h4 className="atm-news-title">{article.title}</h4>
-                  <div className="atm-news-meta">
-                    <span className="atm-news-source">{article.source}</span>
-                    <span className="atm-news-date">{article.date}</span>
-                  </div>
-                  <p className="atm-news-snippet">{article.snippet}</p>
+                <div className="atm-news-actions">
+                  <button
+                    className="atm-generate-article-btn"
+                    onClick={() => handleGenerateFromSource(article, index)}
+                    disabled={isGenerating}
+                  >
+                    {generatingIndex === index ? (
+                      <>
+                        <Spinner />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z" />
+                        </svg>
+                        Generate Article
+                      </>
+                    )}
+                  </button>
 
-                  <div className="atm-news-actions">
-                    <a
-                      href={article.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="atm-view-source-btn"
-                    >
-                      View Source
-                    </a>
-
-                    <Button
-                      isPrimary
-                      onClick={() => handleGenerateFromSource(article, index)}
+                  <div className="atm-image-checkbox-wrapper">
+                    <input
+                      type="checkbox"
+                      id={`generate-image-${index}`}
+                      checked={imageCheckboxes[index] || false}
+                      onChange={(e) =>
+                        handleImageCheckboxChange(index, e.target.checked)
+                      }
                       disabled={isGenerating}
-                      className="atm-generate-btn"
-                    >
-                      {generatingIndex === index ? (
-                        <>
-                          <Spinner />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z" />
-                          </svg>
-                          Generate Article
-                        </>
-                      )}
-                    </Button>
+                    />
+                    <label htmlFor={`generate-image-${index}`}>
+                      Also generate featured image
+                    </label>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {renderPagination()}
+        </div>
+      )}
+
+      {searchResults.length === 0 && searchQuery && !isSearching && (
+        <div className="atm-news-empty-state">
+          <svg
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="M21 21l-4.35-4.35"></path>
+          </svg>
+          <h3>No results found</h3>
+          <p>Try searching with different keywords or check your spelling.</p>
         </div>
       )}
     </div>

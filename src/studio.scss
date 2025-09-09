@@ -2571,3 +2571,328 @@ body.wp-admin .components-base-control .atm-podcast-script-textarea {
 .bg-gradient-to-r.from-blue-500.to-purple-600 {
   background: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%) !important;
 }
+
+/* News Search Results Styles - Add to studio.scss */
+
+.atm-news-search-results {
+  margin-top: 2rem;
+}
+
+.atm-results-header {
+  margin-bottom: 2rem;
+  text-align: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+
+  h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
+  }
+
+  p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+  }
+}
+
+/* Two-column grid for wide screens */
+.atm-news-results-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Individual news item card */
+.atm-news-item-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: #8b5cf6;
+  }
+}
+
+/* Main content area with image and text */
+.atm-news-content-wrapper {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+/* News thumbnail */
+.atm-news-thumbnail {
+  flex-shrink: 0;
+  width: 120px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .atm-news-placeholder {
+    color: #9ca3af;
+    font-size: 24px;
+  }
+
+  @media (max-width: 640px) {
+    width: 100%;
+    height: 120px;
+  }
+}
+
+/* News text content */
+.atm-news-text-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.atm-news-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+}
+
+/* Meta information (source, time, view source) */
+.atm-news-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 12px;
+  flex-wrap: wrap;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+.atm-news-source {
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.atm-news-date {
+  color: #64748b;
+}
+
+.atm-view-source-link {
+  color: #8b5cf6 !important;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #7c3aed !important;
+    text-decoration: underline;
+  }
+}
+
+/* News description */
+.atm-news-description {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+}
+
+/* Action area with generate button and checkbox */
+.atm-news-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+}
+
+.atm-generate-article-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 10px 20px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-height: 36px !important;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4) !important;
+  }
+
+  &:disabled {
+    background: #9ca3af !important;
+    transform: none !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+  }
+
+  svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
+
+.atm-image-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+
+  input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    accent-color: #8b5cf6 !important;
+  }
+
+  label {
+    cursor: pointer;
+    user-select: none;
+    font-weight: 500;
+  }
+}
+
+/* Pagination */
+.atm-news-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.atm-pagination-btn {
+  background: white !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  color: #374151 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  &:hover:not(:disabled) {
+    background: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+  }
+
+  &:disabled {
+    background: #f9fafb !important;
+    color: #9ca3af !important;
+    cursor: not-allowed !important;
+  }
+
+  &.active {
+    background: #8b5cf6 !important;
+    border-color: #8b5cf6 !important;
+    color: white !important;
+  }
+}
+
+.atm-pagination-info {
+  color: #64748b;
+  font-size: 14px;
+  margin: 0 1rem;
+}
+
+/* Loading states */
+.atm-news-item-generating {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Empty state */
+.atm-news-empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #64748b;
+
+  svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #475569;
+  }
+
+  p {
+    font-size: 14px;
+    margin: 0;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+}

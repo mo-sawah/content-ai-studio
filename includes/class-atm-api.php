@@ -342,7 +342,7 @@ class ATM_API {
     /**
      * Search Google News directly using Custom Search API
      */
-    public static function search_google_news_direct($query) {
+    public static function search_google_news_direct($query, $page = 1, $per_page = 10) {
         $api_key = get_option('atm_google_news_search_api_key');
         $search_engine_id = get_option('atm_google_news_cse_id');
         
@@ -350,12 +350,21 @@ class ATM_API {
             throw new Exception('Google Custom Search API key and Search Engine ID must be configured.');
         }
 
+        // Calculate start index for pagination (Google uses 1-based indexing)
+        $start_index = (($page - 1) * $per_page) + 1;
+        
+        // Google CSE limits results to 100 total
+        if ($start_index > 91) { // 91 because max 10 results per request
+            throw new Exception('Search results are limited to 100 total results.');
+        }
+
         $url = 'https://www.googleapis.com/customsearch/v1?' . http_build_query([
             'key' => $api_key,
             'cx' => $search_engine_id,
             'q' => $query,
-            'num' => 10, // Return up to 10 results
-            'sort' => 'date', // Sort by date (newest first)
+            'num' => min($per_page, 10), // Google CSE max is 10 per request
+            'start' => $start_index,
+            'sort' => 'date',
             'dateRestrict' => 'd7', // Last 7 days
             'safe' => 'medium',
             'lr' => 'lang_en', // English language
@@ -384,7 +393,12 @@ class ATM_API {
         }
 
         if (!isset($result['items']) || empty($result['items'])) {
-            return [];
+            return [
+                'results' => [],
+                'total_results' => 0,
+                'current_page' => $page,
+                'per_page' => $per_page
+            ];
         }
 
         $articles = [];
@@ -422,7 +436,17 @@ class ATM_API {
             ];
         }
 
-        return $articles;
+        // Get total results estimate from Google
+        $total_results = isset($result['searchInformation']['totalResults']) 
+            ? min(intval($result['searchInformation']['totalResults']), 100) // Google CSE limit
+            : count($articles);
+
+        return [
+            'results' => $articles,
+            'total_results' => $total_results,
+            'current_page' => $page,
+            'per_page' => $per_page
+        ];
     }
 
     /**
