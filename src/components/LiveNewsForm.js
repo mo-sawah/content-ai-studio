@@ -120,18 +120,20 @@ function LiveNewsForm() {
       .getAttribute("data-post-id");
 
     try {
+      // Step 1: Generate article content only (no image)
       const response = await callAjax("generate_article_from_live_news", {
         post_id: postId,
         keyword,
         category_title: category.title,
         category_sources: category.articles,
-        generate_image: generateImage,
+        generate_image: false, // Always set to false - we'll handle image separately
       });
 
       if (!response.success) {
         throw new Error(response.data);
       }
 
+      // Step 2: Update editor with article content
       updateEditorContent(
         response.data.article_title,
         response.data.article_content,
@@ -140,6 +142,7 @@ function LiveNewsForm() {
 
       setStatusMessage("✅ Article generated successfully!");
 
+      // Step 3: Save the post if we have a subtitle
       if (response.data.subtitle) {
         setStatusMessage(
           "✅ Article inserted! Saving post to apply subtitle..."
@@ -148,13 +151,30 @@ function LiveNewsForm() {
         setStatusMessage("✅ Article and subtitle saved!");
       }
 
-      // Handle image generation feedback
+      // Step 4: Generate featured image if requested (separate from article generation)
       if (generateImage) {
-        if (response.data.image_generated) {
-          setStatusMessage("✅ Article and featured image generated!");
-        } else if (response.data.image_error) {
+        setStatusMessage("Saving post...");
+        await savePost(); // Ensure post is saved before generating image
+
+        setStatusMessage("Generating featured image...");
+        try {
+          const imageResponse = await callAjax("generate_featured_image", {
+            post_id: postId,
+            prompt: "", // Use default prompt
+          });
+
+          if (!imageResponse.success) {
+            // Don't fail the whole process if image fails
+            setStatusMessage(
+              `✅ Article generated! Image failed: ${imageResponse.data}`
+            );
+          } else {
+            setStatusMessage("✅ Article and featured image generated!");
+          }
+        } catch (imageError) {
+          console.error("Image generation error:", imageError);
           setStatusMessage(
-            `✅ Article generated! Image failed: ${response.data.image_error}`
+            `✅ Article generated! Image failed: ${imageError.message}`
           );
         }
       }
