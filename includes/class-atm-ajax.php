@@ -18,22 +18,24 @@ class ATM_Ajax {
             $query = sanitize_text_field($_POST['query']);
             $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
             $per_page = isset($_POST['per_page']) ? max(1, min(50, intval($_POST['per_page']))) : 10;
-            $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : 'en';
-            $country = isset($_POST['country']) ? sanitize_text_field($_POST['country']) : 'us';
+
+            // --- MODIFIED: Correctly read the new filter values from the AJAX request ---
+            $article_language = isset($_POST['article_language']) ? sanitize_text_field($_POST['article_language']) : 'English';
+            $source_languages = isset($_POST['source_languages']) && is_array($_POST['source_languages']) ? array_map('sanitize_text_field', $_POST['source_languages']) : [];
+            $countries = isset($_POST['countries']) && is_array($_POST['countries']) ? array_map('sanitize_text_field', $_POST['countries']) : [];
             
             if (empty($query)) {
                 throw new Exception('Search query is required.');
             }
 
-            $articles = ATM_API::search_google_news_direct($query, $page, $per_page, $language, $country);
+            // --- MODIFIED: Pass the new filter arrays to the API function ---
+            $articles = ATM_API::search_google_news_direct($query, $page, $per_page, $source_languages, $countries);
             
             wp_send_json_success([
                 'articles' => $articles['results'],
                 'query' => $query,
                 'page' => $page,
                 'per_page' => $per_page,
-                'language' => $language,
-                'country' => $country,
                 'total' => $articles['total_results'] ?? count($articles['results'])
             ]);
 
@@ -58,17 +60,22 @@ class ATM_Ajax {
             $source_date = sanitize_text_field($_POST['source_date']);
             $source_domain = sanitize_text_field($_POST['source_domain']);
             $generate_image = isset($_POST['generate_image']) && $_POST['generate_image'] === 'true';
+            
+            // --- NEW: Correctly read the article_language for generation ---
+            $article_language = isset($_POST['article_language']) ? sanitize_text_field($_POST['article_language']) : 'English';
 
             if (empty($source_url) || empty($source_title)) {
                 throw new Exception('Source URL and title are required.');
             }
 
+            // --- MODIFIED: Pass the article language to the API function ---
             $result = ATM_API::generate_article_from_news_source(
                 $source_url,
                 $source_title,
                 $source_snippet,
                 $source_date,
-                $source_domain
+                $source_domain,
+                $article_language // Pass the language
             );
 
             // Save subtitle if provided
@@ -97,17 +104,13 @@ class ATM_Ajax {
             // Generate featured image if requested
             if ($generate_image && $post_id > 0) {
                 try {
-                    // Use the news-specific prompt
                     $image_prompt = ATM_API::get_news_image_prompt($result['title']);
-                    
-                    // Generate image using the configured provider (same as CreativeForm)
                     $image_result = ATM_API::generate_image_with_configured_provider(
                         $image_prompt,
                         get_option('atm_image_size', '1792x1024'),
                         get_option('atm_image_quality', 'hd')
                     );
                     
-                    // Handle the attachment creation based on provider type
                     if ($image_result['is_url']) {
                         $attachment_id = $this->set_image_from_url($image_result['data'], $post_id);
                     } else {

@@ -384,7 +384,7 @@ class ATM_API {
     /**
      * Search Google News directly using Custom Search API
      */
-    public static function search_google_news_direct($query, $page = 1, $per_page = 10, $language = 'en', $country = 'us') {
+    public static function search_google_news_direct($query, $page = 1, $per_page = 10, $source_languages = [], $countries = []) {
         $api_key = get_option('atm_google_news_search_api_key');
         $search_engine_id = get_option('atm_google_news_cse_id');
         
@@ -395,13 +395,33 @@ class ATM_API {
         $start_index = (($page - 1) * $per_page) + 1;
         
         if ($start_index > 91) {
-            throw new Exception('Search results are limited to 100 total results.');
+            return ['results' => [], 'total_results' => 0]; // Return empty instead of throwing an error for pagination
+        }
+
+        // --- NEW: Logic to build filter queries ---
+        $filter_query = '';
+        if (!empty($countries)) {
+            $country_sites = [];
+            // A small map for country names to top-level domains
+            $country_tld_map = [
+                "United States" => "us", "United Kingdom" => "co.uk", "Canada" => "ca", "Australia" => "com.au", "Germany" => "de",
+                "France" => "fr", "Spain" => "es", "Italy" => "it", "Japan" => "co.jp", "India" => "in", "Brazil" => "com.br"
+                // This can be expanded, but site:.tld is more reliable for Google Search
+            ];
+            foreach ($countries as $country_name) {
+                if (isset($country_tld_map[$country_name])) {
+                    $country_sites[] = 'site:.' . $country_tld_map[$country_name];
+                }
+            }
+            if (!empty($country_sites)) {
+                $filter_query .= ' (' . implode(' OR ', $country_sites) . ')';
+            }
         }
 
         $search_params = [
             'key' => $api_key,
             'cx' => $search_engine_id,
-            'q' => $query,
+            'q' => $query . $filter_query, // Append the country filter to the main query
             'num' => min($per_page, 10),
             'start' => $start_index,
             'sort' => 'date',
@@ -409,25 +429,25 @@ class ATM_API {
             'safe' => 'medium',
         ];
 
-        // Add language restriction
-        if (!empty($language)) {
-            $search_params['lr'] = 'lang_' . $language;
-        }
-
-        // Add country restriction (if specified)
-        if (!empty($country)) {
-            $search_params['gl'] = $country;
-            $search_params['cr'] = 'country' . strtoupper($country);
+        // --- MODIFIED: Handle multiple source languages if provided ---
+        if (!empty($source_languages)) {
+            $lang_codes = [];
+            // This should be expanded with a proper mapping
+            $lang_map = ['english' => 'en', 'spanish' => 'es', 'french' => 'fr', 'german' => 'de', 'italian' => 'it', 'portuguese' => 'pt'];
+            foreach($source_languages as $lang_name) {
+                $lang_key = strtolower($lang_name);
+                if(isset($lang_map[$lang_key])) {
+                    $lang_codes[] = 'lang_' . $lang_map[$lang_key];
+                }
+            }
+            if(!empty($lang_codes)) {
+                $search_params['lr'] = implode('|', $lang_codes);
+            }
         }
 
         $url = 'https://www.googleapis.com/customsearch/v1?' . http_build_query($search_params);
 
-        $response = wp_remote_get($url, [
-            'timeout' => 30,
-            'headers' => [
-                'User-Agent' => get_bloginfo('name') . ' WordPress Plugin'
-            ]
-        ]);
+        $response = wp_remote_get($url, ['timeout' => 30]);
 
         if (is_wp_error($response)) {
             throw new Exception('Failed to connect to Google Search API: ' . $response->get_error_message());
@@ -438,19 +458,12 @@ class ATM_API {
         $response_code = wp_remote_retrieve_response_code($response);
 
         if ($response_code !== 200) {
-            $error_message = isset($result['error']['message']) 
-                ? $result['error']['message'] 
-                : 'Unknown Google API error';
+            $error_message = isset($result['error']['message']) ? $result['error']['message'] : 'Unknown Google API error';
             throw new Exception('Google Search API Error: ' . $error_message);
         }
 
         if (!isset($result['items']) || empty($result['items'])) {
-            return [
-                'results' => [],
-                'total_results' => 0,
-                'current_page' => $page,
-                'per_page' => $per_page
-            ];
+            return ['results' => [], 'total_results' => 0];
         }
 
         $articles = [];
@@ -460,18 +473,12 @@ class ATM_API {
             
             $formatted_date = 'Recent';
             if (isset($item['pagemap']['metatags'][0]['article:published_time'])) {
-                $date = $item['pagemap']['metatags'][0]['article:published_time'];
-                $formatted_date = date('M j, Y', strtotime($date));
-            } elseif (isset($item['pagemap']['metatags'][0]['publishedtime'])) {
-                $date = $item['pagemap']['metatags'][0]['publishedtime'];
-                $formatted_date = date('M j, Y', strtotime($date));
+                $formatted_date = date('M j, Y', strtotime($item['pagemap']['metatags'][0]['article:published_time']));
             }
-
+            
             $image_url = '';
             if (isset($item['pagemap']['cse_image'][0]['src'])) {
                 $image_url = $item['pagemap']['cse_image'][0]['src'];
-            } elseif (isset($item['pagemap']['metatags'][0]['og:image'])) {
-                $image_url = $item['pagemap']['metatags'][0]['og:image'];
             }
 
             $article_data = [
@@ -479,27 +486,15 @@ class ATM_API {
                 'link' => esc_url_raw($item['link']),
                 'snippet' => sanitize_text_field($item['snippet']),
                 'source' => sanitize_text_field($source_name),
-                'domain' => sanitize_text_field($source_domain),
                 'date' => sanitize_text_field($formatted_date),
                 'image' => esc_url_raw($image_url)
             ];
-
-            // Check if this article was already used
             $article_data['is_used'] = self::is_article_already_used($item['link']);
-
             $articles[] = $article_data;
         }
 
-        $total_results = isset($result['searchInformation']['totalResults']) 
-            ? min(intval($result['searchInformation']['totalResults']), 100)
-            : count($articles);
-
-        return [
-            'results' => $articles,
-            'total_results' => $total_results,
-            'current_page' => $page,
-            'per_page' => $per_page
-        ];
+        $total_results = isset($result['searchInformation']['totalResults']) ? min(intval($result['searchInformation']['totalResults']), 100) : count($articles);
+        return ['results' => $articles, 'total_results' => $total_results];
     }
 
     /**
@@ -525,7 +520,7 @@ class ATM_API {
             Follow these strict guidelines:
             - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
             - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
-            - **Length**: Aim for 800–1200 words.
+            - **Length**: Aim for 800–1500 words.
             - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
             - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
             - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
@@ -543,9 +538,9 @@ class ATM_API {
 
             **Final Output Format:**
             Your entire output MUST be a single, valid JSON object with three keys:
-            1. "title": A concise, factual, and compelling headline for the new article.
-            2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
-            3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.
+            1. "title": A clear and compelling news headline in {$article_language}, written in the style of a professional news outlet. It must be concise, factual, and highlight the most newsworthy element of the story.
+            2. "subheadline": A brief, one-sentence subheadline that expands on the main headline, written in {$article_language}.
+            3. "content": A complete news article in {$article_language}, formatted using Markdown. The article must follow professional journalistic style: clear, objective, and factual. Structure it with an engaging lead paragraph, followed by supporting details, quotes, and context. Use H2 (##) for section headings, avoid H1.
 
             **SOURCE INFORMATION:**
             Original Title: ' . $source_title . '
