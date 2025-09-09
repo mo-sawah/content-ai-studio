@@ -154,43 +154,22 @@ function LiveNewsForm() {
       // Step 4: Generate featured image if requested (separate from article generation)
       if (generateImage) {
         setStatusMessage("Saving post...");
-        await savePost(); // Ensure post is saved before generating image
+        await savePost();
 
         setStatusMessage("Generating featured image...");
-        try {
-          // Create a news-specific image prompt
-          const newsImagePrompt = `Create a professional, photojournalistic image for a breaking news article titled: "${response.data.article_title}". 
+        const imageResponse = await callAjax("generate_featured_image", {
+          post_id: postId,
+          prompt: "", // Empty prompt - use default just like CreativeForm
+        });
 
-The image should be:
-- Photorealistic and suitable for a news website
-- Related to the article "${response.data.article_title}" and the topic ${keyword}
-- Professional news photography style
-- High quality, sharp focus, natural lighting
-- Appropriate for editorial use
-- 16:9 aspect ratio for featured image use
-
-Style: Documentary photography, news photography, editorial style
-Avoid: Text overlays, logos, watermarks, amateur photography
-Focus on: Visual storytelling, immediate relevance to the news story`;
-
-          const imageResponse = await callAjax("generate_featured_image", {
-            post_id: postId,
-            prompt: newsImagePrompt, // Use specific news prompt instead of default
-          });
-
-          if (!imageResponse.success) {
-            // Don't fail the whole process if image fails
-            setStatusMessage(
-              `✅ Article generated! Image failed: ${imageResponse.data}`
-            );
-          } else {
-            setStatusMessage("✅ Article and featured image generated!");
-          }
-        } catch (imageError) {
-          console.error("Image generation error:", imageError);
-          setStatusMessage(
-            `✅ Article generated! Image failed: ${imageError.message}`
+        if (!imageResponse.success) {
+          alert(
+            "Article was generated and saved, but the image failed: " +
+              imageResponse.data
           );
+          setStatusMessage("✅ Article generated! (Image generation failed)");
+        } else {
+          setStatusMessage("✅ All done! Featured image generated.");
         }
       }
     } catch (error) {
