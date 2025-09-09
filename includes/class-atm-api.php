@@ -389,8 +389,15 @@ class ATM_API {
 
         $articles = [];
         foreach ($result['items'] as $item) {
-            // Extract source domain
-            $source_domain = parse_url($item['link'], PHP_URL_HOST);
+            // Extract the actual source URL, not Google News URL
+            $actual_url = self::extract_actual_source_url($item['link']);
+            
+            // Skip if we can't get a clean URL
+            if (!$actual_url) {
+                continue;
+            }
+            
+            $source_domain = parse_url($actual_url, PHP_URL_HOST);
             $source_name = self::format_source_name($source_domain);
             
             // Format date if available
@@ -413,7 +420,7 @@ class ATM_API {
 
             $articles[] = [
                 'title' => sanitize_text_field($item['title']),
-                'link' => esc_url_raw($item['link']),
+                'link' => esc_url_raw($actual_url), // Use the cleaned URL
                 'snippet' => sanitize_text_field($item['snippet']),
                 'source' => sanitize_text_field($source_name),
                 'domain' => sanitize_text_field($source_domain),
@@ -424,6 +431,48 @@ class ATM_API {
 
         return $articles;
     }
+
+    // Add this new method to extract actual source URLs
+    private static function extract_actual_source_url($url) {
+        // If it's a Google News URL, try to extract the actual source
+        if (strpos($url, 'news.google.com') !== false) {
+            // Google News URLs often have the actual URL in a parameter
+            if (preg_match('/url=([^&]+)/', $url, $matches)) {
+                return urldecode($matches[1]);
+            }
+            
+            // Try to resolve redirects to get the final URL
+            try {
+                $response = wp_remote_head($url, [
+                    'timeout' => 10,
+                    'redirection' => 5,
+                    'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                ]);
+                
+                if (!is_wp_error($response)) {
+                    $final_url = wp_remote_retrieve_header($response, 'location');
+                    if ($final_url && !strpos($final_url, 'google.com')) {
+                        return $final_url;
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('ATM: Failed to resolve Google News redirect: ' . $e->getMessage());
+            }
+            
+            // If we can't extract, skip this result
+            return false;
+        }
+        
+        // If it's already a direct URL, check if it's from a blocked domain
+        $blocked_domains = ['google.com', 'news.google.com', 'facebook.com', 'twitter.com'];
+        $domain = parse_url($url, PHP_URL_HOST);
+        
+        if (in_array($domain, $blocked_domains)) {
+            return false;
+        }
+        
+        return $url;
+}
 
     /**
      * Generate article from a specific news source
