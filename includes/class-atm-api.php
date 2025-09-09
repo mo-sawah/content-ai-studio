@@ -339,6 +339,30 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    // Add to class-atm-api.php
+    public static function generate_image_with_configured_provider($prompt, $size_override = '', $quality_override = '') {
+        $provider = get_option('atm_image_provider', 'openai');
+        
+        switch ($provider) {
+            case 'google':
+                return [
+                    'data' => self::generate_image_with_google_imagen($prompt, $size_override),
+                    'is_url' => false
+                ];
+            case 'blockflow':
+                return [
+                    'data' => self::generate_image_with_blockflow($prompt, '', $size_override),
+                    'is_url' => false
+                ];
+            case 'openai':
+            default:
+                return [
+                    'data' => self::generate_image_with_openai($prompt, $size_override, $quality_override),
+                    'is_url' => true
+                ];
+        }
+    }
+
     /**
      * Search Google News directly using Custom Search API
      */
@@ -3822,6 +3846,37 @@ private static function is_stage_direction($line) {
                 'prompt' => 'You are a professional analyst. Adopt a logical, structured, and explanatory tone. Break down the complex topic into smaller, easy-to-understand parts, focusing on data and comparisons. ' . $base_instructions
             ]
         ];
+    }
+
+    /**
+     * Generate news-specific image prompt optimized for different providers
+     */
+    public static function get_news_image_prompt($article_title) {
+        $provider = get_option('atm_image_provider', 'openai');
+        
+        if ($provider === 'google') {
+            // Simpler prompt for Google Imagen
+            return "Professional news photograph about: {$article_title}. Realistic, high quality, natural lighting, documentary style journalism photo.";
+        } else {
+            // More detailed prompt for other providers
+            return "Create a realistic, documentary-style photograph for a news article about: \"{$article_title}\". 
+
+    REQUIREMENTS:
+    - Style: Authentic photojournalism, NOT cinematic or dramatic
+    - Lighting: Natural daylight or standard indoor lighting
+    - Composition: Clear, straightforward, informative
+    - Quality: High resolution, sharp focus
+    - Tone: Professional, neutral, factual
+
+    AVOID:
+    - Dramatic lighting or effects
+    - Cinematic composition
+    - Overly artistic interpretation
+    - Dark or moody atmosphere
+    - Special effects or unrealistic elements
+
+    The image should look like professional news photography from Reuters or AP.";
+        }
     }
 
     public static function get_default_image_prompt() {

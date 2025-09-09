@@ -82,15 +82,22 @@ class ATM_Ajax {
             // Generate featured image if requested
             if ($generate_image && $post_id > 0) {
                 try {
-                    $image_response = ATM_API::generate_image_with_openai(
-                        ATM_API::get_default_image_prompt(),
-                        '',
-                        '',
-                        ''
+                    // Use the news-specific prompt
+                    $image_prompt = ATM_API::get_news_image_prompt($result['title']);
+                    
+                    // Generate image using the configured provider (same as CreativeForm)
+                    $image_result = ATM_API::generate_image_with_configured_provider(
+                        $image_prompt,
+                        get_option('atm_image_size', '1792x1024'),
+                        get_option('atm_image_quality', 'hd')
                     );
                     
-                    $ajax_handler = new ATM_Ajax();
-                    $attachment_id = $ajax_handler->set_image_from_url($image_response, $post_id);
+                    // Handle the attachment creation based on provider type
+                    if ($image_result['is_url']) {
+                        $attachment_id = $this->set_image_from_url($image_result['data'], $post_id);
+                    } else {
+                        $attachment_id = $this->set_image_from_data($image_result['data'], $post_id, $image_prompt);
+                    }
                     
                     if (!is_wp_error($attachment_id)) {
                         set_post_thumbnail($post_id, $attachment_id);
