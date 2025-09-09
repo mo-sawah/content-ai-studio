@@ -339,6 +339,24 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    private static function is_article_already_used($url) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_used_news_articles';
+        
+        // Check if article was used within the last 2 days (configurable)
+        $cache_hours = get_option('atm_used_articles_cache_hours', 48); // Default 48 hours
+        
+        $result = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $table_name 
+            WHERE article_url = %s 
+            AND used_at > DATE_SUB(NOW(), INTERVAL %d HOUR)",
+            $url,
+            $cache_hours
+        ));
+        
+        return !empty($result);
+    }
+    
     // Add to class-atm-api.php
     public static function generate_image_with_configured_provider($prompt, $size_override = '', $quality_override = '') {
         $provider = get_option('atm_image_provider', 'openai');
@@ -465,6 +483,11 @@ class ATM_API {
                 'date' => sanitize_text_field($formatted_date),
                 'image' => esc_url_raw($image_url)
             ];
+
+            // Check if this article was already used
+            $article_data['is_used'] = self::is_article_already_used($item['link']);
+            
+            $articles[] = $article_data;
         }
 
         $total_results = isset($result['searchInformation']['totalResults']) 

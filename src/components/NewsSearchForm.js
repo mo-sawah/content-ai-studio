@@ -512,7 +512,9 @@ function NewsSearchForm() {
             {searchResults.map((article, index) => (
               <div
                 key={index}
-                className={`atm-news-item-card ${generatingIndex === index ? "atm-news-item-generating" : ""}`}
+                className={`atm-news-item-card 
+            ${generatingIndex === index ? "atm-news-item-generating" : ""} 
+            ${article.is_used ? "atm-news-item-used" : ""}`}
               >
                 <div className="atm-news-content-wrapper">
                   <div className="atm-news-thumbnail">
@@ -526,7 +528,13 @@ function NewsSearchForm() {
                           viewBox="0 0 24 24"
                           fill="currentColor"
                         >
-                          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+                          <path
+                            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 
+                      1.1.9 2 2 2h14c1.1 0 2-.9 
+                      2-2V5c0-1.1-.9-2-2-2zM9 
+                      17H7v-7h2v7zm4 0h-2V7h2v10zm4 
+                      0h-2v-4h2v4z"
+                          />
                         </svg>
                       </div>
                     )}
@@ -552,13 +560,20 @@ function NewsSearchForm() {
                   </div>
                 </div>
 
+                {/* Badge for used articles */}
+                {article.is_used && (
+                  <div className="atm-used-article-badge">Already Used</div>
+                )}
+
                 <div className="atm-news-actions">
                   <button
                     className="atm-generate-article-btn"
                     onClick={() => handleGenerateFromSource(article, index)}
-                    disabled={isGenerating}
+                    disabled={isGenerating || article.is_used}
                   >
-                    {generatingIndex === index ? (
+                    {article.is_used ? (
+                      "Already Used"
+                    ) : generatingIndex === index ? (
                       <>
                         <Spinner />
                         Generating...
@@ -568,20 +583,23 @@ function NewsSearchForm() {
                     )}
                   </button>
 
-                  <div className="atm-image-checkbox-wrapper">
-                    <input
-                      type="checkbox"
-                      id={`generate-image-${index}`}
-                      checked={imageCheckboxes[index] || false}
-                      onChange={(e) =>
-                        handleImageCheckboxChange(index, e.target.checked)
-                      }
-                      disabled={isGenerating}
-                    />
-                    <label htmlFor={`generate-image-${index}`}>
-                      Also generate featured image
-                    </label>
-                  </div>
+                  {/* Only show checkbox for unused articles */}
+                  {!article.is_used && (
+                    <div className="atm-image-checkbox-wrapper">
+                      <input
+                        type="checkbox"
+                        id={`generate-image-${index}`}
+                        checked={imageCheckboxes[index] || false}
+                        onChange={(e) =>
+                          handleImageCheckboxChange(index, e.target.checked)
+                        }
+                        disabled={isGenerating}
+                      />
+                      <label htmlFor={`generate-image-${index}`}>
+                        Also generate featured image
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

@@ -2896,3 +2896,45 @@ body.wp-admin .components-base-control .atm-podcast-script-textarea {
     margin: 0 auto;
   }
 }
+
+/* Used article styling */
+.atm-news-item-used {
+  opacity: 0.6;
+  position: relative;
+
+  &:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-color: #e2e8f0;
+  }
+
+  .atm-news-title,
+  .atm-news-description {
+    color: #9ca3af;
+  }
+
+  .atm-generate-article-btn {
+    background: #f3f4f6 !important;
+    color: #6b7280 !important;
+    cursor: not-allowed !important;
+
+    &:hover {
+      transform: none !important;
+      box-shadow: none !important;
+    }
+  }
+}
+
+.atm-used-article-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #f59e0b;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

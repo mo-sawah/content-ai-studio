@@ -77,6 +77,17 @@ class ATM_Ajax {
                 error_log("ATM Plugin: Saved News Search subtitle '{$result['subtitle']}' to SmartMag field for post {$post_id}");
             }
 
+            // Track this article as used
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'atm_used_news_articles';
+            
+            $wpdb->replace($table_name, [
+                'article_url' => $source_url,
+                'article_title' => $source_title,
+                'used_at' => current_time('mysql'),
+                'post_id' => $post_id
+            ]);
+
             $response_data = [
                 'article_title' => $result['title'],
                 'article_content' => $result['content'],

@@ -311,6 +311,31 @@ class ATM_Settings {
                     <tr><th scope="row">The Guardian API Key</th><td><input type="password" name="atm_guardian_api_key" value="<?php echo esc_attr($options['guardian_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://open-platform.theguardian.com/" target="_blank">The Guardian</a>.</p></td></tr>
                     <tr><th scope="row">Mercury Reader API Key (Optional)</th><td><input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p></td></tr>
                     <tr><th scope="row">Google API Key (for YouTube Search)</th><td><input type="password" name="atm_google_youtube_api_key" value="<?php echo esc_attr($options['google_youtube_key']); ?>" class="regular-text" /><p class="description">Required for the Video Search feature. Get a key from the <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p></td></tr>
+                    <tr>
+            <th scope="row">Used Article Cache Time</th>
+            <td>
+                <select name="atm_used_articles_cache_hours">
+                    <?php
+                    $cache_time_options = [
+                        12 => '12 Hours',
+                        24 => '1 Day',
+                        48 => '2 Days',
+                        72 => '3 Days',
+                        168 => '1 Week'
+                    ];
+                    foreach ($cache_time_options as $hours => $label) {
+                        printf(
+                            '<option value="%s" %s>%s</option>',
+                            esc_attr($hours),
+                            selected($options['used_articles_cache_hours'], $hours, false),
+                            esc_html($label)
+                        );
+                    }
+                    ?>
+                </select>
+                <p class="description">How long an article from News Search is marked as "Already Used" to prevent duplicates.</p>
+            </td>
+        </tr>
 <tr>
     <th scope="row">Google Custom Search API Key</th>
     <td>
@@ -625,6 +650,7 @@ class ATM_Settings {
     // And add these to the save_settings() method:
     update_option('atm_google_news_search_api_key', sanitize_text_field($_POST['atm_google_news_search_api_key']));
     update_option('atm_google_news_cse_id', sanitize_text_field($_POST['atm_google_news_cse_id']));
+    update_option('atm_used_articles_cache_hours', intval($_POST['atm_used_articles_cache_hours'])); // <-- ADD THIS LINE
 
     // Light theme colors
     update_option('atm_podcast_light_card_bg', sanitize_hex_color($_POST['atm_podcast_light_card_bg']));
@@ -680,6 +706,7 @@ class ATM_Settings {
         // And add these to the get_settings() method:
         'google_news_search_api_key' => get_option('atm_google_news_search_api_key', ''),
         'google_news_cse_id' => get_option('atm_google_news_cse_id', ''),
+        'used_articles_cache_hours' => get_option('atm_used_articles_cache_hours', 48), // <-- ADD THIS LINE
 
         // Add these to the get_settings() method return array
         'podcast_default_theme' => get_option('atm_podcast_default_theme', 'light'),

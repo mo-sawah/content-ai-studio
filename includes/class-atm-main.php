@@ -10,6 +10,19 @@ class ATM_Main {
     private static $hooks_initialized = false;
 
     
+    public static function cleanup_old_used_articles() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_used_news_articles';
+        
+        // Delete entries older than configured cache time
+        $cache_hours = get_option('atm_used_articles_cache_hours', 48);
+        
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM $table_name WHERE used_at < DATE_SUB(NOW(), INTERVAL %d HOUR)",
+            $cache_hours
+        ));
+    }
+
     public static function create_podcast_progress_table() {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
@@ -388,6 +401,10 @@ class ATM_Main {
             add_action('add_meta_boxes', array($meta_box, 'add_meta_boxes'));
         }
 
+        if (!wp_next_scheduled('atm_cleanup_used_articles')) {
+            wp_schedule_event(time(), 'daily', 'atm_cleanup_used_articles');
+        }
+
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('admin_head', array($this, 'register_tinymce_button'));
         add_action('rest_api_init', array($this, 'register_rest_routes'));
@@ -403,6 +420,7 @@ class ATM_Main {
         add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
         add_action('atm_process_script_background', array('ATM_API', 'process_script_background'));
         add_action('wp_ajax_check_script_progress', array($ajax, 'check_script_progress'));
+        add_action('atm_cleanup_used_articles', array('ATM_Main', 'cleanup_old_used_articles'));
 
         // Add cleanup for script jobs
         add_action('atm_cleanup_script_jobs', array('ATM_Main', 'cleanup_old_script_jobs'));
@@ -632,6 +650,26 @@ class ATM_Main {
         dbDelta($sql_used_links);
     }
 
+    public static function create_used_articles_table() {
+        global $wpdb;
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        $table_name = $wpdb->prefix . 'atm_used_news_articles';
+        $sql = "CREATE TABLE $table_name (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            article_url varchar(500) NOT NULL,
+            article_title text NOT NULL,
+            used_at datetime DEFAULT CURRENT_TIMESTAMP,
+            post_id bigint(20),
+            PRIMARY KEY (id),
+            UNIQUE KEY url_hash (article_url(191)),
+            KEY used_at (used_at)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+}
+
     // Add this to your activate() method in class-atm-main.php:
     public static function activate() {
         $dirs = [
@@ -648,6 +686,7 @@ class ATM_Main {
         self::create_campaigns_table();
         self::create_podcast_progress_table(); // Add this line
         self::create_script_jobs_table(); // Add this line
+        self::create_used_articles_table(); // Add this line
     }
 
     /**
