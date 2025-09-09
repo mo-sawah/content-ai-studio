@@ -71,6 +71,7 @@ function LiveNewsForm() {
   const [statusMessage, setStatusMessage] = useState("");
   const [keyword, setKeyword] = useState("");
   const [forceFresh, setForceFresh] = useState(false);
+  const [generateImage, setGenerateImage] = useState(false);
   const [newsCategories, setNewsCategories] = useState([]);
   const [generatingCategory, setGeneratingCategory] = useState(null);
 
@@ -147,7 +148,7 @@ function LiveNewsForm() {
         setStatusMessage("✅ Article and subtitle saved!");
       }
 
-      // Handle image generation
+      // Handle image generation feedback
       if (generateImage) {
         if (response.data.image_generated) {
           setStatusMessage("✅ Article and featured image generated!");
@@ -250,6 +251,13 @@ function LiveNewsForm() {
           label="Force fresh search (bypass 3-hour cache)"
           checked={forceFresh}
           onChange={setForceFresh}
+          disabled={isSearching || isLoading}
+        />
+
+        <CheckboxControl
+          label="Also generate a featured image"
+          checked={generateImage}
+          onChange={setGenerateImage}
           disabled={isSearching || isLoading}
         />
 
