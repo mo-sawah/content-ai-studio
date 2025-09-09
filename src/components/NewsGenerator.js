@@ -3,6 +3,7 @@ import { useState } from "@wordpress/element";
 import RssForm from "./RssForm";
 import NewsForm from "./NewsForm";
 import LiveNewsForm from "./LiveNewsForm";
+import NewsSearchForm from "./NewsSearchForm";
 
 function NewsGenerator({ setActiveView }) {
   const [activeTab, setActiveTab] = useState("rss");
