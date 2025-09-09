@@ -249,15 +249,16 @@ function NewsSearchForm() {
         response.data.subtitle || ""
       );
 
-      setStatusMessage(`✅ Article generated from "${article.title}"!`);
-
-      // Step 3: Generate image if requested (separate step like CreativeForm)
+      // Step 3: Handle image generation if requested
       if (shouldGenerateImage) {
-        setStatusMessage("Saving post...");
-        // Save the post first (same as CreativeForm)
+        setStatusMessage(
+          `Article generated from "${article.title}"! Now saving post...`
+        );
+
+        // Save the post first
         await wp.data.dispatch("core/editor").savePost();
 
-        setStatusMessage("Generating featured image...");
+        setStatusMessage(`Post saved! Generating featured image...`);
 
         try {
           const imageResponse = await callAjax("generate_featured_image", {
@@ -266,29 +267,58 @@ function NewsSearchForm() {
           });
 
           if (!imageResponse.success) {
-            setStatusMessage("✅ Article generated! (Image generation failed)");
+            setStatusMessage(
+              `Article generated from "${article.title}"! Image generation failed: ${imageResponse.data}`
+            );
+            // Remove result after showing error message for a few seconds
+            setTimeout(() => {
+              setSearchResults((prev) => prev.filter((_, i) => i !== index));
+              setImageCheckboxes((prev) => {
+                const newState = { ...prev };
+                delete newState[index];
+                return newState;
+              });
+            }, 3000);
           } else {
-            setStatusMessage("✅ All done! Reloading to show image...");
+            setStatusMessage(
+              `Article and featured image generated successfully from "${article.title}"! Reloading to display image...`
+            );
             // Reload page to show the new featured image
-            setTimeout(() => window.location.reload(), 1500);
-            return;
+            setTimeout(() => window.location.reload(), 2000);
+            return; // Don't remove result - page will reload
           }
         } catch (imageError) {
-          setStatusMessage("✅ Article generated! (Image generation failed)");
+          setStatusMessage(
+            `Article generated from "${article.title}"! Image generation encountered an error.`
+          );
           console.error("Image generation error:", imageError);
+          // Remove result after showing error message
+          setTimeout(() => {
+            setSearchResults((prev) => prev.filter((_, i) => i !== index));
+            setImageCheckboxes((prev) => {
+              const newState = { ...prev };
+              delete newState[index];
+              return newState;
+            });
+          }, 3000);
         }
+      } else {
+        // No image requested - show success and remove result
+        setStatusMessage(`Article generated from "${article.title}"!`);
+
+        // Remove this result from the list after showing success message
+        setTimeout(() => {
+          setSearchResults((prev) => prev.filter((_, i) => i !== index));
+          setImageCheckboxes((prev) => {
+            const newState = { ...prev };
+            delete newState[index];
+            return newState;
+          });
+        }, 2000);
       }
-
-      // Remove this result from the list
-      setSearchResults((prev) => prev.filter((_, i) => i !== index));
-
-      setImageCheckboxes((prev) => {
-        const newState = { ...prev };
-        delete newState[index];
-        return newState;
-      });
     } catch (error) {
       setStatusMessage(`Error: ${error.message}`);
+      // Don't remove result on error - user might want to try again
     } finally {
       setIsGenerating(false);
       setGeneratingIndex(null);
