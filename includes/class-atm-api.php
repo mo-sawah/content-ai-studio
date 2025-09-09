@@ -359,38 +359,45 @@ class ATM_API {
         
         $system_prompt = "You are an expert news researcher and categorization specialist. Your task is to search for the latest news about '{$keyword}' and organize the results into logical categories.
 
-    CRITICAL INSTRUCTIONS:
-    1. Use your web search ability to find the latest news about '{$keyword}' from the past 48 hours
-    2. Group related articles into 3-5 main topic categories
-    3. For each category, include 3-5 relevant articles
-    4. Extract key information for each article: title, source, date, summary, and thumbnail URL if available
+CRITICAL INSTRUCTIONS:
+1. Use your web search ability to find the latest news about '{$keyword}' from the past 48 hours
+2. Group related articles into 4-6 main topic categories (aim for more categories when possible)
+3. For each category, include 4-6 relevant articles (aim for more articles per category)
+4. Extract key information for each article: title, source, date, summary, and thumbnail URL if available
 
-    Your response MUST be a valid JSON object with this exact structure:
-    {
-        \"categories\": [
-            {
-                \"title\": \"Category name (e.g., 'Immigration Policy', 'Trade Relations')\",
-                \"articles\": [
-                    {
-                        \"title\": \"Article headline\",
-                        \"source\": \"Source name (e.g., 'CNN', 'Reuters')\",
-                        \"date\": \"Formatted date (e.g., 'Dec 15, 2024')\",
-                        \"summary\": \"Brief 1-2 sentence summary\",
-                        \"thumbnail\": \"Image URL or empty string\",
-                        \"url\": \"Article URL\"
-                    }
-                ]
-            }
-        ]
-    }
+Your response MUST be a valid JSON object with this exact structure:
+{
+    \"categories\": [
+        {
+            \"title\": \"Category name (e.g., 'Immigration Policy', 'Trade Relations', 'Legal Issues')\",
+            \"articles\": [
+                {
+                    \"title\": \"Article headline\",
+                    \"source\": \"Source name (e.g., 'CNN', 'Reuters', 'AP News')\",
+                    \"date\": \"Formatted date (e.g., 'Dec 15, 2024')\",
+                    \"summary\": \"Brief 2-3 sentence summary with key details\",
+                    \"thumbnail\": \"Image URL or empty string\",
+                    \"url\": \"Article URL\"
+                }
+            ]
+        }
+    ]
+}
 
-    Focus on:
-    - Recent, credible news sources
-    - Diverse perspectives and angles
-    - Clear categorization by topic/theme
-    - Quality over quantity - choose the most relevant articles
+SEARCH STRATEGY:
+- Cast a wide net to find diverse angles and perspectives
+- Look for breaking news, analysis pieces, opinion articles, and background reports
+- Include both major and specialized news sources
+- Prioritize recent, credible journalism from the last 24-48 hours
+- Aim for comprehensive coverage of all major aspects of the topic
 
-    Return only the JSON object, no additional text.";
+CATEGORIZATION GUIDELINES:
+- Create distinct, meaningful categories that don't overlap
+- Examples for political figures: 'Legal Issues', 'Policy Positions', 'Campaign Activities', 'International Relations', 'Economic Impact', 'Public Statements'
+- Use specific, descriptive category names rather than generic ones
+- Ensure each category has substantial, unique content
+
+Return only the JSON object, no additional text.";
 
         try {
             $model = get_option('atm_article_model', 'openai/gpt-4o');
@@ -486,33 +493,49 @@ class ATM_API {
             $angle_context .= "\nYou MUST create a completely different perspective that hasn't been covered before.";
         }
         
-        $system_prompt = "You are a professional journalist writing about the latest developments regarding '{$keyword}', specifically focusing on the '{$category_title}' aspect.
+        $system_prompt = "You are a professional news journalist writing about the latest developments regarding '{$keyword}', specifically focusing on the '{$category_title}' aspect.
 
-    {$angle_context}
+{$angle_context}
 
-    TASK:
-    Create a comprehensive, well-researched news article using the provided sources. Focus on delivering unique insights and a fresh perspective on this specific aspect of '{$keyword}'.
+TASK:
+Create a comprehensive, breaking news-style article using the provided sources. Write as if this is current, developing news that readers need to know about right now.
 
-    REQUIREMENTS:
-    1. Generate a compelling, SEO-friendly headline
-    2. Create an engaging subtitle that complements the main title
-    3. Write a substantial article (800-1200 words) with proper structure
-    4. Use journalistic style: objective, fact-based, and engaging
-    5. Include relevant details from the provided sources
-    6. Add your own analysis and context where appropriate
-    7. Use Markdown formatting with proper headings (## for H2, ### for H3)
-    8. DO NOT start with the title in the content - begin directly with the article text
+CRITICAL FORMATTING REQUIREMENTS:
+1. DO NOT include any H1 headings (# format) in the content
+2. Start the content directly with the opening paragraph - NO title or headline
+3. Use only H2 (##) and H3 (###) subheadings within the article body
+4. The content field should contain ONLY the article text, no title repetition
 
-    OUTPUT FORMAT:
-    Your response MUST be a valid JSON object:
-    {
-        \"title\": \"Compelling headline for the article\",
-        \"subtitle\": \"Engaging one-sentence subtitle\",
-        \"content\": \"Full article content in Markdown format\",
-        \"angle\": \"Brief description of the unique angle/perspective taken\"
-    }
+JOURNALISTIC REQUIREMENTS:
+1. Write a compelling, news-style headline (not SEO-focused) - use breaking news format when appropriate
+2. Create an engaging subtitle that provides additional context or the latest development
+3. Write 900-1400 words with proper news article structure:
+   - Lead paragraph with the most important facts (who, what, when, where, why)
+   - Supporting paragraphs with details, context, and quotes
+   - Background information and implications
+   - Recent developments and what comes next
 
-    Write in an authoritative yet accessible tone. Make the article informative and engaging for a general audience while maintaining journalistic integrity.";
+4. Use active voice and present tense where appropriate
+5. Include specific details, names, dates, and figures from the sources
+6. Write for immediate relevance - this is happening now
+7. Maintain journalistic objectivity while being engaging
+
+STYLE GUIDELINES:
+- Write headlines like: 'Trump Faces New Legal Challenge as Appeals Court Rules on Defamation Case'
+- NOT like: 'The Complete Guide to Understanding Trump's Latest Legal Issues'
+- Use breaking news language: 'breaking', 'latest', 'developing', 'just announced'
+- Include time-sensitive phrases: 'as of today', 'in a statement released this morning'
+
+OUTPUT FORMAT:
+Your response MUST be a valid JSON object:
+{
+    \"title\": \"Breaking news-style headline\",
+    \"subtitle\": \"Latest development or key context\",
+    \"content\": \"Full article content in Markdown format (NO H1 headings, start with paragraph text)\",
+    \"angle\": \"Brief description of the unique news angle taken\"
+}
+
+Focus on what makes this newsworthy RIGHT NOW and why readers should care about this development.";
 
         try {
             $model = get_option('atm_article_model', 'openai/gpt-4o');
@@ -2775,8 +2798,13 @@ Follow these rules strictly:
         // Replace this section in enhance_content_with_openrouter function (around line 1169):
 
         // CORRECT: Use OpenRouter's web search plugin (array format)
-        $max_results = intval(get_option('atm_web_search_results', 0));
-        if ($enable_web_search && $max_results > 0) {
+        if ($enable_web_search) {
+            // Get the web search setting from plugin options
+            $max_results = intval(get_option('atm_web_search_results', 10));
+            
+            // Ensure we have a reasonable number (minimum 5, maximum 30)
+            $max_results = max(5, min(30, $max_results));
+            
             $payload['plugins'] = [
                 [
                     'id' => 'web',
@@ -2786,6 +2814,8 @@ Follow these rules strictly:
                     ]
                 ]
             ];
+            
+            error_log("ATM: Using web search with max_results: " . $max_results);
         }
 
         $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', [
