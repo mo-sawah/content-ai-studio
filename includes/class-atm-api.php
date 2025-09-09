@@ -366,7 +366,7 @@ class ATM_API {
     /**
      * Search Google News directly using Custom Search API
      */
-    public static function search_google_news_direct($query, $page = 1, $per_page = 10) {
+    public static function search_google_news_direct($query, $page = 1, $per_page = 10, $language = 'en', $country = 'us') {
         $api_key = get_option('atm_google_news_search_api_key');
         $search_engine_id = get_option('atm_google_news_cse_id');
         
@@ -374,25 +374,35 @@ class ATM_API {
             throw new Exception('Google Custom Search API key and Search Engine ID must be configured.');
         }
 
-        // Calculate start index for pagination (Google uses 1-based indexing)
         $start_index = (($page - 1) * $per_page) + 1;
         
-        // Google CSE limits results to 100 total
-        if ($start_index > 91) { // 91 because max 10 results per request
+        if ($start_index > 91) {
             throw new Exception('Search results are limited to 100 total results.');
         }
 
-        $url = 'https://www.googleapis.com/customsearch/v1?' . http_build_query([
+        $search_params = [
             'key' => $api_key,
             'cx' => $search_engine_id,
             'q' => $query,
-            'num' => min($per_page, 10), // Google CSE max is 10 per request
+            'num' => min($per_page, 10),
             'start' => $start_index,
             'sort' => 'date',
             'dateRestrict' => 'd7', // Last 7 days
             'safe' => 'medium',
-            'lr' => 'lang_en', // English language
-        ]);
+        ];
+
+        // Add language restriction
+        if (!empty($language)) {
+            $search_params['lr'] = 'lang_' . $language;
+        }
+
+        // Add country restriction (if specified)
+        if (!empty($country)) {
+            $search_params['gl'] = $country;
+            $search_params['cr'] = 'country' . strtoupper($country);
+        }
+
+        $url = 'https://www.googleapis.com/customsearch/v1?' . http_build_query($search_params);
 
         $response = wp_remote_get($url, [
             'timeout' => 30,
@@ -427,11 +437,9 @@ class ATM_API {
 
         $articles = [];
         foreach ($result['items'] as $item) {
-            // Extract source domain
             $source_domain = parse_url($item['link'], PHP_URL_HOST);
             $source_name = self::format_source_name($source_domain);
             
-            // Format date if available
             $formatted_date = 'Recent';
             if (isset($item['pagemap']['metatags'][0]['article:published_time'])) {
                 $date = $item['pagemap']['metatags'][0]['article:published_time'];
@@ -441,7 +449,6 @@ class ATM_API {
                 $formatted_date = date('M j, Y', strtotime($date));
             }
 
-            // Extract image if available
             $image_url = '';
             if (isset($item['pagemap']['cse_image'][0]['src'])) {
                 $image_url = $item['pagemap']['cse_image'][0]['src'];
@@ -460,9 +467,8 @@ class ATM_API {
             ];
         }
 
-        // Get total results estimate from Google
         $total_results = isset($result['searchInformation']['totalResults']) 
-            ? min(intval($result['searchInformation']['totalResults']), 100) // Google CSE limit
+            ? min(intval($result['searchInformation']['totalResults']), 100)
             : count($articles);
 
         return [

@@ -18,18 +18,22 @@ class ATM_Ajax {
             $query = sanitize_text_field($_POST['query']);
             $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
             $per_page = isset($_POST['per_page']) ? max(1, min(50, intval($_POST['per_page']))) : 10;
+            $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : 'en';
+            $country = isset($_POST['country']) ? sanitize_text_field($_POST['country']) : 'us';
             
             if (empty($query)) {
                 throw new Exception('Search query is required.');
             }
 
-            $articles = ATM_API::search_google_news_direct($query, $page, $per_page);
+            $articles = ATM_API::search_google_news_direct($query, $page, $per_page, $language, $country);
             
             wp_send_json_success([
                 'articles' => $articles['results'],
                 'query' => $query,
                 'page' => $page,
                 'per_page' => $per_page,
+                'language' => $language,
+                'country' => $country,
                 'total' => $articles['total_results'] ?? count($articles['results'])
             ]);
 

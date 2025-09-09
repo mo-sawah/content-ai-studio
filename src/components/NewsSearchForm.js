@@ -1,6 +1,12 @@
 // src/components/NewsSearchForm.js
-import { useState } from "@wordpress/element";
-import { Button, TextControl, Spinner } from "@wordpress/components";
+import { useState, useRef } from "@wordpress/element";
+import {
+  Button,
+  TextControl,
+  Spinner,
+  DropdownMenu,
+} from "@wordpress/components";
+import { chevronDown } from "@wordpress/icons";
 
 const callAjax = (action, data) =>
   jQuery.ajax({
@@ -42,7 +48,6 @@ const updateEditorContent = (title, markdownContent, subtitle) => {
     }
   }
 
-  // Handle subtitle
   if (subtitle && subtitle.trim()) {
     console.log("ATM: Attempting to populate subtitle:", subtitle);
     setTimeout(function () {
@@ -70,8 +75,102 @@ function NewsSearchForm() {
   const [totalResults, setTotalResults] = useState(0);
   const [imageCheckboxes, setImageCheckboxes] = useState({});
 
+  // New filter states
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [selectedLanguageLabel, setSelectedLanguageLabel] = useState("English");
+  const [selectedCountry, setSelectedCountry] = useState("us");
+  const [selectedCountryLabel, setSelectedCountryLabel] =
+    useState("United States");
+
   const resultsPerPage = 10;
   const totalPages = Math.ceil(totalResults / resultsPerPage);
+
+  // Language options
+  const languageOptions = [
+    { label: "English", value: "en" },
+    { label: "Spanish", value: "es" },
+    { label: "French", value: "fr" },
+    { label: "German", value: "de" },
+    { label: "Italian", value: "it" },
+    { label: "Portuguese", value: "pt" },
+    { label: "Russian", value: "ru" },
+    { label: "Chinese", value: "zh" },
+    { label: "Japanese", value: "ja" },
+    { label: "Korean", value: "ko" },
+    { label: "Arabic", value: "ar" },
+    { label: "Dutch", value: "nl" },
+    { label: "Swedish", value: "sv" },
+    { label: "Norwegian", value: "no" },
+    { label: "Danish", value: "da" },
+  ];
+
+  // Country options
+  const countryOptions = [
+    { label: "United States", value: "us" },
+    { label: "United Kingdom", value: "gb" },
+    { label: "Canada", value: "ca" },
+    { label: "Australia", value: "au" },
+    { label: "Germany", value: "de" },
+    { label: "France", value: "fr" },
+    { label: "Spain", value: "es" },
+    { label: "Italy", value: "it" },
+    { label: "Netherlands", value: "nl" },
+    { label: "Sweden", value: "se" },
+    { label: "Norway", value: "no" },
+    { label: "Denmark", value: "dk" },
+    { label: "Japan", value: "jp" },
+    { label: "South Korea", value: "kr" },
+    { label: "Brazil", value: "br" },
+    { label: "Mexico", value: "mx" },
+    { label: "Argentina", value: "ar" },
+    { label: "India", value: "in" },
+    { label: "China", value: "cn" },
+    { label: "Russia", value: "ru" },
+    { label: "Turkey", value: "tr" },
+    { label: "South Africa", value: "za" },
+    { label: "Egypt", value: "eg" },
+    { label: "Nigeria", value: "ng" },
+    { label: "Any Country", value: "" },
+  ];
+
+  // Custom dropdown component
+  const CustomDropdown = ({
+    label,
+    text,
+    options,
+    onChange,
+    disabled,
+    helpText,
+  }) => {
+    const dropdownRef = useRef(null);
+
+    return (
+      <div className="atm-dropdown-field" ref={dropdownRef}>
+        <label className="atm-dropdown-label">{label}</label>
+        <DropdownMenu
+          className="atm-custom-dropdown"
+          icon={chevronDown}
+          text={text}
+          controls={options.map((option) => ({
+            title: option.label,
+            onClick: () => {
+              onChange(option);
+            },
+          }))}
+          disabled={disabled}
+          popoverProps={{
+            className: "atm-popover",
+            style: {
+              "--atm-dropdown-width": dropdownRef.current?.offsetWidth
+                ? dropdownRef.current.offsetWidth + "px"
+                : "auto",
+            },
+          }}
+        />
+        {helpText && <p className="atm-dropdown-help">{helpText}</p>}
+      </div>
+    );
+  };
 
   const handleSearch = async (page = 1) => {
     if (!searchQuery.trim()) {
@@ -91,6 +190,8 @@ function NewsSearchForm() {
         query: searchQuery,
         page: page,
         per_page: resultsPerPage,
+        language: selectedLanguage,
+        country: selectedCountry,
       });
 
       if (!response.success) {
@@ -140,7 +241,6 @@ function NewsSearchForm() {
         throw new Error(response.data);
       }
 
-      // Update editor with generated content
       updateEditorContent(
         response.data.article_title,
         response.data.article_content,
@@ -148,11 +248,8 @@ function NewsSearchForm() {
       );
 
       setStatusMessage(`✅ Article generated from "${article.title}"!`);
-
-      // Remove this result from the list
       setSearchResults((prev) => prev.filter((_, i) => i !== index));
 
-      // Clear the checkbox state for this item
       setImageCheckboxes((prev) => {
         const newState = { ...prev };
         delete newState[index];
@@ -183,11 +280,10 @@ function NewsSearchForm() {
     if (totalPages <= 1) return null;
 
     const pages = [];
-    const showPages = 5; // Number of page buttons to show
+    const showPages = 5;
     let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
     let endPage = Math.min(totalPages, startPage + showPages - 1);
 
-    // Adjust start page if we're near the end
     if (endPage - startPage + 1 < showPages) {
       startPage = Math.max(1, endPage - showPages + 1);
     }
@@ -272,6 +368,32 @@ function NewsSearchForm() {
           help="Enter keywords to search for recent news articles"
         />
 
+        <div className="atm-grid-2">
+          <CustomDropdown
+            label="Language"
+            text={selectedLanguageLabel}
+            options={languageOptions}
+            onChange={(option) => {
+              setSelectedLanguage(option.value);
+              setSelectedLanguageLabel(option.label);
+            }}
+            disabled={isSearching || isGenerating}
+            helpText="Filter results by language"
+          />
+
+          <CustomDropdown
+            label="Country"
+            text={selectedCountryLabel}
+            options={countryOptions}
+            onChange={(option) => {
+              setSelectedCountry(option.value);
+              setSelectedCountryLabel(option.label);
+            }}
+            disabled={isSearching || isGenerating}
+            helpText="Filter results by country (optional)"
+          />
+        </div>
+
         <Button
           isPrimary
           onClick={() => handleSearch(1)}
@@ -318,7 +440,10 @@ function NewsSearchForm() {
         <div className="atm-news-search-results">
           <div className="atm-results-header">
             <h3>News Search Results for "{searchQuery}"</h3>
-            <p>Found {totalResults} recent articles</p>
+            <p>
+              Found {totalResults} recent articles in {selectedLanguageLabel}{" "}
+              from {selectedCountryLabel}
+            </p>
           </div>
 
           <div className="atm-news-results-grid">
