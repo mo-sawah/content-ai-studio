@@ -377,17 +377,7 @@ function NewsSearchForm() {
                         Generating...
                       </>
                     ) : (
-                      <>
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z" />
-                        </svg>
-                        Generate Article
-                      </>
+                      "Generate Article"
                     )}
                   </button>
 
