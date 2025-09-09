@@ -227,6 +227,7 @@ function NewsSearchForm() {
     const shouldGenerateImage = imageCheckboxes[index] || false;
 
     try {
+      // Step 1: Generate article content ONLY (no image yet)
       const response = await callAjax("generate_article_from_news_source", {
         post_id: postId,
         source_url: article.link,
@@ -234,13 +235,14 @@ function NewsSearchForm() {
         source_snippet: article.snippet,
         source_date: article.date,
         source_domain: article.source,
-        generate_image: shouldGenerateImage,
+        generate_image: false, // Always false - we'll handle image separately
       });
 
       if (!response.success) {
         throw new Error(response.data);
       }
 
+      // Step 2: Update editor with article content
       updateEditorContent(
         response.data.article_title,
         response.data.article_content,
@@ -248,6 +250,36 @@ function NewsSearchForm() {
       );
 
       setStatusMessage(`✅ Article generated from "${article.title}"!`);
+
+      // Step 3: Generate image if requested (separate step like CreativeForm)
+      if (shouldGenerateImage) {
+        setStatusMessage("Saving post...");
+        // Save the post first (same as CreativeForm)
+        await wp.data.dispatch("core/editor").savePost();
+
+        setStatusMessage("Generating featured image...");
+
+        try {
+          const imageResponse = await callAjax("generate_featured_image", {
+            post_id: postId,
+            prompt: "", // Use default prompt
+          });
+
+          if (!imageResponse.success) {
+            setStatusMessage("✅ Article generated! (Image generation failed)");
+          } else {
+            setStatusMessage("✅ All done! Reloading to show image...");
+            // Reload page to show the new featured image
+            setTimeout(() => window.location.reload(), 1500);
+            return;
+          }
+        } catch (imageError) {
+          setStatusMessage("✅ Article generated! (Image generation failed)");
+          console.error("Image generation error:", imageError);
+        }
+      }
+
+      // Remove this result from the list
       setSearchResults((prev) => prev.filter((_, i) => i !== index));
 
       setImageCheckboxes((prev) => {
