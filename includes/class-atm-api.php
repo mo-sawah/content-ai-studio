@@ -483,75 +483,83 @@ Return only the JSON object, no additional text.";
     /**
      * Generate article from live news category with unique angle
      */
+    /**
+     * Generate article from live news category with focus on specific news events
+     */
     public static function generate_live_news_article($keyword, $category_title, $category_sources, $previous_angles = []) {
-        // Prepare the source content
-        $sources_text = "CATEGORY: {$category_title}\n\n";
-        $sources_text .= "LATEST NEWS SOURCES:\n";
+        // Prepare detailed source content for analysis
+        $sources_text = "BREAKING NEWS SOURCES:\n\n";
         
         foreach ($category_sources as $index => $source) {
-            $sources_text .= "\n" . ($index + 1) . ". {$source['title']}\n";
-            $sources_text .= "   Source: {$source['source']} | {$source['date']}\n";
+            $sources_text .= "SOURCE " . ($index + 1) . ":\n";
+            $sources_text .= "Headline: {$source['title']}\n";
+            $sources_text .= "Publisher: {$source['source']} | Date: {$source['date']}\n";
             if (!empty($source['summary'])) {
-                $sources_text .= "   Summary: {$source['summary']}\n";
+                $sources_text .= "Summary: {$source['summary']}\n";
             }
             if (!empty($source['url'])) {
-                $sources_text .= "   URL: {$source['url']}\n";
+                $sources_text .= "URL: {$source['url']}\n";
             }
+            $sources_text .= "---\n";
         }
         
-        // Build angle differentiation prompt
+        // Build angle differentiation context
         $angle_context = '';
         if (!empty($previous_angles)) {
             $angle_context = "\n\nPREVIOUS ANGLES ALREADY COVERED for '{$keyword}':\n";
             foreach ($previous_angles as $i => $angle) {
                 $angle_context .= "- " . ($i + 1) . ". " . $angle . "\n";
             }
-            $angle_context .= "\nYou MUST create a completely different perspective that hasn't been covered before.";
+            $angle_context .= "\nYou MUST create a completely different angle that hasn't been covered before.";
         }
         
-        $system_prompt = "You are a professional news journalist writing about the latest developments regarding '{$keyword}', specifically focusing on the '{$category_title}' aspect.
+        $system_prompt = "You are a breaking news journalist. Your task is to analyze these specific news sources and write a focused news article about ONE specific event or development.
 
-{$angle_context}
+    {$angle_context}
 
-TASK:
-Create a comprehensive, breaking news-style article using the provided sources. Write as if this is current, developing news that readers need to know about right now.
+    CRITICAL ANALYSIS REQUIREMENTS:
+    1. Read ALL the provided sources carefully
+    2. Identify the MOST NEWSWORTHY single event, development, or breaking story from the sources
+    3. Focus on ONE specific happening, not a general overview of multiple topics
+    4. Write about what's actually happening RIGHT NOW based on these sources
 
-CRITICAL FORMATTING REQUIREMENTS:
-1. DO NOT include any H1 headings (# format) in the content
-2. Start the content directly with the opening paragraph - NO title or headline
-3. Use only H2 (##) and H3 (###) subheadings within the article body
-4. The content field should contain ONLY the article text, no title repetition
+    HEADLINE GENERATION RULES:
+    - Write headlines like actual breaking news: \"Netanyahu Faces Military Pressure Over Gaza Strategy\" 
+    - NOT generic reports like: \"Israel Faces Intensified Pressure as Crisis Escalates\"
+    - Focus on WHO is doing WHAT, WHEN it's happening
+    - Use specific names, places, and actions from the sources
+    - Make it immediate and specific to today's developments
 
-JOURNALISTIC REQUIREMENTS:
-1. Write a compelling, news-style headline (not SEO-focused) - use breaking news format when appropriate
-2. Create an engaging subtitle that provides additional context or the latest development
-3. Write 900-1400 words with proper news article structure:
-   - Lead paragraph with the most important facts (who, what, when, where, why)
-   - Supporting paragraphs with details, context, and quotes
-   - Background information and implications
-   - Recent developments and what comes next
+    ARTICLE REQUIREMENTS:
+    1. Choose ONE main story thread from the sources (the most urgent/recent)
+    2. Write a 900-1200 word breaking news article focused on that specific event
+    3. Lead with the most important new development
+    4. Include specific details: names, dates, quotes, numbers from the sources
+    5. Explain what happened, why it matters, and what comes next
+    6. Use the other sources as supporting context, not co-equal stories
 
-4. Use active voice and present tense where appropriate
-5. Include specific details, names, dates, and figures from the sources
-6. Write for immediate relevance - this is happening now
-7. Maintain journalistic objectivity while being engaging
+    FORMATTING RULES:
+    - NO H1 headings (# format) in content
+    - Start content directly with the lead paragraph
+    - Use only H2 (##) and H3 (###) subheadings
+    - Content should be pure article text with no title repetition
 
-STYLE GUIDELINES:
-- Write headlines like: 'Trump Faces New Legal Challenge as Appeals Court Rules on Defamation Case'
-- NOT like: 'The Complete Guide to Understanding Trump's Latest Legal Issues'
-- Use breaking news language: 'breaking', 'latest', 'developing', 'just announced'
-- Include time-sensitive phrases: 'as of today', 'in a statement released this morning'
+    WRITING STYLE:
+    - Breaking news tone: immediate, urgent, factual
+    - Present tense for ongoing situations
+    - Past tense for completed events
+    - Include attribution: \"according to CNN\", \"Reuters reported\", etc.
+    - Focus on the human impact and immediate consequences
 
-OUTPUT FORMAT:
-Your response MUST be a valid JSON object:
-{
-    \"title\": \"Breaking news-style headline\",
-    \"subtitle\": \"Latest development or key context\",
-    \"content\": \"Full article content in Markdown format (NO H1 headings, start with paragraph text)\",
-    \"angle\": \"Brief description of the unique news angle taken\"
-}
+    OUTPUT FORMAT (JSON):
+    {
+        \"title\": \"Specific breaking news headline about ONE main event\",
+        \"subtitle\": \"Additional context or latest development from the story\",
+        \"content\": \"Full news article in Markdown (no H1, start with paragraph)\",
+        \"angle\": \"Brief description of the specific event/angle chosen\"
+    }
 
-Focus on what makes this newsworthy RIGHT NOW and why readers should care about this development.";
+    Remember: You're writing about a SPECIFIC NEWS EVENT, not a general topic overview. Pick the most compelling, recent, or urgent story from the sources and focus entirely on that.";
 
         try {
             $model = get_option('atm_article_model', 'openai/gpt-4o');
@@ -561,7 +569,7 @@ Focus on what makes this newsworthy RIGHT NOW and why readers should care about 
                 $system_prompt,
                 $model,
                 true, // JSON mode
-                true  // Enable web search for additional context
+                true // Disable additional web search to focus on provided sources
             );
             
             $result = json_decode($raw_response, true);
@@ -574,6 +582,9 @@ Focus on what makes this newsworthy RIGHT NOW and why readers should care about 
             if (empty($result['title']) || empty($result['content'])) {
                 throw new Exception('Generated article is missing required fields');
             }
+            
+            // Log the generated headline for debugging
+            error_log("ATM Live News: Generated headline: " . $result['title']);
             
             return [
                 'title' => sanitize_text_field($result['title']),
