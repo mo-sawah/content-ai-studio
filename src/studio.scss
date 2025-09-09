@@ -2938,3 +2938,240 @@ body.wp-admin .components-base-control .atm-podcast-script-textarea {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+/* --- Advanced Filters Styles - Add to studio.scss --- */
+
+/* Main container for the advanced filters section */
+.atm-advanced-filters-container {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+/* Title for the filters section */
+.atm-filters-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 1.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  /* Decorative purple bar */
+  &:before {
+    content: "";
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    border-radius: 2px;
+  }
+}
+
+/* Grid layout for the filter dropdowns */
+.atm-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Wrapper for each individual filter component */
+.atm-advanced-filter {
+  position: relative;
+  font-family: inherit;
+}
+
+/* Label above the dropdown */
+.atm-filter-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+/* Main clickable container that looks like an input field */
+.atm-filter-input-container {
+  position: relative;
+  min-height: 44px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 40px 6px 12px;
+  cursor: text;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+
+  &:hover:not(.disabled) {
+    border-color: #9ca3af;
+  }
+
+  &.open,
+  &:focus-within {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    outline: none;
+  }
+
+  &.disabled {
+    background-color: #f9fafb;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+/* Display for single selected value (non-multi-select) */
+.atm-single-value {
+  font-size: 14px;
+  color: #1e293b;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Container for multi-select tags */
+.atm-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+/* Individual tag for a selected item in multi-select mode */
+.atm-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+  }
+}
+
+/* The 'x' button to remove a tag */
+.atm-tag-remove {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  width: 16px;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #1e293b;
+  }
+}
+
+/* The actual text input for searching within the dropdown */
+.atm-filter-input {
+  flex: 1;
+  min-width: 100px;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 14px;
+  color: #1e293b;
+  height: 24px;
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+}
+
+/* Dropdown chevron icon */
+.atm-filter-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  transition: transform 0.2s ease;
+  pointer-events: none;
+
+  &.open {
+    transform: translateY(-50%) rotate(180deg);
+  }
+}
+
+/* The dropdown menu that appears */
+.atm-filter-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+/* A single option within the dropdown menu */
+.atm-filter-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #1e293b;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  user-select: none;
+
+  &:hover {
+    background-color: #f3f4f6;
+  }
+
+  &.selected {
+    background-color: #f3f4f6;
+    font-weight: 600;
+    color: #8b5cf6;
+  }
+}
+
+/* Checkmark icon for selected multi-select options */
+.atm-option-check {
+  color: #8b5cf6;
+}
+
+/* Message shown when no search results are found */
+.atm-filter-no-results {
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+}
