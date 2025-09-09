@@ -9,6 +9,56 @@ const callAjax = (action, data) =>
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
 
+const updateEditorContent = (title, markdownContent, subtitle) => {
+  const isBlockEditor = document.body.classList.contains("block-editor-page");
+  const htmlContent = window.marked
+    ? window.marked.parse(markdownContent)
+    : markdownContent;
+
+  if (isBlockEditor) {
+    wp.data.dispatch("core/editor").editPost({ title });
+    const blocks = wp.blocks.parse(htmlContent);
+    const currentBlocks = wp.data.select("core/block-editor").getBlocks();
+    if (
+      currentBlocks.length > 0 &&
+      !(
+        currentBlocks.length === 1 &&
+        currentBlocks[0].name === "core/paragraph" &&
+        currentBlocks[0].attributes.content === ""
+      )
+    ) {
+      const clientIds = currentBlocks.map((block) => block.clientId);
+      wp.data.dispatch("core/block-editor").removeBlocks(clientIds);
+    }
+    wp.data.dispatch("core/block-editor").insertBlocks(blocks);
+  } else {
+    jQuery("#title").val(title);
+    jQuery("#title-prompt-text").hide();
+    jQuery("#title").trigger("blur");
+    if (window.tinymce && window.tinymce.get("content")) {
+      window.tinymce.get("content").setContent(htmlContent);
+    } else {
+      jQuery("#content").val(htmlContent);
+    }
+  }
+
+  // Handle subtitle
+  if (subtitle && subtitle.trim()) {
+    console.log("ATM: Attempting to populate subtitle:", subtitle);
+    setTimeout(function () {
+      const subtitleField = jQuery('input[name="_bunyad_sub_title"]');
+      if (subtitleField.length > 0) {
+        console.log("ATM: Found SmartMag subtitle field, populating...");
+        subtitleField.val(subtitle);
+        subtitleField.trigger("input").trigger("change").trigger("keyup");
+        console.log("ATM: Subtitle populated successfully");
+      } else {
+        console.log("ATM: SmartMag subtitle field not found");
+      }
+    }, 1000);
+  }
+};
+
 function NewsSearchForm() {
   const [isSearching, setIsSearching] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);

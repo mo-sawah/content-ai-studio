@@ -3161,57 +3161,217 @@ Follow these rules strictly:
     }
 
     public static function fetch_full_article_content($url) {
-        $api_key = get_option('atm_scrapingant_api_key');
-
-        if (empty($api_key)) {
-            throw new Exception('ScrapingAnt API key is not configured in settings. This is required for the RSS feature.');
-        }
-
-        $scraper_url = 'https://api.scrapingant.com/v2/general?' . http_build_query([
-            'url' => $url,
-            'x-api-key' => $api_key,
-            'browser' => 'true'
-        ]);
+        // Set reasonable timeout for the entire operation
+        $start_time = time();
+        $max_total_time = 60; // 1 minute total maximum
         
-        $response = wp_remote_get($scraper_url, ['timeout' => 120]);
+        $extraction_methods = [
+            'jina' => [
+                'function' => 'fetch_article_with_jina',
+                'timeout' => 15,
+                'description' => 'Jina Reader API'
+            ],
+            'native_readability' => [
+                'function' => 'extract_with_wordpress_native',
+                'timeout' => 20,
+                'description' => 'WordPress Native + Readability'
+            ],
+            'mercury' => [
+                'function' => 'fetch_article_with_mercury',
+                'timeout' => 15,
+                'description' => 'Mercury Parser',
+                'skip_if_no_key' => true
+            ],
+            'basic_scraping' => [
+                'function' => 'extract_with_basic_scraping',
+                'timeout' => 10,
+                'description' => 'Basic HTML Extraction'
+            ]
+        ];
+        
+        $last_error = '';
+        
+        foreach ($extraction_methods as $method_name => $config) {
+            // Check if we've exceeded total time limit
+            if ((time() - $start_time) > $max_total_time) {
+                error_log("ATM: Extraction timeout reached, stopping attempts");
+                break;
+            }
+            
+            // Skip methods that require API keys if not configured
+            if (!empty($config['skip_if_no_key'])) {
+                $api_key = get_option('atm_mercury_api_key');
+                if (empty($api_key)) {
+                    error_log("ATM: Skipping {$method_name} - no API key configured");
+                    continue;
+                }
+            }
+            
+            try {
+                error_log("ATM: Attempting {$config['description']} extraction for " . parse_url($url, PHP_URL_HOST));
+                
+                $content = self::{$config['function']}($url, $config['timeout']);
+                
+                if (strlen($content) > 200) {
+                    $word_count = str_word_count($content);
+                    error_log("ATM: SUCCESS with {$config['description']} - extracted {$word_count} words");
+                    return $content;
+                } else {
+                    throw new Exception("Content too short: " . strlen($content) . " characters");
+                }
+                
+            } catch (Exception $e) {
+                $last_error = $e->getMessage();
+                error_log("ATM: {$config['description']} failed: " . $last_error);
+                
+                // Add small delay between attempts to be respectful
+                if (next($extraction_methods)) {
+                    sleep(1);
+                }
+                continue;
+            }
+        }
+        
+        throw new Exception("All extraction methods failed. Last error: " . $last_error);
+    }
+
+    // Jina Reader (Free, Fast)
+    private static function fetch_article_with_jina($url, $timeout = 15) {
+        $jina_url = 'https://r.jina.ai/' . $url;
+        
+        $response = wp_remote_get($jina_url, [
+            'timeout' => $timeout,
+            'headers' => [
+                'User-Agent' => 'Mozilla/5.0 (compatible; ContentAIStudio/1.0)',
+                'Accept' => 'text/plain'
+            ]
+        ]);
 
         if (is_wp_error($response)) {
-            throw new Exception('Scraping API Connection Error: ' . $response->get_error_message());
+            throw new Exception('Jina request failed: ' . $response->get_error_message());
+        }
+        
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code !== 200) {
+            throw new Exception("Jina returned status code: " . $status_code);
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
+        $content = wp_remote_retrieve_body($response);
+        
+        if (strlen($content) < 100) {
+            throw new Exception('Jina returned insufficient content');
+        }
+
+        return trim($content);
+    }
+
+    // WordPress Native with improved extraction
+    private static function extract_with_wordpress_native($url, $timeout = 20) {
+        $response = wp_remote_get($url, [
+            'timeout' => $timeout,
+            'headers' => [
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            ]
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('HTTP request failed: ' . $response->get_error_message());
+        }
+        
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code !== 200) {
+            throw new Exception("HTTP status code: " . $status_code);
+        }
+
+        $html = wp_remote_retrieve_body($response);
+        
+        // Clean HTML
+        $html = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $html);
+        $html = preg_replace('/<style\b[^>]*>(.*?)<\/style>/is', '', $html);
+        $html = preg_replace('/<nav\b[^>]*>(.*?)<\/nav>/is', '', $html);
+        $html = preg_replace('/<header\b[^>]*>(.*?)<\/header>/is', '', $html);
+        $html = preg_replace('/<footer\b[^>]*>(.*?)<\/footer>/is', '', $html);
+        $html = preg_replace('/<aside\b[^>]*>(.*?)<\/aside>/is', '', $html);
+        
+        // Try multiple extraction strategies
+        $strategies = [
+            'article_tag' => '/<article[^>]*>(.*?)<\/article>/is',
+            'main_tag' => '/<main[^>]*>(.*?)<\/main>/is',
+            'content_class' => '/<div[^>]*class="[^"]*(?:content|article|post|entry)[^"]*"[^>]*>(.*?)<\/div>/is',
+            'content_id' => '/<div[^>]*id="[^"]*(?:content|article|post|entry)[^"]*"[^>]*>(.*?)<\/div>/is'
+        ];
+        
+        foreach ($strategies as $strategy_name => $pattern) {
+            if (preg_match($pattern, $html, $matches)) {
+                $content = wp_strip_all_tags($matches[1]);
+                $content = preg_replace('/\s+/', ' ', trim($content));
+                
+                if (strlen($content) > 200) {
+                    return $content;
+                }
+            }
+        }
+        
+        throw new Exception('No content found with native extraction');
+    }
+
+    // Mercury Parser (if API key available)
+    private static function fetch_article_with_mercury($url, $timeout = 15) {
+        $api_key = get_option('atm_mercury_api_key');
+        if (empty($api_key)) {
+            throw new Exception('Mercury API key not configured');
+        }
+        
+        $api_url = 'https://mercury.postlight.com/parser?url=' . urlencode($url);
+        
+        $response = wp_remote_get($api_url, [
+            'timeout' => $timeout,
+            'headers' => [
+                'x-api-key' => $api_key,
+                'User-Agent' => 'Mozilla/5.0 (compatible; ContentAIStudio/1.0)'
+            ]
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Mercury request failed: ' . $response->get_error_message());
+        }
+
         $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
 
-        if ($response_code !== 200) {
-            $error_data = json_decode($body, true);
-            $error_detail = isset($error_data['detail']) ? $error_data['detail'] : 'Please check your ScrapingAnt account.';
-            throw new Exception('Scraping API Error (Code: ' . $response_code . '): ' . $error_detail);
+        if (!isset($data['content']) || empty($data['content'])) {
+            throw new Exception('Mercury returned no content');
         }
 
-        $result = json_decode($body, true);
+        return wp_strip_all_tags($data['content']);
+    }
 
-        if (json_last_error() !== JSON_ERROR_NONE || empty($result['content'])) {
-            throw new Exception('Scraping service returned an invalid or empty response.');
-        }
-
-        $html_content = $result['content'];
-
-        // Clean up HTML content
-        $html_content = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $html_content);
-        $html_content = preg_replace('/<style\b[^>]*>(.*?)<\/style>/is', "", $html_content);
-        $html_content = preg_replace('/<nav\b[^>]*>(.*?)<\/nav>/is', "", $html_content);
-        $html_content = preg_replace('/<header\b[^>]*>(.*?)<\/header>/is', "", $html_content);
-        $html_content = preg_replace('/<footer\b[^>]*>(.*?)<\/footer>/is', "", $html_content);
-        $html_content = preg_replace('/<aside\b[^>]*>(.*?)<\/aside>/is', "", $html_content);
-
-        $plain_text = wp_strip_all_tags($html_content);
-        $cleaned_text = preg_replace('/\s+/', ' ', trim($plain_text));
+    // Basic fallback
+    private static function extract_with_basic_scraping($url, $timeout = 10) {
+        $response = wp_remote_get($url, ['timeout' => $timeout]);
         
-        if (strlen($cleaned_text) < 200) {
-            return '';
+        if (is_wp_error($response)) {
+            throw new Exception('Basic request failed: ' . $response->get_error_message());
         }
         
-        return $cleaned_text;
+        $html = wp_remote_retrieve_body($response);
+        
+        // Very basic paragraph extraction
+        preg_match_all('/<p[^>]*>(.*?)<\/p>/is', $html, $paragraphs);
+        
+        $content = '';
+        foreach ($paragraphs[1] as $p) {
+            $text = wp_strip_all_tags($p);
+            if (strlen(trim($text)) > 50) {
+                $content .= $text . "\n\n";
+            }
+        }
+        
+        if (strlen($content) < 200) {
+            throw new Exception('Basic extraction found insufficient content');
+        }
+        
+        return trim($content);
     }
     
     public static function generate_audio_with_openai_tts($script_chunk, $voice) {
