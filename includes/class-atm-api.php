@@ -503,6 +503,7 @@ class ATM_API {
 
             **Link Formatting Rules:**
             - When including external links, NEVER use the website URL as the anchor text
+            - Always link to the specific article URL, NOT the homepage
             - Use ONLY 1-3 descriptive words as anchor text
             - Example: [Reuters](https://reuters.com/actual-article-url) reported that...
             - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
