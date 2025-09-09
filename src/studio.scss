@@ -2938,3 +2938,293 @@ body.wp-admin .components-base-control .atm-podcast-script-textarea {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+/* --- Advanced Filters Styles - Add to studio.scss --- */
+
+.atm-advanced-filters {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.atm-filters-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.atm-filters-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.atm-filters-toggle {
+  background: none;
+  border: none;
+  color: #8b5cf6;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  transition: color 0.2s ease;
+}
+
+.atm-filters-toggle:hover {
+  color: #7c3aed;
+}
+
+.atm-filters-toggle svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.atm-filters-toggle.is-expanded svg {
+  transform: rotate(180deg);
+}
+
+.atm-filters-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  opacity: 1;
+  max-height: none;
+  overflow: visible;
+  transition: all 0.3s ease;
+}
+
+.atm-filters-content.is-collapsed {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  margin-top: 0;
+}
+
+.atm-filter-group {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.atm-filter-group:hover {
+  border-color: #cbd5e1;
+}
+
+.atm-filter-label {
+  display: block;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.atm-filter-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 14px;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+
+.atm-filter-select:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.atm-filter-select:hover {
+  border-color: #9ca3af;
+}
+
+/* Filter input styles */
+.atm-filter-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 14px;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+
+.atm-filter-input:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.atm-filter-input::placeholder {
+  color: #9ca3af;
+}
+
+/* Filter checkbox styles */
+.atm-filter-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.atm-filter-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.atm-filter-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.atm-filter-checkbox:checked {
+  border-color: #8b5cf6;
+  background: #8b5cf6;
+}
+
+.atm-filter-checkbox:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.atm-filter-checkbox-label {
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Filter actions */
+.atm-filters-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.atm-filter-button {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.atm-filter-button:hover {
+  border-color: #9ca3af;
+  background: #f9fafb;
+}
+
+.atm-filter-button-primary {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  color: white;
+}
+
+.atm-filter-button-primary:hover {
+  background: #7c3aed;
+  border-color: #7c3aed;
+}
+
+.atm-filter-button-clear {
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+
+.atm-filter-button-clear:hover {
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+/* Active filter indicators */
+.atm-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.atm-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.atm-filter-tag-remove {
+  background: none;
+  border: none;
+  color: #8b5cf6;
+  cursor: pointer;
+  padding: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  transition: all 0.2s ease;
+}
+
+.atm-filter-tag-remove:hover {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+/* Responsive design for filters */
+@media (max-width: 768px) {
+  .atm-filters-content {
+    grid-template-columns: 1fr;
+  }
+
+  .atm-filters-actions {
+    flex-direction: column;
+  }
+
+  .atm-filter-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .atm-active-filters {
+    justify-content: center;
+  }
+}

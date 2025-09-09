@@ -1,12 +1,6 @@
 // src/components/NewsSearchForm.js
-import { useState, useRef } from "@wordpress/element";
-import {
-  Button,
-  TextControl,
-  Spinner,
-  DropdownMenu,
-} from "@wordpress/components";
-import { chevronDown } from "@wordpress/icons";
+import { useState, useRef, useEffect } from "@wordpress/element";
+import { Button, TextControl, Spinner } from "@wordpress/components";
 
 const callAjax = (action, data) =>
   jQuery.ajax({
@@ -64,6 +58,286 @@ const updateEditorContent = (title, markdownContent, subtitle) => {
   }
 };
 
+// Data sources for filters
+const LANGUAGES = [
+  "English",
+  "Spanish",
+  "French",
+  "German",
+  "Italian",
+  "Portuguese",
+  "Russian",
+  "Chinese",
+  "Japanese",
+  "Korean",
+  "Arabic",
+  "Dutch",
+  "Swedish",
+  "Norwegian",
+  "Danish",
+  "Finnish",
+  "Polish",
+  "Czech",
+  "Hungarian",
+  "Romanian",
+  "Bulgarian",
+  "Croatian",
+  "Slovak",
+  "Slovenian",
+  "Estonian",
+  "Latvian",
+  "Lithuanian",
+  "Greek",
+  "Turkish",
+  "Hindi",
+  "Bengali",
+  "Urdu",
+  "Tamil",
+  "Telugu",
+  "Marathi",
+  "Thai",
+  "Vietnamese",
+  "Indonesian",
+  "Malay",
+  "Filipino",
+  "Hebrew",
+  "Persian",
+];
+
+const COUNTRIES = [
+  // Major countries with news presence
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Australia",
+  "Germany",
+  "France",
+  "Spain",
+  "Italy",
+  "Netherlands",
+  "Belgium",
+  "Sweden",
+  "Norway",
+  "Denmark",
+  "Finland",
+  "Poland",
+  "Czech Republic",
+  "Austria",
+  "Switzerland",
+  "Portugal",
+  "Ireland",
+  "Greece",
+  "Turkey",
+  "Russia",
+  "Ukraine",
+  "Romania",
+  "Bulgaria",
+  "Hungary",
+  "Croatia",
+  "Slovakia",
+  "Slovenia",
+  "Estonia",
+  "Latvia",
+  "Lithuania",
+  "Japan",
+  "South Korea",
+  "China",
+  "India",
+  "Singapore",
+  "Malaysia",
+  "Thailand",
+  "Indonesia",
+  "Philippines",
+  "Vietnam",
+  "Taiwan",
+  "Hong Kong",
+  "Israel",
+  "Saudi Arabia",
+  "United Arab Emirates",
+  "Egypt",
+  "South Africa",
+  "Nigeria",
+  "Kenya",
+  "Brazil",
+  "Argentina",
+  "Chile",
+  "Colombia",
+  "Mexico",
+  "Peru",
+  "Venezuela",
+  "Ecuador",
+  "Uruguay",
+  "Paraguay",
+  "Bolivia",
+];
+
+// Advanced Filter Component
+const AdvancedSearchableDropdown = ({
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+  multiSelect = false,
+  disabled = false,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredOptions, setFilteredOptions] = useState(options);
+  const dropdownRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    setFilteredOptions(
+      options.filter((option) =>
+        option.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [searchTerm, options]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleOptionSelect = (option) => {
+    if (multiSelect) {
+      const newValue = Array.isArray(value) ? [...value] : [];
+      if (newValue.includes(option)) {
+        onChange(newValue.filter((v) => v !== option));
+      } else {
+        onChange([...newValue, option]);
+      }
+      setSearchTerm("");
+      inputRef.current?.focus();
+    } else {
+      onChange(option);
+      setIsOpen(false);
+      setSearchTerm("");
+    }
+  };
+
+  const removeTag = (optionToRemove) => {
+    if (multiSelect && Array.isArray(value)) {
+      onChange(value.filter((v) => v !== optionToRemove));
+    }
+  };
+
+  const renderSingleValue = () => {
+    if (!multiSelect && value) {
+      return <div className="atm-single-value">{value}</div>;
+    }
+    return null;
+  };
+
+  const renderTags = () => {
+    if (multiSelect && Array.isArray(value) && value.length > 0) {
+      return (
+        <div className="atm-tags-container">
+          {value.map((tag) => (
+            <div key={tag} className="atm-filter-tag">
+              <span>{tag}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeTag(tag);
+                }}
+                className="atm-tag-remove"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="atm-advanced-filter" ref={dropdownRef}>
+      <label className="atm-filter-label">{label}</label>
+      <div
+        className={`atm-filter-input-container ${isOpen ? "open" : ""} ${disabled ? "disabled" : ""}`}
+        onClick={() => !disabled && setIsOpen(true)}
+      >
+        {renderTags()}
+        {renderSingleValue()}
+        <input
+          ref={inputRef}
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder={placeholder}
+          className="atm-filter-input"
+          onFocus={() => !disabled && setIsOpen(true)}
+          disabled={disabled}
+        />
+        <svg
+          className={`atm-filter-chevron ${isOpen ? "open" : ""}`}
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </div>
+
+      {isOpen && (
+        <div className="atm-filter-dropdown">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((option) => (
+              <div
+                key={option}
+                className={`atm-filter-option ${
+                  multiSelect && Array.isArray(value) && value.includes(option)
+                    ? "selected"
+                    : ""
+                } ${!multiSelect && value === option ? "selected" : ""}`}
+                onClick={() => handleOptionSelect(option)}
+              >
+                {option}
+                {multiSelect &&
+                  Array.isArray(value) &&
+                  value.includes(option) && (
+                    <svg
+                      className="atm-option-check"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
+              </div>
+            ))
+          ) : (
+            <div className="atm-filter-no-results">No results found</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 function NewsSearchForm() {
   const [isSearching, setIsSearching] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -75,102 +349,13 @@ function NewsSearchForm() {
   const [totalResults, setTotalResults] = useState(0);
   const [imageCheckboxes, setImageCheckboxes] = useState({});
 
-  // New filter states
-  const [selectedLanguage, setSelectedLanguage] = useState("en");
-  const [selectedLanguageLabel, setSelectedLanguageLabel] = useState("English");
-  const [selectedCountry, setSelectedCountry] = useState("us");
-  const [selectedCountryLabel, setSelectedCountryLabel] =
-    useState("United States");
+  // New advanced filter states
+  const [articleLanguage, setArticleLanguage] = useState("English");
+  const [sourceLanguages, setSourceLanguages] = useState([]);
+  const [countries, setCountries] = useState(["United States"]);
 
   const resultsPerPage = 10;
   const totalPages = Math.ceil(totalResults / resultsPerPage);
-
-  // Language options
-  const languageOptions = [
-    { label: "English", value: "en" },
-    { label: "Spanish", value: "es" },
-    { label: "French", value: "fr" },
-    { label: "German", value: "de" },
-    { label: "Italian", value: "it" },
-    { label: "Portuguese", value: "pt" },
-    { label: "Russian", value: "ru" },
-    { label: "Chinese", value: "zh" },
-    { label: "Japanese", value: "ja" },
-    { label: "Korean", value: "ko" },
-    { label: "Arabic", value: "ar" },
-    { label: "Dutch", value: "nl" },
-    { label: "Swedish", value: "sv" },
-    { label: "Norwegian", value: "no" },
-    { label: "Danish", value: "da" },
-  ];
-
-  // Country options
-  const countryOptions = [
-    { label: "United States", value: "us" },
-    { label: "United Kingdom", value: "gb" },
-    { label: "Canada", value: "ca" },
-    { label: "Australia", value: "au" },
-    { label: "Germany", value: "de" },
-    { label: "France", value: "fr" },
-    { label: "Spain", value: "es" },
-    { label: "Italy", value: "it" },
-    { label: "Netherlands", value: "nl" },
-    { label: "Sweden", value: "se" },
-    { label: "Norway", value: "no" },
-    { label: "Denmark", value: "dk" },
-    { label: "Japan", value: "jp" },
-    { label: "South Korea", value: "kr" },
-    { label: "Brazil", value: "br" },
-    { label: "Mexico", value: "mx" },
-    { label: "Argentina", value: "ar" },
-    { label: "India", value: "in" },
-    { label: "China", value: "cn" },
-    { label: "Russia", value: "ru" },
-    { label: "Turkey", value: "tr" },
-    { label: "South Africa", value: "za" },
-    { label: "Egypt", value: "eg" },
-    { label: "Nigeria", value: "ng" },
-    { label: "Any Country", value: "" },
-  ];
-
-  // Custom dropdown component
-  const CustomDropdown = ({
-    label,
-    text,
-    options,
-    onChange,
-    disabled,
-    helpText,
-  }) => {
-    const dropdownRef = useRef(null);
-
-    return (
-      <div className="atm-dropdown-field" ref={dropdownRef}>
-        <label className="atm-dropdown-label">{label}</label>
-        <DropdownMenu
-          className="atm-custom-dropdown"
-          icon={chevronDown}
-          text={text}
-          controls={options.map((option) => ({
-            title: option.label,
-            onClick: () => {
-              onChange(option);
-            },
-          }))}
-          disabled={disabled}
-          popoverProps={{
-            className: "atm-popover",
-            style: {
-              "--atm-dropdown-width": dropdownRef.current?.offsetWidth
-                ? dropdownRef.current.offsetWidth + "px"
-                : "auto",
-            },
-          }}
-        />
-        {helpText && <p className="atm-dropdown-help">{helpText}</p>}
-      </div>
-    );
-  };
 
   const handleSearch = async (page = 1) => {
     if (!searchQuery.trim()) {
@@ -190,8 +375,9 @@ function NewsSearchForm() {
         query: searchQuery,
         page: page,
         per_page: resultsPerPage,
-        language: selectedLanguage,
-        country: selectedCountry,
+        article_language: articleLanguage,
+        source_languages: sourceLanguages,
+        countries: countries,
       });
 
       if (!response.success) {
@@ -235,6 +421,7 @@ function NewsSearchForm() {
         source_snippet: article.snippet,
         source_date: article.date,
         source_domain: article.source,
+        article_language: articleLanguage, // Pass the selected article language
         generate_image: false, // Always false - we'll handle image separately
       });
 
@@ -430,30 +617,40 @@ function NewsSearchForm() {
           help="Enter keywords to search for recent news articles"
         />
 
-        <div className="atm-grid-2">
-          <CustomDropdown
-            label="Language"
-            text={selectedLanguageLabel}
-            options={languageOptions}
-            onChange={(option) => {
-              setSelectedLanguage(option.value);
-              setSelectedLanguageLabel(option.label);
-            }}
-            disabled={isSearching || isGenerating}
-            helpText="Filter results by language"
-          />
+        {/* Advanced Filters */}
+        <div className="atm-advanced-filters-container">
+          <h3 className="atm-filters-title">Advanced Filters</h3>
+          <div className="atm-filters-grid">
+            <AdvancedSearchableDropdown
+              label="Article Language"
+              placeholder="Select language for generated article..."
+              options={LANGUAGES}
+              value={articleLanguage}
+              onChange={setArticleLanguage}
+              multiSelect={false}
+              disabled={isSearching || isGenerating}
+            />
 
-          <CustomDropdown
-            label="Country"
-            text={selectedCountryLabel}
-            options={countryOptions}
-            onChange={(option) => {
-              setSelectedCountry(option.value);
-              setSelectedCountryLabel(option.label);
-            }}
-            disabled={isSearching || isGenerating}
-            helpText="Filter results by country (optional)"
-          />
+            <AdvancedSearchableDropdown
+              label="Source Languages"
+              placeholder="Search source languages..."
+              options={LANGUAGES}
+              value={sourceLanguages}
+              onChange={setSourceLanguages}
+              multiSelect={true}
+              disabled={isSearching || isGenerating}
+            />
+
+            <AdvancedSearchableDropdown
+              label="Countries"
+              placeholder="Search countries..."
+              options={COUNTRIES}
+              value={countries}
+              onChange={setCountries}
+              multiSelect={true}
+              disabled={isSearching || isGenerating}
+            />
+          </div>
         </div>
 
         <Button
@@ -498,13 +695,17 @@ function NewsSearchForm() {
         </p>
       )}
 
+      {/* Rest of the component remains the same... */}
       {searchResults.length > 0 && (
         <div className="atm-news-search-results">
           <div className="atm-results-header">
             <h3>News Search Results for "{searchQuery}"</h3>
             <p>
-              Found {totalResults} recent articles in {selectedLanguageLabel}{" "}
-              from {selectedCountryLabel}
+              Found {totalResults} recent articles
+              {articleLanguage && ` (generating in ${articleLanguage})`}
+              {sourceLanguages.length > 0 &&
+                ` from sources in: ${sourceLanguages.join(", ")}`}
+              {countries.length > 0 && ` in: ${countries.join(", ")}`}
             </p>
           </div>
 
