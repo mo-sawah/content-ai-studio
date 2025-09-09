@@ -474,7 +474,7 @@ class ATM_API {
                 $image_url = $item['pagemap']['metatags'][0]['og:image'];
             }
 
-            $articles[] = [
+            $article_data = [
                 'title' => sanitize_text_field($item['title']),
                 'link' => esc_url_raw($item['link']),
                 'snippet' => sanitize_text_field($item['snippet']),
@@ -486,7 +486,7 @@ class ATM_API {
 
             // Check if this article was already used
             $article_data['is_used'] = self::is_article_already_used($item['link']);
-            
+
             $articles[] = $article_data;
         }
 
