@@ -339,10 +339,26 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    public static function debug_web_search_settings() {
+        $settings = [
+            'atm_web_search_results' => get_option('atm_web_search_results', 'NOT_SET'),
+            'atm_openrouter_api_key' => !empty(get_option('atm_openrouter_api_key')) ? 'SET' : 'NOT_SET',
+            'atm_article_model' => get_option('atm_article_model', 'NOT_SET'),
+        ];
+        
+        error_log('ATM Web Search Debug: ' . print_r($settings, true));
+        return $settings;
+    }
+    
     /**
      * Search live news using OpenRouter web search with categorization
      */
     public static function search_live_news_with_openrouter($keyword, $force_fresh = false) {
+            // Debug current settings
+        $web_search_setting = get_option('atm_web_search_results', 0);
+        error_log("ATM Live News Debug - Web search setting: " . $web_search_setting);
+        error_log("ATM Live News Debug - Keyword: " . $keyword);
+        error_log("ATM Live News Debug - Force fresh: " . ($force_fresh ? 'true' : 'false'));
         $cache_key = 'atm_live_news_' . md5($keyword);
         $cache_duration = 3 * HOUR_IN_SECONDS; // 3 hours cache
         
