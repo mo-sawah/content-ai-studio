@@ -323,30 +323,37 @@ class ATM_Settings {
                     <tr><th scope="row">Mercury Reader API Key (Optional)</th><td><input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p></td></tr>
                     <tr><th scope="row">Google API Key (for YouTube Search)</th><td><input type="password" name="atm_google_youtube_api_key" value="<?php echo esc_attr($options['google_youtube_key']); ?>" class="regular-text" /><p class="description">Required for the Video Search feature. Get a key from the <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p></td></tr>
                     <tr>
-            <th scope="row">Used Article Cache Time</th>
-            <td>
-                <select name="atm_used_articles_cache_hours">
-                    <?php
-                    $cache_time_options = [
-                        12 => '12 Hours',
-                        24 => '1 Day',
-                        48 => '2 Days',
-                        72 => '3 Days',
-                        168 => '1 Week'
-                    ];
-                    foreach ($cache_time_options as $hours => $label) {
-                        printf(
-                            '<option value="%s" %s>%s</option>',
-                            esc_attr($hours),
-                            selected($options['used_articles_cache_hours'], $hours, false),
-                            esc_html($label)
-                        );
-                    }
-                    ?>
-                </select>
-                <p class="description">How long an article from News Search is marked as "Already Used" to prevent duplicates.</p>
-            </td>
-        </tr>
+                        <th scope="row">Mercury Reader API Key (Optional)</th>
+                        <td>
+                            <input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" />
+                            <p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Used Article Cache Time</th>
+                        <td>
+                            <select name="atm_used_articles_cache_hours">
+                                <?php
+                                $cache_time_options = [
+                                    12 => '12 Hours',
+                                    24 => '1 Day',
+                                    48 => '2 Days',
+                                    72 => '3 Days',
+                                    168 => '1 Week'
+                                ];
+                                foreach ($cache_time_options as $hours => $label) {
+                                    printf(
+                                        '<option value="%s" %s>%s</option>',
+                                        esc_attr($hours),
+                                        selected($options['used_articles_cache_hours'], $hours, false),
+                                        esc_html($label)
+                                    );
+                                }
+                                ?>
+                            </select>
+                            <p class="description">How long an article from News Search is marked as "Already Used" to prevent duplicates.</p>
+                        </td>
+                    </tr>
 <tr>
     <th scope="row">Google Custom Search API Key</th>
     <td>
@@ -372,6 +379,28 @@ class ATM_Settings {
                         <tr><th scope="row">Default Article Model</th><td><select name="atm_article_model"><?php foreach ($options['article_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['article_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
                         <tr><th scope="row">Translation Quality Model</th><td><select name="atm_translation_model"><?php foreach ($options['translation_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['translation_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">"High Quality" is more accurate but slower and more expensive. "Fast" is good for quick drafts.</p></td></tr>
                         <tr>
+                            <th scope="row">Default Content Model</th>
+                            <td>
+                                <select name="atm_content_model">
+                                    <?php foreach ($options['content_models'] as $model_id => $model_name): ?>
+                                        <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <p class="description">Model used for content generation tasks like takeaways, comments, and other content processing.</p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">Default Audio Provider</th>
+                            <td>
+                                <select name="atm_audio_provider">
+                                    <option value="openai" <?php selected($options['audio_provider'], 'openai'); ?>>OpenAI TTS</option>
+                                    <option value="elevenlabs" <?php selected($options['audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option>
+                                </select>
+                                <p class="description">Default service provider for text-to-speech generation.</p>
+                            </td>
+                        </tr>
+                            <tr>
                             <th scope="row">Web Search Results</th>
                             <td>
                                 <select name="atm_web_search_results">
@@ -657,170 +686,180 @@ class ATM_Settings {
 }
 
     private function save_settings() {
-    check_admin_referer('atm_settings_update');
-    update_option('atm_openrouter_api_key', sanitize_text_field($_POST['atm_openrouter_api_key']));
-    update_option('atm_openai_api_key', sanitize_text_field($_POST['atm_openai_api_key']));
-    update_option('atm_google_api_key', sanitize_text_field($_POST['atm_google_api_key']));
-    update_option('atm_blockflow_api_key', sanitize_text_field($_POST['atm_blockflow_api_key'])); // <-- ADD THIS
-    update_option('atm_flux_model', sanitize_text_field($_POST['atm_flux_model'])); // <-- ADD THIS
-    update_option('atm_elevenlabs_api_key', sanitize_text_field($_POST['atm_elevenlabs_api_key'])); // New
-    update_option('atm_article_model', sanitize_text_field($_POST['atm_article_model']));
-    update_option('atm_content_model', sanitize_text_field($_POST['atm_content_model']));
-    update_option('atm_audio_provider', sanitize_text_field($_POST['atm_audio_provider'])); // New
-    update_option('atm_news_api_key', sanitize_text_field($_POST['atm_news_api_key']));
-    update_option('atm_gnews_api_key', sanitize_text_field($_POST['atm_gnews_api_key']));
-    update_option('atm_guardian_api_key', sanitize_text_field($_POST['atm_guardian_api_key']));
-    update_option('atm_rss_feeds', sanitize_textarea_field($_POST['atm_rss_feeds']));
-    update_option('atm_scrapingant_api_key', sanitize_text_field($_POST['atm_scrapingant_api_key']));
-    update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
-    update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
-    update_option('atm_image_provider', sanitize_text_field($_POST['atm_image_provider']));
-    update_option('atm_translation_model', sanitize_text_field($_POST['atm_translation_model']));
-    update_option('atm_google_youtube_api_key', sanitize_text_field($_POST['atm_google_youtube_api_key']));
-    update_option('atm_web_search_results', intval($_POST['atm_web_search_results'])); // <-- ADD THIS
-    update_option('atm_theme_subtitle_key', sanitize_text_field($_POST['atm_theme_subtitle_key']));
-    update_option('atm_mercury_api_key', sanitize_text_field($_POST['atm_mercury_api_key']));
+        check_admin_referer('atm_settings_update');
+        
+        // API Keys
+        update_option('atm_openrouter_api_key', sanitize_text_field($_POST['atm_openrouter_api_key']));
+        update_option('atm_openai_api_key', sanitize_text_field($_POST['atm_openai_api_key']));
+        update_option('atm_google_api_key', sanitize_text_field($_POST['atm_google_api_key']));
+        update_option('atm_blockflow_api_key', sanitize_text_field($_POST['atm_blockflow_api_key']));
+        update_option('atm_elevenlabs_api_key', sanitize_text_field($_POST['atm_elevenlabs_api_key']));
+        update_option('atm_news_api_key', sanitize_text_field($_POST['atm_news_api_key']));
+        update_option('atm_gnews_api_key', sanitize_text_field($_POST['atm_gnews_api_key']));
+        update_option('atm_guardian_api_key', sanitize_text_field($_POST['atm_guardian_api_key']));
+        update_option('atm_scrapingant_api_key', sanitize_text_field($_POST['atm_scrapingant_api_key']));
+        update_option('atm_google_youtube_api_key', sanitize_text_field($_POST['atm_google_youtube_api_key']));
+        update_option('atm_google_news_search_api_key', sanitize_text_field($_POST['atm_google_news_search_api_key']));
+        update_option('atm_google_news_cse_id', sanitize_text_field($_POST['atm_google_news_cse_id']));
+        update_option('atm_twitterapi_key', sanitize_text_field($_POST['atm_twitterapi_key']));
+        update_option('atm_mercury_api_key', sanitize_text_field($_POST['atm_mercury_api_key']));
 
-    // Add these to the save_settings() method
-    update_option('atm_podcast_default_theme', sanitize_text_field($_POST['atm_podcast_default_theme']));
-    update_option('atm_podcast_content_model', sanitize_text_field($_POST['atm_podcast_content_model']));
-    update_option('atm_podcast_audio_provider', sanitize_text_field($_POST['atm_podcast_audio_provider']));
-    update_option('atm_podcast_accent_color', sanitize_hex_color($_POST['atm_podcast_accent_color']));
-    update_option('atm_podcast_gradient_end', sanitize_hex_color($_POST['atm_podcast_gradient_end']));
-    update_option('atm_podcast_season_text', sanitize_text_field($_POST['atm_podcast_season_text']));
+        // Model Settings
+        update_option('atm_article_model', sanitize_text_field($_POST['atm_article_model']));
+        update_option('atm_content_model', sanitize_text_field($_POST['atm_content_model'])); // FIX: Added missing save
+        update_option('atm_translation_model', sanitize_text_field($_POST['atm_translation_model']));
 
-    // Add Twitter settings
-    update_option('atm_twitterapi_key', sanitize_text_field($_POST['atm_twitterapi_key']));
-    update_option('atm_twitter_credible_sources', sanitize_textarea_field($_POST['atm_twitter_credible_sources']));
-    update_option('atm_twitter_min_followers', intval($_POST['atm_twitter_min_followers']));
-    update_option('atm_twitter_verified_only', isset($_POST['atm_twitter_verified_only']) ? 1 : 0);
+        // Provider Settings
+        update_option('atm_audio_provider', sanitize_text_field($_POST['atm_audio_provider'])); // FIX: Added missing save
+        update_option('atm_image_provider', sanitize_text_field($_POST['atm_image_provider']));
+        update_option('atm_flux_model', sanitize_text_field($_POST['atm_flux_model']));
 
-    // And add these to the save_settings() method:
-    update_option('atm_google_news_search_api_key', sanitize_text_field($_POST['atm_google_news_search_api_key']));
-    update_option('atm_google_news_cse_id', sanitize_text_field($_POST['atm_google_news_cse_id']));
-    update_option('atm_used_articles_cache_hours', intval($_POST['atm_used_articles_cache_hours'])); // <-- ADD THIS LINE
+        // General Settings
+        update_option('atm_web_search_results', intval($_POST['atm_web_search_results']));
+        update_option('atm_theme_subtitle_key', sanitize_text_field($_POST['atm_theme_subtitle_key']));
+        update_option('atm_rss_feeds', sanitize_textarea_field($_POST['atm_rss_feeds']));
+        update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
+        update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
+        update_option('atm_used_articles_cache_hours', intval($_POST['atm_used_articles_cache_hours']));
 
-    // Light theme colors
-    update_option('atm_podcast_light_card_bg', sanitize_hex_color($_POST['atm_podcast_light_card_bg']));
-    update_option('atm_podcast_light_text', sanitize_hex_color($_POST['atm_podcast_light_text']));
-    update_option('atm_podcast_light_subtext', sanitize_hex_color($_POST['atm_podcast_light_subtext']));
-    update_option('atm_podcast_light_rail_bg', sanitize_hex_color($_POST['atm_podcast_light_rail_bg']));
-    update_option('atm_podcast_light_ctrl_bg', sanitize_hex_color($_POST['atm_podcast_light_ctrl_bg']));
-    update_option('atm_podcast_light_playlist_bg', sanitize_hex_color($_POST['atm_podcast_light_playlist_bg']));
+        // Twitter Settings
+        update_option('atm_twitter_credible_sources', sanitize_textarea_field($_POST['atm_twitter_credible_sources']));
+        update_option('atm_twitter_min_followers', intval($_POST['atm_twitter_min_followers']));
 
-    // Dark theme colors
-    update_option('atm_podcast_dark_card_bg', sanitize_hex_color($_POST['atm_podcast_dark_card_bg']));
-    update_option('atm_podcast_dark_text', sanitize_hex_color($_POST['atm_podcast_dark_text']));
-    update_option('atm_podcast_dark_subtext', sanitize_hex_color($_POST['atm_podcast_dark_subtext']));
-    update_option('atm_podcast_dark_rail_bg', sanitize_hex_color($_POST['atm_podcast_dark_rail_bg']));
-    update_option('atm_podcast_dark_ctrl_bg', sanitize_hex_color($_POST['atm_podcast_dark_ctrl_bg']));
-    update_option('atm_podcast_dark_playlist_bg', sanitize_hex_color($_POST['atm_podcast_dark_playlist_bg']));
-    
-    // NEW: Comments Generator options (no register_settings needed)
-    update_option('atm_comments_auto_on_publish', isset($_POST['atm_comments_auto_on_publish']) ? 1 : 0);
-    update_option('atm_comments_default_count', max(5, min(50, intval($_POST['atm_comments_default_count'] ?? 10))));
-    update_option('atm_comments_threaded', isset($_POST['atm_comments_threaded']) ? 1 : 0);
-    update_option('atm_comments_approve', isset($_POST['atm_comments_approve']) ? 1 : 0);
-    update_option('atm_comments_model', sanitize_text_field($_POST['atm_comments_model'] ?? ''));
-    update_option('atm_comments_randomize_window_days', max(1, min(30, intval($_POST['atm_comments_randomize_window_days'] ?? 3))));
-
-    echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
-}
-
-    public function get_settings() {
-    return [
-        'openrouter_key'   => get_option('atm_openrouter_api_key', ''),
-        'openai_key'       => get_option('atm_openai_api_key', ''),
-        'google_key'       => get_option('atm_google_api_key', ''),
-        'blockflow_key'    => get_option('atm_blockflow_api_key', ''), // <-- ADD THIS
-        'elevenlabs_key'   => get_option('atm_elevenlabs_api_key', ''), // New
-        'news_api_key'     => get_option('atm_news_api_key', ''),
-        'gnews_api_key'    => get_option('atm_gnews_api_key', ''),
-        'web_search_results' => get_option('atm_web_search_results', 5), // <-- ADD THIS
-        'theme_subtitle_key' => get_option('atm_theme_subtitle_key', ''),
-        'rss_feeds'        => get_option('atm_rss_feeds', ''),
-        'scrapingant_key'  => get_option('atm_scrapingant_api_key', ''),
-        'guardian_api_key' => get_option('atm_guardian_api_key', ''),
-        'article_model'    => get_option('atm_article_model', 'openai/gpt-4o'),
-        'content_model'    => get_option('atm_content_model', 'anthropic/claude-3-haiku'),
-        'audio_provider'   => get_option('atm_audio_provider', 'openai'), // New
-        'image_quality'    => get_option('atm_image_quality', 'hd'),
-        'image_size'       => get_option('atm_image_size', '1792x1024'),
-        'image_provider'   => get_option('atm_image_provider', 'openai'),
-        'flux_model'       => get_option('atm_flux_model', 'flux-1-schnell'), // <-- FIX IS HERE
-        'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
-        'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
-
-        // And add these to the get_settings() method:
-        'google_news_search_api_key' => get_option('atm_google_news_search_api_key', ''),
-        'google_news_cse_id' => get_option('atm_google_news_cse_id', ''),
-        'used_articles_cache_hours' => get_option('atm_used_articles_cache_hours', 48), // <-- ADD THIS LINE
-
-        // TWitter
-        'twitterapi_key' => get_option('atm_twitterapi_key', ''),
-        'twitter_credible_sources' => get_option('atm_twitter_credible_sources', ''),
-        'twitter_min_followers' => get_option('atm_twitter_min_followers', 10000),
-        'twitter_verified_only' => get_option('atm_twitter_verified_only', 1),
-
-        // Add these to the get_settings() method return array
-        'podcast_default_theme' => get_option('atm_podcast_default_theme', 'light'),
-        'podcast_content_model' => get_option('atm_podcast_content_model', 'anthropic/claude-3-haiku'),
-        'podcast_audio_provider' => get_option('atm_podcast_audio_provider', 'openai'),
-        'podcast_accent_color' => get_option('atm_podcast_accent_color', '#3b82f6'),
-        'podcast_gradient_end' => get_option('atm_podcast_gradient_end', '#7c3aed'),
-        'podcast_season_text' => get_option('atm_podcast_season_text', 'Season 1'),
+        // Podcast Settings
+        update_option('atm_podcast_default_theme', sanitize_text_field($_POST['atm_podcast_default_theme']));
+        update_option('atm_podcast_content_model', sanitize_text_field($_POST['atm_podcast_content_model']));
+        update_option('atm_podcast_audio_provider', sanitize_text_field($_POST['atm_podcast_audio_provider']));
+        update_option('atm_podcast_accent_color', sanitize_hex_color($_POST['atm_podcast_accent_color']));
+        update_option('atm_podcast_gradient_end', sanitize_hex_color($_POST['atm_podcast_gradient_end']));
+        update_option('atm_podcast_season_text', sanitize_text_field($_POST['atm_podcast_season_text']));
 
         // Light theme colors
-        'podcast_light_card_bg' => get_option('atm_podcast_light_card_bg', '#ffffff'),
-        'podcast_light_text' => get_option('atm_podcast_light_text', '#0f172a'),
-        'podcast_light_subtext' => get_option('atm_podcast_light_subtext', '#64748b'),
-        'podcast_light_rail_bg' => get_option('atm_podcast_light_rail_bg', '#e5e7eb'),
-        'podcast_light_ctrl_bg' => get_option('atm_podcast_light_ctrl_bg', '#f3f4f6'),
-        'podcast_light_playlist_bg' => get_option('atm_podcast_light_playlist_bg', '#f8fafc'),
+        update_option('atm_podcast_light_card_bg', sanitize_hex_color($_POST['atm_podcast_light_card_bg']));
+        update_option('atm_podcast_light_text', sanitize_hex_color($_POST['atm_podcast_light_text']));
+        update_option('atm_podcast_light_subtext', sanitize_hex_color($_POST['atm_podcast_light_subtext']));
+        update_option('atm_podcast_light_rail_bg', sanitize_hex_color($_POST['atm_podcast_light_rail_bg']));
+        update_option('atm_podcast_light_ctrl_bg', sanitize_hex_color($_POST['atm_podcast_light_ctrl_bg']));
+        update_option('atm_podcast_light_playlist_bg', sanitize_hex_color($_POST['atm_podcast_light_playlist_bg']));
 
         // Dark theme colors
-        'podcast_dark_card_bg' => get_option('atm_podcast_dark_card_bg', '#0f172a'),
-        'podcast_dark_text' => get_option('atm_podcast_dark_text', '#e2e8f0'),
-        'podcast_dark_subtext' => get_option('atm_podcast_dark_subtext', '#94a3b8'),
-        'podcast_dark_rail_bg' => get_option('atm_podcast_dark_rail_bg', '#1f2937'),
-        'podcast_dark_ctrl_bg' => get_option('atm_podcast_dark_ctrl_bg', '#0b1220'),
-        'podcast_dark_playlist_bg' => get_option('atm_podcast_dark_playlist_bg', '#0b1220'),
+        update_option('atm_podcast_dark_card_bg', sanitize_hex_color($_POST['atm_podcast_dark_card_bg']));
+        update_option('atm_podcast_dark_text', sanitize_hex_color($_POST['atm_podcast_dark_text']));
+        update_option('atm_podcast_dark_subtext', sanitize_hex_color($_POST['atm_podcast_dark_subtext']));
+        update_option('atm_podcast_dark_rail_bg', sanitize_hex_color($_POST['atm_podcast_dark_rail_bg']));
+        update_option('atm_podcast_dark_ctrl_bg', sanitize_hex_color($_POST['atm_podcast_dark_ctrl_bg']));
+        update_option('atm_podcast_dark_playlist_bg', sanitize_hex_color($_POST['atm_podcast_dark_playlist_bg']));
         
-        // NEW: Comments Generator defaults
-        'comments_auto_on_publish'        => (bool) get_option('atm_comments_auto_on_publish', 0),
-        'comments_default_count'          => intval(get_option('atm_comments_default_count', 10)),
-        'comments_threaded'               => (bool) get_option('atm_comments_threaded', 1),
-        'comments_approve'                => (bool) get_option('atm_comments_approve', 0),
-        'comments_model'                  => get_option('atm_comments_model', ''),
-        'comments_randomize_window_days'  => intval(get_option('atm_comments_randomize_window_days', 3)),
+        // Comments Generator options
+        update_option('atm_comments_auto_on_publish', isset($_POST['atm_comments_auto_on_publish']) ? 1 : 0);
+        update_option('atm_comments_default_count', max(5, min(50, intval($_POST['atm_comments_default_count'] ?? 10))));
+        update_option('atm_comments_threaded', isset($_POST['atm_comments_threaded']) ? 1 : 0);
+        update_option('atm_comments_approve', isset($_POST['atm_comments_approve']) ? 1 : 0);
+        update_option('atm_comments_model', sanitize_text_field($_POST['atm_comments_model'] ?? ''));
+        update_option('atm_comments_randomize_window_days', max(1, min(30, intval($_POST['atm_comments_randomize_window_days'] ?? 3))));
 
-        'flux_models' => [
-            'flux-1-schnell'        => 'FLUX 1 Schnell',
-            'flux-1-dev'            => 'FLUX 1 Dev (Fast)',
-            'flux-pro'              => 'FLUX Pro',
-            'flux-pro-1.1'          => 'FLUX Pro 1.1',
-            'flux-pro-1.1-ultra'    => 'FLUX Pro 1.1 Ultra (High Quality)',
-            'flux-kontext-pro'      => 'FLUX Kontext Pro',
-            'flux-kontext-max'      => 'FLUX Kontext Max (Best Quality)',
-         ],
-        'article_models'   => [
-            'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
-            'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
-            'google/gemini-flash-1.5' => 'Google: Gemini 1.5 Flash (Fast & Capable)',
-            'meta-llama/llama-3-70b-instruct' => 'Meta: Llama 3 70B (Great Open Source)',
-        ],
-        'content_models'   => [
-            'anthropic/claude-3-haiku' => 'Claude 3 Haiku (Fast & Cheap)',
-            'openai/gpt-4o' => 'GPT-4o (Highest Quality)',
-            'google/gemini-flash-1.5' => 'Google Gemini 1.5 Flash',
-        ],
-        'translation_models' => [
-            'anthropic/claude-3-haiku' => 'Fast (Claude 3 Haiku)',
-            'openai/gpt-4o' => 'High Quality (GPT-4o)',
-            'anthropic/claude-3-opus' => 'Highest Quality (Claude 3 Opus)',
-        ],
-    ];
-}
+        echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
+    }
+
+    public function get_settings() {
+        return [
+            // API Keys
+            'openrouter_key'   => get_option('atm_openrouter_api_key', ''),
+            'openai_key'       => get_option('atm_openai_api_key', ''),
+            'google_key'       => get_option('atm_google_api_key', ''),
+            'blockflow_key'    => get_option('atm_blockflow_api_key', ''),
+            'elevenlabs_key'   => get_option('atm_elevenlabs_api_key', ''),
+            'news_api_key'     => get_option('atm_news_api_key', ''),
+            'gnews_api_key'    => get_option('atm_gnews_api_key', ''),
+            'guardian_api_key' => get_option('atm_guardian_api_key', ''),
+            'scrapingant_key'  => get_option('atm_scrapingant_api_key', ''),
+            'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
+            'google_news_search_api_key' => get_option('atm_google_news_search_api_key', ''),
+            'google_news_cse_id' => get_option('atm_google_news_cse_id', ''),
+            'twitterapi_key' => get_option('atm_twitterapi_key', ''),
+
+            // Model Settings
+            'article_model'    => get_option('atm_article_model', 'openai/gpt-4o'),
+            'content_model'    => get_option('atm_content_model', 'anthropic/claude-3-haiku'), // FIX: Added missing content_model
+            'translation_model' => get_option('atm_translation_model', 'anthropic/claude-3-haiku'),
+
+            // Provider Settings
+            'audio_provider'   => get_option('atm_audio_provider', 'openai'), // FIX: Added missing audio_provider
+            'image_provider'   => get_option('atm_image_provider', 'openai'),
+            'flux_model'       => get_option('atm_flux_model', 'flux-1-schnell'),
+
+            // General Settings
+            'web_search_results' => get_option('atm_web_search_results', 5),
+            'theme_subtitle_key' => get_option('atm_theme_subtitle_key', ''),
+            'rss_feeds'        => get_option('atm_rss_feeds', ''),
+            'image_quality'    => get_option('atm_image_quality', 'hd'),
+            'image_size'       => get_option('atm_image_size', '1792x1024'),
+            'used_articles_cache_hours' => get_option('atm_used_articles_cache_hours', 48),
+
+            // Twitter Settings
+            'twitter_credible_sources' => get_option('atm_twitter_credible_sources', ''),
+            'twitter_min_followers' => get_option('atm_twitter_min_followers', 10000),
+
+            // Podcast Settings
+            'podcast_default_theme' => get_option('atm_podcast_default_theme', 'light'),
+            'podcast_content_model' => get_option('atm_podcast_content_model', 'anthropic/claude-3-haiku'),
+            'podcast_audio_provider' => get_option('atm_podcast_audio_provider', 'openai'),
+            'podcast_accent_color' => get_option('atm_podcast_accent_color', '#3b82f6'),
+            'podcast_gradient_end' => get_option('atm_podcast_gradient_end', '#7c3aed'),
+            'podcast_season_text' => get_option('atm_podcast_season_text', 'Season 1'),
+
+            // Light theme colors
+            'podcast_light_card_bg' => get_option('atm_podcast_light_card_bg', '#ffffff'),
+            'podcast_light_text' => get_option('atm_podcast_light_text', '#0f172a'),
+            'podcast_light_subtext' => get_option('atm_podcast_light_subtext', '#64748b'),
+            'podcast_light_rail_bg' => get_option('atm_podcast_light_rail_bg', '#e5e7eb'),
+            'podcast_light_ctrl_bg' => get_option('atm_podcast_light_ctrl_bg', '#f3f4f6'),
+            'podcast_light_playlist_bg' => get_option('atm_podcast_light_playlist_bg', '#f8fafc'),
+
+            // Dark theme colors
+            'podcast_dark_card_bg' => get_option('atm_podcast_dark_card_bg', '#0f172a'),
+            'podcast_dark_text' => get_option('atm_podcast_dark_text', '#e2e8f0'),
+            'podcast_dark_subtext' => get_option('atm_podcast_dark_subtext', '#94a3b8'),
+            'podcast_dark_rail_bg' => get_option('atm_podcast_dark_rail_bg', '#1f2937'),
+            'podcast_dark_ctrl_bg' => get_option('atm_podcast_dark_ctrl_bg', '#0b1220'),
+            'podcast_dark_playlist_bg' => get_option('atm_podcast_dark_playlist_bg', '#0b1220'),
+            
+            // Comments Generator settings
+            'comments_auto_on_publish'        => (bool) get_option('atm_comments_auto_on_publish', 0),
+            'comments_default_count'          => intval(get_option('atm_comments_default_count', 10)),
+            'comments_threaded'               => (bool) get_option('atm_comments_threaded', 1),
+            'comments_approve'                => (bool) get_option('atm_comments_approve', 0),
+            'comments_model'                  => get_option('atm_comments_model', ''),
+            'comments_randomize_window_days'  => intval(get_option('atm_comments_randomize_window_days', 3)),
+
+            // Model Arrays
+            'flux_models' => [
+                'flux-1-schnell'        => 'FLUX 1 Schnell',
+                'flux-1-dev'            => 'FLUX 1 Dev (Fast)',
+                'flux-pro'              => 'FLUX Pro',
+                'flux-pro-1.1'          => 'FLUX Pro 1.1',
+                'flux-pro-1.1-ultra'    => 'FLUX Pro 1.1 Ultra (High Quality)',
+                'flux-kontext-pro'      => 'FLUX Kontext Pro',
+                'flux-kontext-max'      => 'FLUX Kontext Max (Best Quality)',
+            ],
+            'article_models'   => [
+                'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
+                'anthropic/claude-3-opus' => 'Anthropic: Claude 3 Opus (Top-Tier Writing)',
+                'google/gemini-flash-1.5' => 'Google: Gemini 1.5 Flash (Fast & Capable)',
+                'meta-llama/llama-3-70b-instruct' => 'Meta: Llama 3 70B (Great Open Source)',
+            ],
+            'content_models'   => [
+                'anthropic/claude-3-haiku' => 'Claude 3 Haiku (Fast & Cheap)',
+                'openai/gpt-4o' => 'GPT-4o (Highest Quality)',
+                'google/gemini-flash-1.5' => 'Google Gemini 1.5 Flash',
+            ],
+            'translation_models' => [
+                'anthropic/claude-3-haiku' => 'Fast (Claude 3 Haiku)',
+                'openai/gpt-4o' => 'High Quality (GPT-4o)',
+                'anthropic/claude-3-opus' => 'Highest Quality (Claude 3 Opus)',
+            ],
+        ];
+    }
 
     
 
