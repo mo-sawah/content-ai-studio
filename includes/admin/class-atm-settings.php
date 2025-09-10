@@ -7,6 +7,10 @@ if (!defined('ABSPATH')) {
 
 class ATM_Settings {
 
+    public function __construct() {
+        add_action('admin_init', array($this, 'add_humanization_tab'));
+    }
+
     public function add_humanization_tab() {
         add_settings_section(
             'atm_humanization_section',
