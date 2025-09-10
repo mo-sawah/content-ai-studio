@@ -500,7 +500,7 @@ class ATM_API {
     /**
      * Generate article from a specific news source
      */
-    public static function generate_article_from_news_source($source_url, $source_title, $source_snippet, $source_date, $source_domain) {
+    public static function generate_article_from_news_source($source_url, $source_title, $source_snippet, $source_date, $source_domain, $article_language = 'English') {
         // First, try to get full article content
         $full_content = '';
         try {
@@ -515,15 +515,16 @@ class ATM_API {
             $full_content = $source_snippet;
         }
 
-        $system_prompt = 'You are a professional news reporter and editor. Using the following source material, write a clear, engaging, and well-structured news article in English. **Use your web search ability to verify the information and add any missing context.**
+        $system_prompt = "You are a professional news reporter and editor. Using the following source material, write a clear, engaging, and well-structured news article in {$article_language}. **Use your web search ability to verify the information and add any missing context.**
 
             Follow these strict guidelines:
+            - **Language**: Write the entire article in {$article_language}. This is mandatory.
             - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
             - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
             - **Length**: Aim for 800–1500 words.
             - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
             - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
-            - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
+            - Do NOT include a final heading titled \"Conclusion\". The article should end naturally with the concluding paragraph itself.
 
             **Link Formatting Rules:**
             - When including external links, NEVER use the website URL as the anchor text
@@ -531,25 +532,25 @@ class ATM_API {
             - Use ONLY 1-3 descriptive words as anchor text
             - Example: [Reuters](https://reuters.com/actual-article-url) reported that...
             - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
-            - Do NOT use generic phrases like "click here", "read more", or "this article" as anchor text
+            - Do NOT use generic phrases like \"click here\", \"read more\", or \"this article\" as anchor text
             - Anchor text should be relevant keywords from the article topic
             - Keep anchor text extremely concise (maximum 2 words)
             - Make links feel natural within the sentence flow
 
             **Final Output Format:**
             Your entire output MUST be a single, valid JSON object with three keys:
-            1. "title": A clear and compelling news headline in {$article_language}, written in the style of a professional news outlet. It must be concise, factual, and highlight the most newsworthy element of the story.
-            2. "subheadline": A brief, one-sentence subheadline that expands on the main headline, written in {$article_language}.
-            3. "content": A complete news article in {$article_language}, formatted using Markdown. The article must follow professional journalistic style: clear, objective, and factual. Structure it with an engaging lead paragraph, followed by supporting details, quotes, and context. Use H2 (##) for section headings, avoid H1.
+            1. \"title\": A clear and compelling news headline in {$article_language}, written in the style of a professional news outlet. It must be concise, factual, and highlight the most newsworthy element of the story.
+            2. \"subheadline\": A brief, one-sentence subheadline that expands on the main headline, written in {$article_language}.
+            3. \"content\": A complete news article in {$article_language}, formatted using Markdown. The article must follow professional journalistic style: clear, objective, and factual. Structure it with an engaging lead paragraph, followed by supporting details, quotes, and context. Use H2 (##) for section headings, avoid H1.
 
             **SOURCE INFORMATION:**
-            Original Title: ' . $source_title . '
-            Source: ' . $source_domain . '
-            Date: ' . $source_date . '
-            URL: ' . $source_url . '
+            Original Title: {$source_title}
+            Source: {$source_domain}
+            Date: {$source_date}
+            URL: {$source_url}
 
             **SOURCE CONTENT:**
-            ' . $full_content;
+            {$full_content}";
 
         $model = get_option('atm_article_model', 'openai/gpt-4o');
         
