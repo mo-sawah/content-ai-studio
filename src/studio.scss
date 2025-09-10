@@ -4441,6 +4441,15 @@ textarea:focus {
   font-weight: 700;
 }
 
+/* Tailwind-like utility variables for violet-500 */
+.from-violet-500 {
+  --tw-gradient-from: #8b5cf6 !important;
+  --tw-gradient-to: rgb(139 92 246 / 0) !important;
+  --tw-gradient-stops:
+    var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+/* Gradient utility: from-violet-500 to-fuchsia-600 (135deg to match your example) */
 .atm-action-icon.bg-gradient-to-r.from-violet-500.to-fuchsia-600 {
-  background: linear-gradient(135deg, #8b5cf6 0%, #c026d3 100%);
+  background: linear-gradient(135deg, #8b5cf6 0%, #c026d3 100%) !important;
 }
