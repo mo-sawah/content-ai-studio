@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 class ATM_Twitter_API {
     
     /**
-     * Search Twitter for credible news tweets
+     * Search Twitter for credible news tweets using TwitterAPI.io
      */
     public static function search_twitter_news($keyword, $filters = []) {
         $api_key = get_option('atm_twitterapi_key');
@@ -16,47 +16,56 @@ class ATM_Twitter_API {
             throw new Exception('TwitterAPI.io key not configured. Please add your API key in the settings.');
         }
         
-        // Build search query with credibility filters
-        $search_query = self::build_credible_search_query($keyword, $filters);
+        // Use TwitterAPI.io advanced search endpoint
+        $url = 'https://api.twitterapi.io/twitter/tweet/advanced_search';
         
-        $url = 'https://api.twitterapi.io/v1/search/tweets';
+        // Build search query
+        $search_query = self::build_search_query($keyword, $filters);
+        
         $params = [
             'query' => $search_query,
-            'max_results' => $filters['max_results'] ?? 20,
-            'tweet_mode' => 'extended',
-            'result_type' => 'recent', // or 'popular' for trending
-            'include_rts' => false, // Exclude retweets for original content
+            'queryType' => 'Latest', // or 'Top' for most popular
+            'maxResults' => min(100, $filters['max_results'] ?? 20), // TwitterAPI.io supports up to 100
         ];
         
         $response = wp_remote_get($url . '?' . http_build_query($params), [
             'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
+                'x-api-key' => $api_key, // TwitterAPI.io uses x-api-key header
                 'Content-Type' => 'application/json'
             ],
             'timeout' => 30
         ]);
         
         if (is_wp_error($response)) {
-            throw new Exception('Failed to connect to TwitterAPI: ' . $response->get_error_message());
+            throw new Exception('Failed to connect to TwitterAPI.io: ' . $response->get_error_message());
         }
         
         $response_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        
         if ($response_code !== 200) {
-            $body = wp_remote_retrieve_body($response);
             $error_data = json_decode($body, true);
-            $error_message = isset($error_data['error']['message']) ? $error_data['error']['message'] : 'Unknown API error';
-            throw new Exception('TwitterAPI Error (' . $response_code . '): ' . $error_message);
+            $error_message = 'TwitterAPI.io Error (' . $response_code . ')';
+            
+            if (isset($error_data['error'])) {
+                $error_message .= ': ' . $error_data['error'];
+            } elseif (isset($error_data['message'])) {
+                $error_message .= ': ' . $error_data['message'];
+            } else {
+                $error_message .= ': ' . $body;
+            }
+            
+            throw new Exception($error_message);
         }
         
-        $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
         
-        if (!isset($data['data'])) {
+        if (!isset($data['tweets']) || !is_array($data['tweets'])) {
             return ['results' => [], 'total' => 0];
         }
         
         // Process and filter results for credibility
-        $filtered_tweets = self::filter_credible_tweets($data['data'], $filters);
+        $filtered_tweets = self::filter_credible_tweets($data['tweets'], $filters);
         
         return [
             'results' => $filtered_tweets,
@@ -66,40 +75,43 @@ class ATM_Twitter_API {
     }
     
     /**
-     * Build search query targeting credible sources
+     * Build search query for TwitterAPI.io
      */
-    private static function build_credible_search_query($keyword, $filters) {
+    private static function build_search_query($keyword, $filters) {
         $query_parts = [$keyword];
         
-        // Add verified account filter
-        if ($filters['verified_only'] ?? true) {
+        // Add verified account filter if requested
+        if ($filters['verified_only'] ?? false) {
             $query_parts[] = 'filter:verified';
         }
         
-        // Add credible sources filter
-        $credible_sources = self::get_credible_sources_array();
-        if (!empty($credible_sources) && ($filters['credible_sources_only'] ?? true)) {
-            $sources_query = '(' . implode(' OR ', array_map(function($source) {
-                return 'from:' . ltrim($source, '@');
-            }, array_slice($credible_sources, 0, 10))) . ')'; // Limit to avoid query length issues
-            
-            $query_parts[] = $sources_query;
+        // Add credible sources if specified
+        if ($filters['credible_sources_only'] ?? false) {
+            $credible_sources = self::get_credible_sources_array();
+            if (!empty($credible_sources)) {
+                // Limit to first 5 sources to avoid too long query
+                $sources_query = '(' . implode(' OR ', array_map(function($source) {
+                    return 'from:' . ltrim($source, '@');
+                }, array_slice($credible_sources, 0, 5))) . ')';
+                
+                $query_parts[] = $sources_query;
+            }
         }
         
-        // Add language filter
+        // Exclude replies and retweets for cleaner content
+        $query_parts[] = '-filter:replies';
+        $query_parts[] = '-filter:retweets';
+        
+        // Add language filter (TwitterAPI.io format)
         if (!empty($filters['language'])) {
             $query_parts[] = 'lang:' . $filters['language'];
         }
-        
-        // Exclude replies and quotes for cleaner content
-        $query_parts[] = '-filter:replies';
-        $query_parts[] = '-filter:quotes';
         
         return implode(' ', $query_parts);
     }
     
     /**
-     * Filter tweets for credibility and relevance
+     * Filter tweets for credibility and relevance using TwitterAPI.io data structure
      */
     private static function filter_credible_tweets($tweets, $filters) {
         $filtered = [];
@@ -107,46 +119,57 @@ class ATM_Twitter_API {
         $credible_sources = self::get_credible_sources_array();
         
         foreach ($tweets as $tweet) {
-            // Skip if user doesn't meet follower threshold
-            if ($tweet['user']['followers_count'] < $min_followers) {
+            // Skip if no user data
+            if (!isset($tweet['user'])) {
                 continue;
             }
             
-            // Prioritize tweets from known credible sources
-            $username = '@' . $tweet['user']['screen_name'];
+            $user = $tweet['user'];
+            
+            // Skip if user doesn't meet follower threshold
+            if (($user['followers_count'] ?? 0) < $min_followers) {
+                continue;
+            }
+            
+            // Check for credible sources
+            $username = '@' . ($user['screen_name'] ?? $user['username'] ?? '');
             $is_credible_source = in_array($username, $credible_sources, true);
             
             // Skip non-credible sources if filter is enabled
-            if (($filters['credible_sources_only'] ?? true) && !$is_credible_source) {
+            if (($filters['credible_sources_only'] ?? false) && !$is_credible_source) {
                 continue;
             }
             
-            // Check for news indicators in the tweet
-            if (!self::appears_to_be_news($tweet['full_text'])) {
+            // Check for news indicators
+            $tweet_text = $tweet['text'] ?? $tweet['full_text'] ?? '';
+            if (!self::appears_to_be_news($tweet_text)) {
                 continue;
             }
+            
+            // Extract metrics safely
+            $metrics = [
+                'retweets' => $tweet['retweet_count'] ?? $tweet['public_metrics']['retweet_count'] ?? 0,
+                'likes' => $tweet['favorite_count'] ?? $tweet['public_metrics']['like_count'] ?? 0,
+                'replies' => $tweet['reply_count'] ?? $tweet['public_metrics']['reply_count'] ?? 0
+            ];
             
             $filtered[] = [
-                'id' => $tweet['id_str'],
-                'text' => $tweet['full_text'],
+                'id' => $tweet['id_str'] ?? $tweet['id'] ?? uniqid(),
+                'text' => $tweet_text,
                 'user' => [
-                    'name' => $tweet['user']['name'],
-                    'screen_name' => $tweet['user']['screen_name'],
-                    'verified' => $tweet['user']['verified'],
-                    'followers' => $tweet['user']['followers_count'],
-                    'profile_image' => $tweet['user']['profile_image_url_https']
+                    'name' => $user['name'] ?? 'Unknown User',
+                    'screen_name' => $user['screen_name'] ?? $user['username'] ?? 'unknown',
+                    'verified' => $user['verified'] ?? false,
+                    'followers' => $user['followers_count'] ?? 0,
+                    'profile_image' => $user['profile_image_url_https'] ?? $user['profile_image_url'] ?? 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
                 ],
-                'created_at' => $tweet['created_at'],
-                'formatted_date' => date('M j, Y g:i A', strtotime($tweet['created_at'])),
-                'metrics' => [
-                    'retweets' => $tweet['retweet_count'],
-                    'likes' => $tweet['favorite_count'],
-                    'replies' => $tweet['reply_count'] ?? 0
-                ],
-                'urls' => self::extract_urls($tweet),
-                'media' => self::extract_media($tweet),
+                'created_at' => $tweet['created_at'] ?? date('c'),
+                'formatted_date' => self::format_twitter_date($tweet['created_at'] ?? ''),
+                'metrics' => $metrics,
+                'urls' => self::extract_urls_from_tweet($tweet),
+                'media' => self::extract_media_from_tweet($tweet),
                 'is_credible_source' => $is_credible_source,
-                'credibility_score' => self::calculate_credibility_score($tweet, $is_credible_source)
+                'credibility_score' => self::calculate_credibility_score_new($tweet, $user, $is_credible_source)
             ];
         }
         
@@ -163,6 +186,22 @@ class ATM_Twitter_API {
     }
     
     /**
+     * Format Twitter date to readable format
+     */
+    private static function format_twitter_date($date_string) {
+        if (empty($date_string)) {
+            return date('M j, Y g:i A');
+        }
+        
+        $timestamp = strtotime($date_string);
+        if ($timestamp === false) {
+            return date('M j, Y g:i A');
+        }
+        
+        return date('M j, Y g:i A', $timestamp);
+    }
+    
+    /**
      * Check if tweet appears to be news content
      */
     private static function appears_to_be_news($text) {
@@ -170,10 +209,15 @@ class ATM_Twitter_API {
             // News language patterns
             'breaking', 'reports', 'according to', 'sources say', 'confirmed',
             'announced', 'statement', 'exclusive', 'developing', 'update',
+            'just in', 'alert', 'happening now', 'live', 'urgent',
             // Time indicators
             'today', 'yesterday', 'this morning', 'tonight', 'now',
+            'earlier today', 'moments ago', 'just now',
             // Authority indicators  
-            'officials', 'spokesperson', 'investigation', 'study shows'
+            'officials', 'spokesperson', 'investigation', 'study shows',
+            'government', 'police', 'court', 'judge', 'president',
+            // News formats
+            'reuters', 'ap news', 'associated press', 'breaking news'
         ];
         
         $text_lower = strtolower($text);
@@ -188,13 +232,21 @@ class ATM_Twitter_API {
             return true;
         }
         
+        // Check for news hashtags
+        $news_hashtags = ['#breaking', '#news', '#update', '#alert', '#live'];
+        foreach ($news_hashtags as $hashtag) {
+            if (stripos($text, $hashtag) !== false) {
+                return true;
+            }
+        }
+        
         return false;
     }
     
     /**
-     * Calculate credibility score based on multiple factors
+     * Calculate credibility score with new data structure
      */
-    private static function calculate_credibility_score($tweet, $is_credible_source) {
+    private static function calculate_credibility_score_new($tweet, $user, $is_credible_source) {
         $score = 0;
         
         // Base score for credible sources
@@ -203,13 +255,15 @@ class ATM_Twitter_API {
         }
         
         // Verification bonus
-        if ($tweet['user']['verified']) {
+        if ($user['verified'] ?? false) {
             $score += 20;
         }
         
         // Follower count factor (logarithmic scaling)
-        $followers = $tweet['user']['followers_count'];
-        if ($followers > 100000) {
+        $followers = $user['followers_count'] ?? 0;
+        if ($followers > 1000000) {
+            $score += 20;
+        } elseif ($followers > 100000) {
             $score += 15;
         } elseif ($followers > 50000) {
             $score += 10;
@@ -218,15 +272,21 @@ class ATM_Twitter_API {
         }
         
         // Engagement factor
-        $engagement = $tweet['retweet_count'] + $tweet['favorite_count'];
+        $retweets = $tweet['retweet_count'] ?? $tweet['public_metrics']['retweet_count'] ?? 0;
+        $likes = $tweet['favorite_count'] ?? $tweet['public_metrics']['like_count'] ?? 0;
+        $engagement = $retweets + $likes;
+        
         if ($engagement > 1000) {
             $score += 10;
         } elseif ($engagement > 100) {
             $score += 5;
+        } elseif ($engagement > 10) {
+            $score += 2;
         }
         
         // URL presence (news often includes sources)
-        if (preg_match('/https?:\/\/[^\s]+/', $tweet['full_text'])) {
+        $text = $tweet['text'] ?? $tweet['full_text'] ?? '';
+        if (preg_match('/https?:\/\/[^\s]+/', $text)) {
             $score += 5;
         }
         
@@ -246,36 +306,61 @@ class ATM_Twitter_API {
     }
     
     /**
-     * Extract URLs from tweet entities
+     * Extract URLs from tweet with TwitterAPI.io format
      */
-    private static function extract_urls($tweet) {
+    private static function extract_urls_from_tweet($tweet) {
         $urls = [];
+        
+        // Check entities structure
         if (isset($tweet['entities']['urls'])) {
             foreach ($tweet['entities']['urls'] as $url) {
                 $urls[] = [
-                    'url' => $url['url'],
-                    'expanded_url' => $url['expanded_url'],
-                    'display_url' => $url['display_url']
+                    'url' => $url['url'] ?? '',
+                    'expanded_url' => $url['expanded_url'] ?? $url['url'] ?? '',
+                    'display_url' => $url['display_url'] ?? $url['url'] ?? ''
                 ];
             }
         }
+        
+        // Fallback: extract URLs from text
+        if (empty($urls)) {
+            $text = $tweet['text'] ?? $tweet['full_text'] ?? '';
+            preg_match_all('/https?:\/\/[^\s]+/', $text, $matches);
+            foreach ($matches[0] as $url) {
+                $urls[] = [
+                    'url' => $url,
+                    'expanded_url' => $url,
+                    'display_url' => $url
+                ];
+            }
+        }
+        
         return $urls;
     }
     
     /**
-     * Extract media from tweet entities
+     * Extract media from tweet with TwitterAPI.io format
      */
-    private static function extract_media($tweet) {
+    private static function extract_media_from_tweet($tweet) {
         $media = [];
+        
+        // Check entities structure for media
         if (isset($tweet['entities']['media'])) {
             foreach ($tweet['entities']['media'] as $item) {
                 $media[] = [
-                    'type' => $item['type'],
-                    'url' => $item['media_url_https'],
-                    'sizes' => $item['sizes']
+                    'type' => $item['type'] ?? 'photo',
+                    'url' => $item['media_url_https'] ?? $item['media_url'] ?? '',
+                    'sizes' => $item['sizes'] ?? []
                 ];
             }
         }
+        
+        // Check attachments structure (TwitterAPI v2 format)
+        if (isset($tweet['attachments']['media_keys'])) {
+            // This would require additional API call to get media details
+            // For now, we'll skip this
+        }
+        
         return $media;
     }
     
@@ -288,7 +373,7 @@ class ATM_Twitter_API {
         }
         
         // Prepare tweet content for analysis
-        $tweets_content = "TWITTER NEWS SOURCES:\n\n";
+        $tweets_content = "TWITTER/X NEWS SOURCES:\n\n";
         
         foreach ($selected_tweets as $index => $tweet) {
             $tweets_content .= "TWEET " . ($index + 1) . ":\n";
@@ -298,9 +383,13 @@ class ATM_Twitter_API {
             $tweets_content .= "Posted: {$tweet['formatted_date']}\n";
             $tweets_content .= "Content: {$tweet['text']}\n";
             if (!empty($tweet['urls'])) {
-                $tweets_content .= "Links: " . implode(', ', array_column($tweet['urls'], 'expanded_url')) . "\n";
+                $urls_list = array_map(function($url) {
+                    return $url['expanded_url'];
+                }, $tweet['urls']);
+                $tweets_content .= "Links: " . implode(', ', $urls_list) . "\n";
             }
             $tweets_content .= "Engagement: {$tweet['metrics']['retweets']} retweets, {$tweet['metrics']['likes']} likes\n";
+            $tweets_content .= "Credibility Score: {$tweet['credibility_score']}/100\n";
             $tweets_content .= "---\n";
         }
         
@@ -308,16 +397,16 @@ class ATM_Twitter_API {
 
         **CRITICAL INSTRUCTIONS:**
         1. **Language**: Write the entire article in {$article_language}. This is mandatory.
-        2. **Analysis**: Synthesize information from multiple tweets to identify the main story
+        2. **Analysis**: Synthesize information from multiple tweets to identify the main story and verify facts
         3. **Verification**: Use your web search ability to verify claims and add context from reliable news sources
-        4. **Attribution**: Properly attribute information to the Twitter sources while maintaining journalistic standards
+        4. **Attribution**: Properly attribute information to Twitter sources while maintaining journalistic standards
         
         **ARTICLE REQUIREMENTS:**
         - Write a 800-1200 word news article
         - Lead with the most important/breaking information
         - Include direct quotes from tweets where appropriate
         - Verify information through additional research
-        - Provide context and background
+        - Provide context and background from reliable sources
         - End with implications or what comes next
         
         **FORMATTING RULES:**
@@ -328,8 +417,15 @@ class ATM_Twitter_API {
         
         **SOCIAL MEDIA ATTRIBUTION:**
         - Format: \"According to a tweet from @username, ...\"
-        - Include follower count for context when relevant
+        - Include follower count for context when relevant: \"@username (2.5M followers)\"
         - Note verification status of major sources
+        - Always attribute information properly
+        
+        **LINK FORMATTING:**
+        - When including external links, use descriptive anchor text
+        - Example: [Reuters](https://reuters.com/specific-article) reported that...
+        - Do NOT use URLs as anchor text
+        - Keep anchor text concise (1-3 words)
         
         **OUTPUT FORMAT (JSON):**
         {
@@ -355,7 +451,7 @@ class ATM_Twitter_API {
         $result = json_decode(trim($raw_response), true);
         if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
             error_log('ATM Plugin - Invalid JSON from Twitter article generation: ' . $raw_response);
-            throw new Exception('Invalid response from article generation API');
+            throw new Exception('Invalid response from article generation API. Please try again.');
         }
         
         return [
