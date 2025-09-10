@@ -524,7 +524,8 @@ class ATM_API {
             - **Length**: Aim for 800–1500 words.
             - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
             - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
-            - Do NOT include a final heading titled \"Conclusion\". The article should end naturally with the concluding paragraph itself.
+            - **CRITICAL**: Do NOT include any final heading such as \"Conclusion\", \"Summary\", \"Final Thoughts\", \"In Summary\", \"To Conclude\", \"Wrapping Up\", \"Looking Ahead\", \"What's Next\", \"The Bottom Line\", \"Key Takeaways\", or any similar conclusory heading. The article should end naturally with the concluding paragraph itself, without any heading above it.
+            - End the article with a natural concluding paragraph that flows seamlessly from the body content, but do NOT put any heading before this final paragraph.
 
             **Link Formatting Rules:**
             - When including external links, NEVER use the website URL as the anchor text
@@ -541,7 +542,7 @@ class ATM_API {
             Your entire output MUST be a single, valid JSON object with three keys:
             1. \"title\": A clear and compelling news headline in {$article_language}, written in the style of a professional news outlet. It must be concise, factual, and highlight the most newsworthy element of the story.
             2. \"subheadline\": A brief, one-sentence subheadline that expands on the main headline, written in {$article_language}.
-            3. \"content\": A complete news article in {$article_language}, formatted using Markdown. The article must follow professional journalistic style: clear, objective, and factual. Structure it with an engaging lead paragraph, followed by supporting details, quotes, and context. Use H2 (##) for section headings, avoid H1.
+            3. \"content\": A complete news article in {$article_language}, formatted using Markdown. The article must follow professional journalistic style: clear, objective, and factual. Structure it with an engaging lead paragraph, followed by supporting details, quotes, and context. Use H2 (##) for section headings, avoid H1. REMEMBER: NO conclusion headings whatsoever - end with a natural concluding paragraph that has no heading above it.
 
             **SOURCE INFORMATION:**
             Original Title: {$source_title}
