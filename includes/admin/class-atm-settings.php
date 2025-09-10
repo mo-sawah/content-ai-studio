@@ -503,6 +503,31 @@ class ATM_Settings {
         }
         ?>
     </div>
+    <script>
+    jQuery(document).ready(function($) {
+        // Handle tab clicks
+        $('.nav-tab-wrapper .nav-tab').on('click', function(e) {
+            e.preventDefault();
+            
+            // Get the target tab from href
+            const url = new URL(this.href);
+            const targetTab = url.searchParams.get('tab') || 'general';
+            
+            // Update URL without page reload
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('tab', targetTab);
+            window.history.pushState({}, '', currentUrl);
+            
+            // Navigate to the new tab
+            window.location.href = this.href;
+        });
+        
+        // Handle browser back/forward buttons
+        window.addEventListener('popstate', function(e) {
+            window.location.reload();
+        });
+    });
+    </script>
     <?php
 }
 
