@@ -1743,6 +1743,17 @@ body.wp-admin .atm-content-body {
   --tw-gradient-to: #16a34a !important;
 }
 
+.from-slate-800 {
+  --tw-gradient-from: #1e293b !important;
+  --tw-gradient-to: rgb(30 41 59 / 0) !important;
+  --tw-gradient-stops:
+    var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.to-black {
+  --tw-gradient-to: #000000 !important;
+}
+
 /* --- NEW: Add the missing yellow/amber gradient definitions --- */
 .from-yellow-500 {
   --tw-gradient-from: #f59e0b !important;
@@ -1758,6 +1769,10 @@ body.wp-admin .atm-content-body {
 /* Apply the actual gradients - fallback method */
 .atm-action-icon.bg-gradient-to-r.from-blue-500.to-purple-600 {
   background: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%) !important;
+}
+
+.atm-action-icon.bg-gradient-to-r.from-slate-800.to-black {
+  background: linear-gradient(to right, #1e293b 0%, #000000 100%) !important;
 }
 
 .atm-action-icon.bg-gradient-to-r.from-green-500.to-teal-600 {

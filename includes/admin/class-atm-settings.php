@@ -421,8 +421,6 @@ class ATM_Settings {
                 </div>
             </div>
 
-            // Add this new card after the existing settings cards in render_settings_page()
-
             <div class="atm-settings-card">
                 <h2>🎙️ Podcast Player Settings</h2>
                 <table class="form-table">
