@@ -359,6 +359,7 @@ class ATM_Main {
             'includes/admin/class-atm-settings.php',
             'includes/class-atm-ajax.php',
             'includes/class-atm-api.php',
+            'includes/class-atm-twitter-api.php',  // ADD THIS LINE
             'includes/class-atm-theme-subtitle-manager.php',
             'includes/class-atm-frontend.php',
             'includes/class-atm-licensing.php',

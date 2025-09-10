@@ -1,3 +1,10 @@
+<?php
+// /includes/class-atm-twitter-api.php
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class ATM_Twitter_API {
     
     /**
@@ -6,7 +13,7 @@ class ATM_Twitter_API {
     public static function search_twitter_news($keyword, $filters = []) {
         $api_key = get_option('atm_twitterapi_key');
         if (empty($api_key)) {
-            throw new Exception('TwitterAPI.io key not configured');
+            throw new Exception('TwitterAPI.io key not configured. Please add your API key in the settings.');
         }
         
         // Build search query with credibility filters
@@ -31,6 +38,14 @@ class ATM_Twitter_API {
         
         if (is_wp_error($response)) {
             throw new Exception('Failed to connect to TwitterAPI: ' . $response->get_error_message());
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        if ($response_code !== 200) {
+            $body = wp_remote_retrieve_body($response);
+            $error_data = json_decode($body, true);
+            $error_message = isset($error_data['error']['message']) ? $error_data['error']['message'] : 'Unknown API error';
+            throw new Exception('TwitterAPI Error (' . $response_code . '): ' . $error_message);
         }
         
         $body = wp_remote_retrieve_body($response);
@@ -223,6 +238,10 @@ class ATM_Twitter_API {
      */
     private static function get_credible_sources_array() {
         $sources_string = get_option('atm_twitter_credible_sources', '');
+        if (empty($sources_string)) {
+            // Default credible sources if none configured
+            $sources_string = "@CNN\n@BBCNews\n@Reuters\n@AP\n@nytimes\n@washingtonpost\n@guardian\n@WSJ\n@Bloomberg\n@NPR\n@ABCNews\n@CBSNews\n@NBCNews\n@FoxNews\n@USAToday\n@TIME\n@Newsweek\n@TheEconomist\n@politico\n@MSNBC";
+        }
         return array_filter(array_map('trim', explode("\n", $sources_string)));
     }
     
@@ -335,7 +354,8 @@ class ATM_Twitter_API {
         // Parse and validate response
         $result = json_decode(trim($raw_response), true);
         if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
-            throw new Exception('Invalid response from article generation');
+            error_log('ATM Plugin - Invalid JSON from Twitter article generation: ' . $raw_response);
+            throw new Exception('Invalid response from article generation API');
         }
         
         return [

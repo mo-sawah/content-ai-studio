@@ -557,14 +557,14 @@ class ATM_Settings {
                         <th scope="row">TwitterAPI.io Key</th>
                         <td>
                             <input type="password" name="atm_twitterapi_key" value="<?php echo esc_attr($options['twitterapi_key']); ?>" class="regular-text" />
-                            <p class="description">Get your API key from <a href="https://twitterapi.io/" target="_blank">TwitterAPI.io</a>. Cost: $0.15 per 1,000 tweets.</p>
+                            <p class="description">Required for Twitter/X news search. Get a free key from <a href="https://twitterapi.io/" target="_blank">TwitterAPI.io</a>.</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Credible News Sources</th>
                         <td>
                             <textarea name="atm_twitter_credible_sources" rows="8" style="width:100%;"><?php echo esc_textarea($options['twitter_credible_sources']); ?></textarea>
-                            <p class="description">List Twitter handles of credible news sources, one per line (e.g., @BBC, @CNN, @Reuters). These will be prioritized in search results.</p>
+                            <p class="description">Add one Twitter/X handle per line (e.g., @CNN, @BBCNews). These accounts will be prioritized in search results. Leave empty to use default news sources.</p>
                         </td>
                     </tr>
                     <tr>
@@ -577,17 +577,7 @@ class ATM_Settings {
                                 <option value="100000" <?php selected($options['twitter_min_followers'], '100000'); ?>>100,000+ followers</option>
                                 <option value="1000000" <?php selected($options['twitter_min_followers'], '1000000'); ?>>1,000,000+ followers</option>
                             </select>
-                            <p class="description">Minimum follower count required for tweets to appear in search results.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Verified Only by Default</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="atm_twitter_verified_only" value="1" <?php checked($options['twitter_verified_only'], 1); ?> />
-                                Only search verified accounts by default
-                            </label>
-                            <p class="description">When enabled, searches will default to verified accounts only for higher credibility.</p>
+                            <p class="description">Default minimum follower count for Twitter searches.</p>
                         </td>
                     </tr>
                 </table>
@@ -768,7 +758,7 @@ class ATM_Settings {
 
         // TWitter
         'twitterapi_key' => get_option('atm_twitterapi_key', ''),
-        'twitter_credible_sources' => get_option('atm_twitter_credible_sources', $this->get_default_credible_sources()),
+        'twitter_credible_sources' => get_option('atm_twitter_credible_sources', ''),
         'twitter_min_followers' => get_option('atm_twitter_min_followers', 10000),
         'twitter_verified_only' => get_option('atm_twitter_verified_only', 1),
 
