@@ -16,18 +16,13 @@ function NewsGenerator({ setActiveView }) {
       description: "Search Google News and generate articles from sources",
       icon: (
         <svg
-          fill="none"
-          stroke="currentColor"
+          fill="currentColor"
           viewBox="0 0 24 24"
           width="20"
           height="20"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-          />
+          <path d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.75 8.36,4.73 12.19,4.73C14.76,4.73 16.04,5.72 17.04,6.58L19.34,4.32C17.23,2.5 14.86,1.5 12.2,1.5C6.42,1.5 2.03,5.82 2.03,12C2.03,18.18 6.42,22.5 12.2,22.5C17.6,22.5 21.95,18.63 21.95,12.31C21.95,11.76 21.64,11.1 21.35,11.1Z" />
         </svg>
       ),
       gradient: "from-indigo-500 to-blue-600",
