@@ -1,5 +1,11 @@
-// src/components/HumanizeComponent.js - Complete Implementation
+// src/components/HumanizeComponent.js - Updated with requested fixes
+// - Advanced button removed; settings always visible
+// - Three checkboxes converted to toggles and shown on one line
+// - Labels in dark settings panel forced to white
+// - Disabled/unclickable buttons no longer show spinners (spinner only on main CTA)
+
 import { useState, useEffect } from "@wordpress/element";
+import { ToggleControl } from "@wordpress/components";
 
 function HumanizeComponent({ setActiveView }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +28,6 @@ function HumanizeComponent({ setActiveView }) {
     processingTime: 0,
   });
   const [progress, setProgress] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Provider options
   const providers = {
@@ -185,6 +190,11 @@ function HumanizeComponent({ setActiveView }) {
         setProgress(
           `✅ Content successfully humanized${creditsText}${timeText}!`
         );
+
+        if (settings.autoReplace) {
+          // If auto-replace is enabled, optionally replace immediately
+          await handleReplaceContent(true);
+        }
       } else {
         throw new Error(data.data || "Humanization failed");
       }
@@ -198,9 +208,9 @@ function HumanizeComponent({ setActiveView }) {
     }
   };
 
-  const handleReplaceContent = async () => {
+  const handleReplaceContent = async (silent = false) => {
     if (!humanizedContent) {
-      alert("No humanized content available to replace.");
+      if (!silent) alert("No humanized content available to replace.");
       return;
     }
 
@@ -214,14 +224,15 @@ function HumanizeComponent({ setActiveView }) {
         throw new Error("No editor found to replace content");
       }
 
-      alert("✅ Content successfully replaced in editor!");
+      if (!silent) alert("✅ Content successfully replaced in editor!");
 
       if (settings.autoReplace) {
         setActiveView("hub");
       }
     } catch (error) {
       console.error("Content replacement error:", error);
-      alert("❌ Failed to replace content in editor: " + error.message);
+      if (!silent)
+        alert("❌ Failed to replace content in editor: " + error.message);
     }
   };
 
@@ -390,7 +401,9 @@ function HumanizeComponent({ setActiveView }) {
           {Object.entries(providers).map(([key, label]) => (
             <div
               key={key}
-              className={`atm-provider-card ${settings.provider === key ? "active" : ""}`}
+              className={`atm-provider-card ${
+                settings.provider === key ? "active" : ""
+              }`}
               onClick={() =>
                 setSettings((prev) => ({ ...prev, provider: key }))
               }
@@ -452,22 +465,15 @@ function HumanizeComponent({ setActiveView }) {
         </div>
       </div>
 
-      {/* Settings Panel */}
+      {/* Settings Panel (always open; Advanced button removed) */}
       <div className="atm-settings-panel">
         <div className="settings-header">
-          <h3>Humanization Settings</h3>
-          <button
-            type="button"
-            className="atm-btn atm-btn-secondary atm-btn-small"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
-            {showAdvanced ? "🔧 Hide Advanced" : "⚙️ Advanced Settings"}
-          </button>
+          <h3 style={{ color: "#fff" }}>Humanization Settings</h3>
         </div>
 
         <div className="atm-settings-grid">
           <div className="atm-setting-group">
-            <label>Writing Tone:</label>
+            <label style={{ color: "#fff" }}>Writing Tone:</label>
             <select
               value={settings.tone}
               onChange={(e) =>
@@ -482,13 +488,14 @@ function HumanizeComponent({ setActiveView }) {
               ))}
             </select>
             <p className="setting-description">
-              Choose the writing style that best fits your content's purpose.
+              Choose the writing style that best fits your content&apos;s
+              purpose.
             </p>
           </div>
 
           {settings.provider === "openrouter" && (
             <div className="atm-setting-group">
-              <label>AI Model:</label>
+              <label style={{ color: "#fff" }}>AI Model:</label>
               <select
                 value={settings.model}
                 onChange={(e) =>
@@ -513,7 +520,7 @@ function HumanizeComponent({ setActiveView }) {
             settings.provider === "combo") && (
             <>
               <div className="atm-setting-group">
-                <label>Quality Mode:</label>
+                <label style={{ color: "#fff" }}>Quality Mode:</label>
                 <select
                   value={settings.mode}
                   onChange={(e) =>
@@ -533,78 +540,63 @@ function HumanizeComponent({ setActiveView }) {
                   Higher quality takes longer but produces better humanization.
                 </p>
               </div>
+            </>
+          )}
+        </div>
 
-              <div className="atm-setting-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={settings.businessMode}
-                    onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        businessMode: e.target.checked,
-                      }))
-                    }
-                    disabled={isLoading}
-                  />
-                  <span className="checkmark"></span>
+        {/* Three toggles in one row */}
+        <div
+          className="atm-advanced-toggles"
+          style={{
+            display: "flex",
+            gap: "16px",
+            alignItems: "center",
+            marginTop: "8px",
+            flexWrap: "nowrap",
+          }}
+        >
+          {(settings.provider === "stealthgpt" ||
+            settings.provider === "combo") && (
+            <ToggleControl
+              className="atm-toggle"
+              label={
+                <span style={{ color: "#fff" }}>
                   Use Enhanced Model (10x more powerful, 3x cost)
-                </label>
-                <p className="setting-description">
-                  The enhanced model provides significantly better
-                  undetectability but costs more credits.
-                </p>
-              </div>
-            </>
+                </span>
+              }
+              checked={!!settings.businessMode}
+              onChange={(value) =>
+                setSettings((prev) => ({ ...prev, businessMode: !!value }))
+              }
+              disabled={isLoading}
+            />
           )}
 
-          {showAdvanced && (
-            <>
-              <div className="atm-setting-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={settings.preserveFormatting}
-                    onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        preserveFormatting: e.target.checked,
-                      }))
-                    }
-                    disabled={isLoading}
-                  />
-                  <span className="checkmark"></span>
-                  Preserve HTML Formatting
-                </label>
-                <p className="setting-description">
-                  Maintain original formatting like headings, bold text, and
-                  paragraphs.
-                </p>
-              </div>
+          <ToggleControl
+            className="atm-toggle"
+            label={
+              <span style={{ color: "#fff" }}>Preserve HTML Formatting</span>
+            }
+            checked={!!settings.preserveFormatting}
+            onChange={(value) =>
+              setSettings((prev) => ({ ...prev, preserveFormatting: !!value }))
+            }
+            disabled={isLoading}
+          />
 
-              <div className="atm-setting-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={settings.autoReplace}
-                    onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        autoReplace: e.target.checked,
-                      }))
-                    }
-                    disabled={isLoading}
-                  />
-                  <span className="checkmark"></span>
-                  Auto-replace in editor after humanization
-                </label>
-                <p className="setting-description">
-                  Automatically replace the editor content and return to the
-                  hub.
-                </p>
-              </div>
-            </>
-          )}
+          <ToggleControl
+            className="atm-toggle"
+            label={
+              <span style={{ color: "#fff" }}>
+                Auto-replace in editor after humanization
+              </span>
+            }
+            checked={!!settings.autoReplace}
+            onChange={(value) =>
+              setSettings((prev) => ({ ...prev, autoReplace: !!value }))
+            }
+            disabled={isLoading}
+          />
         </div>
       </div>
 
@@ -639,13 +631,13 @@ function HumanizeComponent({ setActiveView }) {
                 originalWords: countWords(e.target.value),
               }));
             }}
-            placeholder="Content will be loaded from the editor, or you can paste it here...
+            placeholder={`Content will be loaded from the editor, or you can paste it here...
 
 Example:
 - Blog posts from ChatGPT, Claude, or Gemini
 - AI-generated articles that need humanization
 - Content that was flagged by AI detectors
-- Any text that sounds too robotic or formal"
+- Any text that sounds too robotic or formal`}
             rows={14}
             className="atm-textarea"
             disabled={isLoading}
@@ -656,30 +648,29 @@ Example:
           <h3>✨ Humanized Content</h3>
           <div className="atm-content-actions">
             <button
-              onClick={handleReplaceContent}
+              onClick={() => handleReplaceContent(false)}
               disabled={!humanizedContent || isLoading}
-              className={`atm-btn atm-btn-primary ${!humanizedContent || isLoading ? "disabled" : ""}`}
+              className={`atm-btn atm-btn-primary ${
+                !humanizedContent || isLoading ? "disabled" : ""
+              }`}
             >
-              {isLoading ? (
-                <>
-                  <span className="spinner"></span>
-                  Processing...
-                </>
-              ) : (
-                "✅ Replace in Editor"
-              )}
+              ✅ Replace in Editor
             </button>
             <button
               onClick={handleCopyContent}
               disabled={!humanizedContent || isLoading}
-              className={`atm-btn atm-btn-secondary ${!humanizedContent || isLoading ? "disabled" : ""}`}
+              className={`atm-btn atm-btn-secondary ${
+                !humanizedContent || isLoading ? "disabled" : ""
+              }`}
             >
               📋 Copy
             </button>
             <button
               onClick={detectAI}
               disabled={!humanizedContent || isLoading}
-              className={`atm-btn atm-btn-outline ${!humanizedContent || isLoading ? "disabled" : ""}`}
+              className={`atm-btn atm-btn-outline ${
+                !humanizedContent || isLoading ? "disabled" : ""
+              }`}
             >
               🔍 Check Detection
             </button>
@@ -702,14 +693,14 @@ Example:
           <textarea
             value={humanizedContent}
             onChange={(e) => setHumanizedContent(e.target.value)}
-            placeholder="Humanized content will appear here...
+            placeholder={`Humanized content will appear here...
 
 The result will be:
 ✅ Natural and human-like
 ✅ Bypasses AI detection
 ✅ Maintains original meaning
 ✅ Improved readability
-✅ Authentic tone and flow"
+✅ Authentic tone and flow`}
             rows={14}
             className="atm-textarea"
             disabled={isLoading}
@@ -722,7 +713,13 @@ The result will be:
         <div className="atm-stats-panel">
           <h3>🎯 AI Detection Analysis</h3>
           <div
-            className={`atm-detection-score ${stats.detectionScore < 10 ? "success" : stats.detectionScore < 30 ? "warning" : "danger"}`}
+            className={`atm-detection-score ${
+              stats.detectionScore < 10
+                ? "success"
+                : stats.detectionScore < 30
+                  ? "warning"
+                  : "danger"
+            }`}
           >
             <div className="score-main">
               <span className="score-value">{stats.detectionScore}%</span>
@@ -769,7 +766,13 @@ The result will be:
 
         {progress && (
           <div
-            className={`atm-progress-message ${progress.includes("✅") ? "success" : progress.includes("❌") ? "error" : ""}`}
+            className={`atm-progress-message ${
+              progress.includes("✅")
+                ? "success"
+                : progress.includes("❌")
+                  ? "error"
+                  : ""
+            }`}
           >
             {progress}
           </div>

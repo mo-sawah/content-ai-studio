@@ -4333,3 +4333,105 @@ textarea:focus {
     color 0.2s ease,
     box-shadow 0.2s ease;
 }
+
+.provider-stats .cost,
+.provider-stats .speed {
+  margin: 2px 5px !important;
+}
+
+/* ——— Humanization: dark panel label color and toggle layout ——— */
+.atm-humanize-settings {
+  /* existing dark card container; ensure text is light */
+  .atm-settings-title {
+    color: #fff;
+  }
+
+  /* Make all labels inside the dark card white */
+  .components-base-control__label,
+  .components-toggle-control .components-base-control__label,
+  .components-checkbox-control .components-base-control__label,
+  .components-input-control__label {
+    color: #ffffff !important;
+  }
+
+  /* Helper/description text under fields */
+  .atm-help {
+    color: #cbd5e1;
+  }
+
+  /* Grid for selects (tone/model) – keep as you have, or: */
+  .atm-settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Three toggles in one line */
+  .atm-advanced-toggles {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-top: 14px;
+    flex-wrap: nowrap;
+
+    > .components-base-control {
+      /* Make each toggle share the row equally */
+      flex: 1 1 0;
+      margin: 0;
+    }
+
+    /* Ensure toggle labels are white too */
+    .components-toggle-control__label,
+    .components-toggle-control .components-base-control__label {
+      color: #ffffff !important;
+    }
+
+    @media (max-width: 900px) {
+      /* Allow wrap on small screens */
+      flex-wrap: wrap;
+    }
+  }
+}
+
+/* ——— Buttons: disabled = gray, spinner only when busy (not when simply disabled) ——— */
+
+/* Primary buttons disabled look */
+.atm-studio-container .components-button.is-primary[disabled],
+.atm-studio-container .atm-primary[disabled] {
+  background: #4a5569 !important;
+  color: #e2e8f0 !important;
+  border-color: #6b7280 !important;
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+/* Never show the spinner when a button is disabled (unless isBusy is set) */
+.atm-studio-container .components-button[disabled] .components-spinner {
+  display: none !important;
+}
+
+/* Secondary buttons disabled look */
+.atm-studio-container .components-button.is-secondary[disabled] {
+  background: #3b4458 !important;
+  color: #cbd5e1 !important;
+  border-color: #4b5563 !important;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Optional: make secondary action buttons in right column look like links */
+.atm-video-actions .components-button.is-secondary {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  color: #cbd5e1;
+
+  &:hover {
+    color: #ffffff;
+  }
+}
