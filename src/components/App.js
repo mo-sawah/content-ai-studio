@@ -13,6 +13,7 @@ import MultipageArticlesForm from "./MultipageArticlesForm";
 import CommentsGenerator from "./CommentsGenerator";
 import NewsGenerator from "./NewsGenerator";
 import LiveNewsForm from "./LiveNewsForm";
+import HumanizeComponent from "./HumanizeComponent";
 
 function App() {
   const [activeView, setActiveView] = useState("hub");
@@ -126,6 +127,32 @@ function App() {
             </svg>
           ),
           color: "#ec4899",
+        },
+      ],
+    },
+    {
+      section: "CONTENT ENHANCEMENT",
+      items: [
+        {
+          id: "humanize",
+          label: "Humanize AI Content",
+          icon: (
+            <svg
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+          ),
+          color: "#8b5cf6",
         },
       ],
     },
@@ -269,6 +296,8 @@ function App() {
         return <ChartGenerator setActiveView={setActiveView} />;
       default:
         return <WelcomeHub setActiveView={setActiveView} />;
+      case "humanize":
+        return <HumanizeComponent setActiveView={setActiveView} />;
     }
   };
 
@@ -278,6 +307,7 @@ function App() {
       articles: "Generate Articles",
       multipage: "Generate Multipage Article",
       news: "Generate News",
+      humanize: "Humanize AI Content",
       images: "Generate Images",
       podcast: "Generate Podcast",
       takeaways: "Key Takeaways",
@@ -296,6 +326,7 @@ function App() {
       articles: "Create high-quality content with AI assistance",
       multipage: "Create comprehensive, multi-part guides with AI",
       news: "Create News from RSS feeds and live news sources",
+      humanize: "Humanize AI-generated content for better readability",
       images: "Generate stunning visuals powered by AI",
       podcast: "Turn content into engaging audio experiences",
       takeaways: "Extract key insights from your content",

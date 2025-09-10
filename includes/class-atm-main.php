@@ -365,7 +365,8 @@ class ATM_Main {
             'includes/class-atm-licensing.php',
             'includes/class-atm-campaign-manager.php',
             'includes/lib/Parsedown.php',
-            'includes/class-atm-listicle.php'
+            'includes/class-atm-listicle.php',
+            'includes/class-atm-humanize.php'
         ];
 
         foreach ($required_files as $file) {
@@ -392,6 +393,7 @@ class ATM_Main {
         $frontend = class_exists('ATM_Frontend') ? new ATM_Frontend() : null;
         $campaign_manager = class_exists('ATM_Campaign_Manager') ? new ATM_Campaign_Manager() : null;
         $listicle = class_exists('ATM_Listicle_Generator') ? new ATM_Listicle_Generator() : null;
+        $humanize = class_exists('ATM_Humanize') ? new ATM_Humanize() : null;
 
         // Admin hooks
         if ($settings) {

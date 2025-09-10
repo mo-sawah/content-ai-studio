@@ -7,6 +7,111 @@ if (!defined('ABSPATH')) {
 
 class ATM_Settings {
 
+    public function add_humanization_tab() {
+        add_settings_section(
+            'atm_humanization_section',
+            'Humanization Settings',
+            array($this, 'humanization_section_callback'),
+            'atm-settings-humanization'
+        );
+
+        // API Keys
+        add_settings_field(
+            'atm_stealthgpt_api_key',
+            'StealthGPT API Key',
+            array($this, 'stealthgpt_api_key_callback'),
+            'atm-settings-humanization',
+            'atm_humanization_section'
+        );
+
+        add_settings_field(
+            'atm_undetectable_api_key',
+            'Undetectable.AI API Key',
+            array($this, 'undetectable_api_key_callback'),
+            'atm-settings-humanization',
+            'atm_humanization_section'
+        );
+
+        // Default Settings
+        add_settings_field(
+            'atm_default_humanize_provider',
+            'Default Provider',
+            array($this, 'default_provider_callback'),
+            'atm-settings-humanization',
+            'atm_humanization_section'
+        );
+
+        add_settings_field(
+            'atm_default_humanize_tone',
+            'Default Tone',
+            array($this, 'default_tone_callback'),
+            'atm-settings-humanization',
+            'atm_humanization_section'
+        );
+
+        add_settings_field(
+            'atm_auto_humanize_articles',
+            'Auto-humanize Generated Articles',
+            array($this, 'auto_humanize_callback'),
+            'atm-settings-humanization',
+            'atm_humanization_section'
+        );
+
+        // Register settings
+        register_setting('atm_humanization_settings', 'atm_stealthgpt_api_key');
+        register_setting('atm_humanization_settings', 'atm_undetectable_api_key');
+        register_setting('atm_humanization_settings', 'atm_default_humanize_provider');
+        register_setting('atm_humanization_settings', 'atm_default_humanize_tone');
+        register_setting('atm_humanization_settings', 'atm_auto_humanize_articles');
+    }
+
+    public function humanization_section_callback() {
+        echo '<p>Configure your humanization providers and default settings.</p>';
+        echo '<p>Get API keys: <a href="https://www.stealthgpt.ai/stealthapi" target="_blank">StealthGPT</a> | <a href="https://undetectable.ai/develop" target="_blank">Undetectable.AI</a></p>';
+    }
+
+    public function stealthgpt_api_key_callback() {
+        $api_key = get_option('atm_stealthgpt_api_key', '');
+        echo '<input type="password" id="atm_stealthgpt_api_key" name="atm_stealthgpt_api_key" value="' . esc_attr($api_key) . '" class="regular-text" />';
+        echo '<button type="button" onclick="testAPI(\'stealthgpt\')" class="button">Test</button>';
+        echo '<p class="description">Your StealthGPT API key for content humanization.</p>';
+    }
+
+    public function undetectable_api_key_callback() {
+        $api_key = get_option('atm_undetectable_api_key', '');
+        echo '<input type="password" id="atm_undetectable_api_key" name="atm_undetectable_api_key" value="' . esc_attr($api_key) . '" class="regular-text" />';
+        echo '<button type="button" onclick="testAPI(\'undetectable\')" class="button">Test</button>';
+        echo '<p class="description">Your Undetectable.AI API key.</p>';
+    }
+
+    public function default_provider_callback() {
+        $provider = get_option('atm_default_humanize_provider', 'stealthgpt');
+        $providers = ATM_Humanize::get_providers();
+        
+        echo '<select id="atm_default_humanize_provider" name="atm_default_humanize_provider">';
+        foreach ($providers as $value => $label) {
+            echo '<option value="' . esc_attr($value) . '"' . selected($provider, $value, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select>';
+    }
+
+    public function default_tone_callback() {
+        $tone = get_option('atm_default_humanize_tone', 'conversational');
+        $tones = ATM_Humanize::get_tone_options();
+        
+        echo '<select id="atm_default_humanize_tone" name="atm_default_humanize_tone">';
+        foreach ($tones as $value => $label) {
+            echo '<option value="' . esc_attr($value) . '"' . selected($tone, $value, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select>';
+    }
+
+    public function auto_humanize_callback() {
+        $auto_humanize = get_option('atm_auto_humanize_articles', false);
+        echo '<input type="checkbox" id="atm_auto_humanize_articles" name="atm_auto_humanize_articles" value="1"' . checked(1, $auto_humanize, false) . ' />';
+        echo '<label for="atm_auto_humanize_articles">Automatically humanize all generated articles</label>';
+    }
+
     
     // Default list of credible news sources on Twitter
     private function get_default_credible_sources() {
@@ -289,6 +394,51 @@ class ATM_Settings {
         </div>
         <?php
     }
+
+    private function render_humanization_tab() {
+    ?>
+    <form method="post" action="options.php">
+        <?php
+        settings_fields('atm_humanization_settings');
+        do_settings_sections('atm-settings-humanization');
+        submit_button('Save Humanization Settings');
+        ?>
+    </form>
+    
+    <script>
+    function testAPI(provider) {
+        const apiKey = document.getElementById('atm_' + provider + '_api_key').value;
+        
+        if (!apiKey) {
+            alert('Please enter an API key first.');
+            return;
+        }
+        
+        fetch(ajaxurl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                action: 'validate_humanize_api',
+                nonce: '<?php echo wp_create_nonce('atm_nonce'); ?>',
+                provider: provider,
+                api_key: apiKey
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ API key is valid and working!');
+            } else {
+                alert('❌ ' + data.data);
+            }
+        })
+        .catch(error => {
+            alert('Error testing API key: ' + error.message);
+        });
+    }
+    </script>
+    <?php
+}
 
     public function render_settings_page() {
     if (isset($_POST['submit_activate_license'])) {

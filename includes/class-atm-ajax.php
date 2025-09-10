@@ -979,6 +979,7 @@ public function translate_text() {
         add_action('wp_ajax_populate_subtitle_field', array($this, 'populate_subtitle_field'));
         add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
         add_action('wp_ajax_debug_twitter_response', array($this, 'debug_twitter_response'));
+        add_action('admin_init', array($this, 'add_humanization_tab'));
 
         add_action('wp_ajax_search_google_news', array($this, 'search_google_news'));
         add_action('wp_ajax_generate_article_from_news_source', array($this, 'generate_article_from_news_source'));
