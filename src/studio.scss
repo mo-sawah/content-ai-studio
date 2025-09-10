@@ -3175,3 +3175,356 @@ body.wp-admin .components-base-control .atm-podcast-script-textarea {
   color: #6b7280;
   text-align: center;
 }
+
+// Twitter News Styles - Add to src/studio.scss
+
+// Twitter News Form
+.atm-twitter-news-form {
+  .atm-twitter-header {
+    margin-bottom: 1.5rem;
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0 0 0.5rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      color: #6b7280;
+      margin: 0;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+// Twitter Filters
+.atm-twitter-filters {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+
+  h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .atm-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    align-items: end;
+
+    @media (max-width: 1200px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .atm-filter-group {
+    display: flex;
+    flex-direction: column;
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    select {
+      appearance: none;
+      background: white;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 0.5rem 2rem 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      color: #374151;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.5rem center;
+      background-repeat: no-repeat;
+      background-size: 1.5em 1.5em;
+      cursor: pointer;
+      transition:
+        border-color 0.15s ease-in-out,
+        box-shadow 0.15s ease-in-out;
+
+      &:hover {
+        border-color: #9ca3af;
+      }
+
+      &:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      &:disabled {
+        background-color: #f3f4f6;
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  // Toggle controls styling
+  .components-toggle-control {
+    .components-toggle-control__label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+    }
+  }
+}
+
+// Twitter Actions
+.atm-twitter-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1.5rem;
+
+  .atm-search-twitter-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .atm-generate-twitter-article-btn {
+    background: #059669;
+    border-color: #059669;
+
+    &:hover:not(:disabled) {
+      background: #047857;
+      border-color: #047857;
+    }
+  }
+}
+
+// Twitter Results
+.atm-twitter-results {
+  margin-top: 2rem;
+
+  .atm-results-header {
+    margin-bottom: 1.5rem;
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0 0 0.5rem 0;
+    }
+
+    p {
+      color: #6b7280;
+      margin: 0;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+// Tweets Grid
+.atm-tweets-grid {
+  display: grid;
+  gap: 1rem;
+
+  .atm-tweet-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    &.selected {
+      border-color: #3b82f6;
+      background: #eff6ff;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+  }
+}
+
+// Tweet Header
+.atm-tweet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+
+  .atm-tweet-user {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+
+    .atm-user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .atm-user-info {
+      .atm-user-name {
+        font-weight: 600;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+
+        .atm-verified {
+          color: #1d9bf0;
+          font-size: 0.875rem;
+        }
+      }
+
+      .atm-user-handle {
+        color: #6b7280;
+        font-size: 0.875rem;
+      }
+
+      .atm-user-followers {
+        color: #9ca3af;
+        font-size: 0.75rem;
+      }
+    }
+  }
+}
+
+// Credibility Badges
+.atm-credibility-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+
+  &.credible-source {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  &.verified {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+}
+
+// Tweet Content
+.atm-tweet-content {
+  margin-bottom: 0.75rem;
+
+  p {
+    margin: 0;
+    line-height: 1.5;
+    color: #374151;
+  }
+
+  .atm-tweet-media {
+    margin-top: 0.75rem;
+
+    .atm-tweet-image {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+    }
+  }
+}
+
+// Tweet Meta
+.atm-tweet-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+
+  .atm-tweet-engagement {
+    display: flex;
+    gap: 1rem;
+
+    .atm-credibility-score {
+      background: #f3f4f6;
+      color: #374151;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+  }
+}
+
+// Tweet Actions
+.atm-tweet-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #374151;
+    cursor: pointer;
+
+    input[type="checkbox"] {
+      margin: 0;
+    }
+  }
+
+  .atm-tweet-links {
+    display: flex;
+    gap: 0.5rem;
+
+    .atm-tweet-link {
+      color: #3b82f6;
+      text-decoration: none;
+      font-size: 0.75rem;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+// Empty State
+.atm-twitter-empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6b7280;
+
+  svg {
+    margin: 0 auto 1rem;
+    opacity: 0.5;
+  }
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    color: #374151;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+}

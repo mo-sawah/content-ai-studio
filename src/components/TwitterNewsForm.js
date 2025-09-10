@@ -211,19 +211,33 @@ function TwitterNewsForm() {
         <div className="atm-twitter-filters">
           <h4>Search Filters</h4>
           <div className="atm-filters-grid">
-            <ToggleControl
-              label="Verified accounts only"
-              checked={verifiedOnly}
-              onChange={setVerifiedOnly}
-              disabled={isSearching || isGenerating}
-            />
+            <div className="atm-filter-group">
+              <label htmlFor="verified-only">Account Type:</label>
+              <select
+                id="verified-only"
+                value={verifiedOnly ? "verified" : "all"}
+                onChange={(e) => setVerifiedOnly(e.target.value === "verified")}
+                disabled={isSearching || isGenerating}
+              >
+                <option value="all">All accounts</option>
+                <option value="verified">Verified only</option>
+              </select>
+            </div>
 
-            <ToggleControl
-              label="Credible news sources only"
-              checked={credibleSourcesOnly}
-              onChange={setCredibleSourcesOnly}
-              disabled={isSearching || isGenerating}
-            />
+            <div className="atm-filter-group">
+              <label htmlFor="credible-sources">Source Type:</label>
+              <select
+                id="credible-sources"
+                value={credibleSourcesOnly ? "credible" : "all"}
+                onChange={(e) =>
+                  setCredibleSourcesOnly(e.target.value === "credible")
+                }
+                disabled={isSearching || isGenerating}
+              >
+                <option value="all">All sources</option>
+                <option value="credible">Credible news only</option>
+              </select>
+            </div>
 
             <div className="atm-filter-group">
               <label htmlFor="min-followers">Minimum followers:</label>
