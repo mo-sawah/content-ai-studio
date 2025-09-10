@@ -4,11 +4,45 @@ import RssForm from "./RssForm";
 import NewsForm from "./NewsForm";
 import LiveNewsForm from "./LiveNewsForm";
 import NewsSearchForm from "./NewsSearchForm";
+import TwitterNewsForm from "./TwitterNewsForm"; // NEW
 
 function NewsGenerator({ setActiveView }) {
-  const [activeTab, setActiveTab] = useState("rss");
+  const [activeTab, setActiveTab] = useState("search");
 
   const newsTypes = [
+    {
+      id: "search",
+      title: "News Search",
+      description: "Search Google News and generate articles from sources",
+      icon: (
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+          />
+        </svg>
+      ),
+      gradient: "from-indigo-500 to-blue-600",
+    },
+    {
+      id: "twitter",
+      title: "Twitter/X News",
+      description: "Generate articles from credible Twitter news sources",
+      icon: (
+        <svg fill="currentColor" viewBox="0 0 24 24" width="20" height="20">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+      ),
+      gradient: "from-gray-700 to-gray-900",
+    },
     {
       id: "rss",
       title: "RSS Feeds",
@@ -75,28 +109,6 @@ function NewsGenerator({ setActiveView }) {
       ),
       gradient: "from-blue-500 to-purple-600",
     },
-    {
-      id: "search",
-      title: "News Search",
-      description: "Search Google News and generate articles from sources",
-      icon: (
-        <svg
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-          />
-        </svg>
-      ),
-      gradient: "from-indigo-500 to-blue-600",
-    },
   ];
 
   return (
@@ -126,10 +138,11 @@ function NewsGenerator({ setActiveView }) {
 
       {/* Content based on selected type */}
       <div className="atm-tab-content">
+        {activeTab === "search" && <NewsSearchForm />}
+        {activeTab === "twitter" && <TwitterNewsForm />}
         {activeTab === "rss" && <RssForm />}
         {activeTab === "apis" && <NewsForm />}
         {activeTab === "live" && <LiveNewsForm />}
-        {activeTab === "search" && <NewsSearchForm />}
       </div>
     </div>
   );

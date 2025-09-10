@@ -6,7 +6,101 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
-    // Add these methods to class-atm-ajax.php
+    /**
+     * Search Twitter for credible news content
+     */
+    public function search_twitter_news() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        
+        try {
+            $keyword = sanitize_text_field($_POST['keyword']);
+            $filters = [
+                'verified_only' => isset($_POST['verified_only']) && $_POST['verified_only'] === 'true',
+                'credible_sources_only' => isset($_POST['credible_sources_only']) && $_POST['credible_sources_only'] === 'true',
+                'min_followers' => intval($_POST['min_followers'] ?? 10000),
+                'max_results' => intval($_POST['max_results'] ?? 20),
+                'language' => sanitize_text_field($_POST['language'] ?? 'en'),
+            ];
+            
+            if (empty($keyword)) {
+                throw new Exception('Search keyword is required.');
+            }
+            
+            $results = ATM_Twitter_API::search_twitter_news($keyword, $filters);
+            
+            wp_send_json_success($results);
+            
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
+    /**
+     * Generate article from selected tweets
+     */
+    public function generate_article_from_tweets() {
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
+        }
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 300);
+        
+        try {
+            $post_id = intval($_POST['post_id']);
+            $keyword = sanitize_text_field($_POST['keyword']);
+            $selected_tweets = $_POST['selected_tweets'] ?? [];
+            $article_language = sanitize_text_field($_POST['article_language'] ?? 'English');
+            
+            if (empty($keyword) || empty($selected_tweets)) {
+                throw new Exception('Keyword and selected tweets are required.');
+            }
+            
+            // Sanitize tweet data
+            $sanitized_tweets = [];
+            foreach ($selected_tweets as $tweet) {
+                $sanitized_tweets[] = [
+                    'id' => sanitize_text_field($tweet['id']),
+                    'text' => wp_kses_post($tweet['text']),
+                    'user' => [
+                        'name' => sanitize_text_field($tweet['user']['name']),
+                        'screen_name' => sanitize_text_field($tweet['user']['screen_name']),
+                        'verified' => (bool) $tweet['user']['verified'],
+                        'followers' => intval($tweet['user']['followers']),
+                    ],
+                    'formatted_date' => sanitize_text_field($tweet['formatted_date']),
+                    'metrics' => [
+                        'retweets' => intval($tweet['metrics']['retweets']),
+                        'likes' => intval($tweet['metrics']['likes']),
+                    ],
+                    'urls' => array_map(function($url) {
+                        return [
+                            'expanded_url' => esc_url_raw($url['expanded_url'])
+                        ];
+                    }, $tweet['urls'] ?? []),
+                ];
+            }
+            
+            $result = ATM_Twitter_API::generate_article_from_tweets(
+                $keyword, 
+                $sanitized_tweets, 
+                $article_language
+            );
+            
+            // Save subtitle if provided
+            if ($post_id > 0 && !empty($result['subtitle'])) {
+                update_post_meta($post_id, '_bunyad_sub_title', $result['subtitle']);
+                error_log("ATM Plugin: Saved Twitter News subtitle '{$result['subtitle']}' to SmartMag field for post {$post_id}");
+            }
+            
+            wp_send_json_success($result);
+            
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
 
     public function search_google_news() {
         if (!ATM_Licensing::is_license_active()) {
@@ -836,6 +930,9 @@ public function translate_text() {
         add_action('wp_ajax_search_live_news', array($this, 'search_live_news'));
         add_action('wp_ajax_generate_article_from_live_news', array($this, 'generate_article_from_live_news'));
         
+        // Add Twitter News actions
+        add_action('wp_ajax_search_twitter_news', array($this, 'search_twitter_news'));
+        add_action('wp_ajax_generate_article_from_tweets', array($this, 'generate_article_from_tweets'));
 
 
         // --- MULTIPAGE ACTIONS ---

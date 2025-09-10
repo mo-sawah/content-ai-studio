@@ -7,6 +7,17 @@ if (!defined('ABSPATH')) {
 
 class ATM_Settings {
 
+    
+    // Default list of credible news sources on Twitter
+    private function get_default_credible_sources() {
+        return implode("\n", [
+            '@BBC', '@CNN', '@Reuters', '@AP', '@nytimes', '@washingtonpost',
+            '@WSJ', '@guardian', '@FT', '@Bloomberg', '@NBCNews', '@ABCNews',
+            '@CBSNews', '@NPR', '@USATODAY', '@latimes', '@ChicagoTribune',
+            '@TIME', '@Newsweek', '@politico', '@axios', '@TheEconomist'
+        ]);
+    }
+
     private function render_license_section() {
         $license_data = ATM_Licensing::get_license_data();
         $is_active = ATM_Licensing::is_license_active();
@@ -541,6 +552,49 @@ class ATM_Settings {
                 </div>
             </div>
             
+            <div class="atm-settings-card">
+                <h2>🐦 Twitter/X News Settings</h2>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">TwitterAPI.io Key</th>
+                        <td>
+                            <input type="password" name="atm_twitterapi_key" value="<?php echo esc_attr($options['twitterapi_key']); ?>" class="regular-text" />
+                            <p class="description">Get your API key from <a href="https://twitterapi.io/" target="_blank">TwitterAPI.io</a>. Cost: $0.15 per 1,000 tweets.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Credible News Sources</th>
+                        <td>
+                            <textarea name="atm_twitter_credible_sources" rows="8" style="width:100%;"><?php echo esc_textarea($options['twitter_credible_sources']); ?></textarea>
+                            <p class="description">List Twitter handles of credible news sources, one per line (e.g., @BBC, @CNN, @Reuters). These will be prioritized in search results.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Minimum Followers</th>
+                        <td>
+                            <select name="atm_twitter_min_followers">
+                                <option value="1000" <?php selected($options['twitter_min_followers'], '1000'); ?>>1,000+ followers</option>
+                                <option value="10000" <?php selected($options['twitter_min_followers'], '10000'); ?>>10,000+ followers</option>
+                                <option value="50000" <?php selected($options['twitter_min_followers'], '50000'); ?>>50,000+ followers</option>
+                                <option value="100000" <?php selected($options['twitter_min_followers'], '100000'); ?>>100,000+ followers</option>
+                                <option value="1000000" <?php selected($options['twitter_min_followers'], '1000000'); ?>>1,000,000+ followers</option>
+                            </select>
+                            <p class="description">Minimum follower count required for tweets to appear in search results.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Verified Only by Default</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="atm_twitter_verified_only" value="1" <?php checked($options['twitter_verified_only'], 1); ?> />
+                                Only search verified accounts by default
+                            </label>
+                            <p class="description">When enabled, searches will default to verified accounts only for higher credibility.</p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
             <!-- NEW: Comments Generator Settings -->
             <div class="atm-settings-card">
                 <h2>💬 Comments Generator</h2>
@@ -647,6 +701,12 @@ class ATM_Settings {
     update_option('atm_podcast_gradient_end', sanitize_hex_color($_POST['atm_podcast_gradient_end']));
     update_option('atm_podcast_season_text', sanitize_text_field($_POST['atm_podcast_season_text']));
 
+    // Add Twitter settings
+    update_option('atm_twitterapi_key', sanitize_text_field($_POST['atm_twitterapi_key']));
+    update_option('atm_twitter_credible_sources', sanitize_textarea_field($_POST['atm_twitter_credible_sources']));
+    update_option('atm_twitter_min_followers', intval($_POST['atm_twitter_min_followers']));
+    update_option('atm_twitter_verified_only', isset($_POST['atm_twitter_verified_only']) ? 1 : 0);
+
     // And add these to the save_settings() method:
     update_option('atm_google_news_search_api_key', sanitize_text_field($_POST['atm_google_news_search_api_key']));
     update_option('atm_google_news_cse_id', sanitize_text_field($_POST['atm_google_news_cse_id']));
@@ -708,6 +768,12 @@ class ATM_Settings {
         'google_news_cse_id' => get_option('atm_google_news_cse_id', ''),
         'used_articles_cache_hours' => get_option('atm_used_articles_cache_hours', 48), // <-- ADD THIS LINE
 
+        // TWitter
+        'twitterapi_key' => get_option('atm_twitterapi_key', ''),
+        'twitter_credible_sources' => get_option('atm_twitter_credible_sources', $this->get_default_credible_sources()),
+        'twitter_min_followers' => get_option('atm_twitter_min_followers', 10000),
+        'twitter_verified_only' => get_option('atm_twitter_verified_only', 1),
+
         // Add these to the get_settings() method return array
         'podcast_default_theme' => get_option('atm_podcast_default_theme', 'light'),
         'podcast_content_model' => get_option('atm_podcast_content_model', 'anthropic/claude-3-haiku'),
@@ -767,6 +833,8 @@ class ATM_Settings {
         ],
     ];
 }
+
+    
 
     // Default Prompts
     public static function get_default_article_prompt() {
