@@ -4453,3 +4453,56 @@ textarea:focus {
 .atm-action-icon.bg-gradient-to-r.from-violet-500.to-fuchsia-600 {
   background: linear-gradient(135deg, #8b5cf6 0%, #c026d3 100%) !important;
 }
+
+/* Remove spinner from disabled buttons and make them grayed out */
+.atm-studio-container .components-button {
+  &:disabled {
+    background: #f3f4f6 !important;
+    color: #9ca3af !important;
+    border-color: #e5e7eb !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+    transform: none !important;
+    box-shadow: none !important;
+
+    /* Remove any spinners from disabled buttons */
+    .components-spinner {
+      display: none !important;
+    }
+
+    /* Override any loading states */
+    &::before,
+    &::after {
+      display: none !important;
+    }
+  }
+
+  /* Specific styling for primary disabled buttons */
+  &.is-primary:disabled {
+    background: #d1d5db !important;
+    color: #6b7280 !important;
+    border: 1px solid #d1d5db !important;
+  }
+
+  /* Specific styling for secondary disabled buttons */
+  &.is-secondary:disabled {
+    background: #f9fafb !important;
+    color: #9ca3af !important;
+    border: 1px solid #e5e7eb !important;
+  }
+}
+
+/* Specifically target humanize component buttons */
+.atm-humanize-component {
+  .components-button:disabled {
+    background: #f8fafc !important;
+    color: #94a3b8 !important;
+    border-color: #e2e8f0 !important;
+
+    /* Ensure no spinners show */
+    .components-spinner,
+    svg.atm-custom-spinner {
+      display: none !important;
+    }
+  }
+}
