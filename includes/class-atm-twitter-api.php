@@ -16,49 +16,37 @@ class ATM_Twitter_API {
             throw new Exception('TwitterAPI.io key not configured. Please add your API key in the settings.');
         }
         
-        // Use the EXACT format from TwitterAPI.io documentation
         $url = 'https://api.twitterapi.io/twitter/tweet/advanced_search';
         
-        // Build query in TwitterAPI.io format (simple keyword only for now)
+        // Simple query - don't add complex filters that might cause -1 errors
         $query = $keyword;
         
-        // Add basic filters only
+        // Only add basic filters to avoid API errors
         if ($filters['verified_only'] ?? false) {
             $query .= ' filter:verified';
         }
         
-        // NO complex OR queries for now - they might be causing the error
-        $query .= ' -filter:retweets'; // Exclude retweets
-        
         $params = [
             'query' => $query,
-            'queryType' => 'Latest', // TwitterAPI.io accepts "Latest" or "Top"
+            'queryType' => 'Latest',
         ];
         
-        // Don't add maxResults parameter - it might not be supported
-        
-        error_log("ATM Twitter Emergency - URL: $url");
-        error_log("ATM Twitter Emergency - Query: $query");
-        error_log("ATM Twitter Emergency - Params: " . print_r($params, true));
+        error_log("ATM Twitter Fix - Query: $query");
         
         $response = wp_remote_get($url . '?' . http_build_query($params), [
             'headers' => [
-                'X-API-Key' => $api_key, // Use exact header name from docs
+                'X-API-Key' => $api_key,
                 'Content-Type' => 'application/json'
             ],
             'timeout' => 30
         ]);
         
         if (is_wp_error($response)) {
-            error_log("ATM Twitter Emergency - WP Error: " . $response->get_error_message());
             throw new Exception('Failed to connect to TwitterAPI.io: ' . $response->get_error_message());
         }
         
         $response_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
-        
-        error_log("ATM Twitter Emergency - Response Code: $response_code");
-        error_log("ATM Twitter Emergency - Response Body: " . $body);
         
         if ($response_code !== 200) {
             throw new Exception("TwitterAPI.io Error ($response_code): $body");
@@ -67,10 +55,19 @@ class ATM_Twitter_API {
         $data = json_decode($body, true);
         
         if ($data === null) {
-            throw new Exception('Invalid JSON response from TwitterAPI.io: ' . json_last_error_msg());
+            throw new Exception('Invalid JSON response from TwitterAPI.io');
         }
         
-        // Check all possible response structures
+        // Log the actual response structure to understand TwitterAPI.io format
+        error_log("ATM Twitter Fix - Response keys: " . implode(', ', array_keys($data)));
+        if (!empty($data)) {
+            $first_key = array_key_first($data);
+            if (is_array($data[$first_key]) && !empty($data[$first_key])) {
+                error_log("ATM Twitter Fix - First item structure: " . print_r($data[$first_key][0], true));
+            }
+        }
+        
+        // Try all possible data locations
         $tweets = [];
         if (isset($data['data']) && is_array($data['data'])) {
             $tweets = $data['data'];
@@ -78,42 +75,70 @@ class ATM_Twitter_API {
             $tweets = $data['tweets'];
         } elseif (isset($data['results']) && is_array($data['results'])) {
             $tweets = $data['results'];
-        } else {
-            error_log("ATM Twitter Emergency - Unknown response structure: " . print_r(array_keys($data), true));
-            return ['results' => [], 'total' => 0];
+        } elseif (is_array($data)) {
+            // Sometimes the response is directly an array
+            $tweets = $data;
         }
         
         if (empty($tweets)) {
             return ['results' => [], 'total' => 0];
         }
         
-        // MINIMAL filtering to avoid losing data
+        // Process tweets with flexible data extraction
         $filtered_tweets = [];
-        foreach ($tweets as $tweet) {
-            // Very basic structure - just return what we get
+        $min_followers = $filters['min_followers'] ?? 1000; // Lower default
+        
+        foreach ($tweets as $index => $tweet) {
+            if (!is_array($tweet)) {
+                error_log("ATM Twitter Fix - Tweet $index is not an array: " . gettype($tweet));
+                continue;
+            }
+            
+            // Log structure of first tweet for debugging
+            if ($index === 0) {
+                error_log("ATM Twitter Fix - Tweet structure keys: " . implode(', ', array_keys($tweet)));
+                if (isset($tweet['user'])) {
+                    error_log("ATM Twitter Fix - User structure keys: " . implode(', ', array_keys($tweet['user'])));
+                }
+            }
+            
+            // Extract user data with multiple fallbacks
+            $user_data = self::extract_user_data($tweet);
+            $tweet_text = self::extract_tweet_text($tweet);
+            $metrics = self::extract_metrics($tweet);
+            
+            // Skip if no user data or doesn't meet follower threshold
+            if (!$user_data || ($user_data['followers'] < $min_followers)) {
+                continue;
+            }
+            
+            // Skip non-news content if it doesn't look like news
+            if (!self::appears_to_be_news($tweet_text)) {
+                continue;
+            }
+            
             $filtered_tweets[] = [
                 'id' => $tweet['id_str'] ?? $tweet['id'] ?? uniqid(),
-                'text' => $tweet['text'] ?? $tweet['full_text'] ?? 'No text',
-                'user' => [
-                    'name' => $tweet['user']['name'] ?? 'Unknown User',
-                    'screen_name' => $tweet['user']['screen_name'] ?? $tweet['user']['username'] ?? 'unknown',
-                    'verified' => $tweet['user']['verified'] ?? false,
-                    'followers' => $tweet['user']['followers_count'] ?? 0,
-                    'profile_image' => $tweet['user']['profile_image_url_https'] ?? $tweet['user']['profile_image_url'] ?? 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
-                ],
+                'text' => $tweet_text,
+                'user' => $user_data,
                 'created_at' => $tweet['created_at'] ?? date('c'),
-                'formatted_date' => date('M j, Y g:i A'),
-                'metrics' => [
-                    'retweets' => $tweet['retweet_count'] ?? $tweet['public_metrics']['retweet_count'] ?? 0,
-                    'likes' => $tweet['favorite_count'] ?? $tweet['public_metrics']['like_count'] ?? 0,
-                    'replies' => $tweet['reply_count'] ?? $tweet['public_metrics']['reply_count'] ?? 0
-                ],
-                'urls' => [],
-                'media' => [],
-                'is_credible_source' => false,
-                'credibility_score' => 50
+                'formatted_date' => self::format_twitter_date($tweet['created_at'] ?? ''),
+                'metrics' => $metrics,
+                'urls' => self::extract_urls_from_tweet($tweet),
+                'media' => self::extract_media_from_tweet($tweet),
+                'is_credible_source' => self::is_credible_source($user_data['screen_name']),
+                'credibility_score' => self::calculate_credibility_score_simple($user_data, $metrics)
             ];
         }
+        
+        // Sort by follower count and engagement if no credibility scores
+        usort($filtered_tweets, function($a, $b) {
+            $a_score = $a['user']['followers'] + $a['metrics']['retweets'] + $a['metrics']['likes'];
+            $b_score = $b['user']['followers'] + $b['metrics']['retweets'] + $b['metrics']['likes'];
+            return $b_score - $a_score;
+        });
+        
+        error_log("ATM Twitter Fix - Final count: " . count($filtered_tweets));
         
         return [
             'results' => $filtered_tweets,
@@ -122,10 +147,89 @@ class ATM_Twitter_API {
         ];
     }
 
-    // Simplified query builder
-    private static function build_search_query($keyword, $filters) {
-        // Return just the keyword for now - no complex queries
-        return $keyword;
+    // Helper method to extract user data with multiple fallbacks
+    private static function extract_user_data($tweet) {
+        $user = null;
+        
+        // Try different possible user data locations
+        if (isset($tweet['user'])) {
+            $user = $tweet['user'];
+        } elseif (isset($tweet['author'])) {
+            $user = $tweet['author'];
+        } elseif (isset($tweet['account'])) {
+            $user = $tweet['account'];
+        }
+        
+        if (!$user) {
+            return null;
+        }
+        
+        return [
+            'name' => $user['name'] ?? $user['display_name'] ?? $user['username'] ?? 'Unknown User',
+            'screen_name' => $user['screen_name'] ?? $user['username'] ?? $user['handle'] ?? 'unknown',
+            'verified' => $user['verified'] ?? $user['is_verified'] ?? false,
+            'followers' => $user['followers_count'] ?? $user['follower_count'] ?? $user['followers'] ?? 0,
+            'profile_image' => $user['profile_image_url_https'] ?? $user['profile_image_url'] ?? $user['avatar'] ?? 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
+        ];
+    }
+
+    // Helper method to extract tweet text
+    private static function extract_tweet_text($tweet) {
+        return $tweet['full_text'] ?? $tweet['text'] ?? $tweet['content'] ?? $tweet['body'] ?? 'No text available';
+    }
+
+    // Helper method to extract metrics
+    private static function extract_metrics($tweet) {
+        $metrics = [
+            'retweets' => 0,
+            'likes' => 0,
+            'replies' => 0
+        ];
+        
+        // Try different metric locations
+        if (isset($tweet['public_metrics'])) {
+            $metrics['retweets'] = $tweet['public_metrics']['retweet_count'] ?? 0;
+            $metrics['likes'] = $tweet['public_metrics']['like_count'] ?? 0;
+            $metrics['replies'] = $tweet['public_metrics']['reply_count'] ?? 0;
+        } else {
+            $metrics['retweets'] = $tweet['retweet_count'] ?? $tweet['retweets'] ?? 0;
+            $metrics['likes'] = $tweet['favorite_count'] ?? $tweet['like_count'] ?? $tweet['likes'] ?? 0;
+            $metrics['replies'] = $tweet['reply_count'] ?? $tweet['replies'] ?? 0;
+        }
+        
+        return $metrics;
+    }
+
+    // Simplified credibility check
+    private static function is_credible_source($screen_name) {
+        $credible_sources = self::get_credible_sources_array();
+        return in_array('@' . $screen_name, $credible_sources, true);
+    }
+
+    // Simple credibility scoring
+    private static function calculate_credibility_score_simple($user_data, $metrics) {
+        $score = 20; // Base score
+        
+        if ($user_data['verified']) {
+            $score += 30;
+        }
+        
+        if ($user_data['followers'] > 100000) {
+            $score += 25;
+        } elseif ($user_data['followers'] > 10000) {
+            $score += 15;
+        } elseif ($user_data['followers'] > 1000) {
+            $score += 10;
+        }
+        
+        $engagement = $metrics['retweets'] + $metrics['likes'];
+        if ($engagement > 100) {
+            $score += 15;
+        } elseif ($engagement > 10) {
+            $score += 10;
+        }
+        
+        return min($score, 100);
     }
     
     /**
