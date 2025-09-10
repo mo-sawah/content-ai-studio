@@ -4435,3 +4435,12 @@ textarea:focus {
     color: #ffffff;
   }
 }
+
+.atm-humanize-header h2 {
+  font-size: 25px !important;
+  font-weight: 700;
+}
+
+.atm-action-icon.bg-gradient-to-r.from-violet-500.to-fuchsia-600 {
+  background: linear-gradient(135deg, #8b5cf6 0%, #c026d3 100%);
+}

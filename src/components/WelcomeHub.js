@@ -39,6 +39,29 @@ function WelcomeHub({ setActiveView }) {
       onClick: () => setActiveView("news"),
     },
     {
+      id: "humanize",
+      title: "Humanize Content",
+      description: "Transform AI text into natural, human‑sounding copy",
+      icon: (
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          {/* Sparkles icon */}
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9.813 15.904l-1.023 2.558a.75.75 0 01-1.38 0l-1.023-2.558-2.558-1.023a.75.75 0 010-1.38l2.558-1.023 1.023-2.558a.75.75 0 011.38 0l1.023 2.558 2.558 1.023a.75.75 0 010 1.38l-2.558 1.023zM14.5 4.75l.75 1.875 1.875.75-1.875.75-.75 1.875-.75-1.875-1.875-.75 1.875-.75zM19.5 13.25l.5 1.25 1.25.5-1.25.5-.5 1.25-.5-1.25-1.25-.5 1.25-.5z"
+          />
+        </svg>
+      ),
+      gradient: "from-violet-500 to-fuchsia-600",
+      onClick: () => setActiveView("humanize"),
+    },
+    {
       id: "images",
       title: "Generate Images",
       description: "Create stunning visuals powered by Top AI",
