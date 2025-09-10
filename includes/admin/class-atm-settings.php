@@ -441,6 +441,7 @@ class ATM_Settings {
 }
 
     public function render_settings_page() {
+    // Handle form submissions first
     if (isset($_POST['submit_activate_license'])) {
         $result = ATM_Licensing::activate_license(sanitize_text_field($_POST['atm_license_key']));
         echo '<div class="notice notice-' . ($result['success'] ? 'success' : 'error') . ' is-dismissible"><p>' . esc_html($result['message']) . '</p></div>';
@@ -451,124 +452,112 @@ class ATM_Settings {
         $this->save_settings();
     }
 
-    $options = $this->get_settings();
+    // Get active tab from URL parameter
+    $active_tab = $_GET['tab'] ?? 'general';
+    
     ?>
     <div class="wrap atm-settings">
-        <div class="atm-header"><h1>🎙️ Content AI Studio Settings</h1><p class="atm-subtitle">by Sawah Solutions | <a href="https://sawahsolutions.com/content-ai-studio" target="_blank">Plugin Website</a></p></div>
-        <form method="post" action="">
-            <?php wp_nonce_field('atm_settings_update'); ?>
-            <?php $this->render_license_section(); ?>
+        <div class="atm-header">
+            <h1>🎙️ Content AI Studio Settings</h1>
+            <p class="atm-subtitle">by Sawah Solutions | <a href="https://sawahsolutions.com/content-ai-studio" target="_blank">Plugin Website</a></p>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <h2 class="nav-tab-wrapper">
+            <a href="?page=content-ai-studio&tab=general" class="nav-tab <?php echo $active_tab === 'general' ? 'nav-tab-active' : ''; ?>">
+                🔧 General
+            </a>
+            <a href="?page=content-ai-studio&tab=api" class="nav-tab <?php echo $active_tab === 'api' ? 'nav-tab-active' : ''; ?>">
+                🔑 API Keys
+            </a>
+            <a href="?page=content-ai-studio&tab=humanization" class="nav-tab <?php echo $active_tab === 'humanization' ? 'nav-tab-active' : ''; ?>">
+                🧠 Humanization
+            </a>
+            <a href="?page=content-ai-studio&tab=advanced" class="nav-tab <?php echo $active_tab === 'advanced' ? 'nav-tab-active' : ''; ?>">
+                ⚙️ Advanced
+            </a>
+        </h2>
+        
+        <?php
+        // Render content based on active tab
+        switch ($active_tab) {
+            case 'api':
+                $this->render_api_tab();
+                break;
+                
+            case 'humanization':
+                $this->render_humanization_tab();
+                break;
+                
+            case 'advanced':
+                $this->render_advanced_tab();
+                break;
+                
+            default: // 'general'
+                $this->render_general_tab();
+                break;
+        }
+        ?>
+    </div>
+    <?php
+}
 
+// ADD these new methods to organize your settings into tabs:
+
+private function render_general_tab() {
+    $options = $this->get_settings();
+    ?>
+    <form method="post" action="">
+        <?php wp_nonce_field('atm_settings_update'); ?>
+        
+        <?php $this->render_license_section(); ?>
+
+        <div class="atm-settings-grid">
             <div class="atm-settings-card">
-                <h2>🔑 API Configuration</h2>
+                <h2>🎯 AI Model Defaults</h2>
                 <table class="form-table">
-                    <tr><th scope="row">OpenRouter API Key</th><td><input type="password" name="atm_openrouter_api_key" value="<?php echo esc_attr($options['openrouter_key']); ?>" class="regular-text" required /></td></tr>
-                    <tr><th scope="row">OpenAI API Key</th><td><input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" /><p class="description">Used for DALL-E 3 image generation and OpenAI TTS voices.</p></td></tr>
-                    <tr><th scope="row">Google AI API Key</th><td><input type="password" name="atm_google_api_key" value="<?php echo esc_attr($options['google_key']); ?>" class="regular-text" /><p class="description">Used for Imagen 4 image generation. Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p></td></tr>
-                    <tr><th scope="row">BlockFlow API Key</th><td><input type="password" name="atm_blockflow_api_key" value="<?php echo esc_attr($options['blockflow_key']); ?>" class="regular-text" /><p class="description">Required for FLUX image generation. Get a key from <a href="https://app.blockflow.ai/" target="_blank">BlockFlow.ai</a>.</p></td></tr>
-                    <tr><th scope="row">ElevenLabs API Key</th><td><input type="password" name="atm_elevenlabs_api_key" value="<?php echo esc_attr($options['elevenlabs_key']); ?>" class="regular-text" /><p class="description">Get a key from <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a> for additional high-quality voices.</p></td></tr>
-                    <tr><th scope="row">News API Key</th><td><input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a>.</p></td></tr>
-                    <tr><th scope="row">GNews API Key</th><td><input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p></td></tr>
-                    <tr><th scope="row">The Guardian API Key</th><td><input type="password" name="atm_guardian_api_key" value="<?php echo esc_attr($options['guardian_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://open-platform.theguardian.com/" target="_blank">The Guardian</a>.</p></td></tr>
-                    <tr><th scope="row">Mercury Reader API Key (Optional)</th><td><input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p></td></tr>
-                    <tr><th scope="row">Google API Key (for YouTube Search)</th><td><input type="password" name="atm_google_youtube_api_key" value="<?php echo esc_attr($options['google_youtube_key']); ?>" class="regular-text" /><p class="description">Required for the Video Search feature. Get a key from the <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p></td></tr>
+                    <tr><th scope="row">Default Article Model</th><td><select name="atm_article_model"><?php foreach ($options['article_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['article_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
+                    <tr><th scope="row">Translation Quality Model</th><td><select name="atm_translation_model"><?php foreach ($options['translation_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['translation_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">"High Quality" is more accurate but slower and more expensive. "Fast" is good for quick drafts.</p></td></tr>
                     <tr>
-                        <th scope="row">Mercury Reader API Key (Optional)</th>
+                        <th scope="row">Default Content Model</th>
                         <td>
-                            <input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" />
-                            <p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Used Article Cache Time</th>
-                        <td>
-                            <select name="atm_used_articles_cache_hours">
-                                <?php
-                                $cache_time_options = [
-                                    12 => '12 Hours',
-                                    24 => '1 Day',
-                                    48 => '2 Days',
-                                    72 => '3 Days',
-                                    168 => '1 Week'
-                                ];
-                                foreach ($cache_time_options as $hours => $label) {
-                                    printf(
-                                        '<option value="%s" %s>%s</option>',
-                                        esc_attr($hours),
-                                        selected($options['used_articles_cache_hours'], $hours, false),
-                                        esc_html($label)
-                                    );
-                                }
-                                ?>
+                            <select name="atm_content_model">
+                                <?php foreach ($options['content_models'] as $model_id => $model_name): ?>
+                                    <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
+                                <?php endforeach; ?>
                             </select>
-                            <p class="description">How long an article from News Search is marked as "Already Used" to prevent duplicates.</p>
+                            <p class="description">Model used for content generation tasks like takeaways, comments, and other content processing.</p>
                         </td>
                     </tr>
-<tr>
-    <th scope="row">Google Custom Search API Key</th>
-    <td>
-        <input type="password" name="atm_google_news_search_api_key" value="<?php echo esc_attr($options['google_news_search_api_key']); ?>" class="regular-text" />
-        <p class="description">Required for News Search feature. Get a key from <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p>
-    </td>
-</tr>
-<tr>
-    <th scope="row">Google Custom Search Engine ID</th>
-    <td>
-        <input type="text" name="atm_google_news_cse_id" value="<?php echo esc_attr($options['google_news_cse_id']); ?>" class="regular-text" />
-        <p class="description">Create a Custom Search Engine at <a href="https://cse.google.com/" target="_blank">Google CSE</a> configured for news sites.</p>
-    </td>
-</tr>
-                    <tr><th scope="row">ScrapingAnt API Key</th><td><input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" /><p class="description">Required for RSS scraping. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p></td></tr>
-                </table>
-            </div>
-
-            <div class="atm-settings-grid">
-                <div class="atm-settings-card">
-                    <h2>🎯 AI Model Defaults</h2>
-                    <table class="form-table">
-                        <tr><th scope="row">Default Article Model</th><td><select name="atm_article_model"><?php foreach ($options['article_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['article_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select></td></tr>
-                        <tr><th scope="row">Translation Quality Model</th><td><select name="atm_translation_model"><?php foreach ($options['translation_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['translation_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">"High Quality" is more accurate but slower and more expensive. "Fast" is good for quick drafts.</p></td></tr>
-                        <tr>
-                            <th scope="row">Default Content Model</th>
-                            <td>
-                                <select name="atm_content_model">
-                                    <?php foreach ($options['content_models'] as $model_id => $model_name): ?>
-                                        <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <p class="description">Model used for content generation tasks like takeaways, comments, and other content processing.</p>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <th scope="row">Default Audio Provider</th>
-                            <td>
-                                <select name="atm_audio_provider">
-                                    <option value="openai" <?php selected($options['audio_provider'], 'openai'); ?>>OpenAI TTS</option>
-                                    <option value="elevenlabs" <?php selected($options['audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option>
-                                </select>
-                                <p class="description">Default service provider for text-to-speech generation.</p>
-                            </td>
-                        </tr>
-                            <tr>
-                            <th scope="row">Web Search Results</th>
-                            <td>
-                                <select name="atm_web_search_results">
-                                    <option value="1" <?php selected($options['web_search_results'], '1'); ?>>1 Result (Fastest & Cheapest)</option>
-                                    <option value="2" <?php selected($options['web_search_results'], '2'); ?>>2 Results</option>
-                                    <option value="3" <?php selected($options['web_search_results'], '3'); ?>>3 Results</option>
-                                    <option value="4" <?php selected($options['web_search_results'], '4'); ?>>4 Results</option>
-                                    <option value="5" <?php selected($options['web_search_results'], '5'); ?>>5 Results (Balanced)</option>
-                                    <option value="6" <?php selected($options['web_search_results'], '6'); ?>>6 Results</option>
-                                    <option value="7" <?php selected($options['web_search_results'], '7'); ?>>7 Results</option>
-                                    <option value="8" <?php selected($options['web_search_results'], '8'); ?>>8 Results</option>
-                                    <option value="9" <?php selected($options['web_search_results'], '9'); ?>>9 Results</option>
-                                    <option value="10" <?php selected($options['web_search_results'], '10'); ?>>10 Results (Most Detailed)</option>
-                                </select>
-                                <p class="description">Control the number of web search results used. Each search result costs $0.004, so 1 result = $0.004, 5 results = $0.02, 10 results = $0.04 per request.</p>
-                            </td>
-                        </tr>
-                        <tr>
+                    <tr>
+                        <th scope="row">Default Audio Provider</th>
+                        <td>
+                            <select name="atm_audio_provider">
+                                <option value="openai" <?php selected($options['audio_provider'], 'openai'); ?>>OpenAI TTS</option>
+                                <option value="elevenlabs" <?php selected($options['audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option>
+                            </select>
+                            <p class="description">Default service provider for text-to-speech generation.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Web Search Results</th>
+                        <td>
+                            <select name="atm_web_search_results">
+                                <option value="1" <?php selected($options['web_search_results'], '1'); ?>>1 Result (Fastest & Cheapest)</option>
+                                <option value="2" <?php selected($options['web_search_results'], '2'); ?>>2 Results</option>
+                                <option value="3" <?php selected($options['web_search_results'], '3'); ?>>3 Results</option>
+                                <option value="4" <?php selected($options['web_search_results'], '4'); ?>>4 Results</option>
+                                <option value="5" <?php selected($options['web_search_results'], '5'); ?>>5 Results (Balanced)</option>
+                                <option value="6" <?php selected($options['web_search_results'], '6'); ?>>6 Results</option>
+                                <option value="7" <?php selected($options['web_search_results'], '7'); ?>>7 Results</option>
+                                <option value="8" <?php selected($options['web_search_results'], '8'); ?>>8 Results</option>
+                                <option value="9" <?php selected($options['web_search_results'], '9'); ?>>9 Results</option>
+                                <option value="10" <?php selected($options['web_search_results'], '10'); ?>>10 Results (Most Detailed)</option>
+                            </select>
+                            <p class="description">Control the number of web search results used. Each search result costs $0.004, so 1 result = $0.004, 5 results = $0.02, 10 results = $0.04 per request.</p>
+                        </td>
+                    </tr>
+                    <tr>
                         <th scope="row">Theme's Subtitle Field Key</th>
                         <td>
                             <div style="display: flex; align-items: center; gap: 10px;">
@@ -579,259 +568,144 @@ class ATM_Settings {
                             <p class="description">Optional. Click "Smart Scan" to try and auto-detect your theme's subtitle field, or enter its custom field name (meta key) manually.</p>
                         </td>
                     </tr>
-                    </table>
-                </div>
-                <div class="atm-settings-card">
-                    <h2>🖼️ Image Generation Defaults</h2>
-                    <table class="form-table">
-                        <tr>
-                            <th scope="row">Default Image Provider</th>
-                            <td>
-                                <select name="atm_image_provider">
-                                    <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
-                                    <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
-                                    <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>BlockFlow (FLUX)</option> </select>
-                            </td>
-                        </tr>
-                        <tr><th scope="row">Default FLUX Image Model</th><td><select name="atm_flux_model"><?php foreach ($options['flux_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['flux_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default FLUX model for realistic image generation.</p></td></tr>
-                        <tr><th scope="row">Default Image Quality</th><td><select name="atm_image_quality"><option value="standard" <?php selected($options['image_quality'], 'standard'); ?>>Standard</option><option value="hd" <?php selected($options['image_quality'], 'hd'); ?>>HD</option></select><p class="description">"HD" is only for OpenAI/DALL-E 3.</p></td></tr>
-                        <tr><th scope="row">Default Image Size</th><td><select name="atm_image_size"><option value="1792x1024" <?php selected($options['image_size'], '1792x1024'); ?>>16:9 Landscape</option><option value="1024x1024" <?php selected($options['image_size'], '1024x1024'); ?>>1:1 Square</option><option value="1024x1792" <?php selected($options['image_size'], '1024x1792'); ?>>9:16 Portrait</option></select></td></tr>
-                    </table>
-                </div>
-            </div>
-
-            <div class="atm-settings-card">
-                <h2>🎙️ Podcast Player Settings</h2>
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">Default Theme Mode</th>
-                        <td>
-                            <select name="atm_podcast_default_theme">
-                                <option value="light" <?php selected($options['podcast_default_theme'], 'light'); ?>>Light Mode</option>
-                                <option value="dark" <?php selected($options['podcast_default_theme'], 'dark'); ?>>Dark Mode</option>
-                            </select>
-                            <p class="description">Default appearance for the podcast player across your site.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Podcast Content Model</th>
-                        <td>
-                            <select name="atm_podcast_content_model">
-                                <?php foreach ($options['content_models'] as $model_id => $model_name): ?>
-                                    <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['podcast_content_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="description">AI model used for generating podcast scripts and content.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Podcast Audio Provider</th>
-                        <td>
-                            <select name="atm_podcast_audio_provider">
-                                <option value="openai" <?php selected($options['podcast_audio_provider'], 'openai'); ?>>OpenAI TTS</option>
-                                <option value="elevenlabs" <?php selected($options['podcast_audio_provider'], 'elevenlabs'); ?>>ElevenLabs</option>
-                            </select>
-                            <p class="description">Service provider for text-to-speech generation.</p>
-                        </td>
-                    </tr>
-                    <!-- Add this after the Podcast Audio Provider field -->
-                    <tr>
-                        <th scope="row">Season Text</th>
-                        <td>
-                            <input type="text" name="atm_podcast_season_text" value="<?php echo esc_attr($options['podcast_season_text']); ?>" class="regular-text" placeholder="Season 1" />
-                            <p class="description">Custom text displayed below the podcast name (e.g., "Season 1", "Episode Series", etc.)</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Primary Accent Color</th>
-                        <td>
-                            <input type="text" name="atm_podcast_accent_color" value="<?php echo esc_attr($options['podcast_accent_color']); ?>" class="atm-color-picker" />
-                            <p class="description">Main accent color for buttons, progress bars, and interactive elements.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Gradient End Color</th>
-                        <td>
-                            <input type="text" name="atm_podcast_gradient_end" value="<?php echo esc_attr($options['podcast_gradient_end']); ?>" class="atm-color-picker" />
-                            <p class="description">Secondary color for gradient backgrounds in the player header.</p>
-                        </td>
-                    </tr>
                 </table>
-                
-                <!-- Advanced Color Controls -->
-                <div class="atm-podcast-advanced-colors" style="margin-top: 25px;">
-                    <h3 style="margin-bottom: 15px; color: #1a202c;">Advanced Color Customization</h3>
-                    <div class="atm-color-grid">
-                        <div class="atm-color-group">
-                            <h4>Light Theme Colors</h4>
-                            <div class="atm-color-row">
-                                <div class="atm-color-field">
-                                    <label>Card Background</label>
-                                    <input type="text" name="atm_podcast_light_card_bg" value="<?php echo esc_attr($options['podcast_light_card_bg']); ?>" class="atm-color-picker" />
-                                </div>
-                                <div class="atm-color-field">
-                                    <label>Text Color</label>
-                                    <input type="text" name="atm_podcast_light_text" value="<?php echo esc_attr($options['podcast_light_text']); ?>" class="atm-color-picker" />
-                                </div>
-                                <div class="atm-color-field">
-                                    <label>Subtext Color</label>
-                                    <input type="text" name="atm_podcast_light_subtext" value="<?php echo esc_attr($options['podcast_light_subtext']); ?>" class="atm-color-picker" />
-                                </div>
-                            </div>
-                            <div class="atm-color-row">
-                                <div class="atm-color-field">
-                                    <label>Progress Rail</label>
-                                    <input type="text" name="atm_podcast_light_rail_bg" value="<?php echo esc_attr($options['podcast_light_rail_bg']); ?>" class="atm-color-picker" />
-                                </div>
-                                <div class="atm-color-field">
-                                    <label>Control Background</label>
-                                    <input type="text" name="atm_podcast_light_ctrl_bg" value="<?php echo esc_attr($options['podcast_light_ctrl_bg']); ?>" class="atm-color-picker" />
-                                </div>
-                                <div class="atm-color-field">
-                                    <label>Playlist Background</label>
-                                    <input type="text" name="atm_podcast_light_playlist_bg" value="<?php echo esc_attr($options['podcast_light_playlist_bg']); ?>" class="atm-color-picker" />
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="atm-color-group">
-                            <h4>Dark Theme Colors</h4>
-                            <div class="atm-color-row">
-                                <div class="atm-color-field">
-                                    <label>Card Background</label>
-                                    <input type="text" name="atm_podcast_dark_card_bg" value="<?php echo esc_attr($options['podcast_dark_card_bg']); ?>" class="atm-color-picker" />
-                                </div>
-                                <div class="atm-color-field">
-                                    <label>Text Color</label>
-                                    <input type="text" name="atm_podcast_dark_text" value="<?php echo esc_attr($options['podcast_dark_text']); ?>" class="atm-color-picker" />
-                                </div>
-                                <div class="atm-color-field">
-                                    <label>Subtext Color</label>
-                                    <input type="text" name="atm_podcast_dark_subtext" value="<?php echo esc_attr($options['podcast_dark_subtext']); ?>" class="atm-color-picker" />
-                                </div>
-                            </div>
-                            <div class="atm-color-row">
-                                <div class="atm-color-field">
-                                    <label>Progress Rail</label>
-                                    <input type="text" name="atm_podcast_dark_rail_bg" value="<?php echo esc_attr($options['podcast_dark_rail_bg']); ?>" class="atm-color-picker" />
-                                </div>
-                                <div class="atm-color-field">
-                                    <label>Control Background</label>
-                                    <input type="text" name="atm_podcast_dark_ctrl_bg" value="<?php echo esc_attr($options['podcast_dark_ctrl_bg']); ?>" class="atm-color-picker" />
-                                </div>
-                                <div class="atm-color-field">
-                                    <label>Playlist Background</label>
-                                    <input type="text" name="atm_podcast_dark_playlist_bg" value="<?php echo esc_attr($options['podcast_dark_playlist_bg']); ?>" class="atm-color-picker" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
             
             <div class="atm-settings-card">
-                <h2>🐦 Twitter/X News Settings</h2>
+                <h2>🖼️ Image Generation Defaults</h2>
                 <table class="form-table">
                     <tr>
-                        <th scope="row">TwitterAPI.io Key</th>
+                        <th scope="row">Default Image Provider</th>
                         <td>
-                            <input type="password" name="atm_twitterapi_key" value="<?php echo esc_attr($options['twitterapi_key']); ?>" class="regular-text" />
-                            <p class="description">Required for Twitter/X news search. Get a free key from <a href="https://twitterapi.io/" target="_blank">TwitterAPI.io</a>.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Credible News Sources</th>
-                        <td>
-                            <textarea name="atm_twitter_credible_sources" rows="8" style="width:100%;"><?php echo esc_textarea($options['twitter_credible_sources']); ?></textarea>
-                            <p class="description">Add one Twitter/X handle per line (e.g., @CNN, @BBCNews). These accounts will be prioritized in search results. Leave empty to use default news sources.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Minimum Followers</th>
-                        <td>
-                            <select name="atm_twitter_min_followers">
-                                <option value="1000" <?php selected($options['twitter_min_followers'], '1000'); ?>>1,000+ followers</option>
-                                <option value="10000" <?php selected($options['twitter_min_followers'], '10000'); ?>>10,000+ followers</option>
-                                <option value="50000" <?php selected($options['twitter_min_followers'], '50000'); ?>>50,000+ followers</option>
-                                <option value="100000" <?php selected($options['twitter_min_followers'], '100000'); ?>>100,000+ followers</option>
-                                <option value="1000000" <?php selected($options['twitter_min_followers'], '1000000'); ?>>1,000,000+ followers</option>
+                            <select name="atm_image_provider">
+                                <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
+                                <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
+                                <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>BlockFlow (FLUX)</option>
                             </select>
-                            <p class="description">Default minimum follower count for Twitter searches.</p>
                         </td>
                     </tr>
+                    <tr><th scope="row">Default FLUX Image Model</th><td><select name="atm_flux_model"><?php foreach ($options['flux_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['flux_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default FLUX model for realistic image generation.</p></td></tr>
+                    <tr><th scope="row">Default Image Quality</th><td><select name="atm_image_quality"><option value="standard" <?php selected($options['image_quality'], 'standard'); ?>>Standard</option><option value="hd" <?php selected($options['image_quality'], 'hd'); ?>>HD</option></select><p class="description">"HD" is only for OpenAI/DALL-E 3.</p></td></tr>
+                    <tr><th scope="row">Default Image Size</th><td><select name="atm_image_size"><option value="1792x1024" <?php selected($options['image_size'], '1792x1024'); ?>>16:9 Landscape</option><option value="1024x1024" <?php selected($options['image_size'], '1024x1024'); ?>>1:1 Square</option><option value="1024x1792" <?php selected($options['image_size'], '1024x1792'); ?>>9:16 Portrait</option></select></td></tr>
                 </table>
             </div>
+        </div>
 
-            <!-- NEW: Comments Generator Settings -->
-            <div class="atm-settings-card">
-                <h2>💬 Comments Generator</h2>
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">Generate on Publish</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="atm_comments_auto_on_publish" value="1" <?php checked((bool)$options['comments_auto_on_publish'], true); ?> />
-                                Enable background generation of comments when a post is published.
-                            </label>
-                            <p class="description">A background job runs shortly after publish so it never blocks the editor.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Default Count</th>
-                        <td>
-                            <input type="number" name="atm_comments_default_count" min="5" max="50" value="<?php echo esc_attr($options['comments_default_count']); ?>" />
-                            <p class="description">How many comments to generate automatically on publish.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Allow Threaded Replies</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="atm_comments_threaded" value="1" <?php checked((bool)$options['comments_threaded'], true); ?> />
-                                Let some comments reply to others for realistic threads.
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Approve Immediately</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="atm_comments_approve" value="1" <?php checked((bool)$options['comments_approve'], false); ?> />
-                                Approve comments upon creation (otherwise saved as Pending).
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Model (optional)</th>
-                        <td>
-                            <select name="atm_comments_model">
-                                <option value="" <?php selected($options['comments_model'], ''); ?>>Use Default Content Model</option>
-                                <?php foreach ($options['content_models'] as $model_id => $model_name): ?>
-                                    <option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['comments_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="description">Leave empty to use the default Content Model above.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Timestamp Window (days)</th>
-                        <td>
-                            <input type="number" name="atm_comments_randomize_window_days" min="1" max="30" value="<?php echo esc_attr($options['comments_randomize_window_days']); ?>" />
-                            <p class="description">Randomize comment dates between post publish time and now, capped by this window.</p>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            <!-- /Comments Generator Settings -->
+        <div class="atm-settings-card">
+            <h2>RSS Feeds</h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">RSS Feed URLs</th>
+                    <td>
+                        <textarea name="atm_rss_feeds" rows="8" style="width:100%;"><?php echo esc_textarea($options['rss_feeds']); ?></textarea>
+                        <p class="description">Add one RSS feed URL per line.</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-            <div class="atm-settings-card">
-                <h2>RSS Feeds</h2>
-                <table class="form-table"><tr><th scope="row">RSS Feed URLs</th><td><textarea name="atm_rss_feeds" rows="8" style="width:100%;"><?php echo esc_textarea($options['rss_feeds']); ?></textarea><p class="description">Add one RSS feed URL per line.</p></td></tr></table>
-            </div>
+        <?php submit_button('Save General Settings', 'primary', 'submit', false, ['class' => 'atm-save-button']); ?>
+    </form>
+    <?php
+}
 
-            <?php submit_button('Save Settings', 'primary', 'submit', false, ['class' => 'atm-save-button']); ?>
-        </form>
-    </div>
+private function render_api_tab() {
+    $options = $this->get_settings();
+    ?>
+    <form method="post" action="">
+        <?php wp_nonce_field('atm_settings_update'); ?>
+        
+        <div class="atm-settings-card">
+            <h2>🔑 API Configuration</h2>
+            <table class="form-table">
+                <tr><th scope="row">OpenRouter API Key</th><td><input type="password" name="atm_openrouter_api_key" value="<?php echo esc_attr($options['openrouter_key']); ?>" class="regular-text" required /></td></tr>
+                <tr><th scope="row">OpenAI API Key</th><td><input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" /><p class="description">Used for DALL-E 3 image generation and OpenAI TTS voices.</p></td></tr>
+                <tr><th scope="row">Google AI API Key</th><td><input type="password" name="atm_google_api_key" value="<?php echo esc_attr($options['google_key']); ?>" class="regular-text" /><p class="description">Used for Imagen 4 image generation. Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p></td></tr>
+                <tr><th scope="row">BlockFlow API Key</th><td><input type="password" name="atm_blockflow_api_key" value="<?php echo esc_attr($options['blockflow_key']); ?>" class="regular-text" /><p class="description">Required for FLUX image generation. Get a key from <a href="https://app.blockflow.ai/" target="_blank">BlockFlow.ai</a>.</p></td></tr>
+                <tr><th scope="row">ElevenLabs API Key</th><td><input type="password" name="atm_elevenlabs_api_key" value="<?php echo esc_attr($options['elevenlabs_key']); ?>" class="regular-text" /><p class="description">Get a key from <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a> for additional high-quality voices.</p></td></tr>
+                <tr><th scope="row">News API Key</th><td><input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a>.</p></td></tr>
+                <tr><th scope="row">GNews API Key</th><td><input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p></td></tr>
+                <tr><th scope="row">The Guardian API Key</th><td><input type="password" name="atm_guardian_api_key" value="<?php echo esc_attr($options['guardian_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://open-platform.theguardian.com/" target="_blank">The Guardian</a>.</p></td></tr>
+                <tr><th scope="row">Google API Key (for YouTube Search)</th><td><input type="password" name="atm_google_youtube_api_key" value="<?php echo esc_attr($options['google_youtube_key']); ?>" class="regular-text" /><p class="description">Required for the Video Search feature. Get a key from the <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p></td></tr>
+                <tr><th scope="row">Google Custom Search API Key</th><td><input type="password" name="atm_google_news_search_api_key" value="<?php echo esc_attr($options['google_news_search_api_key']); ?>" class="regular-text" /><p class="description">Required for News Search feature. Get a key from <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>.</p></td></tr>
+                <tr><th scope="row">Google Custom Search Engine ID</th><td><input type="text" name="atm_google_news_cse_id" value="<?php echo esc_attr($options['google_news_cse_id']); ?>" class="regular-text" /><p class="description">Create a Custom Search Engine at <a href="https://cse.google.com/" target="_blank">Google CSE</a> configured for news sites.</p></td></tr>
+                <tr><th scope="row">ScrapingAnt API Key</th><td><input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" /><p class="description">Required for RSS scraping. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p></td></tr>
+                <tr><th scope="row">Mercury Reader API Key (Optional)</th><td><input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p></td></tr>
+                <tr><th scope="row">TwitterAPI.io Key</th><td><input type="password" name="atm_twitterapi_key" value="<?php echo esc_attr($options['twitterapi_key']); ?>" class="regular-text" /><p class="description">Required for Twitter/X news search. Get a free key from <a href="https://twitterapi.io/" target="_blank">TwitterAPI.io</a>.</p></td></tr>
+            </table>
+        </div>
+
+        <?php submit_button('Save API Keys', 'primary', 'submit', false, ['class' => 'atm-save-button']); ?>
+    </form>
+    <?php
+}
+
+private function render_advanced_tab() {
+    $options = $this->get_settings();
+    ?>
+    <form method="post" action="">
+        <?php wp_nonce_field('atm_settings_update'); ?>
+        
+        <div class="atm-settings-card">
+            <h2>🎙️ Podcast Player Settings</h2>
+            <!-- All your existing podcast settings -->
+            <table class="form-table">
+                <!-- Add all your podcast settings here from the original method -->
+            </table>
+        </div>
+
+        <div class="atm-settings-card">
+            <h2>🐦 Twitter/X News Settings</h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">Credible News Sources</th>
+                    <td>
+                        <textarea name="atm_twitter_credible_sources" rows="8" style="width:100%;"><?php echo esc_textarea($options['twitter_credible_sources']); ?></textarea>
+                        <p class="description">Add one Twitter/X handle per line (e.g., @CNN, @BBCNews). These accounts will be prioritized in search results. Leave empty to use default news sources.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Minimum Followers</th>
+                    <td>
+                        <select name="atm_twitter_min_followers">
+                            <option value="1000" <?php selected($options['twitter_min_followers'], '1000'); ?>>1,000+ followers</option>
+                            <option value="10000" <?php selected($options['twitter_min_followers'], '10000'); ?>>10,000+ followers</option>
+                            <option value="50000" <?php selected($options['twitter_min_followers'], '50000'); ?>>50,000+ followers</option>
+                            <option value="100000" <?php selected($options['twitter_min_followers'], '100000'); ?>>100,000+ followers</option>
+                            <option value="1000000" <?php selected($options['twitter_min_followers'], '1000000'); ?>>1,000,000+ followers</option>
+                        </select>
+                        <p class="description">Default minimum follower count for Twitter searches.</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="atm-settings-card">
+            <h2>💬 Comments Generator</h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">Generate on Publish</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="atm_comments_auto_on_publish" value="1" <?php checked((bool)$options['comments_auto_on_publish'], true); ?> />
+                            Enable background generation of comments when a post is published.
+                        </label>
+                        <p class="description">A background job runs shortly after publish so it never blocks the editor.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Default Count</th>
+                    <td>
+                        <input type="number" name="atm_comments_default_count" min="5" max="50" value="<?php echo esc_attr($options['comments_default_count']); ?>" />
+                        <p class="description">How many comments to generate automatically on publish.</p>
+                    </td>
+                </tr>
+                <!-- Add other comment settings -->
+            </table>
+        </div>
+
+        <?php submit_button('Save Advanced Settings', 'primary', 'submit', false, ['class' => 'atm-save-button']); ?>
+    </form>
     <?php
 }
 
