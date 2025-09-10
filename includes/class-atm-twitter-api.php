@@ -16,56 +16,104 @@ class ATM_Twitter_API {
             throw new Exception('TwitterAPI.io key not configured. Please add your API key in the settings.');
         }
         
-        // Use TwitterAPI.io advanced search endpoint
+        // Use the EXACT format from TwitterAPI.io documentation
         $url = 'https://api.twitterapi.io/twitter/tweet/advanced_search';
         
-        // Build search query
-        $search_query = self::build_search_query($keyword, $filters);
+        // Build query in TwitterAPI.io format (simple keyword only for now)
+        $query = $keyword;
+        
+        // Add basic filters only
+        if ($filters['verified_only'] ?? false) {
+            $query .= ' filter:verified';
+        }
+        
+        // NO complex OR queries for now - they might be causing the error
+        $query .= ' -filter:retweets'; // Exclude retweets
         
         $params = [
-            'query' => $search_query,
-            'queryType' => 'Latest', // or 'Top' for most popular
-            'maxResults' => min(100, $filters['max_results'] ?? 20), // TwitterAPI.io supports up to 100
+            'query' => $query,
+            'queryType' => 'Latest', // TwitterAPI.io accepts "Latest" or "Top"
         ];
+        
+        // Don't add maxResults parameter - it might not be supported
+        
+        error_log("ATM Twitter Emergency - URL: $url");
+        error_log("ATM Twitter Emergency - Query: $query");
+        error_log("ATM Twitter Emergency - Params: " . print_r($params, true));
         
         $response = wp_remote_get($url . '?' . http_build_query($params), [
             'headers' => [
-                'x-api-key' => $api_key, // TwitterAPI.io uses x-api-key header
+                'X-API-Key' => $api_key, // Use exact header name from docs
                 'Content-Type' => 'application/json'
             ],
             'timeout' => 30
         ]);
         
         if (is_wp_error($response)) {
+            error_log("ATM Twitter Emergency - WP Error: " . $response->get_error_message());
             throw new Exception('Failed to connect to TwitterAPI.io: ' . $response->get_error_message());
         }
         
         $response_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
         
+        error_log("ATM Twitter Emergency - Response Code: $response_code");
+        error_log("ATM Twitter Emergency - Response Body: " . $body);
+        
         if ($response_code !== 200) {
-            $error_data = json_decode($body, true);
-            $error_message = 'TwitterAPI.io Error (' . $response_code . ')';
-            
-            if (isset($error_data['error'])) {
-                $error_message .= ': ' . $error_data['error'];
-            } elseif (isset($error_data['message'])) {
-                $error_message .= ': ' . $error_data['message'];
-            } else {
-                $error_message .= ': ' . $body;
-            }
-            
-            throw new Exception($error_message);
+            throw new Exception("TwitterAPI.io Error ($response_code): $body");
         }
         
         $data = json_decode($body, true);
         
-        if (!isset($data['tweets']) || !is_array($data['tweets'])) {
+        if ($data === null) {
+            throw new Exception('Invalid JSON response from TwitterAPI.io: ' . json_last_error_msg());
+        }
+        
+        // Check all possible response structures
+        $tweets = [];
+        if (isset($data['data']) && is_array($data['data'])) {
+            $tweets = $data['data'];
+        } elseif (isset($data['tweets']) && is_array($data['tweets'])) {
+            $tweets = $data['tweets'];
+        } elseif (isset($data['results']) && is_array($data['results'])) {
+            $tweets = $data['results'];
+        } else {
+            error_log("ATM Twitter Emergency - Unknown response structure: " . print_r(array_keys($data), true));
             return ['results' => [], 'total' => 0];
         }
         
-        // Process and filter results for credibility
-        $filtered_tweets = self::filter_credible_tweets($data['tweets'], $filters);
+        if (empty($tweets)) {
+            return ['results' => [], 'total' => 0];
+        }
+        
+        // MINIMAL filtering to avoid losing data
+        $filtered_tweets = [];
+        foreach ($tweets as $tweet) {
+            // Very basic structure - just return what we get
+            $filtered_tweets[] = [
+                'id' => $tweet['id_str'] ?? $tweet['id'] ?? uniqid(),
+                'text' => $tweet['text'] ?? $tweet['full_text'] ?? 'No text',
+                'user' => [
+                    'name' => $tweet['user']['name'] ?? 'Unknown User',
+                    'screen_name' => $tweet['user']['screen_name'] ?? $tweet['user']['username'] ?? 'unknown',
+                    'verified' => $tweet['user']['verified'] ?? false,
+                    'followers' => $tweet['user']['followers_count'] ?? 0,
+                    'profile_image' => $tweet['user']['profile_image_url_https'] ?? $tweet['user']['profile_image_url'] ?? 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
+                ],
+                'created_at' => $tweet['created_at'] ?? date('c'),
+                'formatted_date' => date('M j, Y g:i A'),
+                'metrics' => [
+                    'retweets' => $tweet['retweet_count'] ?? $tweet['public_metrics']['retweet_count'] ?? 0,
+                    'likes' => $tweet['favorite_count'] ?? $tweet['public_metrics']['like_count'] ?? 0,
+                    'replies' => $tweet['reply_count'] ?? $tweet['public_metrics']['reply_count'] ?? 0
+                ],
+                'urls' => [],
+                'media' => [],
+                'is_credible_source' => false,
+                'credibility_score' => 50
+            ];
+        }
         
         return [
             'results' => $filtered_tweets,
@@ -73,41 +121,11 @@ class ATM_Twitter_API {
             'keyword' => $keyword
         ];
     }
-    
-    /**
-     * Build search query for TwitterAPI.io
-     */
+
+    // Simplified query builder
     private static function build_search_query($keyword, $filters) {
-        $query_parts = [$keyword];
-        
-        // Add verified account filter if requested
-        if ($filters['verified_only'] ?? false) {
-            $query_parts[] = 'filter:verified';
-        }
-        
-        // Add credible sources if specified
-        if ($filters['credible_sources_only'] ?? false) {
-            $credible_sources = self::get_credible_sources_array();
-            if (!empty($credible_sources)) {
-                // Limit to first 5 sources to avoid too long query
-                $sources_query = '(' . implode(' OR ', array_map(function($source) {
-                    return 'from:' . ltrim($source, '@');
-                }, array_slice($credible_sources, 0, 5))) . ')';
-                
-                $query_parts[] = $sources_query;
-            }
-        }
-        
-        // Exclude replies and retweets for cleaner content
-        $query_parts[] = '-filter:replies';
-        $query_parts[] = '-filter:retweets';
-        
-        // Add language filter (TwitterAPI.io format)
-        if (!empty($filters['language'])) {
-            $query_parts[] = 'lang:' . $filters['language'];
-        }
-        
-        return implode(' ', $query_parts);
+        // Return just the keyword for now - no complex queries
+        return $keyword;
     }
     
     /**
