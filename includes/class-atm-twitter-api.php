@@ -18,10 +18,8 @@ class ATM_Twitter_API {
         
         $url = 'https://api.twitterapi.io/twitter/tweet/advanced_search';
         
-        // Simple query - don't add complex filters that might cause -1 errors
+        // Build simple query
         $query = $keyword;
-        
-        // Only add basic filters to avoid API errors
         if ($filters['verified_only'] ?? false) {
             $query .= ' filter:verified';
         }
@@ -30,8 +28,6 @@ class ATM_Twitter_API {
             'query' => $query,
             'queryType' => 'Latest',
         ];
-        
-        error_log("ATM Twitter Fix - Query: $query");
         
         $response = wp_remote_get($url . '?' . http_build_query($params), [
             'headers' => [
@@ -53,30 +49,20 @@ class ATM_Twitter_API {
         }
         
         $data = json_decode($body, true);
-        
         if ($data === null) {
             throw new Exception('Invalid JSON response from TwitterAPI.io');
         }
         
-        // Log the actual response structure to understand TwitterAPI.io format
-        error_log("ATM Twitter Fix - Response keys: " . implode(', ', array_keys($data)));
-        if (!empty($data)) {
-            $first_key = array_key_first($data);
-            if (is_array($data[$first_key]) && !empty($data[$first_key])) {
-                error_log("ATM Twitter Fix - First item structure: " . print_r($data[$first_key][0], true));
-            }
-        }
+        // Debug: Log the ENTIRE response structure
+        error_log("ATM Twitter FULL RESPONSE: " . print_r($data, true));
         
-        // Try all possible data locations
+        // Extract tweets from response
         $tweets = [];
         if (isset($data['data']) && is_array($data['data'])) {
             $tweets = $data['data'];
         } elseif (isset($data['tweets']) && is_array($data['tweets'])) {
             $tweets = $data['tweets'];
-        } elseif (isset($data['results']) && is_array($data['results'])) {
-            $tweets = $data['results'];
         } elseif (is_array($data)) {
-            // Sometimes the response is directly an array
             $tweets = $data;
         }
         
@@ -84,61 +70,56 @@ class ATM_Twitter_API {
             return ['results' => [], 'total' => 0];
         }
         
-        // Process tweets with flexible data extraction
-        $filtered_tweets = [];
-        $min_followers = $filters['min_followers'] ?? 1000; // Lower default
+        // Debug: Log structure of first tweet
+        error_log("ATM Twitter FIRST TWEET: " . print_r($tweets[0], true));
         
+        $min_followers = $filters['min_followers'] ?? 1000;
+        $credible_sources = self::get_credible_sources_array();
+        
+        $filtered_tweets = [];
         foreach ($tweets as $index => $tweet) {
-            if (!is_array($tweet)) {
-                error_log("ATM Twitter Fix - Tweet $index is not an array: " . gettype($tweet));
+            // Extract all data with aggressive fallbacks
+            $extracted_data = self::extract_all_tweet_data($tweet);
+            
+            // Skip if no valid user data
+            if (!$extracted_data['user_data']) {
+                error_log("ATM Twitter: Skipping tweet $index - no user data");
                 continue;
             }
             
-            // Log structure of first tweet for debugging
-            if ($index === 0) {
-                error_log("ATM Twitter Fix - Tweet structure keys: " . implode(', ', array_keys($tweet)));
-                if (isset($tweet['user'])) {
-                    error_log("ATM Twitter Fix - User structure keys: " . implode(', ', array_keys($tweet['user'])));
-                }
-            }
-            
-            // Extract user data with multiple fallbacks
-            $user_data = self::extract_user_data($tweet);
-            $tweet_text = self::extract_tweet_text($tweet);
-            $metrics = self::extract_metrics($tweet);
-            
-            // Skip if no user data or doesn't meet follower threshold
-            if (!$user_data || ($user_data['followers'] < $min_followers)) {
+            // Apply filters
+            if ($extracted_data['user_data']['followers'] < $min_followers) {
                 continue;
             }
             
-            // Skip non-news content if it doesn't look like news
-            if (!self::appears_to_be_news($tweet_text)) {
+            if (!self::appears_to_be_news($extracted_data['text'])) {
                 continue;
             }
+            
+            // Check credible sources
+            $is_credible = in_array('@' . $extracted_data['user_data']['screen_name'], $credible_sources, true);
             
             $filtered_tweets[] = [
-                'id' => $tweet['id_str'] ?? $tweet['id'] ?? uniqid(),
-                'text' => $tweet_text,
-                'user' => $user_data,
-                'created_at' => $tweet['created_at'] ?? date('c'),
-                'formatted_date' => self::format_twitter_date($tweet['created_at'] ?? ''),
-                'metrics' => $metrics,
-                'urls' => self::extract_urls_from_tweet($tweet),
-                'media' => self::extract_media_from_tweet($tweet),
-                'is_credible_source' => self::is_credible_source($user_data['screen_name']),
-                'credibility_score' => self::calculate_credibility_score_simple($user_data, $metrics)
+                'id' => $extracted_data['id'],
+                'text' => $extracted_data['text'],
+                'user' => $extracted_data['user_data'],
+                'created_at' => $extracted_data['created_at'],
+                'formatted_date' => $extracted_data['formatted_date'],
+                'metrics' => $extracted_data['metrics'],
+                'urls' => $extracted_data['urls'],
+                'media' => $extracted_data['media'],
+                'is_credible_source' => $is_credible,
+                'credibility_score' => self::calculate_credibility_score_fixed($extracted_data['user_data'], $extracted_data['metrics'], $is_credible)
             ];
         }
         
-        // Sort by follower count and engagement if no credibility scores
+        // Sort by credibility score and engagement
         usort($filtered_tweets, function($a, $b) {
-            $a_score = $a['user']['followers'] + $a['metrics']['retweets'] + $a['metrics']['likes'];
-            $b_score = $b['user']['followers'] + $b['metrics']['retweets'] + $b['metrics']['likes'];
-            return $b_score - $a_score;
+            if ($a['credibility_score'] !== $b['credibility_score']) {
+                return $b['credibility_score'] - $a['credibility_score'];
+            }
+            return ($b['metrics']['retweets'] + $b['metrics']['likes']) - ($a['metrics']['retweets'] + $a['metrics']['likes']);
         });
-        
-        error_log("ATM Twitter Fix - Final count: " . count($filtered_tweets));
         
         return [
             'results' => $filtered_tweets,
@@ -146,165 +127,119 @@ class ATM_Twitter_API {
             'keyword' => $keyword
         ];
     }
-
-    // Helper method to extract user data with multiple fallbacks
-    private static function extract_user_data($tweet) {
-        $user = null;
-        
-        // Try different possible user data locations
-        if (isset($tweet['user'])) {
-            $user = $tweet['user'];
-        } elseif (isset($tweet['author'])) {
-            $user = $tweet['author'];
-        } elseif (isset($tweet['account'])) {
-            $user = $tweet['account'];
-        }
-        
-        if (!$user) {
-            return null;
-        }
-        
-        return [
-            'name' => $user['name'] ?? $user['display_name'] ?? $user['username'] ?? 'Unknown User',
-            'screen_name' => $user['screen_name'] ?? $user['username'] ?? $user['handle'] ?? 'unknown',
-            'verified' => $user['verified'] ?? $user['is_verified'] ?? false,
-            'followers' => $user['followers_count'] ?? $user['follower_count'] ?? $user['followers'] ?? 0,
-            'profile_image' => $user['profile_image_url_https'] ?? $user['profile_image_url'] ?? $user['avatar'] ?? 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
-        ];
-    }
-
-    // Helper method to extract tweet text
-    private static function extract_tweet_text($tweet) {
-        return $tweet['full_text'] ?? $tweet['text'] ?? $tweet['content'] ?? $tweet['body'] ?? 'No text available';
-    }
-
-    // Helper method to extract metrics
-    private static function extract_metrics($tweet) {
-        $metrics = [
-            'retweets' => 0,
-            'likes' => 0,
-            'replies' => 0
+    
+    /**
+     * Aggressively extract all possible data from a tweet with multiple fallbacks
+     */
+    private static function extract_all_tweet_data($tweet) {
+        // Start with empty data structure
+        $data = [
+            'id' => '',
+            'text' => '',
+            'user_data' => null,
+            'created_at' => '',
+            'formatted_date' => '',
+            'metrics' => ['retweets' => 0, 'likes' => 0, 'replies' => 0],
+            'urls' => [],
+            'media' => []
         ];
         
-        // Try different metric locations
+        // Extract ID
+        $data['id'] = $tweet['id_str'] ?? $tweet['id'] ?? uniqid();
+        
+        // Extract text with ALL possible field names
+        $text_fields = ['full_text', 'text', 'content', 'body', 'message'];
+        foreach ($text_fields as $field) {
+            if (!empty($tweet[$field])) {
+                $data['text'] = $tweet[$field];
+                break;
+            }
+        }
+        
+        // Extract user data - try EVERY possible structure
+        $user_locations = ['user', 'author', 'account', 'profile', 'creator'];
+        foreach ($user_locations as $location) {
+            if (isset($tweet[$location]) && is_array($tweet[$location])) {
+                $user = $tweet[$location];
+                
+                $data['user_data'] = [
+                    'name' => self::get_first_available($user, ['name', 'display_name', 'full_name', 'username', 'screen_name']) ?: 'Unknown User',
+                    'screen_name' => self::get_first_available($user, ['screen_name', 'username', 'handle', 'login']) ?: 'unknown',
+                    'verified' => $user['verified'] ?? $user['is_verified'] ?? $user['blue_verified'] ?? false,
+                    'followers' => intval($user['followers_count'] ?? $user['follower_count'] ?? $user['followers'] ?? 0),
+                    'profile_image' => $user['profile_image_url_https'] ?? $user['profile_image_url'] ?? $user['avatar'] ?? $user['image'] ?? 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
+                ];
+                break;
+            }
+        }
+        
+        // Extract metrics with multiple fallbacks
         if (isset($tweet['public_metrics'])) {
-            $metrics['retweets'] = $tweet['public_metrics']['retweet_count'] ?? 0;
-            $metrics['likes'] = $tweet['public_metrics']['like_count'] ?? 0;
-            $metrics['replies'] = $tweet['public_metrics']['reply_count'] ?? 0;
+            $metrics = $tweet['public_metrics'];
+            $data['metrics'] = [
+                'retweets' => intval($metrics['retweet_count'] ?? 0),
+                'likes' => intval($metrics['like_count'] ?? 0),
+                'replies' => intval($metrics['reply_count'] ?? 0)
+            ];
         } else {
-            $metrics['retweets'] = $tweet['retweet_count'] ?? $tweet['retweets'] ?? 0;
-            $metrics['likes'] = $tweet['favorite_count'] ?? $tweet['like_count'] ?? $tweet['likes'] ?? 0;
-            $metrics['replies'] = $tweet['reply_count'] ?? $tweet['replies'] ?? 0;
+            $data['metrics'] = [
+                'retweets' => intval($tweet['retweet_count'] ?? $tweet['retweets'] ?? 0),
+                'likes' => intval($tweet['favorite_count'] ?? $tweet['like_count'] ?? $tweet['likes'] ?? $tweet['hearts'] ?? 0),
+                'replies' => intval($tweet['reply_count'] ?? $tweet['replies'] ?? 0)
+            ];
         }
         
-        return $metrics;
-    }
-
-    // Simplified credibility check
-    private static function is_credible_source($screen_name) {
-        $credible_sources = self::get_credible_sources_array();
-        return in_array('@' . $screen_name, $credible_sources, true);
-    }
-
-    // Simple credibility scoring
-    private static function calculate_credibility_score_simple($user_data, $metrics) {
-        $score = 20; // Base score
+        // Extract created_at and format it
+        $created_at = $tweet['created_at'] ?? date('c');
+        $data['created_at'] = $created_at;
+        $data['formatted_date'] = self::format_twitter_date($created_at);
         
-        if ($user_data['verified']) {
-            $score += 30;
+        // Extract URLs
+        if (isset($tweet['entities']['urls'])) {
+            foreach ($tweet['entities']['urls'] as $url) {
+                $data['urls'][] = [
+                    'url' => $url['url'] ?? '',
+                    'expanded_url' => $url['expanded_url'] ?? $url['url'] ?? '',
+                    'display_url' => $url['display_url'] ?? $url['url'] ?? ''
+                ];
+            }
         }
         
-        if ($user_data['followers'] > 100000) {
-            $score += 25;
-        } elseif ($user_data['followers'] > 10000) {
-            $score += 15;
-        } elseif ($user_data['followers'] > 1000) {
-            $score += 10;
+        // Extract media
+        if (isset($tweet['entities']['media'])) {
+            foreach ($tweet['entities']['media'] as $media) {
+                $data['media'][] = [
+                    'type' => $media['type'] ?? 'photo',
+                    'url' => $media['media_url_https'] ?? $media['media_url'] ?? $media['url'] ?? '',
+                    'sizes' => $media['sizes'] ?? []
+                ];
+            }
         }
         
-        $engagement = $metrics['retweets'] + $metrics['likes'];
-        if ($engagement > 100) {
-            $score += 15;
-        } elseif ($engagement > 10) {
-            $score += 10;
+        // If no media in entities, check attachments
+        if (empty($data['media']) && isset($tweet['attachments']['media'])) {
+            foreach ($tweet['attachments']['media'] as $media) {
+                $data['media'][] = [
+                    'type' => $media['type'] ?? 'photo',
+                    'url' => $media['url'] ?? $media['media_url'] ?? '',
+                    'sizes' => []
+                ];
+            }
         }
         
-        return min($score, 100);
+        return $data;
     }
     
     /**
-     * Filter tweets for credibility and relevance using TwitterAPI.io data structure
+     * Get first available value from array of possible keys
      */
-    private static function filter_credible_tweets($tweets, $filters) {
-        $filtered = [];
-        $min_followers = $filters['min_followers'] ?? get_option('atm_twitter_min_followers', 10000);
-        $credible_sources = self::get_credible_sources_array();
-        
-        foreach ($tweets as $tweet) {
-            // Skip if no user data
-            if (!isset($tweet['user'])) {
-                continue;
+    private static function get_first_available($array, $keys) {
+        foreach ($keys as $key) {
+            if (!empty($array[$key])) {
+                return $array[$key];
             }
-            
-            $user = $tweet['user'];
-            
-            // Skip if user doesn't meet follower threshold
-            if (($user['followers_count'] ?? 0) < $min_followers) {
-                continue;
-            }
-            
-            // Check for credible sources
-            $username = '@' . ($user['screen_name'] ?? $user['username'] ?? '');
-            $is_credible_source = in_array($username, $credible_sources, true);
-            
-            // Skip non-credible sources if filter is enabled
-            if (($filters['credible_sources_only'] ?? false) && !$is_credible_source) {
-                continue;
-            }
-            
-            // Check for news indicators
-            $tweet_text = $tweet['text'] ?? $tweet['full_text'] ?? '';
-            if (!self::appears_to_be_news($tweet_text)) {
-                continue;
-            }
-            
-            // Extract metrics safely
-            $metrics = [
-                'retweets' => $tweet['retweet_count'] ?? $tweet['public_metrics']['retweet_count'] ?? 0,
-                'likes' => $tweet['favorite_count'] ?? $tweet['public_metrics']['like_count'] ?? 0,
-                'replies' => $tweet['reply_count'] ?? $tweet['public_metrics']['reply_count'] ?? 0
-            ];
-            
-            $filtered[] = [
-                'id' => $tweet['id_str'] ?? $tweet['id'] ?? uniqid(),
-                'text' => $tweet_text,
-                'user' => [
-                    'name' => $user['name'] ?? 'Unknown User',
-                    'screen_name' => $user['screen_name'] ?? $user['username'] ?? 'unknown',
-                    'verified' => $user['verified'] ?? false,
-                    'followers' => $user['followers_count'] ?? 0,
-                    'profile_image' => $user['profile_image_url_https'] ?? $user['profile_image_url'] ?? 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png'
-                ],
-                'created_at' => $tweet['created_at'] ?? date('c'),
-                'formatted_date' => self::format_twitter_date($tweet['created_at'] ?? ''),
-                'metrics' => $metrics,
-                'urls' => self::extract_urls_from_tweet($tweet),
-                'media' => self::extract_media_from_tweet($tweet),
-                'is_credible_source' => $is_credible_source,
-                'credibility_score' => self::calculate_credibility_score_new($tweet, $user, $is_credible_source)
-            ];
         }
-        
-        // Sort by credibility score and engagement
-        usort($filtered, function($a, $b) {
-            if ($a['credibility_score'] === $b['credibility_score']) {
-                return ($b['metrics']['retweets'] + $b['metrics']['likes']) - 
-                       ($a['metrics']['retweets'] + $a['metrics']['likes']);
-            }
-            return $b['credibility_score'] - $a['credibility_score'];
-        });
-        
-        return $filtered;
+        return null;
     }
     
     /**
@@ -366,53 +301,44 @@ class ATM_Twitter_API {
     }
     
     /**
-     * Calculate credibility score with new data structure
+     * Fixed credibility scoring
      */
-    private static function calculate_credibility_score_new($tweet, $user, $is_credible_source) {
-        $score = 0;
+    private static function calculate_credibility_score_fixed($user_data, $metrics, $is_credible_source) {
+        $score = 10; // Base score
         
-        // Base score for credible sources
+        // Credible source bonus
         if ($is_credible_source) {
-            $score += 50;
+            $score += 40;
         }
         
         // Verification bonus
-        if ($user['verified'] ?? false) {
-            $score += 20;
+        if ($user_data['verified']) {
+            $score += 25;
         }
         
-        // Follower count factor (logarithmic scaling)
-        $followers = $user['followers_count'] ?? 0;
+        // Follower count scoring
+        $followers = $user_data['followers'];
         if ($followers > 1000000) {
             $score += 20;
         } elseif ($followers > 100000) {
             $score += 15;
-        } elseif ($followers > 50000) {
-            $score += 10;
         } elseif ($followers > 10000) {
-            $score += 5;
-        }
-        
-        // Engagement factor
-        $retweets = $tweet['retweet_count'] ?? $tweet['public_metrics']['retweet_count'] ?? 0;
-        $likes = $tweet['favorite_count'] ?? $tweet['public_metrics']['like_count'] ?? 0;
-        $engagement = $retweets + $likes;
-        
-        if ($engagement > 1000) {
             $score += 10;
+        } elseif ($followers > 1000) {
+            $score += 5;
+        }
+        
+        // Engagement scoring
+        $engagement = $metrics['retweets'] + $metrics['likes'];
+        if ($engagement > 1000) {
+            $score += 15;
         } elseif ($engagement > 100) {
-            $score += 5;
+            $score += 10;
         } elseif ($engagement > 10) {
-            $score += 2;
-        }
-        
-        // URL presence (news often includes sources)
-        $text = $tweet['text'] ?? $tweet['full_text'] ?? '';
-        if (preg_match('/https?:\/\/[^\s]+/', $text)) {
             $score += 5;
         }
         
-        return min($score, 100); // Cap at 100
+        return min($score, 100);
     }
     
     /**
@@ -487,77 +413,69 @@ class ATM_Twitter_API {
     }
     
     /**
-     * Generate article from selected tweets
+     * Enhanced article generation with actual tweet quotes
      */
     public static function generate_article_from_tweets($keyword, $selected_tweets, $article_language = 'English') {
         if (empty($selected_tweets)) {
             throw new Exception('No tweets provided for article generation');
         }
         
-        // Prepare tweet content for analysis
+        // Prepare detailed tweet content for analysis
         $tweets_content = "TWITTER/X NEWS SOURCES:\n\n";
         
         foreach ($selected_tweets as $index => $tweet) {
             $tweets_content .= "TWEET " . ($index + 1) . ":\n";
-            $tweets_content .= "From: @{$tweet['user']['screen_name']} ({$tweet['user']['name']})\n";
+            $tweets_content .= "Account: @{$tweet['user']['screen_name']} ({$tweet['user']['name']})\n";
             $tweets_content .= "Verified: " . ($tweet['user']['verified'] ? 'Yes' : 'No') . "\n";
             $tweets_content .= "Followers: " . number_format($tweet['user']['followers']) . "\n";
             $tweets_content .= "Posted: {$tweet['formatted_date']}\n";
-            $tweets_content .= "Content: {$tweet['text']}\n";
+            $tweets_content .= "EXACT TWEET TEXT: \"{$tweet['text']}\"\n";
+            
             if (!empty($tweet['urls'])) {
                 $urls_list = array_map(function($url) {
                     return $url['expanded_url'];
                 }, $tweet['urls']);
                 $tweets_content .= "Links: " . implode(', ', $urls_list) . "\n";
             }
+            
             $tweets_content .= "Engagement: {$tweet['metrics']['retweets']} retweets, {$tweet['metrics']['likes']} likes\n";
             $tweets_content .= "Credibility Score: {$tweet['credibility_score']}/100\n";
-            $tweets_content .= "---\n";
+            $tweets_content .= "---\n\n";
         }
         
-        $system_prompt = "You are a professional social media journalist. Your task is to analyze these Twitter/X posts and create a comprehensive news article in {$article_language} about the topic '{$keyword}'.
+        $system_prompt = "You are a professional social media journalist. Create a comprehensive news article in {$article_language} about '{$keyword}' based on these Twitter/X posts.
 
-        **CRITICAL INSTRUCTIONS:**
-        1. **Language**: Write the entire article in {$article_language}. This is mandatory.
-        2. **Analysis**: Synthesize information from multiple tweets to identify the main story and verify facts
-        3. **Verification**: Use your web search ability to verify claims and add context from reliable news sources
-        4. **Attribution**: Properly attribute information to Twitter sources while maintaining journalistic standards
-        
-        **ARTICLE REQUIREMENTS:**
-        - Write a 800-1200 word news article
-        - Lead with the most important/breaking information
-        - Include direct quotes from tweets where appropriate
-        - Verify information through additional research
-        - Provide context and background from reliable sources
-        - End with implications or what comes next
-        
-        **FORMATTING RULES:**
-        - NO H1 headings in content field
-        - Start with engaging lead paragraph
-        - Use H2 (##) for section headings only
-        - No conclusion headings - end naturally
-        
-        **SOCIAL MEDIA ATTRIBUTION:**
-        - Format: \"According to a tweet from @username, ...\"
-        - Include follower count for context when relevant: \"@username (2.5M followers)\"
-        - Note verification status of major sources
-        - Always attribute information properly
-        
-        **LINK FORMATTING:**
-        - When including external links, use descriptive anchor text
-        - Example: [Reuters](https://reuters.com/specific-article) reported that...
-        - Do NOT use URLs as anchor text
-        - Keep anchor text concise (1-3 words)
-        
-        **OUTPUT FORMAT (JSON):**
-        {
-            \"title\": \"Breaking news headline in {$article_language}\",
-            \"subtitle\": \"Brief subheadline in {$article_language}\",
-            \"content\": \"Full article in {$article_language} using Markdown\"
-        }
-        
-        **SOURCE TWEETS:**
-        {$tweets_content}";
+**CRITICAL REQUIREMENTS:**
+1. **Language**: Write entirely in {$article_language}
+2. **Include Actual Tweets**: Quote the exact tweet text in your article
+3. **Attribution**: Always attribute with full details: @username (Full Name) with X followers
+4. **Verification**: Use web search to verify and add context from reliable news sources
+
+**TWEET QUOTATION FORMAT:**
+- Use exact tweet text in quotes
+- Example: @username (Full Name) tweeted: \"[exact tweet text here]\"
+- Include follower count and verification status for context
+- Example: The verified account @CNN (5.2M followers) reported: \"Breaking: [tweet text]\"
+
+**ARTICLE STRUCTURE:**
+- Lead with the most newsworthy information
+- Quote relevant tweets throughout the article
+- Verify claims through additional research
+- Provide broader context and implications
+- 800-1200 words
+
+**NO H1 HEADINGS** - Use H2 (##) only
+Start directly with content, not title
+
+**OUTPUT FORMAT (JSON):**
+{
+    \"title\": \"Breaking news headline in {$article_language}\",
+    \"subtitle\": \"Brief subheadline in {$article_language}\", 
+    \"content\": \"Full article in {$article_language} with embedded tweet quotes\"
+}
+
+**SOURCE TWEETS:**
+{$tweets_content}";
         
         $model = get_option('atm_article_model', 'openai/gpt-4o');
         
@@ -566,10 +484,9 @@ class ATM_Twitter_API {
             $system_prompt,
             $model,
             true, // JSON mode
-            true  // Enable web search for verification
+            true  // Enable web search
         );
         
-        // Parse and validate response
         $result = json_decode(trim($raw_response), true);
         if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
             error_log('ATM Plugin - Invalid JSON from Twitter article generation: ' . $raw_response);
@@ -580,6 +497,48 @@ class ATM_Twitter_API {
             'title' => sanitize_text_field($result['title']),
             'subtitle' => sanitize_text_field($result['subtitle'] ?? ''),
             'content' => wp_kses_post($result['content'])
+        ];
+    }
+    
+    /**
+     * Test API connection method for debugging
+     */
+    public static function test_api_connection() {
+        $api_key = get_option('atm_twitterapi_key');
+        if (empty($api_key)) {
+            return ['success' => false, 'message' => 'No API key configured'];
+        }
+        
+        // Simple test with a basic query
+        $url = 'https://api.twitterapi.io/twitter/tweet/advanced_search';
+        $params = [
+            'query' => 'hello',
+            'queryType' => 'Latest',
+        ];
+        
+        $response = wp_remote_get($url . '?' . http_build_query($params), [
+            'headers' => [
+                'X-API-Key' => $api_key,
+                'Content-Type' => 'application/json'
+            ],
+            'timeout' => 15
+        ]);
+        
+        if (is_wp_error($response)) {
+            return ['success' => false, 'message' => 'Connection failed: ' . $response->get_error_message()];
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        
+        $data = json_decode($body, true);
+        
+        return [
+            'success' => $response_code === 200,
+            'response_code' => $response_code,
+            'message' => $response_code === 200 ? 'Connection successful' : $body,
+            'data_keys' => $response_code === 200 && $data ? array_keys($data) : [],
+            'tweet_count' => $response_code === 200 && isset($data['data']) ? count($data['data']) : 0
         ];
     }
 }

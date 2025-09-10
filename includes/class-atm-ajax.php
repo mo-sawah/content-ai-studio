@@ -6,6 +6,77 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    public function debug_twitter_response() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        
+        try {
+            $api_key = get_option('atm_twitterapi_key');
+            if (empty($api_key)) {
+                throw new Exception('TwitterAPI.io key not configured');
+            }
+            
+            $url = 'https://api.twitterapi.io/twitter/tweet/advanced_search';
+            $params = [
+                'query' => 'news',
+                'queryType' => 'Latest',
+            ];
+            
+            $response = wp_remote_get($url . '?' . http_build_query($params), [
+                'headers' => [
+                    'X-API-Key' => $api_key,
+                    'Content-Type' => 'application/json'
+                ],
+                'timeout' => 30
+            ]);
+            
+            if (is_wp_error($response)) {
+                throw new Exception('Connection failed: ' . $response->get_error_message());
+            }
+            
+            $response_code = wp_remote_retrieve_response_code($response);
+            $body = wp_remote_retrieve_body($response);
+            
+            if ($response_code !== 200) {
+                throw new Exception("API Error ($response_code): $body");
+            }
+            
+            $data = json_decode($body, true);
+            
+            // Return structured debug info
+            $debug_info = [
+                'response_code' => $response_code,
+                'response_keys' => array_keys($data),
+                'data_structure' => 'unknown'
+            ];
+            
+            // Identify data structure
+            if (isset($data['data']) && is_array($data['data'])) {
+                $debug_info['data_structure'] = 'data array';
+                $debug_info['tweet_count'] = count($data['data']);
+                if (!empty($data['data'])) {
+                    $debug_info['first_tweet'] = $data['data'][0];
+                }
+            } elseif (isset($data['tweets']) && is_array($data['tweets'])) {
+                $debug_info['data_structure'] = 'tweets array';
+                $debug_info['tweet_count'] = count($data['tweets']);
+                if (!empty($data['tweets'])) {
+                    $debug_info['first_tweet'] = $data['tweets'][0];
+                }
+            } elseif (is_array($data)) {
+                $debug_info['data_structure'] = 'direct array';
+                $debug_info['tweet_count'] = count($data);
+                if (!empty($data)) {
+                    $debug_info['first_tweet'] = $data[0];
+                }
+            }
+            
+            wp_send_json_success($debug_info);
+            
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
     /**
      * Search Twitter for news content
      */
@@ -907,6 +978,7 @@ public function translate_text() {
         add_action('wp_ajax_get_post_subtitle', array($this, 'get_post_subtitle'));
         add_action('wp_ajax_populate_subtitle_field', array($this, 'populate_subtitle_field'));
         add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
+        add_action('wp_ajax_debug_twitter_response', array($this, 'debug_twitter_response'));
 
         add_action('wp_ajax_search_google_news', array($this, 'search_google_news'));
         add_action('wp_ajax_generate_article_from_news_source', array($this, 'generate_article_from_news_source'));
