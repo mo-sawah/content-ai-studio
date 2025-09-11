@@ -1,6 +1,6 @@
 <?php
 /**
- * ATM Humanize Class
+ * ATM Humanize Class - FIXED VERSION
  * 
  * Handles all humanization functionality including StealthGPT integration
  * and OpenRouter's most powerful models for content humanization
@@ -12,6 +12,7 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
 
 class ATM_Humanize {
     
@@ -81,7 +82,7 @@ class ATM_Humanize {
     }
     
     /**
-     * AJAX: Humanize content
+     * AJAX: Humanize content - FIXED VERSION
      */
     public function ajax_humanize_content() {
         if (!ATM_Licensing::is_license_active()) {
@@ -104,37 +105,24 @@ class ATM_Humanize {
                 throw new Exception('Content is required for humanization.');
             }
             
-            if (strlen($content) < 50) {
+            if (strlen(wp_strip_all_tags($content)) < 50) {
                 throw new Exception('Content must be at least 50 characters long.');
             }
             
-            // Extract and preserve formatting if needed
-            $original_formatting = null;
-            $plain_content = $content;
-            
-            if ($preserve_formatting) {
-                $original_formatting = $this->extract_formatting($content);
-                $plain_content = wp_strip_all_tags($content);
-            }
-            
-            // Humanize based on provider
-            $result = $this->humanize_content($plain_content, $provider, [
+            // FIXED: Better content processing with formatting preservation
+            $result = $this->humanize_content_with_formatting($content, $provider, [
                 'tone' => $tone,
                 'mode' => $mode,
                 'business_mode' => $business_mode,
-                'model' => $model
+                'model' => $model,
+                'preserve_formatting' => $preserve_formatting
             ]);
-            
-            // Restore formatting if preserved
-            if ($preserve_formatting && $original_formatting) {
-                $result['humanized_content'] = $this->restore_formatting($result['humanized_content'], $original_formatting);
-            }
             
             // Optional: Run AI detection check
             $detection_score = null;
             if (get_option('atm_auto_check_detection', true)) {
                 try {
-                    $detection_score = $this->check_ai_detection($result['humanized_content']);
+                    $detection_score = $this->check_ai_detection(wp_strip_all_tags($result['humanized_content']));
                 } catch (Exception $e) {
                     error_log('ATM: AI detection check failed: ' . $e->getMessage());
                 }
@@ -157,6 +145,502 @@ class ATM_Humanize {
             wp_send_json_error($e->getMessage());
         }
     }
+    
+    /**
+     * NEW: Humanize content while preserving formatting
+     */
+    public function humanize_content_with_formatting($content, $provider = 'stealthgpt', $options = []) {
+        $start_time = microtime(true);
+        $preserve_formatting = $options['preserve_formatting'] ?? true;
+        
+        if (!$preserve_formatting) {
+            // Use old method if formatting preservation is disabled
+            return $this->humanize_content(wp_strip_all_tags($content), $provider, $options);
+        }
+        
+        // STEP 1: Extract and map the content structure
+        $content_map = $this->create_content_map($content);
+        
+        // STEP 2: Extract just the text content for humanization
+        $text_content = $this->extract_text_content($content_map);
+        
+        if (empty($text_content) || strlen($text_content) < 50) {
+            throw new Exception('Insufficient text content for humanization.');
+        }
+        
+        // STEP 3: Humanize the text content
+        $humanized_text = $this->humanize_text_content($text_content, $provider, $options);
+        
+        // STEP 4: Map the humanized text back to the original structure
+        $final_content = $this->restore_content_structure($content_map, $humanized_text);
+        
+        $processing_time = round((microtime(true) - $start_time) * 1000);
+        
+        return [
+            'humanized_content' => $final_content,
+            'credits_used' => $this->calculate_credits($text_content, $provider, $options),
+            'processing_time' => $processing_time
+        ];
+    }
+    
+    /**
+     * Create a detailed map of the content structure
+     */
+    private function create_content_map($content) {
+        $map = [];
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        
+        // Suppress errors for malformed HTML
+        libxml_use_internal_errors(true);
+        
+        // Add proper HTML structure if missing
+        $wrapped_content = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' . $content . '</body></html>';
+        $dom->loadHTML($wrapped_content, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        
+        // Clear errors
+        libxml_clear_errors();
+        
+        $body = $dom->getElementsByTagName('body')->item(0);
+        if (!$body) {
+            // Fallback to simple parsing if DOM fails
+            return $this->create_simple_content_map($content);
+        }
+        
+        $this->map_node_recursive($body, $map);
+        
+        return $map;
+    }
+    
+    /**
+     * Recursively map DOM nodes
+     */
+    private function map_node_recursive($node, &$map) {
+        foreach ($node->childNodes as $child) {
+            if ($child->nodeType === XML_TEXT_NODE) {
+                $text = trim($child->textContent);
+                if (!empty($text)) {
+                    $map[] = [
+                        'type' => 'text',
+                        'content' => $text,
+                        'original' => $text
+                    ];
+                }
+            } elseif ($child->nodeType === XML_ELEMENT_NODE) {
+                $tag_name = strtolower($child->tagName);
+                
+                // Handle different element types
+                if (in_array($tag_name, ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'])) {
+                    // Block elements - extract text but preserve structure
+                    $text_content = $this->get_text_content_from_element($child);
+                    if (!empty(trim($text_content))) {
+                        $map[] = [
+                            'type' => 'block',
+                            'tag' => $tag_name,
+                            'content' => $text_content,
+                            'original' => $text_content,
+                            'html' => $dom->saveHTML($child),
+                            'attributes' => $this->get_element_attributes($child)
+                        ];
+                    }
+                } elseif (in_array($tag_name, ['a'])) {
+                    // Links - preserve completely
+                    $map[] = [
+                        'type' => 'link',
+                        'tag' => $tag_name,
+                        'content' => trim($child->textContent),
+                        'original' => trim($child->textContent),
+                        'html' => $dom->saveHTML($child),
+                        'href' => $child->getAttribute('href'),
+                        'attributes' => $this->get_element_attributes($child)
+                    ];
+                } elseif (in_array($tag_name, ['ul', 'ol'])) {
+                    // Lists - handle specially
+                    $list_items = [];
+                    $list_xpath = new DOMXPath($dom);
+                    $items = $list_xpath->query('.//li', $child);
+                    
+                    foreach ($items as $li) {
+                        $li_text = $this->get_text_content_from_element($li);
+                        if (!empty(trim($li_text))) {
+                            $list_items[] = [
+                                'content' => $li_text,
+                                'original' => $li_text,
+                                'html' => $dom->saveHTML($li)
+                            ];
+                        }
+                    }
+                    
+                    if (!empty($list_items)) {
+                        $map[] = [
+                            'type' => 'list',
+                            'tag' => $tag_name,
+                            'items' => $list_items,
+                            'attributes' => $this->get_element_attributes($child)
+                        ];
+                    }
+                } else {
+                    // Other elements - recurse into them
+                    $this->map_node_recursive($child, $map);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Get text content from element while preserving inline formatting context
+     */
+    private function get_text_content_from_element($element) {
+        $text_parts = [];
+        
+        foreach ($element->childNodes as $child) {
+            if ($child->nodeType === XML_TEXT_NODE) {
+                $text_parts[] = $child->textContent;
+            } elseif ($child->nodeType === XML_ELEMENT_NODE) {
+                if (in_array(strtolower($child->tagName), ['a', 'strong', 'em', 'b', 'i', 'span'])) {
+                    // Inline elements - include their text
+                    $text_parts[] = $child->textContent;
+                } else {
+                    // Block elements - recurse
+                    $text_parts[] = $this->get_text_content_from_element($child);
+                }
+            }
+        }
+        
+        return implode(' ', $text_parts);
+    }
+    
+    /**
+     * Get element attributes
+     */
+    private function get_element_attributes($element) {
+        $attributes = [];
+        if ($element->hasAttributes()) {
+            foreach ($element->attributes as $attr) {
+                $attributes[$attr->name] = $attr->value;
+            }
+        }
+        return $attributes;
+    }
+    
+    /**
+     * Fallback simple content mapping
+     */
+    private function create_simple_content_map($content) {
+        $map = [];
+        
+        // Split by paragraphs and headings while preserving them
+        $pattern = '/(<(?:p|h[1-6]|div)[^>]*>.*?<\/(?:p|h[1-6]|div)>|<(?:ul|ol)[^>]*>.*?<\/(?:ul|ol)>)/is';
+        $parts = preg_split($pattern, $content, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if (empty($part)) continue;
+            
+            if (preg_match('/^<(p|h[1-6]|div)/', $part)) {
+                // Block element
+                $text_content = wp_strip_all_tags($part);
+                if (!empty(trim($text_content))) {
+                    preg_match('/^<(\w+)/', $part, $tag_matches);
+                    $map[] = [
+                        'type' => 'block',
+                        'tag' => $tag_matches[1] ?? 'p',
+                        'content' => $text_content,
+                        'original' => $text_content,
+                        'html' => $part
+                    ];
+                }
+            } elseif (preg_match('/^<(ul|ol)/', $part)) {
+                // List element
+                preg_match_all('/<li[^>]*>(.*?)<\/li>/is', $part, $li_matches);
+                $list_items = [];
+                
+                foreach ($li_matches[1] as $li_content) {
+                    $li_text = wp_strip_all_tags($li_content);
+                    if (!empty(trim($li_text))) {
+                        $list_items[] = [
+                            'content' => $li_text,
+                            'original' => $li_text,
+                            'html' => '<li>' . $li_content . '</li>'
+                        ];
+                    }
+                }
+                
+                if (!empty($list_items)) {
+                    preg_match('/^<(\w+)/', $part, $tag_matches);
+                    $map[] = [
+                        'type' => 'list',
+                        'tag' => $tag_matches[1] ?? 'ul',
+                        'items' => $list_items
+                    ];
+                }
+            } else {
+                // Plain text
+                $text_content = wp_strip_all_tags($part);
+                if (!empty(trim($text_content))) {
+                    $map[] = [
+                        'type' => 'text',
+                        'content' => $text_content,
+                        'original' => $text_content
+                    ];
+                }
+            }
+        }
+        
+        return $map;
+    }
+    
+    /**
+     * Extract all text content for humanization
+     */
+    private function extract_text_content($content_map) {
+        $text_parts = [];
+        
+        foreach ($content_map as $item) {
+            switch ($item['type']) {
+                case 'text':
+                case 'block':
+                case 'link':
+                    if (!empty($item['content'])) {
+                        $text_parts[] = $item['content'];
+                    }
+                    break;
+                    
+                case 'list':
+                    foreach ($item['items'] as $list_item) {
+                        if (!empty($list_item['content'])) {
+                            $text_parts[] = $list_item['content'];
+                        }
+                    }
+                    break;
+            }
+        }
+        
+        return implode("\n\n", $text_parts);
+    }
+    
+    /**
+     * Humanize just the text content
+     */
+    private function humanize_text_content($text_content, $provider, $options) {
+        switch ($provider) {
+            case 'stealthgpt':
+                $result = $this->humanize_with_stealthgpt($text_content, $options);
+                break;
+                
+            case 'openrouter':
+                $result = $this->humanize_with_openrouter($text_content, $options);
+                break;
+                
+            case 'undetectable':
+                $result = $this->humanize_with_undetectable($text_content, $options);
+                break;
+                
+            case 'combo':
+                $result = $this->humanize_with_combo($text_content, $options);
+                break;
+                
+            default:
+                throw new Exception('Invalid humanization provider: ' . $provider);
+        }
+        
+        return $result['humanized_content'];
+    }
+    
+    /**
+     * Restore the content structure with humanized text
+     */
+    private function restore_content_structure($content_map, $humanized_text) {
+        // Split humanized text into segments
+        $text_segments = $this->smart_split_text($humanized_text, count($this->count_text_elements($content_map)));
+        $segment_index = 0;
+        
+        $restored_content = '';
+        
+        foreach ($content_map as $item) {
+            switch ($item['type']) {
+                case 'text':
+                    if (isset($text_segments[$segment_index])) {
+                        $restored_content .= $text_segments[$segment_index];
+                        $segment_index++;
+                    }
+                    break;
+                    
+                case 'block':
+                    if (isset($text_segments[$segment_index])) {
+                        $new_text = $text_segments[$segment_index];
+                        $restored_content .= $this->rebuild_block_element($item, $new_text);
+                        $segment_index++;
+                    }
+                    break;
+                    
+                case 'link':
+                    if (isset($text_segments[$segment_index])) {
+                        $new_text = $text_segments[$segment_index];
+                        $restored_content .= $this->rebuild_link_element($item, $new_text);
+                        $segment_index++;
+                    }
+                    break;
+                    
+                case 'list':
+                    $list_content = $this->rebuild_list_element($item, $text_segments, $segment_index);
+                    $restored_content .= $list_content;
+                    break;
+            }
+        }
+        
+        return $restored_content;
+    }
+    
+    /**
+     * Smart text splitting that tries to preserve content relationships
+     */
+    private function smart_split_text($text, $target_segments) {
+        if ($target_segments <= 1) {
+            return [$text];
+        }
+        
+        // Split by double newlines first (paragraph breaks)
+        $paragraphs = explode("\n\n", $text);
+        
+        if (count($paragraphs) >= $target_segments) {
+            return array_slice($paragraphs, 0, $target_segments);
+        }
+        
+        // Split by single newlines
+        $lines = explode("\n", $text);
+        
+        if (count($lines) >= $target_segments) {
+            return array_slice($lines, 0, $target_segments);
+        }
+        
+        // Split by sentences
+        $sentences = preg_split('/[.!?]+/', $text, -1, PREG_SPLIT_NO_EMPTY);
+        $sentences = array_map('trim', $sentences);
+        
+        if (count($sentences) >= $target_segments) {
+            return array_slice($sentences, 0, $target_segments);
+        }
+        
+        // Fallback: distribute text evenly
+        $text_length = strlen($text);
+        $segment_length = ceil($text_length / $target_segments);
+        $segments = [];
+        
+        for ($i = 0; $i < $target_segments; $i++) {
+            $start = $i * $segment_length;
+            $segment = substr($text, $start, $segment_length);
+            if (!empty(trim($segment))) {
+                $segments[] = trim($segment);
+            }
+        }
+        
+        return $segments;
+    }
+    
+    /**
+     * Count text elements in content map
+     */
+    private function count_text_elements($content_map) {
+        $count = 0;
+        
+        foreach ($content_map as $item) {
+            switch ($item['type']) {
+                case 'text':
+                case 'block':
+                case 'link':
+                    $count++;
+                    break;
+                    
+                case 'list':
+                    $count += count($item['items']);
+                    break;
+            }
+        }
+        
+        return $count;
+    }
+    
+    /**
+     * Rebuild block element with new text
+     */
+    private function rebuild_block_element($item, $new_text) {
+        $tag = $item['tag'];
+        $attributes = $item['attributes'] ?? [];
+        
+        $attr_string = '';
+        foreach ($attributes as $name => $value) {
+            $attr_string .= ' ' . $name . '="' . esc_attr($value) . '"';
+        }
+        
+        return "<{$tag}{$attr_string}>" . $new_text . "</{$tag}>";
+    }
+    
+    /**
+     * Rebuild link element with new text
+     */
+    private function rebuild_link_element($item, $new_text) {
+        $href = $item['href'] ?? '#';
+        $attributes = $item['attributes'] ?? [];
+        
+        $attr_string = '';
+        foreach ($attributes as $name => $value) {
+            if ($name !== 'href') {
+                $attr_string .= ' ' . $name . '="' . esc_attr($value) . '"';
+            }
+        }
+        
+        return '<a href="' . esc_url($href) . '"' . $attr_string . '>' . $new_text . '</a>';
+    }
+    
+    /**
+     * Rebuild list element with new text
+     */
+    private function rebuild_list_element($item, &$text_segments, &$segment_index) {
+        $tag = $item['tag'];
+        $attributes = $item['attributes'] ?? [];
+        
+        $attr_string = '';
+        foreach ($attributes as $name => $value) {
+            $attr_string .= ' ' . $name . '="' . esc_attr($value) . '"';
+        }
+        
+        $list_content = "<{$tag}{$attr_string}>";
+        
+        foreach ($item['items'] as $list_item) {
+            if (isset($text_segments[$segment_index])) {
+                $new_text = $text_segments[$segment_index];
+                $list_content .= '<li>' . $new_text . '</li>';
+                $segment_index++;
+            } else {
+                // Fallback to original
+                $list_content .= $list_item['html'];
+            }
+        }
+        
+        $list_content .= "</{$tag}>";
+        
+        return $list_content;
+    }
+    
+    /**
+     * Calculate credits used (simplified)
+     */
+    private function calculate_credits($content, $provider, $options) {
+        $word_count = str_word_count($content);
+        
+        switch ($provider) {
+            case 'stealthgpt':
+                return $this->calculate_stealthgpt_credits($content, $options['business_mode'] ?? false);
+            case 'openrouter':
+                return $this->calculate_openrouter_credits($content, $options['model'] ?? 'anthropic/claude-3.5-sonnet');
+            case 'undetectable':
+                return $this->calculate_undetectable_credits($content);
+            default:
+                return ceil($word_count / 100) * 10;
+        }
+    }
+    
+    // ... [Keep all the existing methods from the original class for backwards compatibility] ...
     
     /**
      * AJAX: Check AI detection
@@ -210,7 +694,7 @@ class ATM_Humanize {
                 try {
                     $content = wp_kses_post(stripslashes($item['content']));
                     
-                    $result = $this->humanize_content($content, $settings['provider'] ?? 'stealthgpt', $settings);
+                    $result = $this->humanize_content_with_formatting($content, $settings['provider'] ?? 'stealthgpt', $settings);
                     $total_credits += $result['credits_used'];
                     
                     $results[] = [
@@ -254,19 +738,20 @@ class ATM_Humanize {
             $content = wp_kses_post(stripslashes($_POST['content']));
             $provider = sanitize_text_field($_POST['provider'] ?? 'stealthgpt');
             
-            if (empty($content) || strlen($content) < 50) {
+            if (empty($content) || strlen(wp_strip_all_tags($content)) < 50) {
                 throw new Exception('Content must be at least 50 characters.');
             }
             
-            $result = $this->humanize_content($content, $provider, [
+            $result = $this->humanize_content_with_formatting($content, $provider, [
                 'tone' => 'conversational',
                 'mode' => 'Medium',
-                'business_mode' => false // Use cheaper mode for testing
+                'business_mode' => false, // Use cheaper mode for testing
+                'preserve_formatting' => true
             ]);
             
             $detection_score = null;
             try {
-                $detection_score = $this->check_ai_detection($result['humanized_content']);
+                $detection_score = $this->check_ai_detection(wp_strip_all_tags($result['humanized_content']));
             } catch (Exception $e) {
                 // Detection failed, continue anyway
             }
@@ -325,7 +810,7 @@ class ATM_Humanize {
     }
     
     /**
-     * Main humanization method
+     * Main humanization method - LEGACY SUPPORT
      */
     public function humanize_content($content, $provider = 'stealthgpt', $options = []) {
         $start_time = microtime(true);
@@ -421,9 +906,6 @@ class ATM_Humanize {
      * Humanize using OpenRouter's powerful models
      */
     private function humanize_with_openrouter($content, $options = []) {
-        if (strpos($content, '<') !== false && strpos($content, '>') !== false) {
-        return $this->humanize_with_openrouter_structured($content, $options);
-    }
         $api_key = get_option('atm_openrouter_api_key', get_option('atm_openrouter_key'));
         
         if (empty($api_key)) {
@@ -488,127 +970,6 @@ class ATM_Humanize {
         ];
     }
     
-    /**
- * Enhanced humanization with structure preservation
- */
-private function humanize_with_openrouter_structured($content, $options = []) {
-    $api_key = get_option('atm_openrouter_api_key', get_option('atm_openrouter_key'));
-    
-    if (empty($api_key)) {
-        throw new Exception('OpenRouter API key not configured.');
-    }
-    
-    $model = $options['model'] ?? 'anthropic/claude-3.5-sonnet';
-    $tone = $options['tone'] ?? 'conversational';
-    
-    // Parse HTML into structured elements
-    $dom = new DOMDocument();
-    @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $content);
-    $body = $dom->getElementsByTagName('body')->item(0);
-    
-    if (!$body) {
-        // Fallback to regular humanization if parsing fails
-        return $this->humanize_with_openrouter($content, $options);
-    }
-    
-    $humanized_parts = [];
-    
-    foreach ($body->childNodes as $node) {
-        if ($node->nodeType === XML_ELEMENT_NODE) {
-            $tag_name = $node->nodeName;
-            $inner_html = $this->get_inner_html($node);
-            
-            // Skip empty elements
-            if (trim(strip_tags($inner_html)) === '') {
-                $humanized_parts[] = $dom->saveHTML($node);
-                continue;
-            }
-            
-            // Humanize only the text content, preserve structure
-            $humanized_text = $this->humanize_text_only($inner_html, $tone, $model);
-            
-            // Reconstruct the element with humanized content
-            $new_element = $dom->createElement($tag_name);
-            $new_element->nodeValue = htmlspecialchars($humanized_text);
-            
-            // Copy attributes
-            if ($node->hasAttributes()) {
-                foreach ($node->attributes as $attr) {
-                    $new_element->setAttribute($attr->nodeName, $attr->nodeValue);
-                }
-            }
-            
-            $humanized_parts[] = $dom->saveHTML($new_element);
-        } else {
-            // Keep text nodes as-is or humanize them
-            $humanized_parts[] = $dom->saveHTML($node);
-        }
-    }
-    
-    return implode('', $humanized_parts);
-}
-
-/**
- * Humanize only the text content without structural changes
- */
-private function humanize_text_only($text_content, $tone, $model) {
-    // Strip HTML for humanization
-    $plain_text = strip_tags($text_content);
-    
-    if (strlen(trim($plain_text)) < 20) {
-        return $text_content; // Don't humanize very short content
-    }
-    
-    $prompt = "Rewrite this text to sound more natural and human-like. Keep the EXACT same meaning and length. Only change the wording and style to match a {$tone} tone. Do not add or remove information.
-
-Original text: {$plain_text}
-
-Return only the rewritten text, nothing else.";
-    
-    $payload = [
-        'model' => $model,
-        'messages' => [
-            ['role' => 'user', 'content' => $prompt]
-        ],
-        'temperature' => 0.7,
-        'max_tokens' => strlen($plain_text) * 2
-    ];
-    
-    $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', [
-        'headers' => [
-            'Authorization' => 'Bearer ' . get_option('atm_openrouter_api_key'),
-            'Content-Type' => 'application/json',
-            'HTTP-Referer' => home_url(),
-            'X-Title' => 'Content AI Studio'
-        ],
-        'body' => json_encode($payload),
-        'timeout' => 60
-    ]);
-    
-    if (is_wp_error($response)) {
-        return $text_content; // Return original on error
-    }
-    
-    $data = json_decode(wp_remote_retrieve_body($response), true);
-    
-    if (isset($data['choices'][0]['message']['content'])) {
-        return trim($data['choices'][0]['message']['content']);
-    }
-    
-    return $text_content;
-}
-
-/**
- * Helper to get inner HTML of a DOM node
- */
-private function get_inner_html($node) {
-    $inner_html = '';
-    foreach ($node->childNodes as $child) {
-        $inner_html .= $node->ownerDocument->saveHTML($child);
-    }
-    return $inner_html;
-}
-
     /**
      * Humanize using Undetectable.AI
      */
@@ -731,11 +1092,6 @@ CRITICAL REQUIREMENTS:
 - Use natural transitions and flow
 - Add subtle imperfections that humans naturally include
 - {$tone_instruction}
-
-LENGTH REQUIREMENT:
-- The rewritten output must be at least 90% of the input length
-- Do NOT shorten, summarize, or condense
-- Every idea, paragraph, and section in the input must appear in the output
 
 SPECIFIC TECHNIQUES:
 - Replace formal phrases with natural alternatives
@@ -920,74 +1276,6 @@ Rewrite the following content to sound completely human and natural:";
         }
         
         return min($score, 25);
-    }
-    
-    /**
-     * Extract formatting from content
-     */
-    private function extract_formatting($content) {
-        $formatting = [];
-        
-        // Extract headings
-        preg_match_all('/<(h[1-6])[^>]*>(.*?)<\/\1>/i', $content, $headings, PREG_SET_ORDER);
-        $formatting['headings'] = $headings;
-        
-        // Extract bold text
-        preg_match_all('/<(strong|b)[^>]*>(.*?)<\/\1>/i', $content, $bold, PREG_SET_ORDER);
-        $formatting['bold'] = $bold;
-        
-        // Extract italic text
-        preg_match_all('/<(em|i)[^>]*>(.*?)<\/\1>/i', $content, $italic, PREG_SET_ORDER);
-        $formatting['italic'] = $italic;
-        
-        // Extract lists
-        preg_match_all('/<(ul|ol)[^>]*>(.*?)<\/\1>/s', $content, $lists, PREG_SET_ORDER);
-        $formatting['lists'] = $lists;
-        
-        // Extract paragraphs
-        preg_match_all('/<p[^>]*>(.*?)<\/p>/s', $content, $paragraphs, PREG_SET_ORDER);
-        $formatting['paragraphs'] = $paragraphs;
-        
-        return $formatting;
-    }
-    
-    /**
-     * Restore formatting to humanized content
-     */
-    private function restore_formatting($humanized_content, $formatting) {
-        // Simple approach: split into sentences and try to map back
-        $sentences = preg_split('/[.!?]+/', $humanized_content, -1, PREG_SPLIT_NO_EMPTY);
-        $sentences = array_map('trim', $sentences);
-        
-        // If we have paragraph formatting, restore it
-        if (!empty($formatting['paragraphs'])) {
-            $paragraph_count = count($formatting['paragraphs']);
-            $sentences_per_paragraph = max(1, ceil(count($sentences) / $paragraph_count));
-            
-            $formatted_content = '';
-            for ($i = 0; $i < $paragraph_count; $i++) {
-                $start = $i * $sentences_per_paragraph;
-                $end = min(($i + 1) * $sentences_per_paragraph, count($sentences));
-                $paragraph_sentences = array_slice($sentences, $start, $end - $start);
-                
-                if (!empty($paragraph_sentences)) {
-                    $formatted_content .= '<p>' . implode('. ', $paragraph_sentences) . '.</p>' . "\n";
-                }
-            }
-            
-            return trim($formatted_content);
-        }
-        
-        // Fallback: wrap in paragraphs
-        $paragraph_size = max(2, ceil(count($sentences) / 3)); // Aim for 3 paragraphs
-        $formatted_content = '';
-        
-        for ($i = 0; $i < count($sentences); $i += $paragraph_size) {
-            $paragraph_sentences = array_slice($sentences, $i, $paragraph_size);
-            $formatted_content .= '<p>' . implode('. ', $paragraph_sentences) . '.</p>' . "\n";
-        }
-        
-        return trim($formatted_content);
     }
     
     /**
@@ -1255,7 +1543,7 @@ Rewrite the following content to sound completely human and natural:";
             'provider' => $provider,
             'original_length' => strlen($original),
             'humanized_length' => strlen($humanized),
-            'word_count' => str_word_count($original),
+            'word_count' => str_word_count(wp_strip_all_tags($original)),
             'credits_used' => $credits_used,
             'user_id' => get_current_user_id()
         ];
@@ -1344,10 +1632,11 @@ Rewrite the following content to sound completely human and natural:";
         
         try {
             $provider = get_option('atm_default_humanize_provider', 'stealthgpt');
-            $result = $this->humanize_content($content, $provider, [
+            $result = $this->humanize_content_with_formatting($content, $provider, [
                 'tone' => get_option('atm_default_humanize_tone', 'conversational'),
                 'mode' => get_option('atm_default_humanize_mode', 'High'),
-                'business_mode' => get_option('atm_default_business_mode', true)
+                'business_mode' => get_option('atm_default_business_mode', true),
+                'preserve_formatting' => true
             ]);
             
             return $result['humanized_content'];
@@ -1392,6 +1681,11 @@ Rewrite the following content to sound completely human and natural:";
     public static function get_tone_options() {
         return self::TONE_OPTIONS;
     }
+}
+
+// Initialize the humanize class if it doesn't already exist
+if (!class_exists('ATM_Humanize')) {
+    new ATM_Humanize();
 }
 
 ?>
