@@ -3181,14 +3181,13 @@ Follow these rules strictly:
         // Web search plugin
         if ($enable_web_search) {
             $max_results = intval(get_option('atm_web_search_results', 5));
-            $max_results = max(1, min(30, $max_results)); // Allow minimum of 1, maximum of 30
+            $max_results = max(1, min(30, $max_results));
             
             $payload['plugins'] = [
                 [
                     'id' => 'web',
                     'config' => [
-                        'num_results' => $final_max_results,  // Try this instead
-                        'max_results' => $final_max_results,  // Keep both for now
+                        'max_results' => $max_results,  // Use the correct variable name
                         'search_prompt' => 'Find the most recent and relevant information from ' . date('Y') . ' about: {query}. Focus on current events and latest developments.'
                     ]
                 ]
