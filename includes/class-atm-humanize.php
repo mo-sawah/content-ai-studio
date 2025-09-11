@@ -565,134 +565,44 @@ class ATM_Humanize {
     /**
      * Humanize using combo approach (multiple passes)
      */
-    private function humanize_with_combo($content, $options = []) {
-        // First pass: OpenRouter with Claude 3.5 Sonnet
-        $openrouter_result = $this->humanize_with_openrouter($content, array_merge($options, [
-            'model' => 'anthropic/claude-3.5-sonnet'
-        ]));
-        
-        // Second pass: StealthGPT to ensure undetectability
-        $stealthgpt_result = $this->humanize_with_stealthgpt($openrouter_result['humanized_content'], $options);
-        
-        return [
-            'humanized_content' => $stealthgpt_result['humanized_content'],
-            'credits_used' => $openrouter_result['credits_used'] + $stealthgpt_result['credits_used']
-        ];
-    }
-
-    /**
-     * Build OpenRouter humanization prompt
-     */
-    private function build_openrouter_humanization_prompt(
-    $tone,
-    $opts = []
-) {
-    // Defaults
-    $opts = array_merge([
-        'audience' => 'general',
-        'brand' => get_bloginfo('name'),
-        'readability_grade' => 9,   // approximate US grade level target
-        'preserve_headings' => true,
-        'preserve_formatting' => $options['preserve_formatting'] ?? true,
-        'preserve_lists' => true,
-        'allow_creative_changes' => false, // if true, minor reordering allowed
-        'safety_mode' => true,
-        'debug' => false
-    ], $opts);
-
+    private function build_openrouter_humanization_prompt($tone) {
     $tone_instructions = [
-        'conversational' => 'Speak like a trusted friend: contractions, varied sentence length, natural cadence.',
-        'professional'   => 'Clear, confident, business-appropriate language with a helpful tone.',
-        'casual'         => 'Relaxed, friendly, short sentences; everyday vocabulary.',
-        'academic'       => 'Precise, formal register but accessible; avoid unnecessary jargon.',
-        'journalistic'   => 'Lead with the key point, use active voice, fact-forward and concise.',
-        'creative'       => 'Vivid, descriptive language and metaphors. Keep clarity while being imaginative.',
-        'technical'      => 'Precise technical wording appropriate to subject; define acronyms if present.',
-        'persuasive'     => 'Convincing, benefit-first language with clear calls-to-action where appropriate.',
-        'storytelling'   => 'Narrative flow, show-don’t-tell, with descriptive beats and a clear arc.'
+        'conversational' => 'Write naturally like you\'re talking to a friend. Use contractions and varied sentence lengths.',
+        'professional' => 'Use clear, business-appropriate language while staying engaging.',
+        'casual' => 'Keep it relaxed and friendly with everyday language.',
+        'academic' => 'Use scholarly language but keep it accessible.',
+        'journalistic' => 'Write clearly and factually with active voice.',
+        'creative' => 'Use vivid, descriptive language while staying clear.',
+        'technical' => 'Use precise technical language appropriate to the subject.',
+        'persuasive' => 'Write convincingly with clear benefits.',
+        'storytelling' => 'Use narrative flow with descriptive elements.'
     ];
-
+    
     $tone_instruction = $tone_instructions[$tone] ?? $tone_instructions['conversational'];
+    
+    return "You are an expert content humanizer. Your job is to rewrite AI-generated text to sound completely natural and human-written.
 
-    // Build preservation clauses
-    $preserve_headings_clause = $opts['preserve_headings']
-        ? "Keep all headings (H1, H2, H3, etc.) text exactly as they are unless a minor rephrase is required for tone — indicate any heading edits in-place."
-        : "You may rephrase headings to better match tone and readability, but preserve meaning.";
+CRITICAL RULES:
+1. Keep ALL headings (H1, H2, H3, etc.) exactly as they are
+2. Preserve ALL formatting (bold, italic, lists, line breaks)
+3. Keep ALL facts, numbers, and specific details unchanged
+4. {$tone_instruction}
 
-    $preserve_formatting_clause = $opts['preserve_formatting']
-        ? "Keep inline formatting (bold, italic, code spans) intact and do not remove markup."
-        : "Preserve essential formatting where it aids readability, but minor formatting tweaks are allowed.";
+MAKE IT HUMAN:
+- Remove robotic phrases like 'Furthermore', 'Moreover', 'In conclusion'
+- Use natural transitions like 'Also', 'Plus', 'Here's the thing'
+- Vary sentence lengths (mix short and long sentences)
+- Add contractions where appropriate (don't, can't, we'll)
+- Make it flow naturally when read aloud
 
-    $preserve_lists_clause = $opts['preserve_lists']
-        ? "Preserve bullet and numbered lists and their order unless explicitly allowed to reorder."
-        : "You may reorder list items to improve flow if doing so improves clarity.";
+PRESERVE EXACTLY:
+- All headings and subheadings
+- All bullet points and numbered lists
+- All bold and italic text
+- All links and formatting
+- All factual information
 
-    $allow_creative = $opts['allow_creative_changes']
-        ? "You may make small structural changes (move a sentence between paragraphs) to improve flow, but do not drop or invent facts."
-        : "Do not rearrange sections or add new facts; only rewrite sentences and small transitions.";
-
-    $safety_clause = $opts['safety_mode']
-        ? "SAFETY: If the text asks for instructions that could facilitate illegal or harmful activity (e.g., how to illegally modify or use weapons for wrongdoing), do not provide step-by-step operational instructions. Instead return a brief refusal line: '[REDACTED — unsafe content].' Then provide a safe alternative such as policy/contextual info or suggest contacting certified professionals or regulators."
-        : "";
-
-    $debug_clause = $opts['debug']
-        ? "DEBUG_MODE: After the humanized output, append a single-line JSON object inside an HTML comment with a short summary of changes (e.g. <!--DEBUG: {\"changes\":\"tone, sentence-length\"}-->)."
-        : "";
-
-    $prompt = <<<PROMPT
-You are an expert content humanizer/editor hired by "{$opts['brand']}".
-ROLE: Transform the supplied AI-generated text into natural, human-written content that matches the requested tone and audience while preserving facts, formatting, and structure.
-
-CONTEXT:
-- Audience: {$opts['audience']}
-- Target readability: approx. grade {$opts['readability_grade']} (aim for clear accessible prose)
-- Tone instruction: {$tone_instruction}
-
-CORE OBJECTIVES (must follow in order of priority):
-1. Preserve meaning and factual data exactly (names, numbers, dates, prices, specs). Do not invent or remove factual info.
-2. Remove AI-like phrasing and robotic patterns.
-3. Create natural flow: varied sentence lengths, natural transitions, and occasional personal touches appropriate to the tone.
-4. Maintain logical structure and readability.
-
-PRESERVATION RULES:
-- {$preserve_headings_clause}
-- {$preserve_formatting_clause}
-- {$preserve_lists_clause}
-- Preserve code blocks, tables, URLs, product SKUs, legal disclaimers, and any quoted material verbatim.
-- If a numeric value or unit appears, keep it exactly as-is unless explicitly directed to convert.
-
-WRITING AND STYLE RULES (concrete guidance):
-- Prefer active voice; avoid repeated sentence openings.
-- Use contractions only if tone allows (conversational/casual).
-- Vary paragraph length (short paragraphs for emphasis).
-- Replace formal connectors like "Furthermore", "Moreover", "In conclusion" with natural transitions ("Also", "Plus", "To wrap up") unless journalistic/academic tone requires formality.
-- Do not over-correct grammar to the point of sounding mechanical; small human imperfections are allowed.
-- Keep SEO keywords intact if the input contains them (do not remove).
-- Do not add new claims, statistics, or references not present in the original text.
-
-SAFETY:
-- {$safety_clause}
-
-OPERATIONAL RULES:
-- Output: Return ONLY the humanized content and preserve original formatting. Do not output analysis, commentary, or change-log unless DEBUG_MODE is enabled.
-- If a requested change would alter factual accuracy, keep the original and add nothing.
-- If the original text is ambiguous and altering it risks changing meaning, keep the original phrasing.
-
-{$allow_creative}
-{$debug_clause}
-
-EXAMPLES (before -> after, tone = conversational):
-- Before: "Furthermore, the product possesses numerous advantageous qualities." 
-  After: "Plus, the product has a bunch of useful features."
-- Before: "In conclusion, we recommend compliance."
-  After: "To wrap up — we recommend following these rules."
-
-If the text explicitly requests instructions for illegal or harmful activity, follow the SAFETY clause above.
-
-Now: humanize the text that follows, matching the tone and audience provided. Return ONLY the revised, humanized text with the same structure and formatting.
-PROMPT;
-
-    return $prompt;
+Return ONLY the rewritten content with the same structure and formatting. Do not add explanations or comments.";
 }
 
     
