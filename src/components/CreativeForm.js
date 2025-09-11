@@ -162,31 +162,17 @@ function CreativeForm() {
     }
 
     try {
-      let finalTitle = title;
-
-      if (!finalTitle && keyword) {
-        setStatusMessage("Generating compelling title...");
-        const titleResponse = await callAjax("generate_article_title", {
-          keyword,
-          model: articleModel,
-        });
-
-        if (!titleResponse.success) {
-          throw new Error(titleResponse.data);
-        }
-
-        finalTitle = titleResponse.data.article_title;
-      }
-
-      setStatusMessage("Writing article content...");
+      // SINGLE API CALL - the backend now handles title generation locally if needed
+      setStatusMessage("Generating article with unique angle...");
       const contentResponse = await callAjax("generate_article_content", {
         post_id: postId,
-        article_title: finalTitle,
+        article_title: title, // Can be empty - backend will generate locally
+        keyword: keyword, // Backend will use this if title is empty
         model: articleModel,
         writing_style: writingStyle,
         custom_prompt: customPrompt,
         word_count: wordCount,
-        creativity_level: creativityLevel, // Add this line
+        creativity_level: creativityLevel,
       });
 
       if (!contentResponse.success) {
@@ -198,6 +184,9 @@ function CreativeForm() {
         "ATM Debug - Subtitle received:",
         contentResponse.data.subtitle
       );
+
+      // Use the title returned by the backend (either provided or generated)
+      const finalTitle = contentResponse.data.article_title;
 
       updateEditorContent(
         finalTitle,
