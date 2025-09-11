@@ -92,7 +92,6 @@ class ATM_Main {
         $this->load_dependencies();
         $this->init_hooks();
 
-        add_action('init', array($this, 'check_database_tables'), 5);
     }
 
     public static function get_instance() {

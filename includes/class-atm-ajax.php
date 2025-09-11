@@ -6,6 +6,16 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    private function ensure_angles_table_exists() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_content_angles';
+        
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+        if (!$table_exists) {
+            ATM_Main::create_content_angles_table();
+        }
+    }
+    
     public function debug_twitter_response() {
         check_ajax_referer('atm_nonce', 'nonce');
         
@@ -1339,7 +1349,6 @@ public function translate_text() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
         
-        // Simple check - if query fails, return empty array
         $results = $wpdb->get_results($wpdb->prepare(
             "SELECT angle, title FROM $table_name 
             WHERE keyword = %s 
@@ -1347,13 +1356,6 @@ public function translate_text() {
             LIMIT 10",
             $keyword
         ), ARRAY_A);
-        
-        // If there's a database error (like table doesn't exist), create table and return empty
-        if ($wpdb->last_error) {
-            error_log("ATM Debug: Database error, creating table: " . $wpdb->last_error);
-            ATM_Main::create_content_angles_table();
-            return [];
-        }
         
         return $results ?: [];
     }
@@ -1435,34 +1437,11 @@ public function translate_text() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
         
-        $result = $wpdb->insert($table_name, [
+        $wpdb->insert($table_name, [
             'keyword' => $keyword,
             'angle' => $angle,
-            'title' => $title,
-            'created_at' => current_time('mysql')
+            'title' => $title
         ]);
-        
-        // If insert fails, try creating the table first
-        if ($result === false) {
-            error_log("ATM Debug: Insert failed, creating table: " . $wpdb->last_error);
-            ATM_Main::create_content_angles_table();
-            
-            // Try insert again
-            $result = $wpdb->insert($table_name, [
-                'keyword' => $keyword,
-                'angle' => $angle,
-                'title' => $title,
-                'created_at' => current_time('mysql')
-            ]);
-            
-            if ($result === false) {
-                error_log("ATM Debug: Insert still failed after table creation: " . $wpdb->last_error);
-            } else {
-                error_log("ATM Debug: Successfully stored angle after table creation");
-            }
-        } else {
-            error_log("ATM Debug: Successfully stored angle for keyword: " . $keyword);
-        }
     }
 
     public function generate_news_article() {
