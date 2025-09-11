@@ -3126,10 +3126,24 @@ Follow these rules strictly:
         return $context;
     }
 
-    public static function enhance_content_with_openrouter($input, $system_prompt, $model, $json_mode = false, $enable_web_search = true) {
+    public static function enhance_content_with_openrouter($input, $system_prompt, $model, $json_mode = false, $enable_web_search = true, $creativity_level = 'medium') {
         $api_key = trim(get_option('atm_openrouter_api_key', ''));
         if (!$api_key) {
             throw new Exception('OpenRouter API key is not configured.');
+        }
+
+        $payload = [
+            'model' => $model,
+            'messages' => [
+                ['role' => 'system', 'content' => $system_prompt],
+            ],
+        ];
+
+        // Allow $input as string OR array/object (we often pass arrays)
+        if (is_array($input) || is_object($input)) {
+            $payload['messages'][] = ['role' => 'user', 'content' => wp_json_encode($input, JSON_UNESCAPED_SLASHES)];
+        } else {
+            $payload['messages'][] = ['role' => 'user', 'content' => (string) $input];
         }
 
         // Dynamic temperature based on creativity level and time
@@ -3154,37 +3168,19 @@ Follow these rules strictly:
                 $top_p = 0.9;
         }
         
-        $payload = [
-            'model' => $model,
-            'messages' => [
-                ['role' => 'system', 'content' => $system_prompt],
-            ],
-            'temperature' => $temperature,
-            'top_p' => $top_p,
-            'frequency_penalty' => 0.1, // Reduce repetition
-            'presence_penalty' => 0.1,  // Encourage new topics
-        ];
-
-        // Allow $input as string OR array/object (we often pass arrays)
-        if (is_array($input) || is_object($input)) {
-            $payload['messages'][] = ['role' => 'user', 'content' => wp_json_encode($input, JSON_UNESCAPED_SLASHES)];
-        } else {
-            $payload['messages'][] = ['role' => 'user', 'content' => (string) $input];
-        }
+        $payload['temperature'] = $temperature;
+        $payload['top_p'] = $top_p;
+        $payload['frequency_penalty'] = 0.1; // Reduce repetition
+        $payload['presence_penalty'] = 0.1;  // Encourage new topics
 
         // Strict JSON mode if requested
         if ($json_mode) {
             $payload['response_format'] = [ 'type' => 'json_object' ];
         }
 
-        // Replace this section in enhance_content_with_openrouter function (around line 1169):
-
-        // CORRECT: Use OpenRouter's web search plugin (array format)
+        // Web search plugin
         if ($enable_web_search) {
-            // Get the web search setting from plugin options
             $max_results = intval(get_option('atm_web_search_results', 10));
-            
-            // Ensure we have a reasonable number (minimum 5, maximum 30)
             $max_results = max(5, min(30, $max_results));
             
             $payload['plugins'] = [
@@ -3204,10 +3200,10 @@ Follow these rules strictly:
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
                 'Content-Type'  => 'application/json',
-                'HTTP-Referer' => home_url(), // Required by OpenRouter
-                'X-Title' => get_bloginfo('name'), // Optional but recommended
+                'HTTP-Referer' => home_url(),
+                'X-Title' => get_bloginfo('name'),
             ],
-            'timeout' => 120, // Increased timeout for web search
+            'timeout' => 120,
             'body'    => wp_json_encode($payload),
         ]);
 

@@ -13,7 +13,7 @@ class ATM_Main {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
         
-        // Keep only last 20 angles per keyword
+        // Keep only last 50 angles per keyword
         $wpdb->query("
             DELETE t1 FROM $table_name t1
             INNER JOIN (
@@ -21,7 +21,7 @@ class ATM_Main {
                     ROW_NUMBER() OVER (PARTITION BY keyword ORDER BY created_at DESC) as rn
                 FROM $table_name
             ) t2 ON t1.keyword = t2.keyword
-            WHERE t2.rn > 20
+            WHERE t2.rn > 50
         ");
     }
 
@@ -425,6 +425,10 @@ class ATM_Main {
 
         if (!wp_next_scheduled('atm_cleanup_used_articles')) {
             wp_schedule_event(time(), 'daily', 'atm_cleanup_used_articles');
+        }
+
+        if (!wp_next_scheduled('atm_cleanup_angles')) {
+            wp_schedule_event(time(), 'daily', 'atm_cleanup_angles');
         }
 
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
