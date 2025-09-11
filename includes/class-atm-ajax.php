@@ -1456,28 +1456,69 @@ public function translate_text() {
             
             // Add angle-specific instructions
             if (!empty($angle_description)) {
-                $base_prompt .= "\n\n**MANDATORY CONTENT ANGLE:**\n" . $angle_description;
-                $base_prompt .= "\n\nYou MUST create both the title and content specifically for this angle. Do not write generic content.";
-            }
+            $title_enhancement = "
+            
+        **ADVANCED TITLE CREATION STRATEGY:**
+        Based on the angle above, create a title using one of these proven formulas:
+
+        **Problem-Solution Formulas:**
+        - 'Why [Audience] in [Industry] Struggle with [Keyword] (And How to Fix It)'
+        - 'The [Keyword] Mistakes That Are Costing [Industry] [Audience] Money'
+        - 'How [Industry] [Audience] Can Finally Master [Keyword] in [Time]'
+
+        **Benefit-Driven Formulas:**
+        - '[Number] [Keyword] Strategies That Transform [Industry] [Audience]'
+        - 'The [Keyword] Secret [Industry] Leaders Don't Want You to Know'
+        - 'How [Industry] [Audience] Use [Keyword] to [Specific Benefit]'
+
+        **Urgency/Trend Formulas:**
+        - '[Time]: The Year [Keyword] Changes [Industry] Forever'
+        - 'Why [Industry] [Audience] Must Embrace [Keyword] in [Time]'
+        - 'The [Keyword] Revolution Coming to [Industry] in [Time]'
+
+        **Contrarian Formulas:**
+        - 'Why Everything [Industry] [Audience] Know About [Keyword] is Wrong'
+        - 'The [Keyword] Advice That's Actually Hurting [Industry] Businesses'
+        - 'Forget Traditional [Keyword]: Here's What [Industry] Leaders Actually Do'
+
+        **Case Study/Story Formulas:**
+        - 'How This [Industry] [Audience] Used [Keyword] to [Specific Result]'
+        - 'From Zero to Hero: [Keyword] Success Story in [Industry]'
+        - 'Case Study: [Keyword] Transformation in [Industry] ([Time] Results)'
+
+        Choose the formula that best fits the angle and keyword. Make it specific, compelling, and avoid generic language.";
+
+            $base_prompt .= "\n\n**MANDATORY CONTENT ANGLE:**\n" . $angle_description . $title_enhancement;
+            $base_prompt .= "\n\nYou MUST create both the title and content specifically for this angle. Do not write generic content.";
+        }
             
             $output_instructions = '
-            **Final Output Format:**
-            Your entire output MUST be a single, valid JSON object with three keys:
-            1. "title": ' . (empty($final_title) ? 'A compelling, specific title that perfectly matches the required angle and keyword' : '"' . $final_title . '"') . '
-            2. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
-            3. "content": The full article text, formatted using Markdown.
-            
-            **Title Requirements (if generating):**
-            - Must be compelling and clickable
-            - Should reflect the specific angle provided
-            - Include the keyword naturally
-            - Be 8-18 words long
-            - Use power words and emotional triggers
-            
-            **Content Rules:**
-            - Must NOT contain any top-level H1 headings
-            - Must begin directly with the first paragraph
-            - Must target the exact angle specified above';
+**Final Output Format:**
+Your entire output MUST be a single, valid JSON object with three keys:
+1. "title": ' . (empty($final_title) ? 'A compelling, specific title that perfectly matches the required angle and keyword' : '"' . $final_title . '"') . '
+2. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
+3. "content": The full article text, formatted using Markdown.
+
+**CRITICAL CONTENT RULES:**
+- The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+- The `content` field must NOT start with a title or any heading (like `# Heading`). It must begin directly with the first paragraph of the introduction.
+- Do NOT include a final heading titled "Conclusion", "Summary", "Final Thoughts", "In Summary", "To Conclude", "Wrapping Up", "Looking Ahead", "What\'s Next", "The Bottom Line", "Key Takeaways", or any similar conclusory heading. The article should end naturally with the concluding paragraph itself.
+- Do NOT start with generic section headers like "Introduction", "Overview", "Background", etc.
+- Write in a natural, flowing manner without artificial structure markers.
+
+**Title Requirements (if generating):**
+- Must be compelling and clickable (8-18 words)
+- Should reflect the specific angle provided
+- Include the keyword naturally
+- Use power words and emotional triggers
+- Avoid generic phrases like "Complete Guide" or "Everything You Need to Know"
+- Make it specific to the target audience and angle
+
+**Content Requirements:**
+- Must target the exact angle specified above
+- Begin with an engaging hook paragraph
+- Use natural transitions between sections
+- End with a strong concluding paragraph (no heading above it)';
             
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
             
