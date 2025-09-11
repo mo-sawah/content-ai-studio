@@ -740,75 +740,185 @@ private function render_advanced_tab() {
     private function save_settings() {
         check_admin_referer('atm_settings_update');
         
-        // API Keys
-        update_option('atm_openrouter_api_key', sanitize_text_field($_POST['atm_openrouter_api_key']));
-        update_option('atm_openai_api_key', sanitize_text_field($_POST['atm_openai_api_key']));
-        update_option('atm_google_api_key', sanitize_text_field($_POST['atm_google_api_key']));
-        update_option('atm_blockflow_api_key', sanitize_text_field($_POST['atm_blockflow_api_key']));
-        update_option('atm_elevenlabs_api_key', sanitize_text_field($_POST['atm_elevenlabs_api_key']));
-        update_option('atm_news_api_key', sanitize_text_field($_POST['atm_news_api_key']));
-        update_option('atm_gnews_api_key', sanitize_text_field($_POST['atm_gnews_api_key']));
-        update_option('atm_guardian_api_key', sanitize_text_field($_POST['atm_guardian_api_key']));
-        update_option('atm_scrapingant_api_key', sanitize_text_field($_POST['atm_scrapingant_api_key']));
-        update_option('atm_google_youtube_api_key', sanitize_text_field($_POST['atm_google_youtube_api_key']));
-        update_option('atm_google_news_search_api_key', sanitize_text_field($_POST['atm_google_news_search_api_key']));
-        update_option('atm_google_news_cse_id', sanitize_text_field($_POST['atm_google_news_cse_id']));
-        update_option('atm_twitterapi_key', sanitize_text_field($_POST['atm_twitterapi_key']));
-        update_option('atm_mercury_api_key', sanitize_text_field($_POST['atm_mercury_api_key']));
+        // API Keys - only update if they exist in POST
+        if (isset($_POST['atm_openrouter_api_key'])) {
+            update_option('atm_openrouter_api_key', sanitize_text_field($_POST['atm_openrouter_api_key']));
+        }
+        if (isset($_POST['atm_openai_api_key'])) {
+            update_option('atm_openai_api_key', sanitize_text_field($_POST['atm_openai_api_key']));
+        }
+        if (isset($_POST['atm_google_api_key'])) {
+            update_option('atm_google_api_key', sanitize_text_field($_POST['atm_google_api_key']));
+        }
+        if (isset($_POST['atm_blockflow_api_key'])) {
+            update_option('atm_blockflow_api_key', sanitize_text_field($_POST['atm_blockflow_api_key']));
+        }
+        if (isset($_POST['atm_elevenlabs_api_key'])) {
+            update_option('atm_elevenlabs_api_key', sanitize_text_field($_POST['atm_elevenlabs_api_key']));
+        }
+        if (isset($_POST['atm_news_api_key'])) {
+            update_option('atm_news_api_key', sanitize_text_field($_POST['atm_news_api_key']));
+        }
+        if (isset($_POST['atm_gnews_api_key'])) {
+            update_option('atm_gnews_api_key', sanitize_text_field($_POST['atm_gnews_api_key']));
+        }
+        if (isset($_POST['atm_guardian_api_key'])) {
+            update_option('atm_guardian_api_key', sanitize_text_field($_POST['atm_guardian_api_key']));
+        }
+        if (isset($_POST['atm_scrapingant_api_key'])) {
+            update_option('atm_scrapingant_api_key', sanitize_text_field($_POST['atm_scrapingant_api_key']));
+        }
+        if (isset($_POST['atm_google_youtube_api_key'])) {
+            update_option('atm_google_youtube_api_key', sanitize_text_field($_POST['atm_google_youtube_api_key']));
+        }
+        if (isset($_POST['atm_google_news_search_api_key'])) {
+            update_option('atm_google_news_search_api_key', sanitize_text_field($_POST['atm_google_news_search_api_key']));
+        }
+        if (isset($_POST['atm_google_news_cse_id'])) {
+            update_option('atm_google_news_cse_id', sanitize_text_field($_POST['atm_google_news_cse_id']));
+        }
+        if (isset($_POST['atm_twitterapi_key'])) {
+            update_option('atm_twitterapi_key', sanitize_text_field($_POST['atm_twitterapi_key']));
+        }
+        if (isset($_POST['atm_mercury_api_key'])) {
+            update_option('atm_mercury_api_key', sanitize_text_field($_POST['atm_mercury_api_key']));
+        }
 
         // Model Settings
-        update_option('atm_article_model', sanitize_text_field($_POST['atm_article_model']));
-        update_option('atm_content_model', sanitize_text_field($_POST['atm_content_model'])); // FIX: Added missing save
-        update_option('atm_translation_model', sanitize_text_field($_POST['atm_translation_model']));
+        if (isset($_POST['atm_article_model'])) {
+            update_option('atm_article_model', sanitize_text_field($_POST['atm_article_model']));
+        }
+        if (isset($_POST['atm_content_model'])) {
+            update_option('atm_content_model', sanitize_text_field($_POST['atm_content_model']));
+        }
+        if (isset($_POST['atm_translation_model'])) {
+            update_option('atm_translation_model', sanitize_text_field($_POST['atm_translation_model']));
+        }
 
         // Provider Settings
-        update_option('atm_audio_provider', sanitize_text_field($_POST['atm_audio_provider'])); // FIX: Added missing save
-        update_option('atm_image_provider', sanitize_text_field($_POST['atm_image_provider']));
-        update_option('atm_flux_model', sanitize_text_field($_POST['atm_flux_model']));
+        if (isset($_POST['atm_audio_provider'])) {
+            update_option('atm_audio_provider', sanitize_text_field($_POST['atm_audio_provider']));
+        }
+        if (isset($_POST['atm_image_provider'])) {
+            update_option('atm_image_provider', sanitize_text_field($_POST['atm_image_provider']));
+        }
+        if (isset($_POST['atm_flux_model'])) {
+            update_option('atm_flux_model', sanitize_text_field($_POST['atm_flux_model']));
+        }
 
         // General Settings
-        update_option('atm_web_search_results', max(1, min(30, intval($_POST['atm_web_search_results']))));
-        update_option('atm_theme_subtitle_key', sanitize_text_field($_POST['atm_theme_subtitle_key']));
-        update_option('atm_rss_feeds', sanitize_textarea_field($_POST['atm_rss_feeds']));
-        update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
-        update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
-        update_option('atm_used_articles_cache_hours', intval($_POST['atm_used_articles_cache_hours']));
+        if (isset($_POST['atm_web_search_results'])) {
+            update_option('atm_web_search_results', max(1, min(30, intval($_POST['atm_web_search_results']))));
+        }
+        if (isset($_POST['atm_theme_subtitle_key'])) {
+            update_option('atm_theme_subtitle_key', sanitize_text_field($_POST['atm_theme_subtitle_key']));
+        }
+        if (isset($_POST['atm_rss_feeds'])) {
+            update_option('atm_rss_feeds', sanitize_textarea_field($_POST['atm_rss_feeds']));
+        }
+        if (isset($_POST['atm_image_quality'])) {
+            update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));
+        }
+        if (isset($_POST['atm_image_size'])) {
+            update_option('atm_image_size', sanitize_text_field($_POST['atm_image_size']));
+        }
+        if (isset($_POST['atm_used_articles_cache_hours'])) {
+            update_option('atm_used_articles_cache_hours', intval($_POST['atm_used_articles_cache_hours']));
+        }
 
         // Twitter Settings
-        update_option('atm_twitter_credible_sources', sanitize_textarea_field($_POST['atm_twitter_credible_sources']));
-        update_option('atm_twitter_min_followers', intval($_POST['atm_twitter_min_followers']));
+        if (isset($_POST['atm_twitter_credible_sources'])) {
+            update_option('atm_twitter_credible_sources', sanitize_textarea_field($_POST['atm_twitter_credible_sources']));
+        }
+        if (isset($_POST['atm_twitter_min_followers'])) {
+            update_option('atm_twitter_min_followers', intval($_POST['atm_twitter_min_followers']));
+        }
 
         // Podcast Settings
-        update_option('atm_podcast_default_theme', sanitize_text_field($_POST['atm_podcast_default_theme']));
-        update_option('atm_podcast_content_model', sanitize_text_field($_POST['atm_podcast_content_model']));
-        update_option('atm_podcast_audio_provider', sanitize_text_field($_POST['atm_podcast_audio_provider']));
-        update_option('atm_podcast_accent_color', sanitize_hex_color($_POST['atm_podcast_accent_color']));
-        update_option('atm_podcast_gradient_end', sanitize_hex_color($_POST['atm_podcast_gradient_end']));
-        update_option('atm_podcast_season_text', sanitize_text_field($_POST['atm_podcast_season_text']));
+        if (isset($_POST['atm_podcast_default_theme'])) {
+            update_option('atm_podcast_default_theme', sanitize_text_field($_POST['atm_podcast_default_theme']));
+        }
+        if (isset($_POST['atm_podcast_content_model'])) {
+            update_option('atm_podcast_content_model', sanitize_text_field($_POST['atm_podcast_content_model']));
+        }
+        if (isset($_POST['atm_podcast_audio_provider'])) {
+            update_option('atm_podcast_audio_provider', sanitize_text_field($_POST['atm_podcast_audio_provider']));
+        }
+        if (isset($_POST['atm_podcast_accent_color'])) {
+            update_option('atm_podcast_accent_color', sanitize_hex_color($_POST['atm_podcast_accent_color']));
+        }
+        if (isset($_POST['atm_podcast_gradient_end'])) {
+            update_option('atm_podcast_gradient_end', sanitize_hex_color($_POST['atm_podcast_gradient_end']));
+        }
+        if (isset($_POST['atm_podcast_season_text'])) {
+            update_option('atm_podcast_season_text', sanitize_text_field($_POST['atm_podcast_season_text']));
+        }
 
         // Light theme colors
-        update_option('atm_podcast_light_card_bg', sanitize_hex_color($_POST['atm_podcast_light_card_bg']));
-        update_option('atm_podcast_light_text', sanitize_hex_color($_POST['atm_podcast_light_text']));
-        update_option('atm_podcast_light_subtext', sanitize_hex_color($_POST['atm_podcast_light_subtext']));
-        update_option('atm_podcast_light_rail_bg', sanitize_hex_color($_POST['atm_podcast_light_rail_bg']));
-        update_option('atm_podcast_light_ctrl_bg', sanitize_hex_color($_POST['atm_podcast_light_ctrl_bg']));
-        update_option('atm_podcast_light_playlist_bg', sanitize_hex_color($_POST['atm_podcast_light_playlist_bg']));
+        if (isset($_POST['atm_podcast_light_card_bg'])) {
+            update_option('atm_podcast_light_card_bg', sanitize_hex_color($_POST['atm_podcast_light_card_bg']));
+        }
+        if (isset($_POST['atm_podcast_light_text'])) {
+            update_option('atm_podcast_light_text', sanitize_hex_color($_POST['atm_podcast_light_text']));
+        }
+        if (isset($_POST['atm_podcast_light_subtext'])) {
+            update_option('atm_podcast_light_subtext', sanitize_hex_color($_POST['atm_podcast_light_subtext']));
+        }
+        if (isset($_POST['atm_podcast_light_rail_bg'])) {
+            update_option('atm_podcast_light_rail_bg', sanitize_hex_color($_POST['atm_podcast_light_rail_bg']));
+        }
+        if (isset($_POST['atm_podcast_light_ctrl_bg'])) {
+            update_option('atm_podcast_light_ctrl_bg', sanitize_hex_color($_POST['atm_podcast_light_ctrl_bg']));
+        }
+        if (isset($_POST['atm_podcast_light_playlist_bg'])) {
+            update_option('atm_podcast_light_playlist_bg', sanitize_hex_color($_POST['atm_podcast_light_playlist_bg']));
+        }
 
         // Dark theme colors
-        update_option('atm_podcast_dark_card_bg', sanitize_hex_color($_POST['atm_podcast_dark_card_bg']));
-        update_option('atm_podcast_dark_text', sanitize_hex_color($_POST['atm_podcast_dark_text']));
-        update_option('atm_podcast_dark_subtext', sanitize_hex_color($_POST['atm_podcast_dark_subtext']));
-        update_option('atm_podcast_dark_rail_bg', sanitize_hex_color($_POST['atm_podcast_dark_rail_bg']));
-        update_option('atm_podcast_dark_ctrl_bg', sanitize_hex_color($_POST['atm_podcast_dark_ctrl_bg']));
-        update_option('atm_podcast_dark_playlist_bg', sanitize_hex_color($_POST['atm_podcast_dark_playlist_bg']));
+        if (isset($_POST['atm_podcast_dark_card_bg'])) {
+            update_option('atm_podcast_dark_card_bg', sanitize_hex_color($_POST['atm_podcast_dark_card_bg']));
+        }
+        if (isset($_POST['atm_podcast_dark_text'])) {
+            update_option('atm_podcast_dark_text', sanitize_hex_color($_POST['atm_podcast_dark_text']));
+        }
+        if (isset($_POST['atm_podcast_dark_subtext'])) {
+            update_option('atm_podcast_dark_subtext', sanitize_hex_color($_POST['atm_podcast_dark_subtext']));
+        }
+        if (isset($_POST['atm_podcast_dark_rail_bg'])) {
+            update_option('atm_podcast_dark_rail_bg', sanitize_hex_color($_POST['atm_podcast_dark_rail_bg']));
+        }
+        if (isset($_POST['atm_podcast_dark_ctrl_bg'])) {
+            update_option('atm_podcast_dark_ctrl_bg', sanitize_hex_color($_POST['atm_podcast_dark_ctrl_bg']));
+        }
+        if (isset($_POST['atm_podcast_dark_playlist_bg'])) {
+            update_option('atm_podcast_dark_playlist_bg', sanitize_hex_color($_POST['atm_podcast_dark_playlist_bg']));
+        }
         
         // Comments Generator options
-        update_option('atm_comments_auto_on_publish', isset($_POST['atm_comments_auto_on_publish']) ? 1 : 0);
-        update_option('atm_comments_default_count', max(5, min(50, intval($_POST['atm_comments_default_count'] ?? 10))));
-        update_option('atm_comments_threaded', isset($_POST['atm_comments_threaded']) ? 1 : 0);
-        update_option('atm_comments_approve', isset($_POST['atm_comments_approve']) ? 1 : 0);
-        update_option('atm_comments_model', sanitize_text_field($_POST['atm_comments_model'] ?? ''));
-        update_option('atm_comments_randomize_window_days', max(1, min(30, intval($_POST['atm_comments_randomize_window_days'] ?? 3))));
+        if (isset($_POST['atm_comments_auto_on_publish'])) {
+            update_option('atm_comments_auto_on_publish', 1);
+        } else {
+            update_option('atm_comments_auto_on_publish', 0);
+        }
+        if (isset($_POST['atm_comments_default_count'])) {
+            update_option('atm_comments_default_count', max(5, min(50, intval($_POST['atm_comments_default_count']))));
+        }
+        if (isset($_POST['atm_comments_threaded'])) {
+            update_option('atm_comments_threaded', 1);
+        } else {
+            update_option('atm_comments_threaded', 0);
+        }
+        if (isset($_POST['atm_comments_approve'])) {
+            update_option('atm_comments_approve', 1);
+        } else {
+            update_option('atm_comments_approve', 0);
+        }
+        if (isset($_POST['atm_comments_model'])) {
+            update_option('atm_comments_model', sanitize_text_field($_POST['atm_comments_model']));
+        }
+        if (isset($_POST['atm_comments_randomize_window_days'])) {
+            update_option('atm_comments_randomize_window_days', max(1, min(30, intval($_POST['atm_comments_randomize_window_days']))));
+        }
 
         echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
     }
