@@ -1518,7 +1518,18 @@ Your entire output MUST be a single, valid JSON object with three keys:
 - Must target the exact angle specified above
 - Begin with an engaging hook paragraph
 - Use natural transitions between sections
-- End with a strong concluding paragraph (no heading above it)';
+- End with a strong concluding paragraph (no heading above it)
+
+**Link Formatting Rules:**
+- When including external links, NEVER use the website URL as the anchor text
+- Use ONLY 1-3 descriptive words as anchor text
+- Example: railway that [had a deadly crash](https://reuters.com/specific-article) last week and will...
+- Example: Example: [Digital Media](https://wikipedia.com/actual-article-url) reported that...
+- Do NOT use generic phrases like "click here", "read more", or "this article" as anchor text
+- Anchor text should be relevant keywords from the article topic (e.g., marketing, design, finance, AI)
+- Keep anchor text extremely concise (maximum 2 words)
+- Make links feel natural within the sentence flow
+- Avoid long phrases as anchor text';
             
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
             
