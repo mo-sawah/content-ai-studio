@@ -37,8 +37,8 @@ const updateEditorContent = (title, markdownContent, subtitle) => {
       wp.data.dispatch("core/block-editor").removeBlocks(clientIds);
     }
 
-    // Parse HTML into blocks - this is the key change
-    const blocks = wp.blocks.parse(htmlContent);
+    // Convert HTML to proper WordPress blocks
+    const blocks = htmlToGutenbergBlocks(htmlContent);
     wp.data.dispatch("core/block-editor").insertBlocks(blocks);
   } else {
     // Classic editor fallback
@@ -70,6 +70,104 @@ const updateEditorContent = (title, markdownContent, subtitle) => {
       }
     }, 1000);
   }
+};
+
+// New function to convert HTML to Gutenberg blocks
+const htmlToGutenbergBlocks = (htmlContent) => {
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = htmlContent;
+  const blocks = [];
+
+  // Process each child element
+  Array.from(tempDiv.children).forEach((element) => {
+    const tagName = element.tagName.toLowerCase();
+
+    switch (tagName) {
+      case "h1":
+        blocks.push(
+          wp.blocks.createBlock("core/heading", {
+            content: element.innerHTML,
+            level: 1,
+          })
+        );
+        break;
+      case "h2":
+        blocks.push(
+          wp.blocks.createBlock("core/heading", {
+            content: element.innerHTML,
+            level: 2,
+          })
+        );
+        break;
+      case "h3":
+        blocks.push(
+          wp.blocks.createBlock("core/heading", {
+            content: element.innerHTML,
+            level: 3,
+          })
+        );
+        break;
+      case "h4":
+        blocks.push(
+          wp.blocks.createBlock("core/heading", {
+            content: element.innerHTML,
+            level: 4,
+          })
+        );
+        break;
+      case "h5":
+        blocks.push(
+          wp.blocks.createBlock("core/heading", {
+            content: element.innerHTML,
+            level: 5,
+          })
+        );
+        break;
+      case "h6":
+        blocks.push(
+          wp.blocks.createBlock("core/heading", {
+            content: element.innerHTML,
+            level: 6,
+          })
+        );
+        break;
+      case "ul":
+        blocks.push(
+          wp.blocks.createBlock("core/list", {
+            values: element.outerHTML,
+          })
+        );
+        break;
+      case "ol":
+        blocks.push(
+          wp.blocks.createBlock("core/list", {
+            ordered: true,
+            values: element.outerHTML,
+          })
+        );
+        break;
+      case "blockquote":
+        blocks.push(
+          wp.blocks.createBlock("core/quote", {
+            value: element.innerHTML,
+          })
+        );
+        break;
+      case "p":
+      default:
+        // Handle paragraphs and any other content
+        if (element.innerHTML.trim()) {
+          blocks.push(
+            wp.blocks.createBlock("core/paragraph", {
+              content: element.innerHTML,
+            })
+          );
+        }
+        break;
+    }
+  });
+
+  return blocks;
 };
 
 function CreativeForm() {
