@@ -215,9 +215,16 @@ function HumanizeComponent({ setActiveView }) {
     }
 
     try {
-      if (window.ATM_BlockUtils) {
-        // Use global utility - treating humanized content as HTML
-        window.ATM_BlockUtils.updateEditorContent("", humanizedContent, "");
+      if (window.ATM_BlockUtils && window.wp && window.wp.data) {
+        // Get current title to preserve it
+        const currentTitle = wp.data
+          .select("core/editor")
+          .getEditedPostAttribute("title");
+        window.ATM_BlockUtils.updateEditorContent(
+          currentTitle,
+          humanizedContent,
+          ""
+        );
       } else {
         // Fallback method
         if (window.wp && window.wp.data) {

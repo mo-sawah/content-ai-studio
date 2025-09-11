@@ -421,6 +421,9 @@ class ATM_Humanize {
      * Humanize using OpenRouter's powerful models
      */
     private function humanize_with_openrouter($content, $options = []) {
+        if (strpos($content, '<') !== false && strpos($content, '>') !== false) {
+        return $this->humanize_with_openrouter_structured($content, $options);
+    }
         $api_key = get_option('atm_openrouter_api_key', get_option('atm_openrouter_key'));
         
         if (empty($api_key)) {
@@ -485,6 +488,127 @@ class ATM_Humanize {
         ];
     }
     
+    /**
+ * Enhanced humanization with structure preservation
+ */
+private function humanize_with_openrouter_structured($content, $options = []) {
+    $api_key = get_option('atm_openrouter_api_key', get_option('atm_openrouter_key'));
+    
+    if (empty($api_key)) {
+        throw new Exception('OpenRouter API key not configured.');
+    }
+    
+    $model = $options['model'] ?? 'anthropic/claude-3.5-sonnet';
+    $tone = $options['tone'] ?? 'conversational';
+    
+    // Parse HTML into structured elements
+    $dom = new DOMDocument();
+    @$dom->loadHTML('<?xml encoding="utf-8" ?>' . $content);
+    $body = $dom->getElementsByTagName('body')->item(0);
+    
+    if (!$body) {
+        // Fallback to regular humanization if parsing fails
+        return $this->humanize_with_openrouter($content, $options);
+    }
+    
+    $humanized_parts = [];
+    
+    foreach ($body->childNodes as $node) {
+        if ($node->nodeType === XML_ELEMENT_NODE) {
+            $tag_name = $node->nodeName;
+            $inner_html = $this->get_inner_html($node);
+            
+            // Skip empty elements
+            if (trim(strip_tags($inner_html)) === '') {
+                $humanized_parts[] = $dom->saveHTML($node);
+                continue;
+            }
+            
+            // Humanize only the text content, preserve structure
+            $humanized_text = $this->humanize_text_only($inner_html, $tone, $model);
+            
+            // Reconstruct the element with humanized content
+            $new_element = $dom->createElement($tag_name);
+            $new_element->nodeValue = htmlspecialchars($humanized_text);
+            
+            // Copy attributes
+            if ($node->hasAttributes()) {
+                foreach ($node->attributes as $attr) {
+                    $new_element->setAttribute($attr->nodeName, $attr->nodeValue);
+                }
+            }
+            
+            $humanized_parts[] = $dom->saveHTML($new_element);
+        } else {
+            // Keep text nodes as-is or humanize them
+            $humanized_parts[] = $dom->saveHTML($node);
+        }
+    }
+    
+    return implode('', $humanized_parts);
+}
+
+/**
+ * Humanize only the text content without structural changes
+ */
+private function humanize_text_only($text_content, $tone, $model) {
+    // Strip HTML for humanization
+    $plain_text = strip_tags($text_content);
+    
+    if (strlen(trim($plain_text)) < 20) {
+        return $text_content; // Don't humanize very short content
+    }
+    
+    $prompt = "Rewrite this text to sound more natural and human-like. Keep the EXACT same meaning and length. Only change the wording and style to match a {$tone} tone. Do not add or remove information.
+
+Original text: {$plain_text}
+
+Return only the rewritten text, nothing else.";
+    
+    $payload = [
+        'model' => $model,
+        'messages' => [
+            ['role' => 'user', 'content' => $prompt]
+        ],
+        'temperature' => 0.7,
+        'max_tokens' => strlen($plain_text) * 2
+    ];
+    
+    $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . get_option('atm_openrouter_api_key'),
+            'Content-Type' => 'application/json',
+            'HTTP-Referer' => home_url(),
+            'X-Title' => 'Content AI Studio'
+        ],
+        'body' => json_encode($payload),
+        'timeout' => 60
+    ]);
+    
+    if (is_wp_error($response)) {
+        return $text_content; // Return original on error
+    }
+    
+    $data = json_decode(wp_remote_retrieve_body($response), true);
+    
+    if (isset($data['choices'][0]['message']['content'])) {
+        return trim($data['choices'][0]['message']['content']);
+    }
+    
+    return $text_content;
+}
+
+/**
+ * Helper to get inner HTML of a DOM node
+ */
+private function get_inner_html($node) {
+    $inner_html = '';
+    foreach ($node->childNodes as $child) {
+        $inner_html .= $node->ownerDocument->saveHTML($child);
+    }
+    return $inner_html;
+}
+
     /**
      * Humanize using Undetectable.AI
      */
@@ -584,25 +708,28 @@ class ATM_Humanize {
      * Build OpenRouter humanization prompt
      */
     private function build_openrouter_humanization_prompt($tone) {
-    $tone_instructions = [
-        'conversational' => "Write in a natural, conversational style as if you're talking to a friend. Use contractions, casual language, and a warm tone.",
-        'professional' => "Maintain a professional, business-appropriate tone. Use clear, confident, and engaging language.",
-        'casual' => "Write in a relaxed, informal style. Be friendly and approachable, using everyday language.",
-        'academic' => "Use scholarly language appropriate for academic writing. Be precise, formal, and well-structured.",
-        'journalistic' => "Write in a clear, factual, journalistic style. Be objective, informative, and engaging.",
-        'creative' => "Use imaginative, expressive language. Be vivid, engaging, and don't be afraid to use metaphors and creative expressions.",
-        'technical' => "Use precise technical language appropriate for the subject matter. Be clear and accurate.",
-        'persuasive' => "Write convincingly to persuade the reader. Use compelling arguments and engaging language.",
-        'storytelling' => "Write in a narrative style that tells a story. Be engaging, descriptive, and use narrative techniques."
-    ];
-
-    $tone_instruction = $tone_instructions[$tone] ?? $tone_instructions['conversational'];
-
-    return "You are an expert content humanizer. Your task is to rewrite AI-generated text so it reads naturally, like it was written by a real human. The final content will be placed directly into the WordPress editor, so it must be properly formatted with headings, bullet points, and paragraphs.
+        $tone_instructions = [
+            'conversational' => 'Write in a natural, conversational style as if you\'re talking to a friend. Use contractions, casual language, and a warm tone.',
+            'professional' => 'Maintain a professional, business-appropriate tone. Use formal language while keeping it engaging and clear.',
+            'casual' => 'Write in a relaxed, informal style. Be friendly and approachable, using everyday language.',
+            'academic' => 'Use scholarly language appropriate for academic writing. Be precise, formal, and well-structured.',
+            'journalistic' => 'Write in a clear, factual journalistic style. Be objective, informative, and engaging.',
+            'creative' => 'Use imaginative, expressive language. Be vivid, engaging, and don\'t be afraid to use metaphors and creative expressions.',
+            'technical' => 'Use precise technical language appropriate for the subject matter. Be clear and accurate.',
+            'persuasive' => 'Write convincingly to persuade the reader. Use compelling arguments and engaging language.',
+            'storytelling' => 'Write in a narrative style that tells a story. Be engaging, descriptive, and use narrative techniques.'
+        ];
+        
+        $tone_instruction = $tone_instructions[$tone] ?? $tone_instructions['conversational'];
+        
+        return "You are an expert content humanizer. Your task is to rewrite AI-generated text to make it sound completely natural and human-written. Follow these guidelines:
 
 CRITICAL REQUIREMENTS:
-- Make the text sound fully human, not AI-generated
-- Preserve ALL information, sections, and structure from the input
+- Make the text sound like it was written by a real human, not an AI
+- Remove all robotic phrasing, formal structures, and AI-like patterns
+- Vary sentence length and structure naturally
+- Use natural transitions and flow
+- Add subtle imperfections that humans naturally include
 - {$tone_instruction}
 
 LENGTH REQUIREMENT:
@@ -610,38 +737,32 @@ LENGTH REQUIREMENT:
 - Do NOT shorten, summarize, or condense
 - Every idea, paragraph, and section in the input must appear in the output
 
-FORMATTING RULES:
-- Preserve existing headings (H1, H2, H3, etc.) exactly
-- Keep bullet points, numbered lists, and bold/italic formatting
-- Ensure paragraphs are cleanly separated for readability
-- The output must be ready to paste into WordPress without editing
-
 SPECIFIC TECHNIQUES:
-- Use natural transitions and flow
-- Vary sentence lengths and structures
-- Use contractions where appropriate (don't, can't, we'll)
-- Add subtle personal touches and human perspectives
 - Replace formal phrases with natural alternatives
-- Avoid robotic connectors like 'Moreover', 'Furthermore', 'In conclusion'
+- Use contractions where appropriate (don't, can't, we'll)
+- Add personal touches and human perspectives
+- Vary paragraph lengths
+- Use more natural word choices
+- Remove overly perfect grammar in favor of natural flow
+- Add subtle personality to the writing
 
 AVOID:
-- Overly perfect grammar that sounds unnatural
-- Repetitive sentence structures
-- Corporate jargon unless context requires it
-- Any AI-like phrasing or generic filler
+- Robotic phrases like 'Furthermore', 'Moreover', 'In conclusion'
+- Overly structured sentences
+- Perfect grammar that sounds unnatural
+- Repetitive sentence patterns
+- Corporate jargon unless specifically needed
+- AI-typical phrases and constructions
 
 OUTPUT RULES:
 - Return ONLY the rewritten content
-- Maintain the same order of sections as the input
-- Do not add commentary or explanations outside the rewritten content
+- Preserve the original meaning and key information
+- Keep the same approximate length
+- Make it engaging and readable
+- Ensure it flows naturally when read aloud
 
-Rewrite ALL of the text between the markers below. Do not omit or shorten sections.
-
-===ORIGINAL START===
-{{CONTENT}}
-===ORIGINAL END===";
-}
-
+Rewrite the following content to sound completely human and natural:";
+    }
     
     /**
      * Check AI detection using multiple methods
