@@ -3187,7 +3187,8 @@ Follow these rules strictly:
                 [
                     'id' => 'web',
                     'config' => [
-                        'max_results' => $max_results,
+                        'num_results' => $final_max_results,  // Try this instead
+                        'max_results' => $final_max_results,  // Keep both for now
                         'search_prompt' => 'Find the most recent and relevant information from ' . date('Y') . ' about: {query}. Focus on current events and latest developments.'
                     ]
                 ]
