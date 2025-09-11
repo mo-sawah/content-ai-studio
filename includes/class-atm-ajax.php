@@ -90,134 +90,101 @@ class ATM_Ajax {
     }
 
     private function generate_title_from_combination($keyword, $combination) {
-        // Context-aware templates based on audience and industry
-        $audience_industry_templates = [
-            'professionals' => [
-                "{keyword} Mastery: Advanced {format} for {industry} Professionals",
-                "Professional {keyword} Implementation in {industry}: {time} Edition",
-                "Executive's Guide to {keyword} in {industry}: Avoiding {problem}",
-                "Industry Expert's {keyword} Playbook for {industry} Leaders"
-            ],
-            'beginners' => [
-                "{keyword} 101: Complete Beginner's Guide for {industry} Newcomers",
-                "Zero to Hero: {keyword} Crash Course for {industry} Beginners",
-                "Your First {keyword} Success in {industry}: Step-by-Step {format}",
-                "Beginner's Mistakes in {keyword}: What {industry} Newcomers Get Wrong"
-            ],
-            'entrepreneurs' => [
-                "Bootstrapping {keyword} Success: {industry} Entrepreneur's {format}",
-                "From Startup to Scale: {keyword} Growth Hacks for {industry}",
-                "Entrepreneur's {keyword} Advantage in {industry} ({time} Insights)",
-                "Building Your {industry} Empire with {keyword}: {problem} Solutions"
-            ],
-            'small_businesses' => [
-                "Small {industry} Business {keyword}: Competing with Giants",
-                "Local {industry} Success: {keyword} Strategies That Actually Work",
-                "Small Budget, Big Results: {keyword} for {industry} SMBs",
-                "David vs. Goliath: How Small {industry} Businesses Win with {keyword}"
-            ]
+        // Base templates (your current ones)
+        $base_templates = [
+            "{keyword} for {audience} in {industry}: {format} for {time}",
+            "How {audience} in {industry} Can Master {keyword} ({skill} Level)",
+            "{keyword} {problem}: A {format} for {audience} on a {budget} Budget",
+            "The {time} {keyword} Strategy for {industry} {audience}",
+            "{keyword} Success: How {audience} in {industry} Can Avoid {problem}",
+            "From Zero to Hero: {keyword} {format} for {skill} {audience}",
+            "{industry} {keyword}: {problem} Solutions for {time}",
+            "The Complete {keyword} {format} for {audience} in {industry} ({time} Edition)",
+            "Why {audience} in {industry} Fail at {keyword} (And How to Fix It)",
+            "{keyword} on a {budget} Budget: {format} for {industry} {audience}",
+        ];
+
+        // Enhanced viral/clickable templates
+        $viral_templates = [
+            "The Ultimate {keyword} Guide for {industry} {audience} in {time}",
+            "{industry} Leaders' Secret: Advanced {keyword} Strategies",
+            "Breaking: How {keyword} is Transforming {industry} in {time}",
+            "The {keyword} Revolution: {audience} Guide to {industry} Success",
+            "Insider's {keyword} Playbook for {industry} Professionals",
+            "{time} Forecast: {keyword} Trends Every {industry} {audience} Must Know",
+            "The Hidden {keyword} Strategies {industry} Experts Don't Share",
+            "Next-Level {keyword}: How {industry} {audience} Stay Ahead",
+            "The {keyword} Transformation: {industry} Success Stories",
+            "Proven {keyword} Methods for {industry} Growth in {time}",
         ];
 
         // Problem-focused templates
         $problem_templates = [
-            'mistakes_to_avoid' => [
-                "The Fatal {keyword} Mistakes Killing {industry} Businesses in {time}",
-                "Why 90% of {industry} {audience} Fail at {keyword} (And How to Succeed)",
-                "Costly {keyword} Errors Every {industry} Professional Must Avoid",
-                "The {keyword} Pitfalls That Destroyed These {industry} Companies"
-            ],
-            'optimization_strategies' => [
-                "10X Your {keyword} Results: Optimization Secrets for {industry}",
-                "Peak Performance {keyword}: How {industry} Leaders Optimize",
-                "The {keyword} Optimization Formula That Transformed {industry}",
-                "{industry} Optimization: Advanced {keyword} Performance Tactics"
-            ],
-            'cost_reduction' => [
-                "Slash Your {keyword} Costs: {industry} Efficiency Revolution",
-                "Budget-Smart {keyword}: Maximum Results for {industry} on Minimal Spend",
-                "The {keyword} Cost Crisis: How {industry} Leaders Cut Expenses by 50%",
-                "Lean {keyword}: Eliminating Waste in {industry} Operations"
-            ]
+            "The {keyword} Crisis: How {industry} {audience} Can Survive {time}",
+            "Stop Making These {keyword} Mistakes in {industry}",
+            "The {keyword} Nightmare Every {industry} {audience} Fears",
+            "How to Fix Your {keyword} Problems in {industry} ({time} Solutions)",
+            "The {keyword} Disaster That's Killing {industry} Businesses",
         ];
 
-        // Time-context templates
-        $time_templates = [
-            '2025' => [
-                "{keyword} in 2025: What Every {industry} Professional Needs to Know",
-                "The 2025 {keyword} Revolution: {industry} Industry Transformation",
-                "2025 {keyword} Predictions: Future-Proofing Your {industry} Strategy",
-                "Next-Gen {keyword}: 2025 Trends Reshaping {industry}"
-            ],
-            'post_covid' => [
-                "Post-Pandemic {keyword}: How {industry} Adapted and Thrived",
-                "The New Normal: {keyword} Strategies for {industry} in a Changed World",
-                "COVID-Proof {keyword}: Resilient {industry} Business Models",
-                "Recovery and Growth: {keyword} Success Stories from {industry}"
-            ]
+        // Success/transformation templates
+        $success_templates = [
+            "From Failure to Success: {keyword} Transformation in {industry}",
+            "How I Used {keyword} to Dominate {industry} ({skill} Level Guide)",
+            "The {keyword} Blueprint That Built My {industry} Empire",
+            "Case Study: {keyword} Success in {industry} ({time} Results)",
+            "How {audience} Are Crushing {industry} with {keyword}",
         ];
 
-        // Format-specific templates
-        $format_templates = [
-            'case_study' => [
-                "{industry} Success Story: How {keyword} Transformed This Business",
-                "Real Results: {keyword} Case Study from Leading {industry} Company",
-                "From Failure to Success: {keyword} Transformation in {industry}",
-                "Behind the Scenes: {keyword} Implementation That Saved This {industry} Business"
-            ],
-            'ultimate_guide' => [
-                "The Ultimate {keyword} Handbook for {industry} Professionals",
-                "Master Class: Complete {keyword} Authority Guide for {industry}",
-                "Everything About {keyword}: The Definitive {industry} Resource",
-                "The Only {keyword} Guide {industry} Professionals Will Ever Need"
-            ]
+        // Contrarian/controversial templates
+        $contrarian_templates = [
+            "Why Everything You Know About {keyword} in {industry} is Wrong",
+            "The {keyword} Lie That's Destroying {industry} Businesses",
+            "Controversial: Why {industry} {audience} Should Ignore {keyword}",
+            "The {keyword} Myth That's Costing {industry} Millions",
+            "Why Most {keyword} Advice for {industry} is Garbage",
         ];
 
-        // Select appropriate template set based on combination
-        $template_sets = [];
-        
-        if (isset($audience_industry_templates[$combination['audience']])) {
-            $template_sets[] = $audience_industry_templates[$combination['audience']];
-        }
-        
-        if (isset($problem_templates[$combination['problem']])) {
-            $template_sets[] = $problem_templates[$combination['problem']];
-        }
-        
-        if (isset($time_templates[$combination['time']])) {
-            $template_sets[] = $time_templates[$combination['time']];
-        }
-        
-        if (isset($format_templates[$combination['format']])) {
-            $template_sets[] = $format_templates[$combination['format']];
-        }
+        // Future/prediction templates
+        $future_templates = [
+            "{time} Prediction: The Future of {keyword} in {industry}",
+            "What {keyword} Will Look Like in {industry} by {time}",
+            "The Coming {keyword} Revolution in {industry}",
+            "{time}: The Year {keyword} Changes {industry} Forever",
+            "Future-Proof Your {industry} Business with {keyword}",
+        ];
 
-        // Fallback to enhanced general templates if no specific match
-        if (empty($template_sets)) {
-            $template_sets[] = [
-                "The {keyword} Revolution: How {industry} {audience} Are Winning",
-                "Disruptive {keyword}: Why {industry} Will Never Be the Same",
-                "The {keyword} Advantage: Secret Weapons of {industry} Leaders",
-                "Next-Level {keyword}: Advanced Strategies for {industry} Growth"
-            ];
-        }
-
-        // Randomly select from available template sets
-        $selected_set = $template_sets[array_rand($template_sets)];
-        $template = $selected_set[array_rand($selected_set)];
+        // Combine all template arrays
+        $all_templates = array_merge(
+            $base_templates,
+            $viral_templates, 
+            $problem_templates,
+            $success_templates,
+            $contrarian_templates,
+            $future_templates
+        );
         
-        // Enhanced replacements with smart formatting
+        $template = $all_templates[array_rand($all_templates)];
+        
+        // Same replacements as before
         $replacements = [
-            '{keyword}' => $this->format_keyword($keyword),
-            '{audience}' => $this->format_audience($combination['audience']),
-            '{industry}' => $this->format_industry($combination['industry']),
-            '{problem}' => $this->format_problem($combination['problem']),
-            '{format}' => $this->format_format($combination['format']),
-            '{time}' => $this->format_time($combination['time']),
-            '{skill}' => $this->format_skill($combination['skill']),
-            '{budget}' => $this->format_budget($combination['budget'])
+            '{keyword}' => ucwords($keyword),
+            '{audience}' => $this->format_simple($combination['audience']),
+            '{industry}' => $this->format_simple($combination['industry']),
+            '{problem}' => $this->format_simple($combination['problem']),
+            '{format}' => $this->format_simple($combination['format']),
+            '{time}' => $this->format_simple($combination['time']),
+            '{skill}' => $this->format_simple($combination['skill']),
+            '{budget}' => $this->format_simple($combination['budget'])
         ];
         
         return str_replace(array_keys($replacements), array_values($replacements), $template);
+    }
+
+    private function format_simple($text) {
+        // Replace underscores with spaces and capitalize words
+        $formatted = str_replace('_', ' ', $text);
+        return ucwords($formatted);
     }
 
     // Helper methods for smart formatting
@@ -1562,18 +1529,19 @@ public function translate_text() {
         }
     }
 
-   private function build_angle_description($combination) {
+   // Add this method to the ATM_Ajax class
+    private function build_angle_description($combination) {
         return sprintf(
             "Target %s in %s industry focusing on %s, structured as %s, with %s perspective, at %s level, considering %s budget constraints",
-            str_replace('_', ' ', $combination['audience']),
-            str_replace('_', ' ', $combination['industry']),
-            str_replace('_', ' ', $combination['problem']),
-            str_replace('_', ' ', $combination['format']),
-            str_replace('_', ' ', $combination['time']),
-            str_replace('_', ' ', $combination['skill']),
-            str_replace('_', ' ', $combination['budget'])
+            $this->format_simple($combination['audience']),
+            $this->format_simple($combination['industry']),
+            $this->format_simple($combination['problem']),
+            $this->format_simple($combination['format']),
+            $this->format_simple($combination['time']),
+            $this->format_simple($combination['skill']),
+            $this->format_simple($combination['budget'])
         );
-    } 
+    }
 
     private function build_detailed_angle_context($angle_parts, $title) {
         if (count($angle_parts) < 7) return "";
