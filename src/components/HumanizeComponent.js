@@ -215,13 +215,35 @@ function HumanizeComponent({ setActiveView }) {
     }
 
     try {
-      if (window.wp && window.wp.data) {
+      // Try Block Editor (Gutenberg) first
+      if (window.wp && window.wp.data && window.wp.data.select("core/editor")) {
         const { dispatch } = window.wp.data;
-        dispatch("core/editor").editPost({ content: humanizedContent });
-      } else if (window.tinymce && window.tinymce.activeEditor) {
+
+        // Clear existing blocks first
+        const blocks = window.wp.data.select("core/block-editor").getBlocks();
+        if (blocks.length > 0) {
+          const clientIds = blocks.map((block) => block.clientId);
+          dispatch("core/block-editor").removeBlocks(clientIds);
+        }
+
+        // Convert content to blocks and insert
+        const newBlocks = window.wp.blocks.parse(humanizedContent);
+        dispatch("core/block-editor").insertBlocks(newBlocks);
+      }
+      // Try Classic Editor (TinyMCE)
+      else if (window.tinymce && window.tinymce.activeEditor) {
         window.tinymce.activeEditor.setContent(humanizedContent);
-      } else {
-        throw new Error("No editor found to replace content");
+      }
+      // Fallback to direct textarea
+      else {
+        const contentTextarea = document.getElementById("content");
+        if (contentTextarea) {
+          contentTextarea.value = humanizedContent;
+          // Trigger change event
+          contentTextarea.dispatchEvent(new Event("input", { bubbles: true }));
+        } else {
+          throw new Error("No editor found to replace content");
+        }
       }
 
       if (!silent) alert("✅ Content successfully replaced in editor!");
@@ -232,7 +254,7 @@ function HumanizeComponent({ setActiveView }) {
     } catch (error) {
       console.error("Content replacement error:", error);
       if (!silent)
-        alert("❌ Failed to replace content in editor: " + error.message);
+        alert("⚠ Failed to replace content in editor: " + error.message);
     }
   };
 
