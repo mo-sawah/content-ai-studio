@@ -1179,6 +1179,9 @@ public function translate_text() {
                 throw new Exception("Please provide a keyword or an article title.");
             }
             
+            // Ensure the angles table exists
+            $this->ensure_angles_table_exists();
+            
             // Always use angle system for both keyword and title-based generation
             $tracking_keyword = !empty($keyword) ? $keyword : $article_title;
             
@@ -1189,11 +1192,14 @@ public function translate_text() {
             $previous_angles = $this->get_previous_angles($tracking_keyword);
             error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $tracking_keyword);
             
-            // Generate new unique angle first
+            // Generate new unique angle first with enhanced randomization
+            $random_focus = $this->get_random_angle_category();
             $angle_prompt = $this->build_angle_generation_prompt($tracking_keyword, $previous_angles);
+            $enhanced_angle_prompt = $angle_prompt . "\n\nSPECIAL FOCUS FOR THIS ARTICLE: Target this specifically toward: {$random_focus}";
+            
             $new_angle = ATM_API::enhance_content_with_openrouter(
                 ['content' => $tracking_keyword], 
-                $angle_prompt, 
+                $enhanced_angle_prompt, 
                 $model_override ?: get_option('atm_article_model'),
                 false, // not JSON mode for angle generation
                 true,  // enable web search
@@ -1201,11 +1207,12 @@ public function translate_text() {
             );
             
             $new_angle = trim($new_angle);
-            error_log("ATM Debug: Generated new angle: " . $new_angle);
+            error_log("ATM Debug: Generated new angle with focus '{$random_focus}': " . $new_angle);
             
             // Generate title using the angle if we don't have one
             if (empty($article_title)) {
                 $article_title = $this->generate_title_with_angle($tracking_keyword, $new_angle, $model_override);
+                error_log("ATM Debug: Generated title from angle: " . $article_title);
             }
             
             // Store the new angle BEFORE content generation
@@ -1316,23 +1323,41 @@ public function translate_text() {
 
     // Add this new method to generate title with angle
     private function generate_title_with_angle($keyword, $angle, $model_override = '') {
-        $title_prompt = "You are an expert SEO content writer. Generate a compelling, SEO-friendly title for an article about '{$keyword}' that specifically focuses on this angle:
+        $title_prompt = "You are an expert copywriter specializing in creating HIGHLY COMPELLING, click-worthy titles. 
 
-    REQUIRED ANGLE: {$angle}
+    MANDATORY ANGLE TO FOLLOW: {$angle}
 
     TITLE REQUIREMENTS:
-    - Must reflect the specific angle, not be a generic overview
-    - Should be 8-15 words long
-    - Must be engaging and clickable
-    - Should include the main keyword naturally
-    - Must clearly indicate the specific focus/angle
+    - Must reflect this SPECIFIC angle, not be a generic overview
+    - Should be 8-18 words long
+    - Must be engaging and clickable (think viral content)
+    - Should target the specific audience mentioned in the angle
+    - Use power words and emotional triggers
+    - Make it feel fresh and unique
+    - Include numbers, years, or specific benefits when relevant
 
-    Examples of angle-focused titles:
-    - If angle is about small businesses: 'How Small Businesses Can Master [Keyword] Without Breaking the Bank'
-    - If angle is about career growth: '[Keyword] Skills That Will Future-Proof Your Career in 2025'
-    - If angle is about non-profits: 'Why Non-Profits Are Winning with [Keyword]: A Complete Strategy Guide'
+    TITLE FORMULAS TO USE:
+    1. Problem/Solution: 'Why [Problem] and How [Solution]'
+    2. List/Number: '[Number] [Specific Things] That [Benefit]'
+    3. Contrarian: 'Why Everything You Know About [Topic] Is Wrong'
+    4. Urgency: 'The [Year] Guide to [Specific Outcome]'
+    5. Secret/Insider: '[Number] Industry Secrets [Professionals] Don't Want You to Know'
+    6. Transformation: 'How [Specific Group] Can [Transform] Using [Method]'
+    7. Mistake-focused: '[Number] [Keyword] Mistakes That Are [Negative Outcome]'
 
-    Generate ONLY the title, nothing else.";
+    EXAMPLES of angle-focused titles:
+    Angle: 'How small local businesses can compete with big brands'
+    Title: 'How Small Businesses Are Crushing Corporate Giants with These 7 Guerrilla Marketing Tactics'
+
+    Angle: 'The hidden psychological triggers for Gen Z engagement'
+    Title: 'The 5 Psychological Triggers That Make Gen Z Actually Click Your Ads (Data-Driven)'
+
+    Angle: 'Why nonprofits fail at digital marketing'
+    Title: 'Why 90% of Nonprofits Fail at Digital Marketing (And How to Be the Exception)'
+
+    Generate a compelling title for this angle: {$angle}
+    Include the keyword '{$keyword}' naturally in the title.
+    Return ONLY the title, nothing else.";
 
         return trim(ATM_API::enhance_content_with_openrouter(
             ['content' => $keyword], 
@@ -1359,6 +1384,31 @@ public function translate_text() {
         return $results ?: [];
     }
 
+    private function get_random_angle_category() {
+        $categories = [
+            'industry_specific' => [
+                'healthcare', 'education', 'finance', 'retail', 'manufacturing', 
+                'real estate', 'hospitality', 'automotive', 'legal', 'consulting'
+            ],
+            'audience_specific' => [
+                'beginners', 'advanced professionals', 'entrepreneurs', 'students', 
+                'freelancers', 'small business owners', 'corporate executives', 'startups'
+            ],
+            'problem_focused' => [
+                'common mistakes to avoid', 'optimization strategies', 'troubleshooting guide',
+                'cost-effective solutions', 'time-saving techniques', 'ROI improvement'
+            ],
+            'trend_based' => [
+                '2025 predictions', 'emerging technologies', 'future impact', 'AI integration',
+                'post-pandemic changes', 'mobile-first approaches', 'voice search optimization'
+            ]
+        ];
+        
+        $category_keys = array_keys($categories);
+        $random_category = $categories[$category_keys[array_rand($category_keys)]];
+        return $random_category[array_rand($random_category)];
+    }
+
     private function build_angle_generation_prompt($keyword, $previous_angles) {
         $previous_context = '';
         if (!empty($previous_angles)) {
@@ -1366,27 +1416,37 @@ public function translate_text() {
             foreach ($previous_angles as $i => $angle_data) {
                 $previous_context .= "- " . ($i + 1) . ". " . $angle_data['angle'] . "\n";
             }
-            $previous_context .= "\nYou MUST create a completely different angle that hasn't been covered before.";
+            $previous_context .= "\nYou MUST create a completely different angle that hasn't been covered before. Avoid ANY similarity to these previous angles.";
         }
         
-        return "You are a content strategist. Generate a unique, specific angle/perspective for an article about '{$keyword}'. 
-        
-        REQUIREMENTS:
-        - Return ONLY a single sentence describing the unique angle
-        - Make it specific, not generic
-        - Focus on a particular aspect, audience, or approach
-        - Avoid broad overviews
-        
-        {$previous_context}
-        
-        Examples of good angles:
-        - 'How small businesses can leverage {$keyword} without breaking the bank'
-        - 'The hidden psychological impact of {$keyword} on remote workers'
-        - '5 common {$keyword} mistakes that are costing enterprises millions'
-        - 'Why {$keyword} is becoming essential for Gen Z professionals'
-        - 'The unexpected ways {$keyword} is disrupting traditional industries'
-        
-        Generate a unique angle for: {$keyword}";
+        return "You are a content strategist tasked with creating EXTREMELY DIVERSE angles for '{$keyword}'. Each angle must target different audiences, industries, or perspectives.
+
+    REQUIREMENTS:
+    - Return ONLY a single sentence describing a RADICALLY different angle
+    - Make it highly specific to a particular audience, use case, or industry
+    - Focus on unique problems, solutions, or perspectives
+    - Avoid generic overviews or similar phrasing to previous angles
+
+    ANGLE CATEGORIES TO ROTATE BETWEEN:
+    1. Industry-specific applications (healthcare, education, finance, retail, etc.)
+    2. Audience-specific guides (beginners, professionals, entrepreneurs, students)
+    3. Problem-solving approaches (common mistakes, optimization, troubleshooting)
+    4. Trend-based perspectives (2025 predictions, emerging technologies, future impact)
+    5. Comparative analysis (vs competitors, before/after, tool comparisons)
+    6. Case study approaches (success stories, failure analysis, real-world examples)
+    7. Technical deep-dives (advanced strategies, expert techniques, insider secrets)
+    8. Ethical/philosophical angles (privacy concerns, social impact, responsibility)
+
+    {$previous_context}
+
+    EXAMPLES of diverse angles for 'Digital Marketing':
+    - 'How small local businesses can compete with big brands using grassroots digital marketing tactics'
+    - 'The hidden psychological triggers that make Gen Z consumers actually engage with digital ads'
+    - 'Why 90% of nonprofits fail at digital marketing and how to be in the winning 10%'
+    - 'The dark side of digital marketing: ethical considerations every marketer must address'
+    - 'How B2B manufacturing companies can leverage digital marketing to reach decision-makers'
+
+    Generate a completely unique angle for: {$keyword}";
     }
 
     private function build_enhanced_system_prompt($base_prompt, $new_angle, $previous_angles) {
