@@ -166,102 +166,94 @@ private function humanize_content_with_structure_preservation($content, $provide
     $is_gutenberg = strpos($content, '<!-- wp:') !== false;
     
     if ($is_gutenberg) {
-        return $this->humanize_gutenberg_content($content, $provider, $options, $start_time);
+        return $this->humanize_gutenberg_simple($content, $provider, $options, $start_time);
+    } else {
+        return $this->humanize_html_simple($content, $provider, $options, $start_time);
     }
-    
-    // Handle regular HTML content (Classic Editor)
-    return $this->humanize_html_content($content, $provider, $options, $start_time);
 }
 
 /**
- * NEW: Handle Gutenberg block content
+ * Simple and reliable Gutenberg humanization
  */
-private function humanize_gutenberg_content($content, $provider, $options, $start_time) {
-    // Extract all text content and preserve block structure
-    $blocks = [];
-    $text_parts = [];
+private function humanize_gutenberg_simple($content, $provider, $options, $start_time) {
+    // Strategy: Extract text, humanize it, then intelligently put it back
     
-    // Split content by Gutenberg blocks
-    $block_pattern = '/<!-- wp:(\w+).*?-->(.*?)<!-- \/wp:\1 -->/s';
-    preg_match_all($block_pattern, $content, $matches, PREG_SET_ORDER);
+    // Step 1: Extract all text content that needs humanization
+    $text_blocks = [];
+    $block_positions = [];
     
-    foreach ($matches as $i => $match) {
-        $block_type = $match[1];
-        $block_content = $match[2];
-        $full_block = $match[0];
+    // Find all content within Gutenberg blocks
+    $pattern = '/<!-- wp:(\w+)(?:\s+{[^}]*})?\s*-->(.*?)<!-- \/wp:\1 -->/s';
+    preg_match_all($pattern, $content, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+    
+    foreach ($matches as $match) {
+        $block_type = $match[1][0];
+        $block_content = $match[2][0];
+        $full_match = $match[0][0];
+        $position = $match[0][1];
         
-        // Extract text from different block types
+        // Extract text based on block type
+        $extracted_text = '';
+        
         switch ($block_type) {
             case 'heading':
-                if (preg_match('/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i', $block_content, $heading_match)) {
-                    $blocks[$i] = [
-                        'type' => 'heading',
-                        'original_block' => $full_block,
-                        'html_content' => $block_content,
-                        'text_content' => trim($heading_match[1])
-                    ];
-                    $text_parts[] = trim($heading_match[1]);
+                // Extract heading text
+                if (preg_match('/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i', $block_content, $h_match)) {
+                    $extracted_text = trim($h_match[1]);
                 }
                 break;
                 
             case 'paragraph':
-                $text_content = wp_strip_all_tags($block_content);
-                if (!empty(trim($text_content))) {
-                    $blocks[$i] = [
-                        'type' => 'paragraph',
-                        'original_block' => $full_block,
-                        'html_content' => $block_content,
-                        'text_content' => trim($text_content)
-                    ];
-                    $text_parts[] = trim($text_content);
+                // Extract paragraph text (preserve links by replacing with placeholders)
+                $temp_content = $block_content;
+                $links = [];
+                
+                // Extract links
+                preg_match_all('/<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/i', $temp_content, $link_matches, PREG_SET_ORDER);
+                foreach ($link_matches as $i => $link_match) {
+                    $link_placeholder = "##LINK{$i}##";
+                    $links[$link_placeholder] = $link_match[0];
+                    $temp_content = str_replace($link_match[0], $link_placeholder, $temp_content);
+                }
+                
+                $extracted_text = trim(wp_strip_all_tags($temp_content));
+                
+                // Store links for this block
+                if (!empty($links)) {
+                    $text_blocks['links_' . count($text_blocks)] = $links;
                 }
                 break;
                 
             case 'list':
-                $text_content = wp_strip_all_tags($block_content);
-                if (!empty(trim($text_content))) {
-                    $blocks[$i] = [
-                        'type' => 'list',
-                        'original_block' => $full_block,
-                        'html_content' => $block_content,
-                        'text_content' => trim($text_content)
-                    ];
-                    $text_parts[] = trim($text_content);
-                }
+                // Extract list text
+                $extracted_text = trim(wp_strip_all_tags($block_content));
                 break;
                 
             default:
-                // Handle other blocks
-                $text_content = wp_strip_all_tags($block_content);
-                if (!empty(trim($text_content))) {
-                    $blocks[$i] = [
-                        'type' => $block_type,
-                        'original_block' => $full_block,
-                        'html_content' => $block_content,
-                        'text_content' => trim($text_content)
-                    ];
-                    $text_parts[] = trim($text_content);
+                // For other blocks, just extract text
+                $clean_text = trim(wp_strip_all_tags($block_content));
+                if (!empty($clean_text)) {
+                    $extracted_text = $clean_text;
                 }
                 break;
         }
+        
+        if (!empty($extracted_text)) {
+            $text_blocks[] = $extracted_text;
+            $block_positions[] = [
+                'type' => $block_type,
+                'original' => $full_match,
+                'content' => $block_content,
+                'text' => $extracted_text,
+                'position' => $position
+            ];
+        }
     }
     
-    // Also handle any content outside of blocks
-    $remaining_content = $content;
-    foreach ($matches as $match) {
-        $remaining_content = str_replace($match[0], '', $remaining_content);
-    }
-    
-    $remaining_text = trim(wp_strip_all_tags($remaining_content));
-    if (!empty($remaining_text)) {
-        $text_parts[] = $remaining_text;
-    }
-    
-    // Combine all text for humanization
-    $combined_text = implode("\n\n", $text_parts);
+    // Step 2: Combine all text and humanize it
+    $combined_text = implode("\n\n", $text_blocks);
     
     if (empty(trim($combined_text))) {
-        // No text to humanize, return original
         return [
             'humanized_content' => $content,
             'credits_used' => 0,
@@ -273,56 +265,48 @@ private function humanize_gutenberg_content($content, $provider, $options, $star
     $humanized_result = $this->humanize_content($combined_text, $provider, $options);
     $humanized_text = $humanized_result['humanized_content'];
     
-    // Split humanized text back into parts
+    // Step 3: Split humanized text back into parts
     $humanized_parts = preg_split('/\n\s*\n/', $humanized_text, -1, PREG_SPLIT_NO_EMPTY);
     $humanized_parts = array_map('trim', $humanized_parts);
     
-    // Rebuild content with humanized text
+    // Step 4: Replace content block by block (working backwards to preserve positions)
     $final_content = $content;
-    $part_index = 0;
+    $parts_used = 0;
     
-    foreach ($blocks as $block) {
-        if (isset($humanized_parts[$part_index])) {
-            $new_text = $humanized_parts[$part_index];
-            
-            switch ($block['type']) {
-                case 'heading':
-                    // Replace heading text while preserving structure
-                    $new_html = preg_replace('/(<h[1-6][^>]*>)[^<]+(<\/h[1-6]>)/i', '$1' . $new_text . '$2', $block['html_content']);
-                    $new_block = str_replace($block['html_content'], $new_html, $block['original_block']);
-                    break;
-                    
-                case 'paragraph':
-                    // Replace paragraph content while preserving links
-                    $new_html = $this->replace_paragraph_content_preserve_links($block['html_content'], $new_text);
-                    $new_block = str_replace($block['html_content'], $new_html, $block['original_block']);
-                    break;
-                    
-                case 'list':
-                    // Handle list content
-                    $new_html = $this->replace_list_content_smart($block['html_content'], $new_text);
-                    $new_block = str_replace($block['html_content'], $new_html, $block['original_block']);
-                    break;
-                    
-                default:
-                    // Generic replacement
-                    $new_html = '<p>' . $new_text . '</p>';
-                    $new_block = str_replace($block['html_content'], $new_html, $block['original_block']);
-                    break;
-            }
-            
-            $final_content = str_replace($block['original_block'], $new_block, $final_content);
-            $part_index++;
+    // Sort blocks by position (descending) to replace from end to beginning
+    usort($block_positions, function($a, $b) {
+        return $b['position'] - $a['position'];
+    });
+    
+    // We need to assign parts in the original order, so let's reindex
+    $ordered_blocks = $block_positions;
+    usort($ordered_blocks, function($a, $b) {
+        return $a['position'] - $b['position'];
+    });
+    
+    // Create a mapping of position to humanized part
+    $position_to_part = [];
+    foreach ($ordered_blocks as $i => $block) {
+        if (isset($humanized_parts[$i])) {
+            $position_to_part[$block['position']] = $humanized_parts[$i];
         }
     }
     
-    // Handle any remaining humanized text
-    if ($part_index < count($humanized_parts)) {
-        $remaining_humanized = '';
-        for ($i = $part_index; $i < count($humanized_parts); $i++) {
-            $remaining_humanized .= "\n\n<!-- wp:paragraph -->\n<p>" . $humanized_parts[$i] . "</p>\n<!-- /wp:paragraph -->";
+    // Now replace from end to beginning to preserve string positions
+    foreach ($block_positions as $block) {
+        if (!isset($position_to_part[$block['position']])) {
+            continue;
         }
-        $final_content .= $remaining_humanized;
+        
+        $humanized_part = $position_to_part[$block['position']];
+        $new_block = $this->rebuild_gutenberg_block($block, $humanized_part);
+        
+        $final_content = substr_replace(
+            $final_content,
+            $new_block,
+            $block['position'],
+            strlen($block['original'])
+        );
     }
     
     return [
@@ -333,103 +317,195 @@ private function humanize_gutenberg_content($content, $provider, $options, $star
 }
 
 /**
- * NEW: Handle regular HTML content (Classic Editor)
+ * Rebuild a Gutenberg block with humanized content
  */
-private function humanize_html_content($content, $provider, $options, $start_time) {
-    // Extract links and preserve them
-    $links = [];
-    $link_placeholders = [];
+private function rebuild_gutenberg_block($block, $humanized_text) {
+    $block_type = $block['type'];
+    $original_content = $block['content'];
     
-    // Find all links
-    preg_match_all('/<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/i', $content, $matches, PREG_SET_ORDER);
-    
-    foreach ($matches as $i => $match) {
-        $placeholder = "##LINK_PLACEHOLDER_" . $i . "##";
-        $links[$placeholder] = [
-            'full_tag' => $match[0],
-            'url' => $match[1],
-            'text' => $match[2]
-        ];
-        $link_placeholders[] = $placeholder;
-        $content = str_replace($match[0], $placeholder, $content);
+    switch ($block_type) {
+        case 'heading':
+            // Replace heading text while preserving HTML structure and classes
+            $new_content = preg_replace(
+                '/(<h[1-6][^>]*>)[^<]+(<\/h[1-6]>)/i',
+                '$1' . htmlspecialchars($humanized_text) . '$2',
+                $original_content
+            );
+            break;
+            
+        case 'paragraph':
+            // Handle paragraph with potential links
+            $new_content = $this->rebuild_paragraph_with_links($original_content, $humanized_text);
+            break;
+            
+        case 'list':
+            // Handle list content
+            $new_content = $this->rebuild_list_content($original_content, $humanized_text);
+            break;
+            
+        default:
+            // For other blocks, wrap in appropriate tags
+            if (strpos($original_content, '<p') !== false) {
+                $new_content = '<p>' . htmlspecialchars($humanized_text) . '</p>';
+            } else {
+                $new_content = htmlspecialchars($humanized_text);
+            }
+            break;
     }
     
-    // Extract headings
-    $headings = [];
-    preg_match_all('/<(h[1-6])[^>]*>([^<]+)<\/h[1-6]>/i', $content, $heading_matches, PREG_SET_ORDER);
+    // Reconstruct the full block
+    $block_start = '<!-- wp:' . $block_type;
+    $block_end = '<!-- /wp:' . $block_type . ' -->';
     
-    $text_parts = [];
-    foreach ($heading_matches as $i => $match) {
-        $placeholder = "##HEADING_" . $i . "##";
-        $headings[$placeholder] = [
-            'tag' => $match[1],
-            'text' => $match[2],
-            'full_tag' => $match[0]
-        ];
-        $text_parts[] = $match[2];
-        $content = str_replace($match[0], $placeholder, $content);
-    }
+    // Find the full opening tag (including any attributes)
+    $original_block = $block['original'];
+    preg_match('/<!-- wp:' . preg_quote($block_type) . '(?:\s+{[^}]*})?\s*-->/', $original_block, $start_match);
+    $full_start_tag = $start_match[0] ?? $block_start . ' -->';
     
-    // Get remaining text content
-    $remaining_text = wp_strip_all_tags($content);
+    return $full_start_tag . "\n" . $new_content . "\n" . $block_end;
+}
+
+/**
+ * Rebuild paragraph content while preserving links
+ */
+private function rebuild_paragraph_with_links($original_content, $humanized_text) {
+    // Extract any existing links from original content
+    preg_match_all('/<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/i', $original_content, $link_matches, PREG_SET_ORDER);
     
-    // Remove placeholders from text for humanization
-    foreach (array_keys($headings) as $placeholder) {
-        $remaining_text = str_replace($placeholder, '', $remaining_text);
-    }
-    foreach ($link_placeholders as $placeholder) {
-        $remaining_text = str_replace($placeholder, $links[$placeholder]['text'], $remaining_text);
-    }
-    
-    $text_parts[] = $remaining_text;
-    $combined_text = implode("\n\n", array_filter($text_parts));
-    
-    // Humanize the text content
-    $humanized_result = $this->humanize_content(trim($combined_text), $provider, $options);
-    $humanized_text = $humanized_result['humanized_content'];
-    
-    // Split humanized text into parts
-    $humanized_parts = preg_split('/\n\s*\n/', $humanized_text, -1, PREG_SPLIT_NO_EMPTY);
-    $part_index = 0;
-    
-    // Rebuild content with structure
-    $final_content = $content;
-    
-    // Replace headings
-    foreach ($headings as $placeholder => $info) {
-        if (isset($humanized_parts[$part_index])) {
-            $new_heading = '<' . $info['tag'] . '>' . trim($humanized_parts[$part_index]) . '</' . $info['tag'] . '>';
-            $final_content = str_replace($placeholder, $new_heading, $final_content);
-            $part_index++;
+    if (!empty($link_matches)) {
+        // Try to place the first link intelligently in the humanized text
+        $link = $link_matches[0];
+        $link_url = $link[1];
+        $words = explode(' ', $humanized_text);
+        
+        if (count($words) >= 4) {
+            // Take 2-3 words from the middle of the text to use as link text
+            $start_pos = floor(count($words) / 3);
+            $link_words = array_slice($words, $start_pos, 2);
+            $link_text = implode(' ', $link_words);
+            
+            // Replace those words with the link
+            $words[$start_pos] = '<a href="' . $link_url . '">' . $link_text . '</a>';
+            $words[$start_pos + 1] = ''; // Remove the second word since it's now part of the link
+            $humanized_text = implode(' ', array_filter($words));
+        } else {
+            // Short text, append the original link
+            $humanized_text .= ' ' . $link[0];
         }
     }
     
-    // Replace remaining content
-    $remaining_humanized = '';
-    for ($i = $part_index; $i < count($humanized_parts); $i++) {
-        $remaining_humanized .= '<p>' . trim($humanized_parts[$i]) . '</p>' . "\n";
+    // Extract paragraph attributes from original
+    if (preg_match('/<p([^>]*)>/i', $original_content, $p_match)) {
+        $p_attributes = $p_match[1];
+        return '<p' . $p_attributes . '>' . $humanized_text . '</p>';
+    } else {
+        return '<p>' . $humanized_text . '</p>';
+    }
+}
+
+/**
+ * Rebuild list content
+ */
+private function rebuild_list_content($original_content, $humanized_text) {
+    // Count original list items
+    $li_count = substr_count($original_content, '<li');
+    
+    if ($li_count > 0) {
+        // Split humanized text into sentences
+        $sentences = preg_split('/[.!?]+/', $humanized_text, -1, PREG_SPLIT_NO_EMPTY);
+        $sentences = array_map('trim', $sentences);
+        
+        if (count($sentences) >= $li_count) {
+            // Extract list attributes
+            $list_tag = 'ul';
+            $list_attributes = '';
+            
+            if (preg_match('/<(ul|ol)([^>]*)>/i', $original_content, $list_match)) {
+                $list_tag = $list_match[1];
+                $list_attributes = $list_match[2];
+            }
+            
+            // Build new list
+            $new_content = '<' . $list_tag . $list_attributes . '>';
+            
+            for ($i = 0; $i < $li_count; $i++) {
+                $sentence = $sentences[$i] ?? $sentences[0];
+                $new_content .= '<li>' . htmlspecialchars($sentence) . '</li>';
+            }
+            
+            $new_content .= '</' . $list_tag . '>';
+            return $new_content;
+        }
     }
     
-    // Clean up and add remaining content
-    $final_content = preg_replace('/##HEADING_\d+##/', '', $final_content);
-    $final_content = wp_strip_all_tags($final_content);
-    $final_content = $remaining_humanized;
+    // Fallback: return as paragraph
+    return '<p>' . htmlspecialchars($humanized_text) . '</p>';
+}
+
+/**
+ * Simple HTML humanization (for Classic Editor)
+ */
+private function humanize_html_simple($content, $provider, $options, $start_time) {
+    // For HTML content, use a simpler approach that just preserves basic structure
+    
+    // Extract and preserve links
+    $links = [];
+    preg_match_all('/<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/i', $content, $link_matches, PREG_SET_ORDER);
+    
+    foreach ($link_matches as $i => $match) {
+        $placeholder = "##LINK_PLACEHOLDER_" . $i . "##";
+        $links[$placeholder] = $match[0];
+        $content = str_replace($match[0], $placeholder, $content);
+    }
+    
+    // Get text content for humanization
+    $text_content = wp_strip_all_tags($content);
+    
+    // Remove link placeholders from text
+    foreach (array_keys($links) as $placeholder) {
+        $text_content = str_replace($placeholder, '', $text_content);
+    }
+    
+    $text_content = trim($text_content);
+    
+    if (empty($text_content)) {
+        return [
+            'humanized_content' => $content,
+            'credits_used' => 0,
+            'processing_time' => round((microtime(true) - $start_time) * 1000)
+        ];
+    }
+    
+    // Humanize the text
+    $humanized_result = $this->humanize_content($text_content, $provider, $options);
+    $humanized_text = $humanized_result['humanized_content'];
+    
+    // Wrap in paragraphs
+    $paragraphs = preg_split('/\n\s*\n/', $humanized_text, -1, PREG_SPLIT_NO_EMPTY);
+    $final_content = '';
+    
+    foreach ($paragraphs as $paragraph) {
+        $final_content .= '<p>' . trim($paragraph) . '</p>' . "\n";
+    }
     
     // Restore links
-    foreach ($links as $placeholder => $link_info) {
-        $words = explode(' ', $link_info['text']);
-        $link_text = count($words) > 2 ? implode(' ', array_slice($words, 0, 2)) : $link_info['text'];
-        
-        if (strpos($final_content, $link_text) !== false) {
-            $new_link = '<a href="' . $link_info['url'] . '">' . $link_text . '</a>';
-            $final_content = str_replace($link_text, $new_link, $final_content);
-        } else {
-            $final_content .= ' ' . $link_info['full_tag'];
+    foreach ($links as $placeholder => $link_html) {
+        // Try to place link in the content
+        preg_match('/>([^<]+)<\/a>/', $link_html, $link_text_match);
+        if ($link_text_match) {
+            $link_text_words = explode(' ', $link_text_match[1]);
+            $search_text = count($link_text_words) > 2 ? implode(' ', array_slice($link_text_words, 0, 2)) : $link_text_match[1];
+            
+            if (strpos($final_content, $search_text) !== false) {
+                $final_content = str_replace($search_text, str_replace($link_text_match[1], $search_text, $link_html), $final_content);
+            } else {
+                $final_content .= ' ' . $link_html;
+            }
         }
     }
     
     return [
-        'humanized_content' => $final_content,
+        'humanized_content' => trim($final_content),
         'credits_used' => $humanized_result['credits_used'],
         'processing_time' => round((microtime(true) - $start_time) * 1000)
     ];
