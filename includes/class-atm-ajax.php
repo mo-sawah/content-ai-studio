@@ -1168,39 +1168,42 @@ public function translate_text() {
                 throw new Exception("Please provide a keyword or an article title.");
             }
             
-            // Use keyword for angle tracking (fallback to title if no keyword)
-            $tracking_keyword = !empty($keyword) ? $keyword : $article_title;
+            $new_angle = '';
+            $previous_angles = [];
             
-            // Get previous angles for this keyword
-            $previous_angles = $this->get_previous_angles($tracking_keyword);
-
-            // Add this debug logging after $previous_angles = $this->get_previous_angles($tracking_keyword);
-            error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for keyword: " . $tracking_keyword);
-            if (!empty($previous_angles)) {
-                foreach ($previous_angles as $i => $angle) {
-                    error_log("ATM Debug: Previous angle " . ($i+1) . ": " . $angle['angle']);
-                }
-            }
-            
-            // Generate new unique angle first
-            $angle_prompt = $this->build_angle_generation_prompt($tracking_keyword, $previous_angles);
-            $new_angle = ATM_API::enhance_content_with_openrouter(
-                ['content' => $tracking_keyword], 
-                $angle_prompt, 
-                $model_override ?: get_option('atm_article_model'),
-                false, // not JSON mode for angle generation
-                true,  // enable web search
-                $creativity_level
-            );
-
-            error_log("ATM Debug: Generated new angle: " . trim($new_angle));
-            
+            // Only use angle system if user provided keyword (not title)
             if (empty($article_title) && !empty($keyword)) {
-                $article_title = ATM_API::generate_title_from_keyword($keyword, $model_override);
+                // Use keyword for angle tracking
+                $tracking_keyword = $keyword;
+                
+                // Get previous angles for this keyword
+                $previous_angles = $this->get_previous_angles($tracking_keyword);
+                error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for keyword: " . $tracking_keyword);
+                if (!empty($previous_angles)) {
+                    foreach ($previous_angles as $i => $angle) {
+                        error_log("ATM Debug: Previous angle " . ($i+1) . ": " . $angle['angle']);
+                    }
+                }
+                
+                // Generate new unique angle first
+                $angle_prompt = $this->build_angle_generation_prompt($tracking_keyword, $previous_angles);
+                $new_angle = ATM_API::enhance_content_with_openrouter(
+                    ['content' => $tracking_keyword], 
+                    $angle_prompt, 
+                    $model_override ?: get_option('atm_article_model'),
+                    false, // not JSON mode for angle generation
+                    true,  // enable web search
+                    $creativity_level
+                );
+                
+                error_log("ATM Debug: Generated new angle: " . trim($new_angle));
+                
+                // Generate title using the angle
+                $article_title = $this->generate_title_with_angle($keyword, trim($new_angle), $model_override);
+                
+                // Store the new angle
+                $this->store_content_angle($tracking_keyword, trim($new_angle), $article_title);
             }
-            
-            // Store the new angle
-            $this->store_content_angle($tracking_keyword, trim($new_angle), $article_title);
             
             $writing_styles = ATM_API::get_writing_styles();
             $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
@@ -1230,10 +1233,19 @@ public function translate_text() {
             - Make links feel natural within the sentence flow
             - Avoid long phrases as anchor text';
             
-            // Enhanced system prompt with angle context
-            $enhanced_prompt = $this->build_enhanced_system_prompt($base_prompt, trim($new_angle), $previous_angles);
-            error_log("ATM Debug: Enhanced prompt preview: " . substr($enhanced_prompt, 0, 500) . "...");
-            $system_prompt = $enhanced_prompt . "\n\n" . $output_instructions;
+            $system_prompt = $base_prompt . "\n\n" . $output_instructions;
+            
+            // Only enhance prompt with angle if we have one (keyword-based generation)
+            if (!empty($new_angle)) {
+                $enhanced_prompt = $this->build_enhanced_system_prompt($base_prompt, trim($new_angle), $previous_angles);
+                $system_prompt = $enhanced_prompt . "\n\n" . $output_instructions;
+                error_log("ATM Debug: Enhanced prompt preview: " . substr($enhanced_prompt, 0, 500) . "...");
+                
+                // Add contextual seed for additional variation
+                $contextual_seed = ATM_API::get_contextual_seed($keyword);
+                $system_prompt .= "\n\nContextual Focus: " . $contextual_seed;
+                error_log("ATM Debug: Contextual seed: " . $contextual_seed);
+            }
             
             if ($post) {
                 $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
@@ -1242,10 +1254,7 @@ public function translate_text() {
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
             }
             
-            // Add contextual seed for additional variation
-            $contextual_seed = ATM_API::get_contextual_seed($tracking_keyword);
-            error_log("ATM Debug: Contextual seed: " . $contextual_seed);
-            $system_prompt .= "\n\nContextual Focus: " . $contextual_seed;
+            error_log("ATM Debug: Final system prompt length: " . strlen($system_prompt));
             
             $raw_response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $article_title], 
@@ -1306,6 +1315,36 @@ public function translate_text() {
         }
     }
 
+    // Add this new method to generate title with angle
+    private function generate_title_with_angle($keyword, $angle, $model_override = '') {
+        $title_prompt = "You are an expert SEO content writer. Generate a compelling, SEO-friendly title for an article about '{$keyword}' that specifically focuses on this angle:
+
+    REQUIRED ANGLE: {$angle}
+
+    TITLE REQUIREMENTS:
+    - Must reflect the specific angle, not be a generic overview
+    - Should be 8-15 words long
+    - Must be engaging and clickable
+    - Should include the main keyword naturally
+    - Must clearly indicate the specific focus/angle
+
+    Examples of angle-focused titles:
+    - If angle is about small businesses: 'How Small Businesses Can Master [Keyword] Without Breaking the Bank'
+    - If angle is about career growth: '[Keyword] Skills That Will Future-Proof Your Career in 2025'
+    - If angle is about non-profits: 'Why Non-Profits Are Winning with [Keyword]: A Complete Strategy Guide'
+
+    Generate ONLY the title, nothing else.";
+
+        return trim(ATM_API::enhance_content_with_openrouter(
+            ['content' => $keyword], 
+            $title_prompt, 
+            $model_override ?: get_option('atm_article_model'),
+            false, // not JSON mode
+            true   // enable web search
+        ));
+    }
+
+    // Keep your existing helper methods
     private function get_previous_angles($keyword) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
