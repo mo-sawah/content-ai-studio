@@ -1,7 +1,8 @@
-// src/components/HumanizeComponent.js - Fixed version with proper button states
-// - Spinners only show when processing with content
-// - Disabled buttons are grayed out without spinners
-// - Clear visual distinction between states
+// src/components/HumanizeComponent.js - Updated with requested fixes
+// - Advanced button removed; settings always visible
+// - Three checkboxes converted to toggles and shown on one line
+// - Labels in dark settings panel forced to white
+// - Disabled/unclickable buttons no longer show spinners (spinner only on main CTA)
 
 import { useState, useEffect } from "@wordpress/element";
 import { ToggleControl } from "@wordpress/components";
@@ -200,7 +201,7 @@ function HumanizeComponent({ setActiveView }) {
     } catch (error) {
       console.error("Humanization error:", error);
       setProgress("");
-      alert(`⚠ Error: ${error.message}`);
+      alert(`❌ Error: ${error.message}`);
     } finally {
       setIsLoading(false);
       setTimeout(() => setProgress(""), 8000);
@@ -231,7 +232,7 @@ function HumanizeComponent({ setActiveView }) {
     } catch (error) {
       console.error("Content replacement error:", error);
       if (!silent)
-        alert("⚠ Failed to replace content in editor: " + error.message);
+        alert("❌ Failed to replace content in editor: " + error.message);
     }
   };
 
@@ -294,7 +295,7 @@ function HumanizeComponent({ setActiveView }) {
       }
     } catch (error) {
       console.error("AI detection error:", error);
-      alert(`⚠ Error: ${error.message}`);
+      alert(`❌ Error: ${error.message}`);
     } finally {
       setIsLoading(false);
       setTimeout(() => setProgress(""), 7000);
@@ -609,7 +610,7 @@ function HumanizeComponent({ setActiveView }) {
               className="atm-btn atm-btn-secondary"
               disabled={isLoading}
             >
-              🔄 Load from Editor
+              📄 Load from Editor
             </button>
             <span className="atm-word-count">
               {stats.originalWords} words
@@ -650,49 +651,28 @@ Example:
               onClick={() => handleReplaceContent(false)}
               disabled={!humanizedContent || isLoading}
               className={`atm-btn atm-btn-primary ${
-                !humanizedContent ? "no-content" : isLoading ? "loading" : ""
+                !humanizedContent || isLoading ? "disabled" : ""
               }`}
             >
-              {isLoading && humanizedContent ? (
-                <>
-                  <span className="spinner"></span>
-                  Replacing...
-                </>
-              ) : (
-                "✅ Replace in Editor"
-              )}
+              ✅ Replace in Editor
             </button>
             <button
               onClick={handleCopyContent}
               disabled={!humanizedContent || isLoading}
               className={`atm-btn atm-btn-secondary ${
-                !humanizedContent ? "no-content" : isLoading ? "loading" : ""
+                !humanizedContent || isLoading ? "disabled" : ""
               }`}
             >
-              {isLoading && humanizedContent ? (
-                <>
-                  <span className="spinner"></span>
-                  Copying...
-                </>
-              ) : (
-                "📋 Copy"
-              )}
+              📋 Copy
             </button>
             <button
               onClick={detectAI}
               disabled={!humanizedContent || isLoading}
               className={`atm-btn atm-btn-outline ${
-                !humanizedContent ? "no-content" : isLoading ? "loading" : ""
+                !humanizedContent || isLoading ? "disabled" : ""
               }`}
             >
-              {isLoading && humanizedContent ? (
-                <>
-                  <span className="spinner"></span>
-                  Checking...
-                </>
-              ) : (
-                "🔍 Check Detection"
-              )}
+              🔍 Check Detection
             </button>
             <span className="atm-word-count">
               {stats.humanizedWords} words
@@ -752,7 +732,7 @@ The result will be:
                 stats.detectionScore < 30 &&
                 "⚠️ Good - Minor AI signatures detected. Consider light editing."}
               {stats.detectionScore >= 30 &&
-                "⚠ Poor - Clearly AI-generated. Try re-humanizing with enhanced settings."}
+                "❌ Poor - Clearly AI-generated. Try re-humanizing with enhanced settings."}
             </div>
             <div className="score-recommendation">
               {stats.detectionScore < 10 &&
@@ -789,7 +769,7 @@ The result will be:
             className={`atm-progress-message ${
               progress.includes("✅")
                 ? "success"
-                : progress.includes("⚠")
+                : progress.includes("❌")
                   ? "error"
                   : ""
             }`}
@@ -853,7 +833,7 @@ The result will be:
             </ul>
           </div>
           <div className="tip-item">
-            <h4>📝 Content Guidelines</h4>
+            <h4>📏 Content Guidelines</h4>
             <ul>
               <li>Minimum 50 characters required for processing</li>
               <li>Works best with 100+ words for optimal results</li>
