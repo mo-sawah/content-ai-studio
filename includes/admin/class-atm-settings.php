@@ -572,16 +572,15 @@ private function render_general_tab() {
                         <th scope="row">Web Search Results</th>
                         <td>
                             <select name="atm_web_search_results">
-                                <option value="1" <?php selected($options['web_search_results'], '1'); ?>>1 Result (Fastest & Cheapest)</option>
-                                <option value="2" <?php selected($options['web_search_results'], '2'); ?>>2 Results</option>
-                                <option value="3" <?php selected($options['web_search_results'], '3'); ?>>3 Results</option>
-                                <option value="4" <?php selected($options['web_search_results'], '4'); ?>>4 Results</option>
-                                <option value="5" <?php selected($options['web_search_results'], '5'); ?>>5 Results (Balanced)</option>
-                                <option value="6" <?php selected($options['web_search_results'], '6'); ?>>6 Results</option>
-                                <option value="7" <?php selected($options['web_search_results'], '7'); ?>>7 Results</option>
-                                <option value="8" <?php selected($options['web_search_results'], '8'); ?>>8 Results</option>
-                                <option value="9" <?php selected($options['web_search_results'], '9'); ?>>9 Results</option>
-                                <option value="10" <?php selected($options['web_search_results'], '10'); ?>>10 Results (Most Detailed)</option>
+                                <option value="1" <?php selected($options['web_search_results'], '1'); ?>>1 Result ($0.004)</option>
+                                <option value="2" <?php selected($options['web_search_results'], '2'); ?>>2 Results ($0.008)</option>
+                                <option value="3" <?php selected($options['web_search_results'], '3'); ?>>3 Results ($0.012)</option>
+                                <option value="5" <?php selected($options['web_search_results'], '5'); ?>>5 Results ($0.02)</option>
+                                <option value="10" <?php selected($options['web_search_results'], '10'); ?>>10 Results ($0.04)</option>
+                                <option value="15" <?php selected($options['web_search_results'], '15'); ?>>15 Results ($0.06)</option>
+                                <option value="20" <?php selected($options['web_search_results'], '20'); ?>>20 Results ($0.08)</option>
+                                <option value="25" <?php selected($options['web_search_results'], '25'); ?>>25 Results ($0.10)</option>
+                                <option value="30" <?php selected($options['web_search_results'], '30'); ?>>30 Results ($0.12)</option>
                             </select>
                             <p class="description">Control the number of web search results used. Each search result costs $0.004, so 1 result = $0.004, 5 results = $0.02, 10 results = $0.04 per request.</p>
                         </td>
