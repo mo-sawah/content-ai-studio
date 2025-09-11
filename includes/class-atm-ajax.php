@@ -1427,51 +1427,57 @@ public function translate_text() {
             $angle_combination = '';
             $angle_description = '';
             
-            // Generate angle and title locally (NO API CALL) if no title provided
+            // Generate angle locally if no title provided
             if (empty($article_title) && !empty($keyword)) {
                 $tracking_keyword = $keyword;
                 $previous_angles = $this->get_previous_angles($tracking_keyword);
                 
-                error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $tracking_keyword);
-                
-                // Generate angle locally without API call
+                // Generate angle locally (no API call)
                 $angle_info = $this->generate_local_angle_and_title($tracking_keyword, $previous_angles);
-                $final_title = $angle_info['title'];
                 $angle_combination = $angle_info['combination_key'];
-                $angle_description = $this->build_angle_description($angle_info['combination']); // NEW: Build readable description
+                $angle_description = $this->build_angle_description($angle_info['combination']);
                 
-                error_log("ATM Debug: Generated LOCAL title: " . $final_title);
-                error_log("ATM Debug: Angle combination: " . $angle_combination);
-                error_log("ATM Debug: Angle description: " . $angle_description);
+                error_log("ATM Debug: Generated angle: " . $angle_description);
                 
-                // Store the angle BEFORE API call - FIXED: Use angle description, not combination key
-                $this->store_content_angle($tracking_keyword, $angle_description, $final_title);
+                // Store angle but don't generate title yet - let AI do it
+                $this->store_content_angle($tracking_keyword, $angle_description, '[AI Generated]');
+                
+                // Clear final_title so AI knows to generate one
+                $final_title = '';
             }
             
-            // Build content prompt (this will be the ONLY API call)
+            // Build system prompt for BOTH title and content generation
             $writing_styles = ATM_API::get_writing_styles();
             $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
+            
             if (!empty($custom_prompt)) {
                 $base_prompt = $custom_prompt;
             }
             
-            // Add angle-specific instructions if we generated an angle
-            if (!empty($angle_combination)) {
-                $base_prompt .= "\n\nSPECIFIC CONTENT FOCUS: " . $this->get_prompt_focus_from_combination($angle_combination);
-                $base_prompt .= "\nThis article MUST target this specific angle. Do not write a generic overview.";
+            // Add angle-specific instructions
+            if (!empty($angle_description)) {
+                $base_prompt .= "\n\n**MANDATORY CONTENT ANGLE:**\n" . $angle_description;
+                $base_prompt .= "\n\nYou MUST create both the title and content specifically for this angle. Do not write generic content.";
             }
             
             $output_instructions = '
             **Final Output Format:**
-            Your entire output MUST be a single, valid JSON object with two keys:
-            1. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
-            2. "content": The full article text, formatted using Markdown. 
+            Your entire output MUST be a single, valid JSON object with three keys:
+            1. "title": ' . (empty($final_title) ? 'A compelling, specific title that perfectly matches the required angle and keyword' : '"' . $final_title . '"') . '
+            2. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
+            3. "content": The full article text, formatted using Markdown.
             
-            **IMPORTANT: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.**
+            **Title Requirements (if generating):**
+            - Must be compelling and clickable
+            - Should reflect the specific angle provided
+            - Include the keyword naturally
+            - Be 8-18 words long
+            - Use power words and emotional triggers
             
             **Content Rules:**
-            - The `content` field must NOT start with a title or any heading (like `# Heading`). It must begin directly with the first paragraph of the introduction.
-            - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.';
+            - Must NOT contain any top-level H1 headings
+            - Must begin directly with the first paragraph
+            - Must target the exact angle specified above';
             
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
             
@@ -1482,19 +1488,19 @@ public function translate_text() {
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
             }
             
-            error_log("ATM Debug: Making SINGLE API call for content generation");
+            // Single API call for both title and content
+            $user_content = empty($final_title) ? $keyword : $final_title;
             
-            // SINGLE API CALL - this is the only charge
             $raw_response = ATM_API::enhance_content_with_openrouter(
-                ['content' => $final_title], 
+                ['content' => $user_content], 
                 $system_prompt, 
                 $model_override ?: get_option('atm_article_model'), 
                 true, // JSON mode
-                true, // enable web search - but only this ONE call
+                true, // enable web search
                 $creativity_level
             );
             
-            // Process response (same as before)
+            // Process response
             $json_string = trim($raw_response);
             if (!str_starts_with($json_string, '{')) {
                 if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
@@ -1504,18 +1510,18 @@ public function translate_text() {
 
             $result = json_decode($json_string, true);
             if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
-                error_log('Content AI Studio - Invalid JSON from Creative AI: ' . $raw_response);
+                error_log('Content AI Studio - Invalid JSON from AI: ' . $raw_response);
                 throw new Exception('The AI returned an invalid response structure. Please try again.');
             }
 
-            $subtitle = '';
-            if (isset($result['subheadline']) && !empty(trim($result['subheadline']))) {
-                $subtitle = trim($result['subheadline']);
-            } elseif (isset($result['subtitle']) && !empty(trim($result['subtitle']))) {
-                $subtitle = trim($result['subtitle']);
-            }
-
+            $generated_title = $result['title'] ?? $final_title;
+            $subtitle = $result['subheadline'] ?? $result['subtitle'] ?? '';
             $final_content = trim($result['content']);
+
+            // Update the stored angle with the actual generated title
+            if (!empty($angle_description) && !empty($generated_title)) {
+                $this->update_stored_angle($tracking_keyword, $angle_description, $generated_title);
+            }
 
             // Save subtitle
             if ($post_id > 0 && !empty($subtitle)) {
@@ -1523,10 +1529,30 @@ public function translate_text() {
                 update_post_meta($post_id, '_atm_subtitle', $subtitle);
             }
 
-            wp_send_json_success(['article_title' => $final_title, 'article_content' => $final_content, 'subtitle' => $subtitle]);
+            wp_send_json_success([
+                'article_title' => $generated_title,
+                'article_content' => $final_content, 
+                'subtitle' => $subtitle
+            ]);
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
+    }
+
+    // Add this helper method to update the stored angle with real title
+    private function update_stored_angle($keyword, $angle_description, $actual_title) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_content_angles';
+        
+        $wpdb->update(
+            $table_name,
+            ['title' => $actual_title],
+            [
+                'keyword' => $keyword,
+                'angle' => $angle_description,
+                'title' => '[AI Generated]'
+            ]
+        );
     }
 
    // Add this method to the ATM_Ajax class
@@ -1607,11 +1633,7 @@ public function translate_text() {
             
         } while (in_array($combination_key, $used_combinations) && $attempts < $max_attempts);
         
-        // Generate title from template locally
-        $title = $this->generate_title_from_combination($keyword, $combination);
-        
         return [
-            'title' => $title,
             'combination_key' => $combination_key,
             'combination' => $combination
         ];
