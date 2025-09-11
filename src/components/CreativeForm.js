@@ -5,7 +5,7 @@ import {
   Button,
   TextControl,
   TextareaControl,
-  CheckboxControl,
+  ToggleControl,
   Spinner,
   DropdownMenu,
 } from "@wordpress/components";
@@ -48,6 +48,9 @@ function CreativeForm() {
   const [wordCountLabel, setWordCountLabel] = useState("Default");
   const [customPrompt, setCustomPrompt] = useState("");
   const [generateImage, setGenerateImage] = useState(false);
+  const [creativityLevel, setCreativityLevel] = useState("high");
+  const [creativityLevelLabel, setCreativityLevelLabel] =
+    useState("High Creativity");
 
   const { savePost } = useDispatch("core/editor");
   const isSaving = useSelect((select) => select("core/editor").isSavingPost());
@@ -125,6 +128,12 @@ function CreativeForm() {
     { label: "Long (~2000 words)", value: "2000" },
   ];
 
+  const creativityOptions = [
+    { label: "High Creativity", value: "high" },
+    { label: "Medium Creativity", value: "medium" },
+    { label: "Low Creativity", value: "low" },
+  ];
+
   // Set initial writing style label
   useEffect(() => {
     if (!writingStyleLabel && styleOptions.length > 0) {
@@ -177,6 +186,7 @@ function CreativeForm() {
         writing_style: writingStyle,
         custom_prompt: customPrompt,
         word_count: wordCount,
+        creativity_level: creativityLevel, // Add this line
       });
 
       if (!contentResponse.success) {
@@ -253,7 +263,7 @@ function CreativeForm() {
         help="Provide a specific title or let AI generate one from your keyword"
       />
 
-      <div className="atm-grid-2">
+      <div className="atm-grid-3">
         <CustomDropdown
           label="AI Model"
           text={articleModelLabel}
@@ -274,6 +284,18 @@ function CreativeForm() {
             setWritingStyleLabel(option.label);
           }}
           disabled={isLoading || isSaving}
+        />
+
+        <CustomDropdown
+          label="Creativity Level"
+          text={creativityLevelLabel}
+          options={creativityOptions}
+          onChange={(option) => {
+            setCreativityLevel(option.value);
+            setCreativityLevelLabel(option.label);
+          }}
+          disabled={isLoading || isSaving}
+          helpText="Higher creativity generates more unique and diverse content"
         />
       </div>
 
@@ -297,11 +319,17 @@ function CreativeForm() {
         disabled={isLoading || isSaving}
       />
 
-      <CheckboxControl
+      <ToggleControl
         label="Also generate a featured image"
+        help={
+          generateImage
+            ? "Featured image will be generated after the article"
+            : "Article will be generated without a featured image"
+        }
         checked={generateImage}
         onChange={setGenerateImage}
         disabled={isLoading || isSaving}
+        __nextHasNoMarginBottom
       />
 
       <Button

@@ -9,6 +9,22 @@ class ATM_Main {
     private static $instance = null;
     private static $hooks_initialized = false;
 
+    public static function cleanup_old_angles() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_content_angles';
+        
+        // Keep only last 20 angles per keyword
+        $wpdb->query("
+            DELETE t1 FROM $table_name t1
+            INNER JOIN (
+                SELECT keyword, 
+                    ROW_NUMBER() OVER (PARTITION BY keyword ORDER BY created_at DESC) as rn
+                FROM $table_name
+            ) t2 ON t1.keyword = t2.keyword
+            WHERE t2.rn > 20
+        ");
+    }
+
     
     public static function cleanup_old_used_articles() {
         global $wpdb;
@@ -56,6 +72,9 @@ class ATM_Main {
         // Prevent multiple instances
         if (self::$instance !== null) {
             return self::$instance;
+        }
+        if (!wp_next_scheduled('atm_cleanup_angles')) {
+            wp_schedule_event(time(), 'daily', 'atm_cleanup_angles');
         }
         self::$instance = $this;
         
@@ -424,6 +443,8 @@ class ATM_Main {
         add_action('atm_process_script_background', array('ATM_API', 'process_script_background'));
         add_action('wp_ajax_check_script_progress', array($ajax, 'check_script_progress'));
         add_action('atm_cleanup_used_articles', array('ATM_Main', 'cleanup_old_used_articles'));
+        add_action('atm_cleanup_angles', array('ATM_Main', 'cleanup_old_angles'));
+
 
         // Add cleanup for script jobs
         add_action('atm_cleanup_script_jobs', array('ATM_Main', 'cleanup_old_script_jobs'));
@@ -690,6 +711,27 @@ class ATM_Main {
         self::create_podcast_progress_table(); // Add this line
         self::create_script_jobs_table(); // Add this line
         self::create_used_articles_table(); // Add this line
+        self::create_content_angles_table(); // Add this line
+    }
+
+    public static function create_content_angles_table() {
+        global $wpdb;
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        $table_name = $wpdb->prefix . 'atm_content_angles';
+        $sql = "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            keyword varchar(255) NOT NULL,
+            angle varchar(500) NOT NULL,
+            title varchar(500) NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY keyword (keyword),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
     }
 
     /**

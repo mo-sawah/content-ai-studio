@@ -339,6 +339,27 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    public static function get_contextual_seed($keyword) {
+        $current_month = date('F');
+        $current_year = date('Y'); 
+        $day_of_year = date('z');
+        
+        $contexts = [
+            "In the context of {$current_month} {$current_year} trends",
+            "From a {$current_year} perspective", 
+            "Considering recent industry developments in {$current_year}",
+            "With current market conditions in mind",
+            "Looking at {$keyword} through a modern lens",
+            "In today's digital-first environment",
+            "From a post-pandemic business perspective",
+            "Considering emerging technologies in {$current_year}"
+        ];
+        
+        // Use day of year to pick different context each day
+        $selected_context = $contexts[$day_of_year % count($contexts)];
+        return $selected_context;
+    }
+
     private static function is_article_already_used($url) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_used_news_articles';
@@ -3111,12 +3132,37 @@ Follow these rules strictly:
             throw new Exception('OpenRouter API key is not configured.');
         }
 
+        // Dynamic temperature based on creativity level and time
+        $base_temperature = 0.8;
+        $time_modifier = (time() % 100) / 100; // Adds 0.0-0.99 variation
+        
+        switch ($creativity_level) {
+            case 'high':
+                $temperature = min(1.4, $base_temperature + 0.4 + ($time_modifier * 0.2));
+                $top_p = 0.95;
+                break;
+            case 'medium':
+                $temperature = $base_temperature + ($time_modifier * 0.3);
+                $top_p = 0.9;
+                break;
+            case 'low':
+                $temperature = max(0.3, $base_temperature - 0.2 + ($time_modifier * 0.1));
+                $top_p = 0.8;
+                break;
+            default:
+                $temperature = $base_temperature + ($time_modifier * 0.3);
+                $top_p = 0.9;
+        }
+        
         $payload = [
             'model' => $model,
             'messages' => [
                 ['role' => 'system', 'content' => $system_prompt],
             ],
-            'temperature' => 0.8,
+            'temperature' => $temperature,
+            'top_p' => $top_p,
+            'frequency_penalty' => 0.1, // Reduce repetition
+            'presence_penalty' => 0.1,  // Encourage new topics
         ];
 
         // Allow $input as string OR array/object (we often pass arrays)

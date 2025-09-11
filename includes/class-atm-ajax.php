@@ -1162,17 +1162,42 @@ public function translate_text() {
             $style_key = isset($_POST['writing_style']) ? sanitize_key($_POST['writing_style']) : 'default_seo';
             $custom_prompt = isset($_POST['custom_prompt']) ? wp_kses_post(stripslashes($_POST['custom_prompt'])) : '';
             $word_count = isset($_POST['word_count']) ? intval($_POST['word_count']) : 0;
+            $creativity_level = isset($_POST['creativity_level']) ? sanitize_text_field($_POST['creativity_level']) : 'high';
+            
             if (empty($article_title) && empty($keyword)) {
                 throw new Exception("Please provide a keyword or an article title.");
             }
+            
+            // Use keyword for angle tracking (fallback to title if no keyword)
+            $tracking_keyword = !empty($keyword) ? $keyword : $article_title;
+            
+            // Get previous angles for this keyword
+            $previous_angles = $this->get_previous_angles($tracking_keyword);
+            
+            // Generate new unique angle first
+            $angle_prompt = $this->build_angle_generation_prompt($tracking_keyword, $previous_angles);
+            $new_angle = ATM_API::enhance_content_with_openrouter(
+                ['content' => $tracking_keyword], 
+                $angle_prompt, 
+                $model_override ?: get_option('atm_article_model'),
+                false, // not JSON mode for angle generation
+                true,  // enable web search
+                $creativity_level
+            );
+            
             if (empty($article_title) && !empty($keyword)) {
                 $article_title = ATM_API::generate_title_from_keyword($keyword, $model_override);
             }
+            
+            // Store the new angle
+            $this->store_content_angle($tracking_keyword, trim($new_angle), $article_title);
+            
             $writing_styles = ATM_API::get_writing_styles();
             $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
             if (!empty($custom_prompt)) {
                 $base_prompt = $custom_prompt;
             }
+            
             $output_instructions = '
             **Final Output Format:**
             Your entire output MUST be a single, valid JSON object with two keys:
@@ -1194,14 +1219,30 @@ public function translate_text() {
             - Keep anchor text extremely concise (maximum 2 words)
             - Make links feel natural within the sentence flow
             - Avoid long phrases as anchor text';
-            $system_prompt = $base_prompt . "\n\n" . $output_instructions;
+            
+            // Enhanced system prompt with angle context
+            $enhanced_prompt = $this->build_enhanced_system_prompt($base_prompt, trim($new_angle), $previous_angles);
+            $system_prompt = $enhanced_prompt . "\n\n" . $output_instructions;
+            
             if ($post) {
                 $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
             }
             if ($word_count > 0) {
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
             }
-            $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $article_title], $system_prompt, $model_override ?: get_option('atm_article_model'), true);
+            
+            // Add contextual seed for additional variation
+            $contextual_seed = ATM_API::get_contextual_seed($tracking_keyword);
+            $system_prompt .= "\n\nContextual Focus: " . $contextual_seed;
+            
+            $raw_response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $article_title], 
+                $system_prompt, 
+                $model_override ?: get_option('atm_article_model'), 
+                true, // JSON mode
+                true, // enable web search
+                $creativity_level
+            );
             
             // More robust JSON extraction
             $json_string = trim($raw_response);
@@ -1251,6 +1292,91 @@ public function translate_text() {
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
+    }
+
+    private function get_previous_angles($keyword) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_content_angles';
+        
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT angle, title FROM $table_name 
+            WHERE keyword = %s 
+            ORDER BY created_at DESC 
+            LIMIT 10",
+            $keyword
+        ), ARRAY_A);
+    }
+
+    private function build_angle_generation_prompt($keyword, $previous_angles) {
+        $previous_context = '';
+        if (!empty($previous_angles)) {
+            $previous_context = "\n\nPREVIOUS ANGLES ALREADY COVERED for '{$keyword}':\n";
+            foreach ($previous_angles as $i => $angle_data) {
+                $previous_context .= "- " . ($i + 1) . ". " . $angle_data['angle'] . "\n";
+            }
+            $previous_context .= "\nYou MUST create a completely different angle that hasn't been covered before.";
+        }
+        
+        return "You are a content strategist. Generate a unique, specific angle/perspective for an article about '{$keyword}'. 
+        
+        REQUIREMENTS:
+        - Return ONLY a single sentence describing the unique angle
+        - Make it specific, not generic
+        - Focus on a particular aspect, audience, or approach
+        - Avoid broad overviews
+        
+        {$previous_context}
+        
+        Examples of good angles:
+        - 'How small businesses can leverage {$keyword} without breaking the bank'
+        - 'The hidden psychological impact of {$keyword} on remote workers'
+        - '5 common {$keyword} mistakes that are costing enterprises millions'
+        - 'Why {$keyword} is becoming essential for Gen Z professionals'
+        - 'The unexpected ways {$keyword} is disrupting traditional industries'
+        
+        Generate a unique angle for: {$keyword}";
+    }
+
+    private function build_enhanced_system_prompt($base_prompt, $new_angle, $previous_angles) {
+        $uniqueness_instruction = "
+        
+        **CRITICAL UNIQUENESS REQUIREMENTS:**
+        Your specific angle for this article: {$new_angle}
+        
+        You MUST focus entirely on this specific angle. Do NOT write a general overview.";
+        
+        if (!empty($previous_angles)) {
+            $uniqueness_instruction .= "\n\nPREVIOUS ANGLES ALREADY COVERED:\n";
+            foreach ($previous_angles as $angle_data) {
+                $uniqueness_instruction .= "- " . $angle_data['angle'] . "\n";
+            }
+            $uniqueness_instruction .= "\nAvoid any similarity to these previous approaches.";
+        }
+        
+        $uniqueness_instruction .= "\n\n**CREATIVITY BOOSTERS:**
+        - Use unexpected examples or case studies
+        - Include contrarian viewpoints when appropriate  
+        - Focus on specific, actionable insights rather than general information
+        - Add personal anecdotes or industry-specific scenarios
+        - Use current events or trending topics as context
+        - Challenge common assumptions about the topic
+        - Provide fresh statistics or recent research findings
+        - Include expert quotes or interviews (when using web search)
+        - Use analogies from completely different industries
+        - Focus on emerging trends or future predictions";
+        
+        return $base_prompt . $uniqueness_instruction;
+    }
+
+    private function store_content_angle($keyword, $angle, $title) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_content_angles';
+        
+        $wpdb->insert($table_name, [
+            'keyword' => $keyword,
+            'angle' => $angle,
+            'title' => $title
+        ]);
     }
 
     public function generate_news_article() {
