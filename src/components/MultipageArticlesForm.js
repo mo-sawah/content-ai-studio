@@ -19,19 +19,17 @@ const callAjax = (action, data) =>
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
 
-const updateEditorContent = (title, content) => {
-  const isBlockEditor = !!wp.data.select("core/block-editor");
-
-  if (isBlockEditor) {
-    wp.data.dispatch("core/editor").editPost({ title });
-    const blocks = wp.blocks.parse(content);
-    wp.data.dispatch("core/block-editor").resetBlocks(blocks);
+const updateEditorContent = (title, markdownContent, subtitle) => {
+  if (window.ATM_BlockUtils) {
+    window.ATM_BlockUtils.updateEditorContent(title, markdownContent, subtitle);
   } else {
-    jQuery("#title").val(title).trigger("blur");
-    if (window.tinymce?.get("content")) {
-      window.tinymce.get("content").setContent(content);
-    } else {
-      jQuery("#content").val(content);
+    console.error("ATM: Block utilities not loaded");
+    // Fallback to basic HTML insertion
+    const htmlContent = window.marked
+      ? window.marked.parse(markdownContent)
+      : markdownContent;
+    if (window.wp && window.wp.data) {
+      wp.data.dispatch("core/editor").editPost({ title, content: htmlContent });
     }
   }
 };
