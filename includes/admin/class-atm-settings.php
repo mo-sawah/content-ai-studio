@@ -768,7 +768,7 @@ private function render_advanced_tab() {
         update_option('atm_flux_model', sanitize_text_field($_POST['atm_flux_model']));
 
         // General Settings
-        update_option('atm_web_search_results', intval($_POST['atm_web_search_results']));
+        update_option('atm_web_search_results', max(1, min(30, intval($_POST['atm_web_search_results']))));
         update_option('atm_theme_subtitle_key', sanitize_text_field($_POST['atm_theme_subtitle_key']));
         update_option('atm_rss_feeds', sanitize_textarea_field($_POST['atm_rss_feeds']));
         update_option('atm_image_quality', sanitize_text_field($_POST['atm_image_quality']));

@@ -3180,8 +3180,8 @@ Follow these rules strictly:
 
         // Web search plugin
         if ($enable_web_search) {
-            $max_results = intval(get_option('atm_web_search_results', 10));
-            $max_results = max(5, min(30, $max_results));
+            $max_results = intval(get_option('atm_web_search_results', 5));
+            $max_results = max(1, min(30, $max_results)); // Allow minimum of 1, maximum of 30
             
             $payload['plugins'] = [
                 [
