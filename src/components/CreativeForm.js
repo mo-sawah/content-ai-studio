@@ -20,27 +20,31 @@ const callAjax = (action, data) =>
 
 const updateEditorContent = (title, markdownContent, subtitle) => {
   const isBlockEditor = document.body.classList.contains("block-editor-page");
-  const htmlContent = window.marked
-    ? window.marked.parse(markdownContent)
-    : markdownContent;
 
   if (isBlockEditor) {
+    // Set the title
     wp.data.dispatch("core/editor").editPost({ title });
-    const blocks = wp.blocks.parse(htmlContent);
+
+    // Convert markdown to HTML first
+    const htmlContent = window.marked
+      ? window.marked.parse(markdownContent)
+      : markdownContent;
+
+    // Clear existing blocks
     const currentBlocks = wp.data.select("core/block-editor").getBlocks();
-    if (
-      currentBlocks.length > 0 &&
-      !(
-        currentBlocks.length === 1 &&
-        currentBlocks[0].name === "core/paragraph" &&
-        currentBlocks[0].attributes.content === ""
-      )
-    ) {
+    if (currentBlocks.length > 0) {
       const clientIds = currentBlocks.map((block) => block.clientId);
       wp.data.dispatch("core/block-editor").removeBlocks(clientIds);
     }
+
+    // Parse HTML into blocks - this is the key change
+    const blocks = wp.blocks.parse(htmlContent);
     wp.data.dispatch("core/block-editor").insertBlocks(blocks);
   } else {
+    // Classic editor fallback
+    const htmlContent = window.marked
+      ? window.marked.parse(markdownContent)
+      : markdownContent;
     jQuery("#title").val(title);
     jQuery("#title-prompt-text").hide();
     jQuery("#title").trigger("blur");
@@ -51,6 +55,7 @@ const updateEditorContent = (title, markdownContent, subtitle) => {
     }
   }
 
+  // Handle subtitle (same as before)
   if (subtitle && subtitle.trim()) {
     console.log("ATM: Attempting to populate subtitle:", subtitle);
     setTimeout(function () {
