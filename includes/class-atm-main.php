@@ -9,6 +9,17 @@ class ATM_Main {
     private static $instance = null;
     private static $hooks_initialized = false;
 
+    public function check_database_tables() {
+        // Only run once per day
+        $last_check = get_option('atm_last_db_check');
+        if ($last_check && (time() - $last_check) < DAY_IN_SECONDS) {
+            return;
+        }
+        
+        self::verify_content_angles_table();
+        update_option('atm_last_db_check', time());
+    }
+
     public static function cleanup_old_angles() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
@@ -80,6 +91,8 @@ class ATM_Main {
         
         $this->load_dependencies();
         $this->init_hooks();
+
+        add_action('init', array($this, 'check_database_tables'), 5);
     }
 
     public static function get_instance() {
