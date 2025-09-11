@@ -3182,17 +3182,16 @@ Follow these rules strictly:
         if ($enable_web_search) {
             $max_results = intval(get_option('atm_web_search_results', 5));
             $max_results = max(1, min(30, $max_results));
-            
+
             $payload['plugins'] = [
                 [
                     'id' => 'web',
-                    'config' => [
-                        'max_results' => $max_results,  // Use the correct variable name
-                        'search_prompt' => 'Find the most recent and relevant information from ' . date('Y') . ' about: {query}. Focus on current events and latest developments.'
-                    ]
+                    // put options directly here (NOT inside 'config')
+                    'max_results'   => $max_results,
+                    'search_prompt' => 'Find the most recent and relevant information from ' . date('Y') . ' about: {query}. Focus on current events and latest developments.'
                 ]
             ];
-            
+
             error_log("ATM: Using web search with max_results: " . $max_results);
         }
 
