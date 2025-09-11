@@ -18,156 +18,20 @@ const callAjax = (action, data) =>
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
 
+// Remove the old updateEditorContent function and replace with this:
 const updateEditorContent = (title, markdownContent, subtitle) => {
-  const isBlockEditor = document.body.classList.contains("block-editor-page");
-
-  if (isBlockEditor) {
-    // Set the title
-    wp.data.dispatch("core/editor").editPost({ title });
-
-    // Convert markdown to HTML first
-    const htmlContent = window.marked
-      ? window.marked.parse(markdownContent)
-      : markdownContent;
-
-    // Clear existing blocks
-    const currentBlocks = wp.data.select("core/block-editor").getBlocks();
-    if (currentBlocks.length > 0) {
-      const clientIds = currentBlocks.map((block) => block.clientId);
-      wp.data.dispatch("core/block-editor").removeBlocks(clientIds);
-    }
-
-    // Convert HTML to proper WordPress blocks
-    const blocks = htmlToGutenbergBlocks(htmlContent);
-    wp.data.dispatch("core/block-editor").insertBlocks(blocks);
+  if (window.ATM_BlockUtils) {
+    window.ATM_BlockUtils.updateEditorContent(title, markdownContent, subtitle);
   } else {
-    // Classic editor fallback
+    console.error("ATM: Block utilities not loaded");
+    // Fallback to basic HTML insertion
     const htmlContent = window.marked
       ? window.marked.parse(markdownContent)
       : markdownContent;
-    jQuery("#title").val(title);
-    jQuery("#title-prompt-text").hide();
-    jQuery("#title").trigger("blur");
-    if (window.tinymce && window.tinymce.get("content")) {
-      window.tinymce.get("content").setContent(htmlContent);
-    } else {
-      jQuery("#content").val(htmlContent);
+    if (window.wp && window.wp.data) {
+      wp.data.dispatch("core/editor").editPost({ title, content: htmlContent });
     }
   }
-
-  // Handle subtitle (same as before)
-  if (subtitle && subtitle.trim()) {
-    console.log("ATM: Attempting to populate subtitle:", subtitle);
-    setTimeout(function () {
-      const subtitleField = jQuery('input[name="_bunyad_sub_title"]');
-      if (subtitleField.length > 0) {
-        console.log("ATM: Found SmartMag subtitle field, populating...");
-        subtitleField.val(subtitle);
-        subtitleField.trigger("input").trigger("change").trigger("keyup");
-        console.log("ATM: Subtitle populated successfully");
-      } else {
-        console.log("ATM: SmartMag subtitle field not found");
-      }
-    }, 1000);
-  }
-};
-
-// New function to convert HTML to Gutenberg blocks
-const htmlToGutenbergBlocks = (htmlContent) => {
-  const tempDiv = document.createElement("div");
-  tempDiv.innerHTML = htmlContent;
-  const blocks = [];
-
-  // Process each child element
-  Array.from(tempDiv.children).forEach((element) => {
-    const tagName = element.tagName.toLowerCase();
-
-    switch (tagName) {
-      case "h1":
-        blocks.push(
-          wp.blocks.createBlock("core/heading", {
-            content: element.innerHTML,
-            level: 1,
-          })
-        );
-        break;
-      case "h2":
-        blocks.push(
-          wp.blocks.createBlock("core/heading", {
-            content: element.innerHTML,
-            level: 2,
-          })
-        );
-        break;
-      case "h3":
-        blocks.push(
-          wp.blocks.createBlock("core/heading", {
-            content: element.innerHTML,
-            level: 3,
-          })
-        );
-        break;
-      case "h4":
-        blocks.push(
-          wp.blocks.createBlock("core/heading", {
-            content: element.innerHTML,
-            level: 4,
-          })
-        );
-        break;
-      case "h5":
-        blocks.push(
-          wp.blocks.createBlock("core/heading", {
-            content: element.innerHTML,
-            level: 5,
-          })
-        );
-        break;
-      case "h6":
-        blocks.push(
-          wp.blocks.createBlock("core/heading", {
-            content: element.innerHTML,
-            level: 6,
-          })
-        );
-        break;
-      case "ul":
-        blocks.push(
-          wp.blocks.createBlock("core/list", {
-            values: element.outerHTML,
-          })
-        );
-        break;
-      case "ol":
-        blocks.push(
-          wp.blocks.createBlock("core/list", {
-            ordered: true,
-            values: element.outerHTML,
-          })
-        );
-        break;
-      case "blockquote":
-        blocks.push(
-          wp.blocks.createBlock("core/quote", {
-            value: element.innerHTML,
-          })
-        );
-        break;
-      case "p":
-      default:
-        // Handle paragraphs and any other content
-        if (element.innerHTML.trim()) {
-          blocks.push(
-            wp.blocks.createBlock("core/paragraph", {
-              content: element.innerHTML,
-            })
-          );
-        }
-        break;
-    }
-  });
-
-  return blocks;
 };
 
 function CreativeForm() {

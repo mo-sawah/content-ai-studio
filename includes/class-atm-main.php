@@ -473,128 +473,128 @@ class ATM_Main {
     }
     
     public function enqueue_admin_scripts($hook) {
-        $screen = get_current_screen();
-        $is_plugin_page = false;
-        
-        if ($screen) {
-            if ($screen->id === 'toplevel_page_content-ai-studio' || strpos($screen->id, 'ai-studio_page_') === 0) {
-                 $is_plugin_page = true;
-            }
+    $screen = get_current_screen();
+    $is_plugin_page = false;
+    
+    if ($screen) {
+        if ($screen->id === 'toplevel_page_content-ai-studio' || strpos($screen->id, 'ai-studio_page_') === 0) {
+             $is_plugin_page = true;
         }
-
-        if ($hook !== 'post.php' && $hook !== 'post-new.php' && !$is_plugin_page) {
-            return;
-        }
-
-        wp_enqueue_media();
-
-        // Register the marked library from CDN
-        wp_register_script(
-            'marked-library',
-            'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
-            array(),
-            '4.0.12',
-            true
-        );
-
-        // Enqueue Gutenberg sidebar script
-        $script_asset_path = ATM_PLUGIN_PATH . 'build/index.asset.php';
-        if (file_exists($script_asset_path)) {
-            $script_asset = require($script_asset_path);
-            wp_enqueue_script(
-                'atm-gutenberg-sidebar',
-                ATM_PLUGIN_URL . 'build/index.js',
-                $script_asset['dependencies'],
-                $script_asset['version'],
-                true
-            );
-            
-            $style_path = ATM_PLUGIN_PATH . 'build/index.css';
-            if (file_exists($style_path)) {
-                wp_enqueue_style(
-                    'atm-gutenberg-sidebar-style',
-                    ATM_PLUGIN_URL . 'build/index.css',
-                    array(),
-                    $script_asset['version']
-                );
-            }
-        }
-
-        // Enqueue Studio App for meta box
-        $studio_asset_path = ATM_PLUGIN_PATH . 'build/studio.asset.php';
-        if (file_exists($studio_asset_path)) {
-            $studio_asset = require($studio_asset_path);
-            wp_enqueue_script(
-                'atm-studio-app',
-                ATM_PLUGIN_URL . 'build/studio.js',
-                $studio_asset['dependencies'],
-                $studio_asset['version'],
-                true
-            );
-            
-            $studio_style_path = ATM_PLUGIN_PATH . 'build/studio.css';
-            if (file_exists($studio_style_path)) {
-                wp_enqueue_style(
-                    'atm-studio-style',
-                    ATM_PLUGIN_URL . 'build/studio.css',
-                    array(),
-                    $studio_asset['version']
-                );
-            }
-        }
-
-        // Legacy admin script
-        $dependencies = array('jquery', 'wp-blocks', 'wp-data', 'wp-element', 'wp-editor', 'wp-components', 'marked-library');
-        wp_enqueue_script(
-            'atm-admin-script',
-            ATM_PLUGIN_URL . 'assets/js/admin.js',
-            $dependencies,
-            ATM_VERSION,
-            true
-        );
-
-        wp_enqueue_style(
-            'atm-admin-style',
-            ATM_PLUGIN_URL . 'assets/css/admin.css',
-            array(),
-            ATM_VERSION
-        );
-
-        // Prepare localized data
-        $localized_data = array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('atm_nonce'),
-            'plugin_url' => ATM_PLUGIN_URL,
-            'tts_voices' => ['alloy' => 'Alloy', 'echo' => 'Echo', 'fable' => 'Fable', 'onyx' => 'Onyx', 'nova' => 'Nova', 'shimmer' => 'Shimmer'],
-        );
-
-        // Add settings data if available
-        if (class_exists('ATM_Settings')) {
-            $settings_class = new ATM_Settings();
-            $settings = $settings_class->get_settings();
-            $localized_data['article_models'] = $settings['article_models'];
-            $localized_data['content_models'] = $settings['content_models'];
-            $localized_data['image_provider'] = $settings['image_provider'];
-            $localized_data['audio_provider'] = $settings['audio_provider'];
-        }
-
-        // Add API data if available
-        if (class_exists('ATM_API')) {
-            $api_class = new ATM_API();
-            $localized_data['writing_styles'] = $api_class->get_writing_styles();
-            $localized_data['elevenlabs_voices'] = ATM_API::get_elevenlabs_voices();
-        }
-
-        // Add post-specific data
-        $post_id = get_the_ID();
-        if ($post_id) {
-            $localized_data['existing_podcast_url'] = get_post_meta($post_id, '_atm_podcast_url', true);
-            $localized_data['existing_podcast_script'] = get_post_meta($post_id, '_atm_podcast_script', true);
-        }
-
-        wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
-        wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data);
     }
+
+    if ($hook !== 'post.php' && $hook !== 'post-new.php' && !$is_plugin_page) {
+        return;
+    }
+
+    wp_enqueue_media();
+
+    // Register the marked library from CDN
+    wp_register_script(
+        'marked-library',
+        'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
+        array(),
+        '4.0.12',
+        true
+    );
+
+    // Enqueue admin script FIRST (contains global block utilities)
+    $dependencies = array('jquery', 'wp-blocks', 'wp-data', 'wp-element', 'wp-editor', 'wp-components', 'marked-library');
+    wp_enqueue_script(
+        'atm-admin-script',
+        ATM_PLUGIN_URL . 'assets/js/admin.js',
+        $dependencies,
+        ATM_VERSION,
+        true
+    );
+
+    wp_enqueue_style(
+        'atm-admin-style',
+        ATM_PLUGIN_URL . 'assets/css/admin.css',
+        array(),
+        ATM_VERSION
+    );
+
+    // Enqueue Gutenberg sidebar script
+    $script_asset_path = ATM_PLUGIN_PATH . 'build/index.asset.php';
+    if (file_exists($script_asset_path)) {
+        $script_asset = require($script_asset_path);
+        wp_enqueue_script(
+            'atm-gutenberg-sidebar',
+            ATM_PLUGIN_URL . 'build/index.js',
+            array_merge($script_asset['dependencies'], ['atm-admin-script']), // Add dependency
+            $script_asset['version'],
+            true
+        );
+        
+        $style_path = ATM_PLUGIN_PATH . 'build/index.css';
+        if (file_exists($style_path)) {
+            wp_enqueue_style(
+                'atm-gutenberg-sidebar-style',
+                ATM_PLUGIN_URL . 'build/index.css',
+                array(),
+                $script_asset['version']
+            );
+        }
+    }
+
+    // Enqueue Studio App for meta box (depends on admin script)
+    $studio_asset_path = ATM_PLUGIN_PATH . 'build/studio.asset.php';
+    if (file_exists($studio_asset_path)) {
+        $studio_asset = require($studio_asset_path);
+        wp_enqueue_script(
+            'atm-studio-app',
+            ATM_PLUGIN_URL . 'build/studio.js',
+            array_merge($studio_asset['dependencies'], ['atm-admin-script']), // Add dependency
+            $studio_asset['version'],
+            true
+        );
+        
+        $studio_style_path = ATM_PLUGIN_PATH . 'build/studio.css';
+        if (file_exists($studio_style_path)) {
+            wp_enqueue_style(
+                'atm-studio-style',
+                ATM_PLUGIN_URL . 'build/studio.css',
+                array(),
+                $studio_asset['version']
+            );
+        }
+    }
+
+    // Prepare localized data
+    $localized_data = array(
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('atm_nonce'),
+        'plugin_url' => ATM_PLUGIN_URL,
+        'tts_voices' => ['alloy' => 'Alloy', 'echo' => 'Echo', 'fabel' => 'Fable', 'onyx' => 'Onyx', 'nova' => 'Nova', 'shimmer' => 'Shimmer'],
+    );
+
+    // Add settings data if available
+    if (class_exists('ATM_Settings')) {
+        $settings_class = new ATM_Settings();
+        $settings = $settings_class->get_settings();
+        $localized_data['article_models'] = $settings['article_models'];
+        $localized_data['content_models'] = $settings['content_models'];
+        $localized_data['image_provider'] = $settings['image_provider'];
+        $localized_data['audio_provider'] = $settings['audio_provider'];
+    }
+
+    // Add API data if available
+    if (class_exists('ATM_API')) {
+        $api_class = new ATM_API();
+        $localized_data['writing_styles'] = $api_class->get_writing_styles();
+        $localized_data['elevenlabs_voices'] = ATM_API::get_elevenlabs_voices();
+    }
+
+    // Add post-specific data
+    $post_id = get_the_ID();
+    if ($post_id) {
+        $localized_data['existing_podcast_url'] = get_post_meta($post_id, '_atm_podcast_url', true);
+        $localized_data['existing_podcast_script'] = get_post_meta($post_id, '_atm_podcast_script', true);
+    }
+
+    wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
+    wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data);
+}
 
     public function register_tinymce_button() {
         if (!current_user_can('edit_posts') && !current_user_can('edit_pages') && get_user_option('rich_editing') !== 'true') {

@@ -1315,3 +1315,134 @@ const pollProgress = async (jobId) => {
   // Start checking
   setTimeout(checkProgress, 5000); // First check after 5 seconds
 };
+
+// Global WordPress Block Utilities for Content AI Studio
+window.ATM_BlockUtils = {
+  htmlToGutenbergBlocks: function (htmlContent) {
+    if (!htmlContent || !window.wp || !window.wp.blocks) {
+      console.warn("ATM: WordPress blocks API not available");
+      return [];
+    }
+
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = htmlContent;
+    const blocks = [];
+
+    Array.from(tempDiv.children).forEach((element) => {
+      const tagName = element.tagName.toLowerCase();
+
+      switch (tagName) {
+        case "h1":
+        case "h2":
+        case "h3":
+        case "h4":
+        case "h5":
+        case "h6":
+          blocks.push(
+            wp.blocks.createBlock("core/heading", {
+              content: element.innerHTML,
+              level: parseInt(tagName.charAt(1)),
+            })
+          );
+          break;
+
+        case "ul":
+          blocks.push(
+            wp.blocks.createBlock("core/list", {
+              values: element.outerHTML,
+            })
+          );
+          break;
+
+        case "ol":
+          blocks.push(
+            wp.blocks.createBlock("core/list", {
+              ordered: true,
+              values: element.outerHTML,
+            })
+          );
+          break;
+
+        case "blockquote":
+          blocks.push(
+            wp.blocks.createBlock("core/quote", {
+              value: element.innerHTML,
+            })
+          );
+          break;
+
+        case "pre":
+          blocks.push(
+            wp.blocks.createBlock("core/code", {
+              content: element.textContent,
+            })
+          );
+          break;
+
+        case "p":
+        default:
+          if (element.innerHTML.trim()) {
+            blocks.push(
+              wp.blocks.createBlock("core/paragraph", {
+                content: element.innerHTML,
+              })
+            );
+          }
+          break;
+      }
+    });
+
+    return blocks;
+  },
+
+  updateEditorContent: function (title, markdownContent, subtitle) {
+    const isBlockEditor = document.body.classList.contains("block-editor-page");
+
+    if (isBlockEditor && window.wp && window.wp.data) {
+      // Set title
+      wp.data.dispatch("core/editor").editPost({ title });
+
+      // Convert markdown to HTML
+      const htmlContent = window.marked
+        ? window.marked.parse(markdownContent)
+        : markdownContent;
+
+      // Clear existing blocks
+      const currentBlocks = wp.data.select("core/block-editor").getBlocks();
+      if (currentBlocks.length > 0) {
+        const clientIds = currentBlocks.map((block) => block.clientId);
+        wp.data.dispatch("core/block-editor").removeBlocks(clientIds);
+      }
+
+      // Convert HTML to blocks and insert
+      const blocks = this.htmlToGutenbergBlocks(htmlContent);
+      wp.data.dispatch("core/block-editor").insertBlocks(blocks);
+    } else {
+      // Classic editor fallback
+      const htmlContent = window.marked
+        ? window.marked.parse(markdownContent)
+        : markdownContent;
+
+      jQuery("#title").val(title);
+      jQuery("#title-prompt-text").hide();
+      jQuery("#title").trigger("blur");
+
+      if (window.tinymce && window.tinymce.get("content")) {
+        window.tinymce.get("content").setContent(htmlContent);
+      } else {
+        jQuery("#content").val(htmlContent);
+      }
+    }
+
+    // Handle subtitle (SmartMag theme support)
+    if (subtitle && subtitle.trim()) {
+      setTimeout(function () {
+        const subtitleField = jQuery('input[name="_bunyad_sub_title"]');
+        if (subtitleField.length > 0) {
+          subtitleField.val(subtitle);
+          subtitleField.trigger("input").trigger("change").trigger("keyup");
+        }
+      }, 1000);
+    }
+  },
+};
