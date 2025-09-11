@@ -4527,3 +4527,7 @@ textarea:focus {
     }
   }
 }
+
+.atm-btn:disabled:after {
+  display: none !important;
+}
