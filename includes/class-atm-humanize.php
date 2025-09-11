@@ -1121,62 +1121,94 @@ private function get_inner_html($node) {
     /**
      * Build OpenRouter humanization prompt
      */
-    private function build_openrouter_humanization_prompt($tone) {
-        $tone_instructions = [
-            'conversational' => 'Write in a natural, conversational style as if you\'re talking to a friend. Use contractions, casual language, and a warm tone.',
-            'professional' => 'Maintain a professional, business-appropriate tone. Use formal language while keeping it engaging and clear.',
-            'casual' => 'Write in a relaxed, informal style. Be friendly and approachable, using everyday language.',
-            'academic' => 'Use scholarly language appropriate for academic writing. Be precise, formal, and well-structured.',
-            'journalistic' => 'Write in a clear, factual journalistic style. Be objective, informative, and engaging.',
-            'creative' => 'Use imaginative, expressive language. Be vivid, engaging, and don\'t be afraid to use metaphors and creative expressions.',
-            'technical' => 'Use precise technical language appropriate for the subject matter. Be clear and accurate.',
-            'persuasive' => 'Write convincingly to persuade the reader. Use compelling arguments and engaging language.',
-            'storytelling' => 'Write in a narrative style that tells a story. Be engaging, descriptive, and use narrative techniques.'
-        ];
-        
-        $tone_instruction = $tone_instructions[$tone] ?? $tone_instructions['conversational'];
-        
-        return "You are an expert content humanizer. Your task is to rewrite AI-generated text to make it sound completely natural and human-written. Follow these guidelines:
+    private function build_openrouter_humanization_prompt($tone, $opts = []) {
+    // sensible defaults; change get_bloginfo('name') if you want dynamic site name
+    $opts = array_merge([
+        'brand' => get_bloginfo('name') ?: 'Website',
+        'audience' => 'general',
+        'readability_grade' => 9,
+        'allow_structuring' => false, // if no headings exist, model may add H2s for readability
+        'safety_mode' => true,
+        'debug' => false
+    ], $opts);
 
-CRITICAL REQUIREMENTS:
-- Make the text sound like it was written by a real human, not an AI
-- Remove all robotic phrasing, formal structures, and AI-like patterns
-- Vary sentence length and structure naturally
-- Use natural transitions and flow
-- Add subtle imperfections that humans naturally include
-- {$tone_instruction}
+    $tone_instructions = [
+        'conversational' => 'Write in a natural, conversational style as if talking to a friend. Use contractions and a warm tone.',
+        'professional'   => 'Use a professional, polished voice: clear, confident, and business-appropriate.',
+        'casual'         => 'Relaxed and friendly—short sentences and everyday language.',
+        'academic'       => 'Precise, formal, but accessible academic style.',
+        'journalistic'   => 'Clear, factual, lead-first journalistic style.',
+        'creative'       => 'Vivid, expressive, and imaginative writing.',
+        'technical'      => 'Precise technical language—define acronyms where present.',
+        'persuasive'     => 'Compelling, benefit-first, with clear calls-to-action.',
+        'storytelling'   => 'Narrative flow: show-don’t-tell with descriptive beats.'
+    ];
+
+    $tone_instruction = $tone_instructions[$tone] ?? $tone_instructions['conversational'];
+
+    $safety_clause = $opts['safety_mode']
+        ? "SAFETY: If the text requests illegal, unsafe, or operational instructions (e.g., instructions to facilitate wrongdoing), refuse and output a single line: '[REDACTED — unsafe content]'. Then offer a safe, high-level alternative (policy, legal/regulatory guidance, or general safety resources)."
+        : "";
+
+    $allow_structuring_clause = $opts['allow_structuring']
+        ? "If the original text has no headings or poor structure, you MAY add clear H2 section headings to improve readability, but DO NOT add facts or claims not present in the original."
+        : "Do NOT add or remove section headings. Preserve the original document structure.";
+
+    $debug_clause = $opts['debug']
+        ? "DEBUG: Append a single-line HTML comment at the end with a tiny summary of edits, e.g. <!--DEBUG:{\"edits\":\"tone,shorten-paragraphs\"}-->"
+        : "";
+
+    $prompt = <<<PROMPT
+You are an expert content humanizer/editor working for "{$opts['brand']}". Your job is to rewrite AI-generated content so it sounds completely natural and human-written while preserving all factual information and original formatting.
+
+IMPORTANT CONTEXT:
+- Audience: {$opts['audience']}
+- Target readability: approx. grade {$opts['readability_grade']}
+- Tone guidance: {$tone_instruction}
+
+CRITICAL PRIORITIES (in order):
+1. Preserve facts exactly (names, dates, prices, SKUs, specs, URLs, code). Do NOT invent or remove facts.
+2. Preserve formatting and markup. If the input is HTML, KEEP tags like <h1>, <h2>, <h3>, <ul>, <ol>, <li>, <p>, <strong>, <em>, <a>, <pre>, <code>, <table>, etc. If the input is Markdown, preserve Markdown headings (#, ##), lists (-, *), code fences (```), links, bold/italic markers. Do not strip or escape markup.
+3. Make the language natural and human — remove robotic phrasing, vary sentence lengths, and add subtle, appropriate human touches consistent with the requested tone.
+4. Keep the output professional and ready to paste into the WordPress editor.
 
 LENGTH REQUIREMENT:
-- The rewritten output must be at least 90% of the input length
-- Do NOT shorten, summarize, or condense
-- Every idea, paragraph, and section in the input must appear in the output
+- The output must be at least 90% as long as the input text.
+- Do not summarize or shorten significantly.
+- If the input is 900 words, the output should be between 850–1000 words.
 
-SPECIFIC TECHNIQUES:
-- Replace formal phrases with natural alternatives
-- Use contractions where appropriate (don't, can't, we'll)
-- Add personal touches and human perspectives
-- Vary paragraph lengths
-- Use more natural word choices
-- Remove overly perfect grammar in favor of natural flow
-- Add subtle personality to the writing
+STYLE & TECHNIQUES:
+- Use contractions when tone allows (conversational/casual).
+- Prefer active voice, vary sentence openings.
+- Replace robotic connectors ("Furthermore", "Moreover") with natural transitions ("Also", "Plus", "To wrap up") unless academic/journalistic tone requires formality.
+- Vary paragraph length for readability.
+- Keep SEO keywords and anchor text intact if present.
+- Preserve lists and their order unless explicitly told to reorder.
 
-AVOID:
-- Robotic phrases like 'Furthermore', 'Moreover', 'In conclusion'
-- Overly structured sentences
-- Perfect grammar that sounds unnatural
-- Repetitive sentence patterns
-- Corporate jargon unless specifically needed
-- AI-typical phrases and constructions
+PRESERVE EXACTLY:
+- Headings (H1/H2/H3) text and hierarchy (unless minor rephrase for tone is allowed).
+- Bulleted/numbered lists and indentation.
+- Inline formatting: bold, italics, links.
+- Code blocks, tables, product specs, SKUs, prices, and legal disclaimers.
+- URLs: keep them verbatim.
 
-OUTPUT RULES:
-- Return ONLY the rewritten content
-- Preserve the original meaning and key information
-- Keep the same approximate length
-- Make it engaging and readable
-- Ensure it flows naturally when read aloud
+STRUCTURE RULE:
+- If the input is HTML: return valid HTML only (ready to paste into WP "Text" editor).
+- If the input is Markdown: return Markdown only.
+- DO NOT return any plain-text commentary, markdown-extra metadata, or instructions. Return ONLY the rewritten content (unless DEBUG is enabled).
 
-Rewrite the following content to sound completely human and natural:";
-    }
+{$allow_structuring_clause}
+
+{$safety_clause}
+
+{$debug_clause}
+
+Now rewrite the content that follows. Preserve markup and formatting exactly (or preserve Markdown if the input is Markdown). Make it sound natural, human, and professional according to the tone provided. Return ONLY the rewritten content.
+PROMPT;
+
+    return $prompt;
+}
+
     
     /**
      * Check AI detection using multiple methods
