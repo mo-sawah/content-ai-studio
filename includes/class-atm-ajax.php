@@ -6,6 +6,127 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    private function get_massive_scale_angles() {
+        return [
+            'target_audiences' => [
+                'beginners', 'professionals', 'entrepreneurs', 'small_businesses', 'startups',
+                'freelancers', 'consultants', 'agencies', 'enterprises', 'non_profits',
+                'students', 'job_seekers', 'managers', 'executives', 'creatives'
+            ],
+            'industries' => [
+                'healthcare', 'finance', 'education', 'retail', 'manufacturing',
+                'real_estate', 'hospitality', 'automotive', 'legal', 'consulting',
+                'technology', 'media', 'sports', 'fashion', 'food_beverage',
+                'construction', 'agriculture', 'energy', 'government', 'aerospace'
+            ],
+            'problem_types' => [
+                'mistakes_to_avoid', 'optimization_strategies', 'cost_reduction',
+                'time_saving', 'efficiency_improvement', 'quality_enhancement',
+                'security_concerns', 'compliance_issues', 'scalability_challenges',
+                'integration_problems', 'training_gaps', 'measurement_difficulties'
+            ],
+            'content_formats' => [
+                'ultimate_guide', 'step_by_step', 'checklist', 'case_study',
+                'comparison', 'review', 'trend_analysis', 'prediction', 'interview',
+                'toolkit', 'template', 'framework', 'strategy', 'blueprint'
+            ],
+            'time_contexts' => [
+                '2025', '2026', 'next_5_years', '30_days', '90_days', '6_months',
+                'this_year', 'pandemic_era', 'post_covid', 'recession_proof',
+                'economic_uncertainty', 'digital_transformation_era'
+            ],
+            'skill_levels' => [
+                'complete_beginner', 'intermediate', 'advanced', 'expert',
+                'transitioning_career', 'self_taught', 'formally_trained'
+            ],
+            'budget_constraints' => [
+                'zero_budget', 'bootstrap', 'small_budget', 'medium_investment',
+                'enterprise_budget', 'cost_effective', 'premium_solutions'
+            ]
+        ];
+    }
+
+    private function generate_massive_scale_angle($keyword, $previous_angles) {
+        $dimensions = $this->get_massive_scale_angles();
+        
+        // Get previously used combinations to avoid duplicates
+        $used_combinations = [];
+        foreach ($previous_angles as $prev) {
+            if (isset($prev['angle'])) {
+                $used_combinations[] = md5($prev['angle']);
+            }
+        }
+        
+        // Generate unique combination
+        $max_attempts = 50;
+        $attempts = 0;
+        
+        do {
+            $combination = [
+                'audience' => $dimensions['target_audiences'][array_rand($dimensions['target_audiences'])],
+                'industry' => $dimensions['industries'][array_rand($dimensions['industries'])],
+                'problem' => $dimensions['problem_types'][array_rand($dimensions['problem_types'])],
+                'format' => $dimensions['content_formats'][array_rand($dimensions['content_formats'])],
+                'time' => $dimensions['time_contexts'][array_rand($dimensions['time_contexts'])],
+                'skill' => $dimensions['skill_levels'][array_rand($dimensions['skill_levels'])],
+                'budget' => $dimensions['budget_constraints'][array_rand($dimensions['budget_constraints'])]
+            ];
+            
+            $combination_key = implode('|', $combination);
+            $combination_hash = md5($combination_key);
+            $attempts++;
+            
+        } while (in_array($combination_hash, $used_combinations) && $attempts < $max_attempts);
+        
+        // Generate title from combination
+        $title = $this->generate_title_from_combination($keyword, $combination);
+        
+        return [
+            'title' => $title,
+            'combination' => $combination,
+            'combination_key' => $combination_key,
+            'prompt_focus' => $this->build_detailed_prompt_focus($combination)
+        ];
+    }
+
+    private function generate_title_from_combination($keyword, $combination) {
+        $templates = [
+            "{keyword} for {audience} in {industry}: {format} for {time}",
+            "How {audience} in {industry} Can Master {keyword} ({skill} Level)",
+            "{keyword} {problem}: A {format} for {audience} on a {budget} Budget",
+            "The {time} {keyword} Strategy for {industry} {audience}",
+            "{keyword} Success: How {audience} in {industry} Can Avoid {problem}",
+            "From Zero to Hero: {keyword} {format} for {skill} {audience}",
+            "{industry} {keyword}: {problem} Solutions for {time}",
+            "The Complete {keyword} {format} for {audience} in {industry} ({time} Edition)",
+            "Why {audience} in {industry} Fail at {keyword} (And How to Fix It)",
+            "{keyword} on a {budget} Budget: {format} for {industry} {audience}"
+        ];
+        
+        $template = $templates[array_rand($templates)];
+        
+        // Replace placeholders
+        $replacements = [
+            '{keyword}' => $keyword,
+            '{audience}' => str_replace('_', ' ', ucwords($combination['audience'], '_')),
+            '{industry}' => str_replace('_', ' ', ucwords($combination['industry'], '_')),
+            '{problem}' => str_replace('_', ' ', ucwords($combination['problem'], '_')),
+            '{format}' => str_replace('_', ' ', ucwords($combination['format'], '_')),
+            '{time}' => str_replace('_', ' ', ucwords($combination['time'], '_')),
+            '{skill}' => str_replace('_', ' ', ucwords($combination['skill'], '_')),
+            '{budget}' => str_replace('_', ' ', ucwords($combination['budget'], '_'))
+        ];
+        
+        return str_replace(array_keys($replacements), array_values($replacements), $template);
+    }
+
+    private function build_detailed_prompt_focus($combination) {
+        return "Write specifically for {$combination['audience']} in the {$combination['industry']} industry who are dealing with {$combination['problem']}. " .
+            "Focus on {$combination['skill']} level content with a {$combination['budget']} budget approach. " .
+            "Structure this as a {$combination['format']} with a {$combination['time']} perspective. " .
+            "Include industry-specific examples, realistic constraints, and actionable advice that this specific audience can actually implement.";
+    }
+    
     private function ensure_angles_table_exists() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
@@ -1182,46 +1303,36 @@ public function translate_text() {
             // Ensure the angles table exists
             $this->ensure_angles_table_exists();
             
-            // Always use angle system for both keyword and title-based generation
-            $tracking_keyword = !empty($keyword) ? $keyword : $article_title;
+            $final_title = $article_title;
+            $angle_info = null;
             
-            $new_angle = '';
-            $previous_angles = [];
-            
-            // Get previous angles for this keyword/title
-            $previous_angles = $this->get_previous_angles($tracking_keyword);
-            error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $tracking_keyword);
-            
-            // Generate new unique angle first with enhanced randomization
-            $random_focus = $this->get_random_angle_category();
-            $angle_prompt = $this->build_angle_generation_prompt($tracking_keyword, $previous_angles);
-            $enhanced_angle_prompt = $angle_prompt . "\n\nSPECIAL FOCUS FOR THIS ARTICLE: Target this specifically toward: {$random_focus}";
-            
-            $new_angle = ATM_API::enhance_content_with_openrouter(
-                ['content' => $tracking_keyword], 
-                $enhanced_angle_prompt, 
-                $model_override ?: get_option('atm_article_model'),
-                false, // not JSON mode for angle generation
-                true,  // enable web search
-                $creativity_level
-            );
-            
-            $new_angle = trim($new_angle);
-            error_log("ATM Debug: Generated new angle with focus '{$random_focus}': " . $new_angle);
-            
-            // Generate title using the angle if we don't have one
-            if (empty($article_title)) {
-                $article_title = $this->generate_title_with_angle($tracking_keyword, $new_angle, $model_override);
-                error_log("ATM Debug: Generated title from angle: " . $article_title);
+            // Only generate new angle/title if no title provided
+            if (empty($article_title) && !empty($keyword)) {
+                $tracking_keyword = $keyword;
+                $previous_angles = $this->get_previous_angles($tracking_keyword);
+                
+                // Generate structured angle using the massive scale system
+                $angle_info = $this->generate_massive_scale_angle($tracking_keyword, $previous_angles);
+                $final_title = $angle_info['title'];
+                
+                error_log("ATM Debug: Generated combination: " . $angle_info['combination_key']);
+                error_log("ATM Debug: Generated title: " . $final_title);
+                
+                // Store the angle
+                $this->store_content_angle($tracking_keyword, $angle_info['combination_key'], $final_title);
             }
             
-            // Store the new angle BEFORE content generation
-            $this->store_content_angle($tracking_keyword, $new_angle, $article_title);
-            
+            // Build enhanced prompt with angle focus
             $writing_styles = ATM_API::get_writing_styles();
             $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
             if (!empty($custom_prompt)) {
                 $base_prompt = $custom_prompt;
+            }
+            
+            // Add angle-specific instructions if we have an angle
+            if ($angle_info) {
+                $base_prompt .= "\n\nSPECIFIC ANGLE REQUIREMENT: " . $angle_info['prompt_focus'];
+                $base_prompt .= "\nThis article MUST follow this angle throughout. Do not write a generic overview.";
             }
             
             $output_instructions = '
@@ -1239,24 +1350,10 @@ public function translate_text() {
             **Link Formatting Rules:**
             - When including external links, NEVER use the website URL as the anchor text
             - Use ONLY 1-3 descriptive words as anchor text
-            - Example: railway that [had a deadly crash](https://reuters.com/specific-article) last week and will...
-            - Do NOT use generic phrases like "click here", "read more", or "this article" as anchor text
-            - Anchor text should be relevant keywords from the article topic (e.g., marketing, design, finance, AI)
             - Keep anchor text extremely concise (maximum 2 words)
-            - Make links feel natural within the sentence flow
-            - Avoid long phrases as anchor text';
+            - Make links feel natural within the sentence flow';
             
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
-            
-            // Enhanced prompt with angle
-            $enhanced_prompt = $this->build_enhanced_system_prompt($base_prompt, $new_angle, $previous_angles);
-            $system_prompt = $enhanced_prompt . "\n\n" . $output_instructions;
-            error_log("ATM Debug: Enhanced prompt preview: " . substr($enhanced_prompt, 0, 500) . "...");
-            
-            // Add contextual seed for additional variation
-            $contextual_seed = ATM_API::get_contextual_seed($tracking_keyword);
-            $system_prompt .= "\n\nContextual Focus: " . $contextual_seed;
-            error_log("ATM Debug: Contextual seed: " . $contextual_seed);
             
             if ($post) {
                 $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
@@ -1265,21 +1362,19 @@ public function translate_text() {
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
             }
             
-            error_log("ATM Debug: Final system prompt length: " . strlen($system_prompt));
-            
+            // SINGLE API CALL with web search
             $raw_response = ATM_API::enhance_content_with_openrouter(
-                ['content' => $article_title], 
+                ['content' => $final_title], 
                 $system_prompt, 
                 $model_override ?: get_option('atm_article_model'), 
                 true, // JSON mode
-                true, // enable web search
+                true, // enable web search - but only one call now
                 $creativity_level
             );
             
-            // More robust JSON extraction
+            // Process response (same as before)
             $json_string = trim($raw_response);
             if (!str_starts_with($json_string, '{')) {
-                // Try to extract JSON from response
                 if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
                     $json_string = $matches[0];
                 }
@@ -1291,31 +1386,22 @@ public function translate_text() {
                 throw new Exception('The AI returned an invalid response structure. Please try again.');
             }
 
-            // More robust subtitle extraction
             $subtitle = '';
             if (isset($result['subheadline']) && !empty(trim($result['subheadline']))) {
                 $subtitle = trim($result['subheadline']);
             } elseif (isset($result['subtitle']) && !empty(trim($result['subtitle']))) {
                 $subtitle = trim($result['subtitle']);
-            } elseif (isset($result['sub_headline']) && !empty(trim($result['sub_headline']))) {
-                $subtitle = trim($result['sub_headline']);
             }
 
-            $original_content = trim($result['content']);
-            $final_content = $original_content;
+            $final_content = trim($result['content']);
 
-            // Direct SmartMag subtitle saving
+            // Save subtitle
             if ($post_id > 0 && !empty($subtitle)) {
-                // Save to SmartMag field
-                $smartmag_result = update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
-                error_log("ATM Plugin: Saved subtitle '{$subtitle}' to SmartMag field (_bunyad_sub_title) for post {$post_id}. Result: " . ($smartmag_result ? 'success' : 'failed'));
-                
-                // Also save to our backup field
-                $backup_result = update_post_meta($post_id, '_atm_subtitle', $subtitle);
-                error_log("ATM Plugin: Saved subtitle to backup field (_atm_subtitle). Result: " . ($backup_result ? 'success' : 'failed'));
+                update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
+                update_post_meta($post_id, '_atm_subtitle', $subtitle);
             }
 
-            wp_send_json_success(['article_title' => $article_title, 'article_content' => $final_content, 'subtitle' => $subtitle]);
+            wp_send_json_success(['article_title' => $final_title, 'article_content' => $final_content, 'subtitle' => $subtitle]);
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
