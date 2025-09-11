@@ -565,46 +565,75 @@ class ATM_Humanize {
     /**
      * Humanize using combo approach (multiple passes)
      */
+    private function humanize_with_combo($content, $options = []) {
+        // First pass: OpenRouter with Claude 3.5 Sonnet
+        $openrouter_result = $this->humanize_with_openrouter($content, array_merge($options, [
+            'model' => 'anthropic/claude-3.5-sonnet'
+        ]));
+        
+        // Second pass: StealthGPT to ensure undetectability
+        $stealthgpt_result = $this->humanize_with_stealthgpt($openrouter_result['humanized_content'], $options);
+        
+        return [
+            'humanized_content' => $stealthgpt_result['humanized_content'],
+            'credits_used' => $openrouter_result['credits_used'] + $stealthgpt_result['credits_used']
+        ];
+    }
+
+    /**
+     * Build OpenRouter humanization prompt
+     */
     private function build_openrouter_humanization_prompt($tone) {
-    $tone_instructions = [
-        'conversational' => 'Write naturally like you\'re talking to a friend. Use contractions and varied sentence lengths.',
-        'professional' => 'Use clear, business-appropriate language while staying engaging.',
-        'casual' => 'Keep it relaxed and friendly with everyday language.',
-        'academic' => 'Use scholarly language but keep it accessible.',
-        'journalistic' => 'Write clearly and factually with active voice.',
-        'creative' => 'Use vivid, descriptive language while staying clear.',
-        'technical' => 'Use precise technical language appropriate to the subject.',
-        'persuasive' => 'Write convincingly with clear benefits.',
-        'storytelling' => 'Use narrative flow with descriptive elements.'
-    ];
-    
-    $tone_instruction = $tone_instructions[$tone] ?? $tone_instructions['conversational'];
-    
-    return "You are an expert content humanizer. Your job is to rewrite AI-generated text to sound completely natural and human-written.
+        $tone_instructions = [
+            'conversational' => 'Write in a natural, conversational style as if you\'re talking to a friend. Use contractions, casual language, and a warm tone.',
+            'professional' => 'Maintain a professional, business-appropriate tone. Use formal language while keeping it engaging and clear.',
+            'casual' => 'Write in a relaxed, informal style. Be friendly and approachable, using everyday language.',
+            'academic' => 'Use scholarly language appropriate for academic writing. Be precise, formal, and well-structured.',
+            'journalistic' => 'Write in a clear, factual journalistic style. Be objective, informative, and engaging.',
+            'creative' => 'Use imaginative, expressive language. Be vivid, engaging, and don\'t be afraid to use metaphors and creative expressions.',
+            'technical' => 'Use precise technical language appropriate for the subject matter. Be clear and accurate.',
+            'persuasive' => 'Write convincingly to persuade the reader. Use compelling arguments and engaging language.',
+            'storytelling' => 'Write in a narrative style that tells a story. Be engaging, descriptive, and use narrative techniques.'
+        ];
+        
+        $tone_instruction = $tone_instructions[$tone] ?? $tone_instructions['conversational'];
+        
+        return "You are an expert content humanizer. Your task is to rewrite AI-generated text to make it sound completely natural and human-written. Follow these guidelines:
 
-CRITICAL RULES:
-1. Keep ALL headings (H1, H2, H3, etc.) exactly as they are
-2. Preserve ALL formatting (bold, italic, lists, line breaks)
-3. Keep ALL facts, numbers, and specific details unchanged
-4. {$tone_instruction}
+CRITICAL REQUIREMENTS:
+- Make the text sound like it was written by a real human, not an AI
+- Remove all robotic phrasing, formal structures, and AI-like patterns
+- Vary sentence length and structure naturally
+- Use natural transitions and flow
+- Add subtle imperfections that humans naturally include
+- {$tone_instruction}
 
-MAKE IT HUMAN:
-- Remove robotic phrases like 'Furthermore', 'Moreover', 'In conclusion'
-- Use natural transitions like 'Also', 'Plus', 'Here's the thing'
-- Vary sentence lengths (mix short and long sentences)
-- Add contractions where appropriate (don't, can't, we'll)
-- Make it flow naturally when read aloud
+SPECIFIC TECHNIQUES:
+- Replace formal phrases with natural alternatives
+- Use contractions where appropriate (don't, can't, we'll)
+- Add personal touches and human perspectives
+- Vary paragraph lengths
+- Use more natural word choices
+- Remove overly perfect grammar in favor of natural flow
+- Add subtle personality to the writing
 
-PRESERVE EXACTLY:
-- All headings and subheadings
-- All bullet points and numbered lists
-- All bold and italic text
-- All links and formatting
-- All factual information
+AVOID:
+- Robotic phrases like 'Furthermore', 'Moreover', 'In conclusion'
+- Overly structured sentences
+- Perfect grammar that sounds unnatural
+- Repetitive sentence patterns
+- Corporate jargon unless specifically needed
+- AI-typical phrases and constructions
 
-Return ONLY the rewritten content with the same structure and formatting. Do not add explanations or comments.";
-}
+OUTPUT RULES:
+- Return ONLY the rewritten content
+- Preserve the original meaning and key information
+- Keep the same approximate length
+- Make it engaging and readable
+- Ensure it flows naturally when read aloud
 
+Rewrite the following content to sound completely human and natural:";
+    }
     
     /**
      * Check AI detection using multiple methods

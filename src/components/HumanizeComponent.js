@@ -74,21 +74,21 @@ function HumanizeComponent({ setActiveView }) {
           .select("core/editor")
           .getEditedPostContent();
         if (editorContent) {
-          const plainText = stripHtml(editorContent);
-          setContent(plainText);
+          // Keep the HTML content instead of stripping it
+          setContent(editorContent);
           setStats((prev) => ({
             ...prev,
-            originalWords: countWords(plainText),
+            originalWords: countWords(stripHtml(editorContent)), // Only strip for word count
           }));
         }
       } else if (window.tinymce && window.tinymce.activeEditor) {
         const editorContent = window.tinymce.activeEditor.getContent({
-          format: "text",
+          format: "html", // Get HTML instead of text
         });
         setContent(editorContent);
         setStats((prev) => ({
           ...prev,
-          originalWords: countWords(editorContent),
+          originalWords: countWords(stripHtml(editorContent)), // Only strip for word count
         }));
       } else {
         console.warn("No editor found. Content must be entered manually.");
@@ -650,7 +650,7 @@ function HumanizeComponent({ setActiveView }) {
               setContent(e.target.value);
               setStats((prev) => ({
                 ...prev,
-                originalWords: countWords(e.target.value),
+                originalWords: countWords(stripHtml(e.target.value)),
               }));
             }}
             placeholder={`Content will be loaded from the editor, or you can paste it here...
