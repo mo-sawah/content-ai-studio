@@ -133,6 +133,7 @@ class ATM_Ajax {
         
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
         if (!$table_exists) {
+            error_log("ATM Debug: Creating content angles table");
             ATM_Main::create_content_angles_table();
         }
     }
@@ -1304,35 +1305,38 @@ public function translate_text() {
             $this->ensure_angles_table_exists();
             
             $final_title = $article_title;
-            $angle_info = null;
+            $angle_combination = '';
             
-            // Only generate new angle/title if no title provided
+            // Generate angle and title locally (NO API CALL) if no title provided
             if (empty($article_title) && !empty($keyword)) {
                 $tracking_keyword = $keyword;
                 $previous_angles = $this->get_previous_angles($tracking_keyword);
                 
-                // Generate structured angle using the massive scale system
-                $angle_info = $this->generate_massive_scale_angle($tracking_keyword, $previous_angles);
+                error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $tracking_keyword);
+                
+                // Generate angle locally without API call
+                $angle_info = $this->generate_local_angle_and_title($tracking_keyword, $previous_angles);
                 $final_title = $angle_info['title'];
+                $angle_combination = $angle_info['combination_key'];
                 
-                error_log("ATM Debug: Generated combination: " . $angle_info['combination_key']);
-                error_log("ATM Debug: Generated title: " . $final_title);
+                error_log("ATM Debug: Generated LOCAL title: " . $final_title);
+                error_log("ATM Debug: Angle combination: " . $angle_combination);
                 
-                // Store the angle
-                $this->store_content_angle($tracking_keyword, $angle_info['combination_key'], $final_title);
+                // Store the angle BEFORE API call
+                $this->store_content_angle($tracking_keyword, $angle_combination, $final_title);
             }
             
-            // Build enhanced prompt with angle focus
+            // Build content prompt (this will be the ONLY API call)
             $writing_styles = ATM_API::get_writing_styles();
             $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
             if (!empty($custom_prompt)) {
                 $base_prompt = $custom_prompt;
             }
             
-            // Add angle-specific instructions if we have an angle
-            if ($angle_info) {
-                $base_prompt .= "\n\nSPECIFIC ANGLE REQUIREMENT: " . $angle_info['prompt_focus'];
-                $base_prompt .= "\nThis article MUST follow this angle throughout. Do not write a generic overview.";
+            // Add angle-specific instructions if we generated an angle
+            if (!empty($angle_combination)) {
+                $base_prompt .= "\n\nSPECIFIC CONTENT FOCUS: " . $this->get_prompt_focus_from_combination($angle_combination);
+                $base_prompt .= "\nThis article MUST target this specific angle. Do not write a generic overview.";
             }
             
             $output_instructions = '
@@ -1345,13 +1349,7 @@ public function translate_text() {
             
             **Content Rules:**
             - The `content` field must NOT start with a title or any heading (like `# Heading`). It must begin directly with the first paragraph of the introduction.
-            - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.
-            
-            **Link Formatting Rules:**
-            - When including external links, NEVER use the website URL as the anchor text
-            - Use ONLY 1-3 descriptive words as anchor text
-            - Keep anchor text extremely concise (maximum 2 words)
-            - Make links feel natural within the sentence flow';
+            - Do NOT include a final heading titled "Conclusion". The article should end naturally with the concluding paragraph itself.';
             
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
             
@@ -1362,13 +1360,15 @@ public function translate_text() {
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
             }
             
-            // SINGLE API CALL with web search
+            error_log("ATM Debug: Making SINGLE API call for content generation");
+            
+            // SINGLE API CALL - this is the only charge
             $raw_response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $final_title], 
                 $system_prompt, 
                 $model_override ?: get_option('atm_article_model'), 
                 true, // JSON mode
-                true, // enable web search - but only one call now
+                true, // enable web search - but only this ONE call
                 $creativity_level
             );
             
@@ -1405,6 +1405,56 @@ public function translate_text() {
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
+    }
+
+    // Add this new method for local angle generation (no API calls)
+    private function generate_local_angle_and_title($keyword, $previous_angles) {
+        $dimensions = $this->get_massive_scale_angles();
+        
+        // Get used combinations
+        $used_combinations = [];
+        foreach ($previous_angles as $prev) {
+            if (isset($prev['angle'])) {
+                $used_combinations[] = $prev['angle'];
+            }
+        }
+        
+        // Generate unique combination locally
+        $max_attempts = 20;
+        $attempts = 0;
+        
+        do {
+            $combination = [
+                'audience' => $dimensions['target_audiences'][array_rand($dimensions['target_audiences'])],
+                'industry' => $dimensions['industries'][array_rand($dimensions['industries'])],
+                'problem' => $dimensions['problem_types'][array_rand($dimensions['problem_types'])],
+                'format' => $dimensions['content_formats'][array_rand($dimensions['content_formats'])],
+                'time' => $dimensions['time_contexts'][array_rand($dimensions['time_contexts'])],
+                'skill' => $dimensions['skill_levels'][array_rand($dimensions['skill_levels'])],
+                'budget' => $dimensions['budget_constraints'][array_rand($dimensions['budget_constraints'])]
+            ];
+            
+            $combination_key = implode('|', array_values($combination));
+            $attempts++;
+            
+        } while (in_array($combination_key, $used_combinations) && $attempts < $max_attempts);
+        
+        // Generate title from template locally
+        $title = $this->generate_title_from_combination($keyword, $combination);
+        
+        return [
+            'title' => $title,
+            'combination_key' => $combination_key,
+            'combination' => $combination
+        ];
+    }
+
+    private function get_prompt_focus_from_combination($combination_key) {
+        $parts = explode('|', $combination_key);
+        if (count($parts) >= 7) {
+            return "Target audience: {$parts[0]} in {$parts[1]} industry, focusing on {$parts[2]}, structured as {$parts[3]}, with {$parts[4]} perspective, at {$parts[5]} level, considering {$parts[6]} budget constraints.";
+        }
+        return "Focus on creating unique, valuable content for the specific target audience.";
     }
 
     // Add this new method to generate title with angle
@@ -1463,9 +1513,14 @@ public function translate_text() {
             "SELECT angle, title FROM $table_name 
             WHERE keyword = %s 
             ORDER BY created_at DESC 
-            LIMIT 10",
+            LIMIT 20",
             $keyword
         ), ARRAY_A);
+        
+        if ($wpdb->last_error) {
+            error_log("ATM Debug: Database error getting angles: " . $wpdb->last_error);
+            return [];
+        }
         
         return $results ?: [];
     }
@@ -1582,12 +1637,23 @@ public function translate_text() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
         
-        $wpdb->insert($table_name, [
+        error_log("ATM Debug: Attempting to store angle - Keyword: $keyword, Angle: $angle, Title: $title");
+        
+        $result = $wpdb->insert($table_name, [
             'keyword' => $keyword,
             'angle' => $angle,
-            'title' => $title
+            'title' => $title,
+            'created_at' => current_time('mysql')
         ]);
-    }
+        
+        if ($result === false) {
+            error_log("ATM Debug: Failed to store angle. Error: " . $wpdb->last_error);
+        } else {
+            error_log("ATM Debug: Successfully stored angle. Insert ID: " . $wpdb->insert_id);
+        }
+        
+        return $result;
+}
 
     public function generate_news_article() {
         if (!ATM_Licensing::is_license_active()) {
