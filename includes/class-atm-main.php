@@ -716,6 +716,10 @@ class ATM_Main {
         self::create_script_jobs_table(); // Add this line
         self::create_used_articles_table(); // Add this line
         self::create_content_angles_table(); // Add this line
+
+        // Force table creation check
+        self::verify_content_angles_table();
+
     }
 
     public static function create_content_angles_table() {
@@ -736,6 +740,19 @@ class ATM_Main {
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
+    }
+
+    public static function verify_content_angles_table() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_content_angles';
+        
+        // Check if table exists, if not create it
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+        
+        if (!$table_exists) {
+            self::create_content_angles_table();
+            error_log("ATM: Content angles table created");
+        }
     }
 
     /**

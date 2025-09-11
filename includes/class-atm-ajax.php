@@ -979,6 +979,7 @@ public function translate_text() {
         add_action('wp_ajax_populate_subtitle_field', array($this, 'populate_subtitle_field'));
         add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
         add_action('wp_ajax_debug_twitter_response', array($this, 'debug_twitter_response'));
+        add_action('init', array($this, 'check_database_tables'));
 
         add_action('wp_ajax_search_google_news', array($this, 'search_google_news'));
         add_action('wp_ajax_generate_article_from_news_source', array($this, 'generate_article_from_news_source'));
@@ -1011,6 +1012,17 @@ public function translate_text() {
         // Helper/Legacy Actions
         add_action('wp_ajax_test_rss_feed', array($this, 'test_rss_feed'));
         add_action('wp_ajax_generate_inline_image', array($this, 'generate_inline_image'));
+    }
+
+    public function check_database_tables() {
+        // Only run once per day
+        $last_check = get_option('atm_last_db_check');
+        if ($last_check && (time() - $last_check) < DAY_IN_SECONDS) {
+            return;
+        }
+        
+        self::verify_content_angles_table();
+        update_option('atm_last_db_check', time());
     }
 
     public function generate_podcast_script() {
@@ -1150,7 +1162,7 @@ public function translate_text() {
 
     public function generate_article_content() {
         if (!ATM_Licensing::is_license_active()) {
-            wp_send_json_error('Please activate your license key to use this feature.');
+            wp_send_json_error('Please activate your license key.');
         }
         check_ajax_referer('atm_nonce', 'nonce');
         try {
@@ -1168,42 +1180,37 @@ public function translate_text() {
                 throw new Exception("Please provide a keyword or an article title.");
             }
             
+            // Always use angle system for both keyword and title-based generation
+            $tracking_keyword = !empty($keyword) ? $keyword : $article_title;
+            
             $new_angle = '';
             $previous_angles = [];
             
-            // Only use angle system if user provided keyword (not title)
-            if (empty($article_title) && !empty($keyword)) {
-                // Use keyword for angle tracking
-                $tracking_keyword = $keyword;
-                
-                // Get previous angles for this keyword
-                $previous_angles = $this->get_previous_angles($tracking_keyword);
-                error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for keyword: " . $tracking_keyword);
-                if (!empty($previous_angles)) {
-                    foreach ($previous_angles as $i => $angle) {
-                        error_log("ATM Debug: Previous angle " . ($i+1) . ": " . $angle['angle']);
-                    }
-                }
-                
-                // Generate new unique angle first
-                $angle_prompt = $this->build_angle_generation_prompt($tracking_keyword, $previous_angles);
-                $new_angle = ATM_API::enhance_content_with_openrouter(
-                    ['content' => $tracking_keyword], 
-                    $angle_prompt, 
-                    $model_override ?: get_option('atm_article_model'),
-                    false, // not JSON mode for angle generation
-                    true,  // enable web search
-                    $creativity_level
-                );
-                
-                error_log("ATM Debug: Generated new angle: " . trim($new_angle));
-                
-                // Generate title using the angle
-                $article_title = $this->generate_title_with_angle($keyword, trim($new_angle), $model_override);
-                
-                // Store the new angle
-                $this->store_content_angle($tracking_keyword, trim($new_angle), $article_title);
+            // Get previous angles for this keyword/title
+            $previous_angles = $this->get_previous_angles($tracking_keyword);
+            error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $tracking_keyword);
+            
+            // Generate new unique angle first
+            $angle_prompt = $this->build_angle_generation_prompt($tracking_keyword, $previous_angles);
+            $new_angle = ATM_API::enhance_content_with_openrouter(
+                ['content' => $tracking_keyword], 
+                $angle_prompt, 
+                $model_override ?: get_option('atm_article_model'),
+                false, // not JSON mode for angle generation
+                true,  // enable web search
+                $creativity_level
+            );
+            
+            $new_angle = trim($new_angle);
+            error_log("ATM Debug: Generated new angle: " . $new_angle);
+            
+            // Generate title using the angle if we don't have one
+            if (empty($article_title)) {
+                $article_title = $this->generate_title_with_angle($tracking_keyword, $new_angle, $model_override);
             }
+            
+            // Store the new angle BEFORE content generation
+            $this->store_content_angle($tracking_keyword, $new_angle, $article_title);
             
             $writing_styles = ATM_API::get_writing_styles();
             $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
@@ -1235,17 +1242,15 @@ public function translate_text() {
             
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
             
-            // Only enhance prompt with angle if we have one (keyword-based generation)
-            if (!empty($new_angle)) {
-                $enhanced_prompt = $this->build_enhanced_system_prompt($base_prompt, trim($new_angle), $previous_angles);
-                $system_prompt = $enhanced_prompt . "\n\n" . $output_instructions;
-                error_log("ATM Debug: Enhanced prompt preview: " . substr($enhanced_prompt, 0, 500) . "...");
-                
-                // Add contextual seed for additional variation
-                $contextual_seed = ATM_API::get_contextual_seed($keyword);
-                $system_prompt .= "\n\nContextual Focus: " . $contextual_seed;
-                error_log("ATM Debug: Contextual seed: " . $contextual_seed);
-            }
+            // Enhanced prompt with angle
+            $enhanced_prompt = $this->build_enhanced_system_prompt($base_prompt, $new_angle, $previous_angles);
+            $system_prompt = $enhanced_prompt . "\n\n" . $output_instructions;
+            error_log("ATM Debug: Enhanced prompt preview: " . substr($enhanced_prompt, 0, 500) . "...");
+            
+            // Add contextual seed for additional variation
+            $contextual_seed = ATM_API::get_contextual_seed($tracking_keyword);
+            $system_prompt .= "\n\nContextual Focus: " . $contextual_seed;
+            error_log("ATM Debug: Contextual seed: " . $contextual_seed);
             
             if ($post) {
                 $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
@@ -1302,11 +1307,6 @@ public function translate_text() {
                 // Also save to our backup field
                 $backup_result = update_post_meta($post_id, '_atm_subtitle', $subtitle);
                 error_log("ATM Plugin: Saved subtitle to backup field (_atm_subtitle). Result: " . ($backup_result ? 'success' : 'failed'));
-                
-                // Verify it was saved
-                $saved_smartmag = get_post_meta($post_id, '_bunyad_sub_title', true);
-                $saved_backup = get_post_meta($post_id, '_atm_subtitle', true);
-                error_log("ATM Plugin: Verification - SmartMag field: '{$saved_smartmag}', Backup field: '{$saved_backup}'");
             }
 
             wp_send_json_success(['article_title' => $article_title, 'article_content' => $final_content, 'subtitle' => $subtitle]);
@@ -1349,13 +1349,28 @@ public function translate_text() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
         
-        return $wpdb->get_results($wpdb->prepare(
+        // First check if table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+        if (!$table_exists) {
+            error_log("ATM Debug: Content angles table doesn't exist, creating it");
+            ATM_Main::create_content_angles_table();
+            return [];
+        }
+        
+        $results = $wpdb->get_results($wpdb->prepare(
             "SELECT angle, title FROM $table_name 
             WHERE keyword = %s 
             ORDER BY created_at DESC 
             LIMIT 10",
             $keyword
         ), ARRAY_A);
+        
+        if ($wpdb->last_error) {
+            error_log("ATM Debug: Database error getting angles: " . $wpdb->last_error);
+            return [];
+        }
+        
+        return $results ?: [];
     }
 
     private function build_angle_generation_prompt($keyword, $previous_angles) {
@@ -1435,11 +1450,18 @@ public function translate_text() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
         
-        $wpdb->insert($table_name, [
+        $result = $wpdb->insert($table_name, [
             'keyword' => $keyword,
             'angle' => $angle,
-            'title' => $title
+            'title' => $title,
+            'created_at' => current_time('mysql')
         ]);
+        
+        if ($result === false) {
+            error_log("ATM Debug: Failed to store angle: " . $wpdb->last_error);
+        } else {
+            error_log("ATM Debug: Successfully stored angle for keyword: " . $keyword);
+        }
     }
 
     public function generate_news_article() {
