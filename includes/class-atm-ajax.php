@@ -1173,6 +1173,14 @@ public function translate_text() {
             
             // Get previous angles for this keyword
             $previous_angles = $this->get_previous_angles($tracking_keyword);
+
+            // Add this debug logging after $previous_angles = $this->get_previous_angles($tracking_keyword);
+            error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for keyword: " . $tracking_keyword);
+            if (!empty($previous_angles)) {
+                foreach ($previous_angles as $i => $angle) {
+                    error_log("ATM Debug: Previous angle " . ($i+1) . ": " . $angle['angle']);
+                }
+            }
             
             // Generate new unique angle first
             $angle_prompt = $this->build_angle_generation_prompt($tracking_keyword, $previous_angles);
@@ -1184,6 +1192,8 @@ public function translate_text() {
                 true,  // enable web search
                 $creativity_level
             );
+
+            error_log("ATM Debug: Generated new angle: " . trim($new_angle));
             
             if (empty($article_title) && !empty($keyword)) {
                 $article_title = ATM_API::generate_title_from_keyword($keyword, $model_override);
@@ -1222,6 +1232,7 @@ public function translate_text() {
             
             // Enhanced system prompt with angle context
             $enhanced_prompt = $this->build_enhanced_system_prompt($base_prompt, trim($new_angle), $previous_angles);
+            error_log("ATM Debug: Enhanced prompt preview: " . substr($enhanced_prompt, 0, 500) . "...");
             $system_prompt = $enhanced_prompt . "\n\n" . $output_instructions;
             
             if ($post) {
@@ -1233,6 +1244,7 @@ public function translate_text() {
             
             // Add contextual seed for additional variation
             $contextual_seed = ATM_API::get_contextual_seed($tracking_keyword);
+            error_log("ATM Debug: Contextual seed: " . $contextual_seed);
             $system_prompt .= "\n\nContextual Focus: " . $contextual_seed;
             
             $raw_response = ATM_API::enhance_content_with_openrouter(
@@ -1340,30 +1352,42 @@ public function translate_text() {
     private function build_enhanced_system_prompt($base_prompt, $new_angle, $previous_angles) {
         $uniqueness_instruction = "
         
-        **CRITICAL UNIQUENESS REQUIREMENTS:**
-        Your specific angle for this article: {$new_angle}
+        **MANDATORY ANGLE ENFORCEMENT:**
+        YOUR SPECIFIC REQUIRED ANGLE: {$new_angle}
         
-        You MUST focus entirely on this specific angle. Do NOT write a general overview.";
+        YOU MUST WRITE ENTIRELY FROM THIS ANGLE. This is not optional.
+        - Do NOT write a general overview of the topic
+        - Do NOT cover multiple angles - focus ONLY on this specific angle
+        - Every paragraph must relate directly to this angle
+        - Your title, introduction, and conclusion must all reflect this specific angle";
         
         if (!empty($previous_angles)) {
-            $uniqueness_instruction .= "\n\nPREVIOUS ANGLES ALREADY COVERED:\n";
+            $uniqueness_instruction .= "\n\n**ANGLES ALREADY COVERED - AVOID COMPLETELY:**\n";
             foreach ($previous_angles as $angle_data) {
-                $uniqueness_instruction .= "- " . $angle_data['angle'] . "\n";
+                $uniqueness_instruction .= "❌ " . $angle_data['angle'] . "\n";
             }
-            $uniqueness_instruction .= "\nAvoid any similarity to these previous approaches.";
+            $uniqueness_instruction .= "\nYour content must be COMPLETELY DIFFERENT from these previous approaches.";
         }
         
-        $uniqueness_instruction .= "\n\n**CREATIVITY BOOSTERS:**
-        - Use unexpected examples or case studies
-        - Include contrarian viewpoints when appropriate  
-        - Focus on specific, actionable insights rather than general information
-        - Add personal anecdotes or industry-specific scenarios
-        - Use current events or trending topics as context
-        - Challenge common assumptions about the topic
-        - Provide fresh statistics or recent research findings
-        - Include expert quotes or interviews (when using web search)
-        - Use analogies from completely different industries
-        - Focus on emerging trends or future predictions";
+        $uniqueness_instruction .= "\n\n**EXTREME CREATIVITY REQUIREMENTS:**
+        - Use unexpected examples from different industries
+        - Include contrarian or controversial viewpoints when appropriate  
+        - Focus on very specific, niche aspects rather than broad topics
+        - Add surprising statistics or research findings
+        - Use analogies from completely unrelated fields
+        - Challenge conventional wisdom about the topic
+        - Include emerging trends that others might miss
+        - Write from a unique demographic or business perspective
+        - Use storytelling elements and case studies
+        - Include actionable insights that are rarely discussed
+        
+        **CONTENT STRUCTURE MANDATE:**
+        - Start with a hook that immediately relates to your specific angle
+        - Every major section must advance your specific angle
+        - Include at least 3 specific examples or case studies that support your angle
+        - End with actionable advice specific to your angle
+        
+        FAILURE TO FOLLOW YOUR ASSIGNED ANGLE WILL RESULT IN CONTENT REJECTION.";
         
         return $base_prompt . $uniqueness_instruction;
     }
@@ -1425,6 +1449,8 @@ public function translate_text() {
                 2. "subheadline": A brief, one-sentence subheadline that expands on the main headline.
                 3. "content": The full article text, formatted using Markdown. The content must start with an introduction (lede), be followed by body paragraphs with smooth transitions, and end with a short conclusion.';
             $raw_response = ATM_API::enhance_content_with_openrouter(['content' => $news_context], $system_prompt, $model_override, true);
+
+            error_log("ATM Debug: Final system prompt length: " . strlen($system_prompt));
             
             // More robust JSON extraction
             $json_string = trim($raw_response);
