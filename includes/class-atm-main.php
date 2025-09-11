@@ -752,6 +752,14 @@ class ATM_Main {
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
+        
+        // Verify table was created
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+        if ($table_exists) {
+            error_log("ATM: Content angles table created successfully");
+        } else {
+            error_log("ATM: FAILED to create content angles table. Error: " . $wpdb->last_error);
+        }
     }
 
     public static function verify_content_angles_table() {

@@ -90,34 +90,174 @@ class ATM_Ajax {
     }
 
     private function generate_title_from_combination($keyword, $combination) {
-        $templates = [
-            "{keyword} for {audience} in {industry}: {format} for {time}",
-            "How {audience} in {industry} Can Master {keyword} ({skill} Level)",
-            "{keyword} {problem}: A {format} for {audience} on a {budget} Budget",
-            "The {time} {keyword} Strategy for {industry} {audience}",
-            "{keyword} Success: How {audience} in {industry} Can Avoid {problem}",
-            "From Zero to Hero: {keyword} {format} for {skill} {audience}",
-            "{industry} {keyword}: {problem} Solutions for {time}",
-            "The Complete {keyword} {format} for {audience} in {industry} ({time} Edition)",
-            "Why {audience} in {industry} Fail at {keyword} (And How to Fix It)",
-            "{keyword} on a {budget} Budget: {format} for {industry} {audience}"
+        // Context-aware templates based on audience and industry
+        $audience_industry_templates = [
+            'professionals' => [
+                "{keyword} Mastery: Advanced {format} for {industry} Professionals",
+                "Professional {keyword} Implementation in {industry}: {time} Edition",
+                "Executive's Guide to {keyword} in {industry}: Avoiding {problem}",
+                "Industry Expert's {keyword} Playbook for {industry} Leaders"
+            ],
+            'beginners' => [
+                "{keyword} 101: Complete Beginner's Guide for {industry} Newcomers",
+                "Zero to Hero: {keyword} Crash Course for {industry} Beginners",
+                "Your First {keyword} Success in {industry}: Step-by-Step {format}",
+                "Beginner's Mistakes in {keyword}: What {industry} Newcomers Get Wrong"
+            ],
+            'entrepreneurs' => [
+                "Bootstrapping {keyword} Success: {industry} Entrepreneur's {format}",
+                "From Startup to Scale: {keyword} Growth Hacks for {industry}",
+                "Entrepreneur's {keyword} Advantage in {industry} ({time} Insights)",
+                "Building Your {industry} Empire with {keyword}: {problem} Solutions"
+            ],
+            'small_businesses' => [
+                "Small {industry} Business {keyword}: Competing with Giants",
+                "Local {industry} Success: {keyword} Strategies That Actually Work",
+                "Small Budget, Big Results: {keyword} for {industry} SMBs",
+                "David vs. Goliath: How Small {industry} Businesses Win with {keyword}"
+            ]
         ];
+
+        // Problem-focused templates
+        $problem_templates = [
+            'mistakes_to_avoid' => [
+                "The Fatal {keyword} Mistakes Killing {industry} Businesses in {time}",
+                "Why 90% of {industry} {audience} Fail at {keyword} (And How to Succeed)",
+                "Costly {keyword} Errors Every {industry} Professional Must Avoid",
+                "The {keyword} Pitfalls That Destroyed These {industry} Companies"
+            ],
+            'optimization_strategies' => [
+                "10X Your {keyword} Results: Optimization Secrets for {industry}",
+                "Peak Performance {keyword}: How {industry} Leaders Optimize",
+                "The {keyword} Optimization Formula That Transformed {industry}",
+                "{industry} Optimization: Advanced {keyword} Performance Tactics"
+            ],
+            'cost_reduction' => [
+                "Slash Your {keyword} Costs: {industry} Efficiency Revolution",
+                "Budget-Smart {keyword}: Maximum Results for {industry} on Minimal Spend",
+                "The {keyword} Cost Crisis: How {industry} Leaders Cut Expenses by 50%",
+                "Lean {keyword}: Eliminating Waste in {industry} Operations"
+            ]
+        ];
+
+        // Time-context templates
+        $time_templates = [
+            '2025' => [
+                "{keyword} in 2025: What Every {industry} Professional Needs to Know",
+                "The 2025 {keyword} Revolution: {industry} Industry Transformation",
+                "2025 {keyword} Predictions: Future-Proofing Your {industry} Strategy",
+                "Next-Gen {keyword}: 2025 Trends Reshaping {industry}"
+            ],
+            'post_covid' => [
+                "Post-Pandemic {keyword}: How {industry} Adapted and Thrived",
+                "The New Normal: {keyword} Strategies for {industry} in a Changed World",
+                "COVID-Proof {keyword}: Resilient {industry} Business Models",
+                "Recovery and Growth: {keyword} Success Stories from {industry}"
+            ]
+        ];
+
+        // Format-specific templates
+        $format_templates = [
+            'case_study' => [
+                "{industry} Success Story: How {keyword} Transformed This Business",
+                "Real Results: {keyword} Case Study from Leading {industry} Company",
+                "From Failure to Success: {keyword} Transformation in {industry}",
+                "Behind the Scenes: {keyword} Implementation That Saved This {industry} Business"
+            ],
+            'ultimate_guide' => [
+                "The Ultimate {keyword} Handbook for {industry} Professionals",
+                "Master Class: Complete {keyword} Authority Guide for {industry}",
+                "Everything About {keyword}: The Definitive {industry} Resource",
+                "The Only {keyword} Guide {industry} Professionals Will Ever Need"
+            ]
+        ];
+
+        // Select appropriate template set based on combination
+        $template_sets = [];
         
-        $template = $templates[array_rand($templates)];
+        if (isset($audience_industry_templates[$combination['audience']])) {
+            $template_sets[] = $audience_industry_templates[$combination['audience']];
+        }
         
-        // Replace placeholders
+        if (isset($problem_templates[$combination['problem']])) {
+            $template_sets[] = $problem_templates[$combination['problem']];
+        }
+        
+        if (isset($time_templates[$combination['time']])) {
+            $template_sets[] = $time_templates[$combination['time']];
+        }
+        
+        if (isset($format_templates[$combination['format']])) {
+            $template_sets[] = $format_templates[$combination['format']];
+        }
+
+        // Fallback to enhanced general templates if no specific match
+        if (empty($template_sets)) {
+            $template_sets[] = [
+                "The {keyword} Revolution: How {industry} {audience} Are Winning",
+                "Disruptive {keyword}: Why {industry} Will Never Be the Same",
+                "The {keyword} Advantage: Secret Weapons of {industry} Leaders",
+                "Next-Level {keyword}: Advanced Strategies for {industry} Growth"
+            ];
+        }
+
+        // Randomly select from available template sets
+        $selected_set = $template_sets[array_rand($template_sets)];
+        $template = $selected_set[array_rand($selected_set)];
+        
+        // Enhanced replacements with smart formatting
         $replacements = [
-            '{keyword}' => $keyword,
-            '{audience}' => str_replace('_', ' ', ucwords($combination['audience'], '_')),
-            '{industry}' => str_replace('_', ' ', ucwords($combination['industry'], '_')),
-            '{problem}' => str_replace('_', ' ', ucwords($combination['problem'], '_')),
-            '{format}' => str_replace('_', ' ', ucwords($combination['format'], '_')),
-            '{time}' => str_replace('_', ' ', ucwords($combination['time'], '_')),
-            '{skill}' => str_replace('_', ' ', ucwords($combination['skill'], '_')),
-            '{budget}' => str_replace('_', ' ', ucwords($combination['budget'], '_'))
+            '{keyword}' => $this->format_keyword($keyword),
+            '{audience}' => $this->format_audience($combination['audience']),
+            '{industry}' => $this->format_industry($combination['industry']),
+            '{problem}' => $this->format_problem($combination['problem']),
+            '{format}' => $this->format_format($combination['format']),
+            '{time}' => $this->format_time($combination['time']),
+            '{skill}' => $this->format_skill($combination['skill']),
+            '{budget}' => $this->format_budget($combination['budget'])
         ];
         
         return str_replace(array_keys($replacements), array_values($replacements), $template);
+    }
+
+    // Helper methods for smart formatting
+    private function format_keyword($keyword) {
+        return ucwords(strtolower($keyword));
+    }
+
+    private function format_audience($audience) {
+        $mappings = [
+            'small_businesses' => 'Small Business Owners',
+            'job_seekers' => 'Job Seekers',
+            'non_profits' => 'Nonprofit Organizations'
+        ];
+        return $mappings[$audience] ?? ucwords(str_replace('_', ' ', $audience));
+    }
+
+    private function format_industry($industry) {
+        $mappings = [
+            'real_estate' => 'Real Estate',
+            'food_beverage' => 'Food & Beverage',
+        ];
+        return $mappings[$industry] ?? ucwords(str_replace('_', ' ', $industry));
+    }
+
+    private function format_problem($problem) {
+        $mappings = [
+            'mistakes_to_avoid' => 'Critical Mistakes',
+            'optimization_strategies' => 'Performance Optimization',
+            'cost_reduction' => 'Cost Management',
+            'time_saving' => 'Time Efficiency',
+            'efficiency_improvement' => 'Operational Excellence',
+            'quality_enhancement' => 'Quality Improvement',
+            'security_concerns' => 'Security Challenges',
+            'compliance_issues' => 'Regulatory Compliance',
+            'scalability_challenges' => 'Growth Scalability',
+            'integration_problems' => 'System Integration',
+            'training_gaps' => 'Skills Development',
+            'measurement_difficulties' => 'Performance Metrics'
+        ];
+        return $mappings[$problem] ?? ucwords(str_replace('_', ' ', $problem));
     }
 
     private function build_detailed_prompt_focus($combination) {
@@ -127,14 +267,26 @@ class ATM_Ajax {
             "Include industry-specific examples, realistic constraints, and actionable advice that this specific audience can actually implement.";
     }
     
-    private function ensure_angles_table_exists() {
+    public function ensure_angles_table_exists() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
+        
+        error_log("ATM Debug: Checking if angles table exists");
         
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
         if (!$table_exists) {
             error_log("ATM Debug: Creating content angles table");
             ATM_Main::create_content_angles_table();
+            
+            // Verify it was created
+            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+            if (!$table_exists) {
+                error_log("ATM Debug: FAILED to create content angles table");
+            } else {
+                error_log("ATM Debug: Successfully created content angles table");
+            }
+        } else {
+            error_log("ATM Debug: Content angles table already exists");
         }
     }
     
@@ -1306,6 +1458,7 @@ public function translate_text() {
             
             $final_title = $article_title;
             $angle_combination = '';
+            $angle_description = '';
             
             // Generate angle and title locally (NO API CALL) if no title provided
             if (empty($article_title) && !empty($keyword)) {
@@ -1318,12 +1471,14 @@ public function translate_text() {
                 $angle_info = $this->generate_local_angle_and_title($tracking_keyword, $previous_angles);
                 $final_title = $angle_info['title'];
                 $angle_combination = $angle_info['combination_key'];
+                $angle_description = $this->build_angle_description($angle_info['combination']); // NEW: Build readable description
                 
                 error_log("ATM Debug: Generated LOCAL title: " . $final_title);
                 error_log("ATM Debug: Angle combination: " . $angle_combination);
+                error_log("ATM Debug: Angle description: " . $angle_description);
                 
-                // Store the angle BEFORE API call
-                $this->store_content_angle($tracking_keyword, $angle_combination, $final_title);
+                // Store the angle BEFORE API call - FIXED: Use angle description, not combination key
+                $this->store_content_angle($tracking_keyword, $angle_description, $final_title);
             }
             
             // Build content prompt (this will be the ONLY API call)
@@ -1405,6 +1560,51 @@ public function translate_text() {
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
+    }
+
+   private function build_angle_description($combination) {
+        return sprintf(
+            "Target %s in %s industry focusing on %s, structured as %s, with %s perspective, at %s level, considering %s budget constraints",
+            str_replace('_', ' ', $combination['audience']),
+            str_replace('_', ' ', $combination['industry']),
+            str_replace('_', ' ', $combination['problem']),
+            str_replace('_', ' ', $combination['format']),
+            str_replace('_', ' ', $combination['time']),
+            str_replace('_', ' ', $combination['skill']),
+            str_replace('_', ' ', $combination['budget'])
+        );
+    } 
+
+    private function build_detailed_angle_context($angle_parts, $title) {
+        if (count($angle_parts) < 7) return "";
+        
+        [$audience, $industry, $problem, $format, $time, $skill, $budget] = $angle_parts;
+        
+        return "**MANDATORY CONTENT ANGLE - FOLLOW EXACTLY:**
+
+    SPECIFIC AUDIENCE: Write exclusively for {$audience} working in the {$industry} industry
+    EXACT PROBLEM FOCUS: Address {$problem} - this must be the central theme
+    SKILL LEVEL REQUIREMENT: Target {$skill} level readers with appropriate depth
+    BUDGET CONTEXT: Consider {$budget} budget constraints in all recommendations
+    TIME PERSPECTIVE: Frame everything from a {$time} viewpoint
+    CONTENT FORMAT: Structure as a {$format} with appropriate formatting
+
+    **STRICT CONTENT RULES:**
+    1. Every paragraph must relate to this specific audience-problem combination
+    2. Use industry-specific terminology and examples relevant to {$industry}
+    3. Address the {$problem} challenge in multiple sections throughout the article
+    4. Provide solutions appropriate for {$skill} level readers
+    5. Consider {$budget} constraints in all recommendations
+    6. Include 3-5 specific examples from the {$industry} industry
+    7. Use the {$time} context to frame trends, predictions, or current relevance
+
+    **FORBIDDEN CONTENT:**
+    - Generic advice that could apply to any industry
+    - Solutions inappropriate for the {$skill} level
+    - Recommendations that ignore {$budget} constraints
+    - Content that doesn't address the core {$problem}
+
+    This is not optional - every single piece of content must align with this angle.";
     }
 
     // Add this new method for local angle generation (no API calls)
@@ -1510,16 +1710,18 @@ public function translate_text() {
         $table_name = $wpdb->prefix . 'atm_content_angles';
         
         $results = $wpdb->get_results($wpdb->prepare(
-            "SELECT angle, title FROM $table_name 
+            "SELECT angle, title, created_at FROM $table_name 
             WHERE keyword = %s 
             ORDER BY created_at DESC 
-            LIMIT 20",
+            LIMIT 50",
             $keyword
         ), ARRAY_A);
         
-        if ($wpdb->last_error) {
-            error_log("ATM Debug: Database error getting angles: " . $wpdb->last_error);
-            return [];
+        // Log angle diversity metrics
+        if (!empty($results)) {
+            $unique_combinations = array_unique(array_column($results, 'angle'));
+            $diversity_score = count($unique_combinations) / count($results);
+            error_log("ATM Angle Diversity for '$keyword': " . round($diversity_score * 100, 1) . "% unique combinations");
         }
         
         return $results ?: [];
@@ -1637,6 +1839,13 @@ public function translate_text() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_content_angles';
         
+        // Verify table exists first
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+        if (!$table_exists) {
+            error_log("ATM Debug: Content angles table does not exist, creating...");
+            ATM_Main::create_content_angles_table();
+        }
+        
         error_log("ATM Debug: Attempting to store angle - Keyword: $keyword, Angle: $angle, Title: $title");
         
         $result = $wpdb->insert($table_name, [
@@ -1648,12 +1857,15 @@ public function translate_text() {
         
         if ($result === false) {
             error_log("ATM Debug: Failed to store angle. Error: " . $wpdb->last_error);
+            error_log("ATM Debug: Last query: " . $wpdb->last_query);
+            // Try to create table again if insert failed
+            ATM_Main::create_content_angles_table();
         } else {
             error_log("ATM Debug: Successfully stored angle. Insert ID: " . $wpdb->insert_id);
         }
         
         return $result;
-}
+    }
 
     public function generate_news_article() {
         if (!ATM_Licensing::is_license_active()) {
