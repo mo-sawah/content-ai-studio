@@ -1,12 +1,13 @@
 // src/components/TrendingForm.js
-import { useState, useEffect } from "@wordpress/element";
+import { useState, useEffect, useRef } from "@wordpress/element";
 import {
   Button,
   TextControl,
   CheckboxControl,
-  SelectControl,
+  Spinner,
+  DropdownMenu,
 } from "@wordpress/components";
-import CustomSpinner from "./common/CustomSpinner";
+import { chevronDown } from "@wordpress/icons";
 
 const callAjax = (action, data) =>
   jQuery.ajax({
@@ -15,336 +16,258 @@ const callAjax = (action, data) =>
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
 
+// Custom Dropdown Component (styled like the rest of the plugin)
+const CustomDropdown = ({ label, text, options, onChange, disabled }) => {
+  const dropdownRef = useRef(null);
+  useEffect(() => {
+    if (dropdownRef.current) {
+      const width = dropdownRef.current.offsetWidth;
+      document.documentElement.style.setProperty(
+        "--atm-dropdown-width",
+        `${width}px`
+      );
+    }
+  }, [text]);
+
+  return (
+    <div className="atm-dropdown-field" ref={dropdownRef}>
+      <label className="atm-dropdown-label">{label}</label>
+      <DropdownMenu
+        className="atm-custom-dropdown"
+        icon={chevronDown}
+        text={text}
+        controls={options.map((option) => ({
+          title: option.label,
+          onClick: () => onChange(option),
+        }))}
+        disabled={disabled}
+      />
+    </div>
+  );
+};
+
 const TrendingForm = () => {
   const [keyword, setKeyword] = useState("");
   const [trendingTopics, setTrendingTopics] = useState([]);
   const [selectedTopics, setSelectedTopics] = useState([]);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
-  const [region, setRegion] = useState("US");
-  const [searchSource, setSearchSource] = useState("combined");
+  const [statusMessage, setStatusMessage] = useState({ text: "", type: "" });
 
-  // Article generation settings
+  // Search Parameters
+  const [region, setRegion] = useState({ label: "United States", value: "US" });
+  const [language, setLanguage] = useState({ label: "English", value: "en" });
+  const [date, setDate] = useState({ label: "Past Week", value: "now 7-d" });
+
+  // Article Settings
   const [articleSettings, setArticleSettings] = useState({
-    wordCount: "800-1200",
-    tone: "professional",
-    includeImages: true,
     autoPublish: false,
   });
 
   const regions = [
     { label: "United States", value: "US" },
-    { label: "Global", value: "" },
     { label: "United Kingdom", value: "GB" },
     { label: "Canada", value: "CA" },
     { label: "Australia", value: "AU" },
     { label: "Germany", value: "DE" },
     { label: "France", value: "FR" },
     { label: "India", value: "IN" },
+    { label: "Global", value: "" },
   ];
-
-  const searchSources = [
-    {
-      label: "Combined Search",
-      value: "combined",
-      icon: "⚡",
-      description: "Use all sources for maximum coverage",
-    },
-    {
-      label: "OpenRouter Web Search",
-      value: "openrouter_web",
-      icon: "🌐",
-      description: "AI-powered web search for trending topics",
-    },
-    {
-      label: "Google Trends (SerpApi)",
-      value: "google_trends",
-      icon: "📈",
-      description: "Real search trends from Google",
-    },
-    {
-      label: "Google Custom Search",
-      value: "google_custom",
-      icon: "🔍",
-      description: "Search recent popular articles",
-    },
+  const languages = [
+    { label: "English", value: "en" },
+    { label: "Spanish", value: "es" },
+    { label: "German", value: "de" },
+    { label: "French", value: "fr" },
   ];
-
-  const wordCountOptions = [
-    { label: "Short (400-600 words)", value: "400-600" },
-    { label: "Medium (800-1200 words)", value: "800-1200" },
-    { label: "Long (1500-2000 words)", value: "1500-2000" },
-  ];
-
-  const toneOptions = [
-    { label: "Professional", value: "professional" },
-    { label: "Casual", value: "casual" },
-    { label: "News / Journalistic", value: "journalistic" },
+  const dates = [
+    { label: "Past Day", value: "now 1-d" },
+    { label: "Past Week", value: "now 7-d" },
+    { label: "Past Month", value: "today 1-m" },
+    { label: "Past Year", value: "today 12-m" },
   ];
 
   const fetchTrendingTopics = async () => {
     setIsLoadingTrends(true);
-    setStatusMessage("Searching for trending topics...");
+    setStatusMessage({ text: "Searching Google Trends...", type: "info" });
     setTrendingTopics([]);
     setSelectedTopics([]);
 
     try {
-      const response = await callAjax("fetch_trending_topics_multi_source", {
+      const response = await callAjax("fetch_trending_topics", {
         keyword: keyword.trim(),
-        region: region,
-        search_source: searchSource,
+        region: region.value,
+        language: language.value,
+        date: date.value,
       });
 
-      if (!response.success) {
-        throw new Error(response.data || "Failed to fetch trending topics");
-      }
-
+      if (!response.success) throw new Error(response.data);
       setTrendingTopics(response.data.trends || []);
-
-      if (!response.data.trends || response.data.trends.length === 0) {
-        setStatusMessage(
-          "No trending topics found. Try a different keyword, region, or search source."
-        );
-      } else {
-        setStatusMessage(
-          `Found ${response.data.trends.length} trending topics.`
-        );
-      }
+      setStatusMessage({
+        text: response.data.trends?.length
+          ? `Found ${response.data.trends.length} trending topics.`
+          : "No trending topics found. Try a different keyword or timeframe.",
+        type: "info",
+      });
     } catch (err) {
-      setStatusMessage(`Error: ${err.message}`);
-      console.error("Error fetching trending topics:", err);
+      setStatusMessage({ text: `Error: ${err.message}`, type: "error" });
     } finally {
       setIsLoadingTrends(false);
     }
   };
 
-  const handleTopicSelection = (topicIndex, isSelected) => {
+  const handleTopicSelection = (topic, isSelected) => {
     if (isSelected) {
-      setSelectedTopics([...selectedTopics, topicIndex]);
+      setSelectedTopics((prev) => [...prev, topic]);
     } else {
-      setSelectedTopics(selectedTopics.filter((index) => index !== topicIndex));
+      setSelectedTopics((prev) => prev.filter((t) => t.title !== topic.title));
     }
   };
 
   const generateArticlesFromTrends = async () => {
     if (selectedTopics.length === 0) {
-      setStatusMessage("Please select at least one topic.");
+      setStatusMessage({
+        text: "Please select at least one topic.",
+        type: "error",
+      });
       return;
     }
-
     setIsGeneratingArticle(true);
-    setStatusMessage(`Generating ${selectedTopics.length} article(s)...`);
-
+    setStatusMessage({
+      text: `Generating ${selectedTopics.length} article(s)...`,
+      type: "info",
+    });
     try {
-      const selectedTrendingTopics = selectedTopics.map(
-        (index) => trendingTopics[index]
-      );
-
       const response = await callAjax("generate_trending_articles", {
-        trending_topics: JSON.stringify(selectedTrendingTopics),
+        trending_topics: JSON.stringify(selectedTopics),
         settings: JSON.stringify(articleSettings),
+        language: language.label, // Pass language name for prompt
       });
-
-      if (!response.success) {
-        throw new Error(
-          response.data || "Failed to generate articles from trends"
-        );
-      }
-
+      if (!response.success) throw new Error(response.data);
       setSelectedTopics([]);
-      setStatusMessage(
-        `✅ Successfully generated ${response.data.successful_count} trending article(s)!`
-      );
+      setStatusMessage({
+        text: `✅ Successfully generated ${response.data.successful_count} article(s)!`,
+        type: "success",
+      });
     } catch (err) {
-      setStatusMessage(`Error: ${err.message}`);
-      console.error("Error generating trending articles:", err);
+      setStatusMessage({ text: `Error: ${err.message}`, type: "error" });
     } finally {
       setIsGeneratingArticle(false);
     }
   };
 
-  // Load initial trends on component mount
   useEffect(() => {
     fetchTrendingTopics();
   }, []);
 
-  const getSourceBadge = (source) => {
-    const sourceMap = {
-      google_trends: { icon: "📈", color: "#4285f4", name: "Google Trends" },
-      google_custom: { icon: "🔍", color: "#34a853", name: "Google Search" },
-      openrouter_web: { icon: "🌐", color: "#ea4335", name: "Web Search" },
-      combined: { icon: "⚡", color: "#fbbc04", name: "Combined" },
-      fallback: { icon: "💡", color: "#9aa0a6", name: "Generated" },
-    };
-    const sourceInfo = sourceMap[source] || sourceMap.fallback;
-    return (
-      <span
-        className="atm-topic-source-badge"
-        style={{ background: sourceInfo.color }}
-      >
-        {sourceInfo.icon} {sourceInfo.name}
-      </span>
-    );
-  };
-
   return (
     <div className="atm-form-container">
-      {/* Search Source Selection */}
       <div className="atm-form-section">
-        <h3 className="atm-section-title">Search Source</h3>
-        <div className="atm-search-sources">
-          {searchSources.map((source) => (
-            <label
-              key={source.value}
-              className={`atm-source-option ${
-                searchSource === source.value ? "active" : ""
-              }`}
-            >
-              <input
-                type="radio"
-                name="search_source"
-                value={source.value}
-                checked={searchSource === source.value}
-                onChange={(e) => setSearchSource(e.target.value)}
-              />
-              <div className="atm-source-content">
-                <div className="atm-source-header">
-                  <span className="atm-source-icon">{source.icon}</span>
-                  <span className="atm-source-label">{source.label}</span>
-                </div>
-                <p className="atm-source-description">{source.description}</p>
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Search Parameters */}
-      <div className="atm-form-section">
-        <h3 className="atm-section-title">Search Parameters</h3>
-        <div className="atm-form-grid">
-          <TextControl
-            label="Keyword (Optional)"
-            value={keyword}
-            onChange={setKeyword}
-            placeholder="e.g., technology, elections..."
-            help="Leave empty for general trends"
-          />
-          <SelectControl
+        <h3 className="atm-section-title">Find Trending Topics</h3>
+        <TextControl
+          label="Keyword"
+          value={keyword}
+          onChange={setKeyword}
+          placeholder="e.g., AI, renewable energy, summer movies..."
+          help="Leave empty for general trends in the selected region."
+        />
+        <div
+          className="atm-form-grid"
+          style={{ gridTemplateColumns: "1fr 1fr 1fr" }}
+        >
+          <CustomDropdown
             label="Region"
-            value={region}
+            text={region.label}
             options={regions}
             onChange={setRegion}
-            help="For Google Trends & Search"
+            disabled={isLoadingTrends}
+          />
+          <CustomDropdown
+            label="Language"
+            text={language.label}
+            options={languages}
+            onChange={setLanguage}
+            disabled={isLoadingTrends}
+          />
+          <CustomDropdown
+            label="Date"
+            text={date.label}
+            options={dates}
+            onChange={setDate}
+            disabled={isLoadingTrends}
           />
         </div>
         <Button
-          isSecondary
+          isPrimary
           onClick={fetchTrendingTopics}
           disabled={isLoadingTrends || isGeneratingArticle}
         >
-          {isLoadingTrends ? "Searching..." : "Search For Trends"}
+          {isLoadingTrends ? (
+            <>
+              <Spinner />
+              Searching...
+            </>
+          ) : (
+            "Search For Trends"
+          )}
         </Button>
       </div>
 
-      {/* Status & Loading */}
-      {(isLoadingTrends || statusMessage) && (
-        <div className="atm-status-container">
-          {isLoadingTrends && <CustomSpinner />}
-          {statusMessage && (
-            <p className="atm-status-message info">{statusMessage}</p>
-          )}
-        </div>
+      {statusMessage.text && (
+        <p className={`atm-status-message ${statusMessage.type}`}>
+          {statusMessage.text}
+        </p>
       )}
 
-      {/* Trending Topics List */}
       {!isLoadingTrends && trendingTopics.length > 0 && (
-        <div className="atm-trending-topics">
-          <h3 className="atm-section-title">Select Topics to Write About</h3>
-          <div className="atm-topics-list">
+        <>
+          <div className="atm-trending-topics-grid">
             {trendingTopics.map((topic, index) => (
               <div
                 key={index}
-                className={`atm-topic-item ${
-                  selectedTopics.includes(index) ? "selected" : ""
-                }`}
+                className={`atm-topic-card ${selectedTopics.some((t) => t.title === topic.title) ? "selected" : ""}`}
               >
-                <CheckboxControl
-                  checked={selectedTopics.includes(index)}
-                  onChange={(isSelected) =>
-                    handleTopicSelection(index, isSelected)
-                  }
-                  disabled={isGeneratingArticle}
-                />
-                <div className="atm-topic-content">
-                  <div className="atm-topic-header">
-                    <strong>{topic.title}</strong>
-                    {topic.source && getSourceBadge(topic.source)}
+                <div className="atm-card-header">
+                  <CheckboxControl
+                    checked={selectedTopics.some(
+                      (t) => t.title === topic.title
+                    )}
+                    onChange={(isSelected) =>
+                      handleTopicSelection(topic, isSelected)
+                    }
+                    disabled={isGeneratingArticle}
+                  />
+                  <h4 className="atm-card-title">{topic.title}</h4>
+                </div>
+                <div className="atm-card-body">
+                  <p className="atm-card-snippet">{topic.snippet}</p>
+                  <div className="atm-card-meta">
+                    <span className="atm-card-traffic">🔥 {topic.traffic}</span>
+                    <a
+                      href={topic.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="atm-card-link"
+                    >
+                      View on Google Trends ↗
+                    </a>
                   </div>
-                  {topic.snippet && (
-                    <p className="atm-topic-snippet">{topic.snippet}</p>
+                  {topic.related_keywords && (
+                    <div className="atm-related-keywords">
+                      <strong>Related:</strong>
+                      <ul>
+                        {topic.related_keywords.slice(0, 3).map((kw) => (
+                          <li key={kw}>{kw}</li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
-                  <div className="atm-topic-meta">
-                    {topic.traffic && (
-                      <span className="atm-topic-traffic">
-                        🔥 {topic.traffic}
-                      </span>
-                    )}
-                    {topic.url && (
-                      <a
-                        href={topic.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="atm-topic-link"
-                      >
-                        🔗 View Source
-                      </a>
-                    )}
-                  </div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Article Generation Settings */}
-      {selectedTopics.length > 0 && (
-        <div className="atm-form-section">
-          <h3 className="atm-section-title">Article Generation Settings</h3>
-          <div className="atm-form-grid">
-            <SelectControl
-              label="Article Length"
-              value={articleSettings.wordCount}
-              options={wordCountOptions}
-              onChange={(value) =>
-                setArticleSettings((prev) => ({ ...prev, wordCount: value }))
-              }
-              disabled={isGeneratingArticle}
-            />
-            <SelectControl
-              label="Writing Tone"
-              value={articleSettings.tone}
-              options={toneOptions}
-              onChange={(value) =>
-                setArticleSettings((prev) => ({ ...prev, tone: value }))
-              }
-              disabled={isGeneratingArticle}
-            />
-          </div>
-          <div className="atm-form-grid">
-            <CheckboxControl
-              label="Generate a featured image for each article"
-              checked={articleSettings.includeImages}
-              onChange={(value) =>
-                setArticleSettings((prev) => ({
-                  ...prev,
-                  includeImages: value,
-                }))
-              }
-              disabled={isGeneratingArticle}
-            />
+          <div className="atm-form-section atm-generation-actions">
+            <h3 className="atm-section-title">{`Generate ${selectedTopics.length} Article(s)`}</h3>
             <CheckboxControl
               label="Auto-publish articles (otherwise save as draft)"
               checked={articleSettings.autoPublish}
@@ -353,17 +276,22 @@ const TrendingForm = () => {
               }
               disabled={isGeneratingArticle}
             />
+            <Button
+              isPrimary
+              onClick={generateArticlesFromTrends}
+              disabled={isGeneratingArticle || selectedTopics.length === 0}
+            >
+              {isGeneratingArticle ? (
+                <>
+                  <Spinner />
+                  Generating...
+                </>
+              ) : (
+                "Generate Selected Articles"
+              )}
+            </Button>
           </div>
-          <Button
-            isPrimary
-            onClick={generateArticlesFromTrends}
-            disabled={isGeneratingArticle}
-          >
-            {isGeneratingArticle
-              ? `Generating ${selectedTopics.length} Article(s)...`
-              : `Generate ${selectedTopics.length} Article(s)`}
-          </Button>
-        </div>
+        </>
       )}
     </div>
   );

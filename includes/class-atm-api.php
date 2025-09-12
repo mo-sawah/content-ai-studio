@@ -339,190 +339,63 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
-    public static function fetch_trending_topics_multi_source($keyword, $region, $source) {
-        $trends = [];
-        $sources_used = [];
+    
 
+    /**
+     * Main function to fetch trending topics, now exclusively from SerpApi.
+     */
+    public static function fetch_trending_topics($keyword, $region, $language, $date) {
         try {
-            switch ($source) {
-                case 'openrouter_web':
-                    $trends = self::_fetch_trends_from_openrouter($keyword, $region);
-                    $sources_used[] = 'OpenRouter Web Search';
-                    break;
-                case 'google_custom':
-                    $trends = self::_fetch_trends_from_google_cse($keyword, $region);
-                    $sources_used[] = 'Google Custom Search';
-                    break;
-                case 'google_trends':
-                    $trends = self::_fetch_trends_from_serpapi($keyword, $region);
-                    $sources_used[] = 'Google Trends (SerpApi)';
-                    break;
-                case 'combined':
-                default:
-                    $openrouter_trends = self::_fetch_trends_from_openrouter($keyword, $region);
-                    $sources_used[] = 'OpenRouter Web Search';
-                    $google_trends = self::_fetch_trends_from_serpapi($keyword, $region);
-                    $sources_used[] = 'Google Trends (SerpApi)';
-                    $trends = self::_merge_and_deduplicate_trends($openrouter_trends, $google_trends);
-                    break;
-            }
+            $trends = self::_fetch_trends_from_serpapi($keyword, $region, $language, $date);
         } catch (Exception $e) {
-            // If a source fails, we can either throw the error or log it and continue.
-            // For a better user experience, we'll log it and return what we have.
             error_log('ATM Trending Topics Error: ' . $e->getMessage());
-            // If the primary source failed, we might throw the error up
-            if ($source !== 'combined') {
-                throw $e;
-            }
+            throw $e;
         }
         
-        // Sort trends by traffic if available, otherwise keep order
-        usort($trends, function($a, $b) {
-            $a_traffic = isset($a['traffic_numeric']) ? $a['traffic_numeric'] : 0;
-            $b_traffic = isset($b['traffic_numeric']) ? $b['traffic_numeric'] : 0;
-            return $b_traffic <=> $a_traffic;
-        });
+        // Sort trends by traffic
+        usort($trends, fn($a, $b) => ($b['traffic_numeric'] ?? 0) <=> ($a['traffic_numeric'] ?? 0));
 
-        return ['trends' => array_slice($trends, 0, 20), 'sources_used' => $sources_used];
-    }
-
-    /**
-     * Fetch trends using OpenRouter Web Search for qualitative analysis.
-     */
-    private static function _fetch_trends_from_openrouter($keyword, $region) {
-        $prompt_keyword = empty($keyword) ? "general news and culture" : "'{$keyword}'";
-        $prompt_region = empty($region) ? "globally" : "in {$region}";
-
-        $system_prompt = "You are a professional trend analyst. Your task is to identify the top 5-7 trending topics related to {$prompt_keyword} {$prompt_region} right now. Use your web search ability to find the most current information.
-
-        For each trend, provide:
-        - A concise, engaging title.
-        - A one-sentence snippet explaining why it's trending.
-
-        Your response MUST be a single, valid JSON object with a single key 'trends', which is an array of objects. Each object must have 'title' and 'snippet' keys.
-        Example:
-        {
-        \"trends\": [
-            {
-            \"title\": \"Example Trend Title\",
-            \"snippet\": \"This is a brief explanation of why this topic is currently trending.\"
-            }
-        ]
-        }";
-
-        $raw_response = self::enhance_content_with_openrouter(
-            ['content' => "Find trending topics for {$prompt_keyword}"],
-            $system_prompt,
-            'anthropic/claude-3-haiku', // Fast and cost-effective
-            true, // JSON mode
-            true  // Enable web search
-        );
-
-        $result = json_decode($raw_response, true);
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['trends'])) {
-            return [];
-        }
-
-        // Add source to each item
-        return array_map(function($trend) {
-            $trend['source'] = 'openrouter_web';
-            return $trend;
-        }, $result['trends']);
-    }
-
-    /**
-     * Fetch trends using Google Custom Search to find popular recent articles.
-     */
-    private static function _fetch_trends_from_google_cse($keyword, $region) {
-        $api_key = get_option('atm_google_news_search_api_key');
-        $search_engine_id = get_option('atm_google_trending_cse_id');
-
-        if (empty($api_key) || empty($search_engine_id)) {
-            throw new Exception('Google Custom Search API Key and Trending Search Engine ID must be configured.');
-        }
-        
-        $query = empty($keyword) ? "latest news" : $keyword;
-
-        $search_params = [
-            'key' => $api_key, 'cx' => $search_engine_id, 'q' => $query,
-            'num' => 10, 'sort' => 'date', 'dateRestrict' => 'd7' // Last 7 days
-        ];
-        
-        if(!empty($region)) {
-            $search_params['gl'] = $region;
-        }
-
-        $url = 'https://www.googleapis.com/customsearch/v1?' . http_build_query($search_params);
-        $response = wp_remote_get($url, ['timeout' => 20]);
-        if (is_wp_error($response)) throw new Exception('Failed to connect to Google Search API.');
-
-        $body = wp_remote_retrieve_body($response);
-        $result = json_decode($body, true);
-        if (wp_remote_retrieve_response_code($response) !== 200) {
-            throw new Exception('Google Search API Error: ' . ($result['error']['message'] ?? 'Unknown error'));
-        }
-
-        if (!isset($result['items'])) return [];
-
-        $trends = [];
-        foreach ($result['items'] as $item) {
-            $trends[] = [
-                'title' => sanitize_text_field($item['title']),
-                'snippet' => sanitize_text_field($item['snippet']),
-                'url' => esc_url_raw($item['link']),
-                'source' => 'google_custom'
-            ];
-        }
-        return $trends;
+        return ['trends' => array_slice($trends, 0, 24)];
     }
 
     /**
      * Fetch quantitative trends from Google Trends via SerpApi.
+     * UPDATED to handle new parameters and response formats.
      */
-    private static function _fetch_trends_from_serpapi($keyword, $region) {
+    private static function _fetch_trends_from_serpapi($keyword, $region, $language, $date) {
         $api_key = get_option('atm_serpapi_key');
         if (empty($api_key)) {
-            // Return empty array instead of throwing an error if the key isn't configured,
-            // so the "Combined Search" can still function with other sources.
-            error_log('ATM Trend Warning: SerpApi key is not configured. Skipping Google Trends source.');
-            return [];
+            throw new Exception('SerpApi key is not configured in AI Studio -> API Keys.');
         }
 
-        $params = [ 'api_key' => $api_key ];
-        
-        // Use the new, correct endpoint for fetching daily trending searches when no keyword is provided.
+        $params = [
+            'api_key' => $api_key,
+            'engine' => 'google_trends',
+        ];
+
         if (empty($keyword)) {
-            $params['engine'] = 'google_trends';
             $params['type'] = 'TRENDING_SEARCHES';
         } else {
-            // This part for related queries remains the same and is not deprecated.
-            $params['engine'] = 'google_trends';
             $params['q'] = $keyword;
             $params['data_type'] = 'RELATED_QUERIES';
         }
 
-        if (!empty($region)) {
-            $params['gl'] = $region;
-        }
+        if (!empty($region)) $params['gl'] = $region;
+        if (!empty($language)) $params['hl'] = $language;
+        if (!empty($date)) $params['date'] = $date;
         
         $url = 'https://serpapi.com/search.json?' . http_build_query($params);
-        $response = wp_remote_get($url, ['timeout' => 20]);
-        if (is_wp_error($response)) {
-            throw new Exception('SerpApi request failed: ' . $response->get_error_message());
-        }
+        $response = wp_remote_get($url, ['timeout' => 25]);
+        if (is_wp_error($response)) throw new Exception('SerpApi request failed: ' . $response->get_error_message());
         
         $body = wp_remote_retrieve_body($response);
         $result = json_decode($body, true);
         
-        if (isset($result['error'])) {
-            // Provide a more specific error message to the user.
-            throw new Exception('SerpApi Error: ' . $result['error']);
-        }
+        if (isset($result['error'])) throw new Exception('SerpApi Error: ' . $result['error']);
 
         $trends = [];
         $source_data = [];
 
-        // Adjust parsing logic for the new API response structures.
         if (!empty($keyword) && isset($result['related_queries']['rising'])) {
             $source_data = $result['related_queries']['rising'];
         } elseif (empty($keyword) && isset($result['trending_searches'])) {
@@ -530,85 +403,59 @@ class ATM_API {
         }
 
         foreach ($source_data as $item) {
-            // The new 'trending_searches' response has 'title' and 'subtitle' (for traffic).
-            // The 'related_queries' response has 'query' and 'value' (for traffic).
             $title = $item['title'] ?? $item['query'] ?? '';
-            $traffic = $item['subtitle'] ?? $item['value'] ?? '';
-
             if (empty($title)) continue;
 
             $trends[] = [
                 'title' => sanitize_text_field($title),
-                'traffic' => esc_html($traffic),
-                'traffic_numeric' => intval(preg_replace('/[^\d]/', '', $traffic ?? '0')),
-                'snippet' => esc_html($item['snippet'] ?? ''),
+                'traffic' => esc_html($item['subtitle'] ?? ($item['value'] ?? '')),
+                'traffic_numeric' => intval(preg_replace('/[^\d]/', '', $item['subtitle'] ?? ($item['value'] ?? '0'))),
+                'snippet' => esc_html($item['snippet'] ?? "A rising search trend related to '{$keyword}'."),
                 'url' => esc_url_raw($item['explore_link'] ?? ($item['link'] ?? '')),
-                'source' => 'google_trends'
+                'related_keywords' => array_map('sanitize_text_field', $item['related_queries'] ?? []),
             ];
         }
         return $trends;
     }
 
     /**
-     * Merge and de-duplicate trends from multiple sources.
-     */
-    private static function _merge_and_deduplicate_trends(...$trend_arrays) {
-        $merged = [];
-        $titles = [];
-
-        foreach ($trend_arrays as $trends) {
-            foreach ($trends as $trend) {
-                $normalized_title = strtolower(trim($trend['title']));
-                if (!in_array($normalized_title, $titles)) {
-                    $merged[] = $trend;
-                    $titles[] = $normalized_title;
-                }
-            }
-        }
-        return $merged;
-    }
-
-    /**
      * Generate a single article from a trending topic.
+     * UPDATED to accept language.
      */
-    public static function generate_article_from_trend($topic, $settings) {
-        $word_count = esc_html($settings['wordCount'] ?? '800-1200');
+    public static function generate_article_from_trend($topic, $settings, $language = 'English') {
         $tone = esc_html($settings['tone'] ?? 'professional');
         
-        $system_prompt = "You are an expert journalist and content creator. Your task is to write a comprehensive, engaging, and SEO-friendly article about the following trending topic. Use your web search ability to gather the most current information, facts, and context.
+        $system_prompt = "You are an expert journalist. Your task is to write a comprehensive, engaging, and SEO-friendly article in {$language} about the trending topic: '{$topic['title']}'.
+        Use your web search ability to gather the most current information.
 
-        **TRENDING TOPIC:** {$topic['title']}
-        **CONTEXT / SNIPPET:** {$topic['snippet']}
+        **CONTEXT:** {$topic['snippet']}
 
         **CRITICAL INSTRUCTIONS:**
-        - **Word Count:** The article must be between {$word_count} words.
+        - **Language:** The entire article must be written in {$language}.
         - **Tone:** Adopt a {$tone} writing style.
-        - **Structure:** Use clear H2 and H3 headings. Do NOT include an H1 heading in the content.
-        - **Introduction:** Start with a compelling hook that explains why this topic is trending right now.
-        - **Body:** Cover the key aspects of the topic: who, what, where, when, why, and how. Include background information and future implications.
-        - **Conclusion:** End with a strong concluding paragraph. Do NOT use a heading like 'Conclusion'.
-        - **Originality:** Write completely original content. Do not copy from sources.
+        - **Structure:** Use clear H2 and H3 headings. Do NOT include an H1 heading.
+        - **Content:** Cover the topic in depth. Explain what it is, why it's trending, and what the implications are.
+        - **Conclusion:** End with a strong concluding paragraph without a 'Conclusion' heading.
 
         **OUTPUT FORMAT (JSON):**
         Your entire response MUST be a single, valid JSON object with two keys:
-        1. \"title\": A compelling, SEO-friendly title for the article.
-        2. \"content\": The full article content in Markdown format.";
+        1. \"title\": A compelling, SEO-friendly title for the article, written in {$language}.
+        2. \"content\": The full article content in Markdown format, written in {$language}.";
 
         $raw_response = self::enhance_content_with_openrouter(
             ['content' => $topic['title']],
             $system_prompt,
             get_option('atm_article_model', 'openai/gpt-4o'),
-            true, // JSON mode
-            true  // Enable web search
+            true, true
         );
 
         $result = json_decode($raw_response, true);
         if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
             throw new Exception('The AI returned an invalid response structure.');
         }
-
         return $result;
     }
+
 
     /**
      * Generate an image using Vertex AI Gemini 2.5 Flash Image (Nano Banana).

@@ -6,17 +6,17 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
-    public function fetch_trending_topics_multi_source() {
+    public function fetch_trending_topics() {
         check_ajax_referer('atm_nonce', 'nonce');
         try {
             $keyword = isset($_POST['keyword']) ? sanitize_text_field($_POST['keyword']) : '';
             $region = isset($_POST['region']) ? sanitize_text_field($_POST['region']) : 'US';
-            $source = isset($_POST['search_source']) ? sanitize_key($_POST['search_source']) : 'combined';
+            $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : 'en';
+            $date = isset($_POST['date']) ? sanitize_text_field($_POST['date']) : 'now 7-d';
 
-            $result = ATM_API::fetch_trending_topics_multi_source($keyword, $region, $source);
+            $result = ATM_API::fetch_trending_topics($keyword, $region, $language, $date);
 
             wp_send_json_success($result);
-
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
@@ -29,72 +29,47 @@ class ATM_Ajax {
         try {
             $topics = isset($_POST['trending_topics']) ? json_decode(stripslashes($_POST['trending_topics']), true) : [];
             $settings = isset($_POST['settings']) ? json_decode(stripslashes($_POST['settings']), true) : [];
+            $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : 'English';
 
             if (empty($topics) || empty($settings)) {
-                throw new Exception('Missing topics or settings for article generation.');
+                throw new Exception('Missing topics or settings.');
             }
 
             $successful_count = 0;
             foreach ($topics as $topic) {
                 try {
                     // 1. Generate Article Content & Title
-                    $article_data = ATM_API::generate_article_from_trend($topic, $settings);
+                    $article_data = ATM_API::generate_article_from_trend($topic, $settings, $language);
                     $post_status = ($settings['autoPublish'] ?? false) ? 'publish' : 'draft';
                     $Parsedown = new Parsedown();
                     $html_content = $Parsedown->text($article_data['content']);
 
                     // 2. Create the Post
-                    $post_arr = [
+                    $post_id = wp_insert_post([
                         'post_title'   => sanitize_text_field($article_data['title']),
                         'post_content' => wp_kses_post($html_content),
                         'post_status'  => $post_status,
                         'post_author'  => get_current_user_id(),
-                    ];
-                    $post_id = wp_insert_post($post_arr);
+                    ]);
 
-                    if (is_wp_error($post_id)) {
-                        throw new Exception('Failed to create post: ' . $post_id->get_error_message());
-                    }
-
-                    // 3. Generate Featured Image if requested
-                    if ($settings['includeImages'] ?? false) {
-                        $image_prompt = ATM_API::get_default_image_prompt();
-                        $final_prompt = str_replace('[article_title]', $article_data['title'], $image_prompt);
-
-                        $image_result = ATM_API::generate_image_with_configured_provider($final_prompt);
-                        
-                        if ($image_result['is_url']) {
-                            $attachment_id = $this->set_image_from_url($image_result['data'], $post_id);
-                        } else {
-                            $attachment_id = $this->set_image_from_data($image_result['data'], $post_id, $final_prompt);
-                        }
-                        
-                        if (!is_wp_error($attachment_id)) {
-                            set_post_thumbnail($post_id, $attachment_id);
-                        } else {
-                            error_log("ATM Trending Image Failed for Post {$post_id}: " . $attachment_id->get_error_message());
-                        }
-                    }
+                    if (is_wp_error($post_id)) continue;
                     
                     $successful_count++;
-
                 } catch (Exception $e) {
-                    error_log("ATM Trending Article Failed for topic '{$topic['title']}': " . $e->getMessage());
-                    // Continue to the next topic even if one fails
+                    error_log("ATM Trending Article Failed for '{$topic['title']}': " . $e->getMessage());
                     continue;
                 }
             }
 
             if ($successful_count === 0) {
-                throw new Exception('Could not generate any articles. Please check the logs or try again.');
+                throw new Exception('Could not generate any articles. Please check API logs or try again.');
             }
 
             wp_send_json_success(['successful_count' => $successful_count]);
-
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
-}
+    }
 
     private function get_massive_scale_angles() {
         return [
@@ -1321,7 +1296,7 @@ public function translate_text() {
         add_action('wp_ajax_check_podcast_progress', array($this, 'check_podcast_progress'));
         add_action('wp_ajax_debug_twitter_response', array($this, 'debug_twitter_response'));
 
-        add_action('wp_ajax_fetch_trending_topics_multi_source', array($this, 'fetch_trending_topics_multi_source'));
+        add_action('wp_ajax_fetch_trending_topics', array($this, 'fetch_trending_topics'));
         add_action('wp_ajax_generate_trending_articles', array($this, 'generate_trending_articles'));
 
         add_action('wp_ajax_search_google_news', array($this, 'search_google_news'));
