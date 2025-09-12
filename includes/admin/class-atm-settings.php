@@ -661,6 +661,20 @@ private function render_api_tab() {
                 <tr><th scope="row">ScrapingAnt API Key</th><td><input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" /><p class="description">Required for RSS scraping. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p></td></tr>
                 <tr><th scope="row">Mercury Reader API Key (Optional)</th><td><input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p></td></tr>
                 <tr><th scope="row">TwitterAPI.io Key</th><td><input type="password" name="atm_twitterapi_key" value="<?php echo esc_attr($options['twitterapi_key']); ?>" class="regular-text" /><p class="description">Required for Twitter/X news search. Get a free key from <a href="https://twitterapi.io/" target="_blank">TwitterAPI.io</a>.</p></td></tr>
+                <tr>
+                    <th scope="row">SerpApi Key</th>
+                    <td>
+                        <input type="password" name="atm_serpapi_key" value="<?php echo esc_attr(get_option('atm_serpapi_key', '')); ?>" class="regular-text" />
+                        <p class="description">Required for Google Trends. Get a key from <a href="https://serpapi.com/" target="_blank">SerpApi</a>.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Google Trending Search Engine ID</th>
+                    <td>
+                        <input type="text" name="atm_google_trending_cse_id" value="<?php echo esc_attr(get_option('atm_google_trending_cse_id', '')); ?>" class="regular-text" />
+                        <p class="description">Create a new Custom Search Engine at <a href="https://cse.google.com/" target="_blank">Google CSE</a> configured to search the <strong>entire web</strong>.</p>
+                    </td>
+                </tr>
 
                 <tr>
                 <th scope="row">Vertex Project ID</th>
@@ -819,6 +833,13 @@ private function render_advanced_tab() {
         }
         if (isset($_POST['atm_nanobanana_model'])) {
             update_option('atm_nanobanana_model', sanitize_text_field($_POST['atm_nanobanana_model']));
+        }
+
+        if (isset($_POST['atm_serpapi_key'])) {
+            update_option('atm_serpapi_key', sanitize_text_field($_POST['atm_serpapi_key']));
+        }
+        if (isset($_POST['atm_google_trending_cse_id'])) {
+            update_option('atm_google_trending_cse_id', sanitize_text_field($_POST['atm_google_trending_cse_id']));
         }
 
         // Nano Banana backend selector
@@ -994,6 +1015,8 @@ private function render_advanced_tab() {
             'google_news_cse_id' => get_option('atm_google_news_cse_id', ''),
             'twitterapi_key' => get_option('atm_twitterapi_key', ''),
             'nanobanana_model' => get_option('atm_nanobanana_model', 'gemini-2.5-flash-image'),
+            'serpapi_key' => get_option('atm_serpapi_key', ''),
+            'google_trending_cse_id' => get_option('atm_google_trending_cse_id', ''),
             
             //Vertex AI Settings
             'vertex_project_id' => get_option('atm_vertex_project_id', ''),
