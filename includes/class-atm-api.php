@@ -481,14 +481,21 @@ class ATM_API {
      */
     private static function _fetch_trends_from_serpapi($keyword, $region) {
         $api_key = get_option('atm_serpapi_key');
-        if (empty($api_key)) throw new Exception('SerpApi key is not configured.');
+        if (empty($api_key)) {
+            // Return empty array instead of throwing an error if the key isn't configured,
+            // so the "Combined Search" can still function with other sources.
+            error_log('ATM Trend Warning: SerpApi key is not configured. Skipping Google Trends source.');
+            return [];
+        }
 
         $params = [ 'api_key' => $api_key ];
         
+        // Use the new, correct endpoint for fetching daily trending searches when no keyword is provided.
         if (empty($keyword)) {
-            $params['engine'] = 'google_trends_trending_now';
-            $params['frequency'] = 'daily';
+            $params['engine'] = 'google_trends';
+            $params['type'] = 'TRENDING_SEARCHES';
         } else {
+            // This part for related queries remains the same and is not deprecated.
             $params['engine'] = 'google_trends';
             $params['q'] = $keyword;
             $params['data_type'] = 'RELATED_QUERIES';
@@ -500,30 +507,42 @@ class ATM_API {
         
         $url = 'https://serpapi.com/search.json?' . http_build_query($params);
         $response = wp_remote_get($url, ['timeout' => 20]);
-        if (is_wp_error($response)) throw new Exception('SerpApi request failed.');
+        if (is_wp_error($response)) {
+            throw new Exception('SerpApi request failed: ' . $response->get_error_message());
+        }
         
         $body = wp_remote_retrieve_body($response);
         $result = json_decode($body, true);
         
         if (isset($result['error'])) {
+            // Provide a more specific error message to the user.
             throw new Exception('SerpApi Error: ' . $result['error']);
         }
 
         $trends = [];
         $source_data = [];
 
+        // Adjust parsing logic for the new API response structures.
         if (!empty($keyword) && isset($result['related_queries']['rising'])) {
             $source_data = $result['related_queries']['rising'];
         } elseif (empty($keyword) && isset($result['trending_searches'])) {
-            $source_data = $result['trending_searches'][0]['searches'] ?? [];
+            $source_data = $result['trending_searches'];
         }
 
         foreach ($source_data as $item) {
+            // The new 'trending_searches' response has 'title' and 'subtitle' (for traffic).
+            // The 'related_queries' response has 'query' and 'value' (for traffic).
+            $title = $item['title'] ?? $item['query'] ?? '';
+            $traffic = $item['subtitle'] ?? $item['value'] ?? '';
+
+            if (empty($title)) continue;
+
             $trends[] = [
-                'title' => sanitize_text_field($item['query']),
-                'traffic' => esc_html($item['value'] ?? ($item['traffic'] ?? '')),
-                'traffic_numeric' => intval(preg_replace('/[^\d]/', '', $item['value'] ?? ($item['traffic'] ?? '0'))),
-                'url' => esc_url_raw($item['link'] ?? ''),
+                'title' => sanitize_text_field($title),
+                'traffic' => esc_html($traffic),
+                'traffic_numeric' => intval(preg_replace('/[^\d]/', '', $traffic ?? '0')),
+                'snippet' => esc_html($item['snippet'] ?? ''),
+                'url' => esc_url_raw($item['explore_link'] ?? ($item['link'] ?? '')),
                 'source' => 'google_trends'
             ];
         }
