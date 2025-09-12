@@ -3,8 +3,8 @@
   "version": "1.6.404",
   "private": true,
   "scripts": {
-    "build": "wp-scripts build src/index.js src/studio.js",
-    "start": "wp-scripts start src/index.js src/studio.js",
+    "build": "wp-scripts build src/index.js src/studio.js src/automation.js",
+    "start": "wp-scripts start src/index.js src/studio.js src/automation.js",
     "zip": "wp-scripts plugin-zip",
     "postversion": "node version-sync.js"
   },

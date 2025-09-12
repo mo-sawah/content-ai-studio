@@ -676,17 +676,27 @@ class ATM_Main {
     
     public function enqueue_admin_scripts($hook) {
     $screen = get_current_screen();
-    $is_plugin_page = false;
-    
-    if ($screen) {
-        if ($screen->id === 'toplevel_page_content-ai-studio' || strpos($screen->id, 'ai-studio_page_') === 0) {
-             $is_plugin_page = true;
-        }
-    }
-
-    if ($hook !== 'post.php' && $hook !== 'post-new.php' && !$is_plugin_page) {
+    if (!$screen) {
         return;
     }
+
+    // --- START: Corrected Logic ---
+
+    // Check 1: Is this one of the new automation pages?
+    $is_automation_page = strpos($screen->id, 'ai-automation') !== false;
+
+    // Check 2: Is this the post editor?
+    $is_post_editor = in_array($hook, ['post.php', 'post-new.php']);
+
+    // Check 3: Is this one of the existing plugin settings pages?
+    $is_plugin_settings_page = ($screen->id === 'toplevel_page_content-ai-studio' || strpos($screen->id, 'ai-studio_page_') === 0);
+
+    // If it's none of the above, stop loading scripts.
+    if (!$is_post_editor && !$is_automation_page && !$is_plugin_settings_page) {
+        return;
+    }
+
+    // --- END: Corrected Logic ---
 
     wp_enqueue_media();
 
@@ -795,7 +805,52 @@ class ATM_Main {
     }
 
     wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
-    wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data);
+    if ($is_automation_page) {
+        $automation_asset_path = ATM_PLUGIN_PATH . 'build/automation.asset.php';
+        if (file_exists($automation_asset_path)) {
+            $automation_asset = require($automation_asset_path);
+            wp_enqueue_script(
+                'atm-automation-app',
+                ATM_PLUGIN_URL . 'build/automation.js',
+                array_merge($automation_asset['dependencies'], ['atm-admin-script']),
+                $automation_asset['version'],
+                true
+            );
+            wp_localize_script('atm-automation-app', 'atm_automation_data', $localized_data);
+
+            // Enqueue the main studio style for consistent UI
+            wp_enqueue_style(
+                'atm-studio-style',
+                ATM_PLUGIN_URL . 'build/studio.css',
+                array(),
+                ATM_VERSION
+            );
+        }
+    } else {
+         // This is the existing logic for the post editor
+        $studio_asset_path = ATM_PLUGIN_PATH . 'build/studio.asset.php';
+        if (file_exists($studio_asset_path)) {
+            $studio_asset = require($studio_asset_path);
+            wp_enqueue_script(
+                'atm-studio-app',
+                ATM_PLUGIN_URL . 'build/studio.js',
+                array_merge($studio_asset['dependencies'], ['atm-admin-script']),
+                $studio_asset['version'],
+                true
+            );
+
+            $studio_style_path = ATM_PLUGIN_PATH . 'build/studio.css';
+            if (file_exists($studio_style_path)) {
+                wp_enqueue_style(
+                    'atm-studio-style',
+                    ATM_PLUGIN_URL . 'build/studio.css',
+                    array(),
+                    $studio_asset['version']
+                );
+            }
+            wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data);
+        }
+    }
 }
 
     public function register_tinymce_button() {
