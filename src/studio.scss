@@ -4823,3 +4823,24 @@ textarea:focus {
     font-weight: 400;
   }
 }
+
+/* --- Trending Articles Drag-to-Scroll & Actions --- */
+.atm-related-trends-scroll {
+  cursor: grab;
+  user-select: none; /* Prevents text selection while dragging */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, and Opera */
+  }
+  &.active {
+    cursor: grabbing;
+  }
+}
+
+.atm-form-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}

@@ -6,8 +6,10 @@ import {
   CheckboxControl,
   Spinner,
   DropdownMenu,
+  ToggleControl,
 } from "@wordpress/components";
 import { chevronDown } from "@wordpress/icons";
+import { useDispatch } from "@wordpress/data";
 
 const callAjax = (action, data) =>
   jQuery.ajax({
@@ -19,15 +21,15 @@ const updateEditorContent = (title, markdownContent, subtitle) => {
   if (window.ATM_BlockUtils) {
     window.ATM_BlockUtils.updateEditorContent(title, markdownContent, subtitle);
   } else {
-    console.error("ATM: Block utilities not loaded");
     const htmlContent = window.marked
       ? window.marked.parse(markdownContent)
       : markdownContent;
-    if (window.wp && window.wp.data) {
+    if (window.wp?.data) {
       wp.data.dispatch("core/editor").editPost({ title, content: htmlContent });
     }
   }
 };
+
 const CustomDropdown = ({ label, text, options, onChange, disabled }) => {
   const dropdownRef = useRef(null);
   useEffect(() => {
@@ -40,7 +42,7 @@ const CustomDropdown = ({ label, text, options, onChange, disabled }) => {
     }
   }, [text]);
   return (
-    <div className="atm-dropdown-field" ref={dropdownRef}>
+    <div className="atm-dropdown-field">
       {" "}
       <label className="atm-dropdown-label">{label}</label>{" "}
       <DropdownMenu
@@ -57,6 +59,51 @@ const CustomDropdown = ({ label, text, options, onChange, disabled }) => {
   );
 };
 
+// Drag-to-scroll custom hook
+const useDraggableScroll = () => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+    const mouseDown = (e) => {
+      isDown = true;
+      el.classList.add("active");
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+    };
+    const mouseLeave = () => {
+      isDown = false;
+      el.classList.remove("active");
+    };
+    const mouseUp = () => {
+      isDown = false;
+      el.classList.remove("active");
+    };
+    const mouseMove = (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX) * 2;
+      el.scrollLeft = scrollLeft - walk;
+    };
+    el.addEventListener("mousedown", mouseDown);
+    el.addEventListener("mouseleave", mouseLeave);
+    el.addEventListener("mouseup", mouseUp);
+    el.addEventListener("mousemove", mouseMove);
+    return () => {
+      el.removeEventListener("mousedown", mouseDown);
+      el.removeEventListener("mouseleave", mouseLeave);
+      el.removeEventListener("mouseup", mouseUp);
+      el.removeEventListener("mousemove", mouseMove);
+    };
+  }, []);
+  return ref;
+};
+
+// Main Component
 const TrendingForm = () => {
   const [keyword, setKeyword] = useState("");
   const [trendingTopics, setTrendingTopics] = useState([]);
@@ -64,10 +111,20 @@ const TrendingForm = () => {
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ text: "", type: "" });
+  const [forceFresh, setForceFresh] = useState(false);
+  const { savePost } = useDispatch("core/editor");
+
   const [region, setRegion] = useState({ label: "United States", value: "US" });
   const [language, setLanguage] = useState({ label: "English", value: "en" });
   const [date, setDate] = useState({ label: "Past Day", value: "now 1-d" });
+
   const [articleSettings, setArticleSettings] = useState({
+    writingStyle: {
+      label: "News / Journalistic",
+      value: "News / Journalistic",
+    },
+    wordCount: { label: "Medium (~800 words)", value: "800-1200" },
+    includeImages: true,
     autoPublish: false,
   });
 
@@ -93,6 +150,15 @@ const TrendingForm = () => {
     { label: "Past Month", value: "today 1-m" },
     { label: "Past Year", value: "today 12-m" },
   ];
+  const writingStyles = Object.entries(atm_studio_data.writing_styles).map(
+    ([value, { label }]) => ({ label, value })
+  );
+  const wordCounts = [
+    { label: "Short (~500 words)", value: "500" },
+    { label: "Medium (~800 words)", value: "800-1200" },
+    { label: "Long (~1500 words)", value: "1500-2000" },
+  ];
+  const draggableRef = useDraggableScroll();
 
   const fetchTrendingTopics = async () => {
     setIsLoadingTrends(true);
@@ -105,6 +171,7 @@ const TrendingForm = () => {
         region: region.value,
         language: language.value,
         date: date.value,
+        force_fresh: forceFresh,
       });
       if (!response.success) throw new Error(response.data);
       setTrendingTopics(response.data.trends || []);
@@ -122,11 +189,9 @@ const TrendingForm = () => {
   };
 
   const handleTopicSelection = (topic, isSelected) => {
-    if (isSelected) {
-      setSelectedTopics((prev) => [...prev, topic]);
-    } else {
+    if (isSelected) setSelectedTopics((prev) => [...prev, topic]);
+    else
       setSelectedTopics((prev) => prev.filter((t) => t.title !== topic.title));
-    }
   };
 
   const generateArticlesFromTrends = async () => {
@@ -138,26 +203,56 @@ const TrendingForm = () => {
       return;
     }
     setIsGeneratingArticle(true);
+    const settingsPayload = {
+      ...articleSettings,
+      writingStyle: articleSettings.writingStyle.value,
+      wordCount: articleSettings.wordCount.value,
+    };
+
     if (selectedTopics.length === 1) {
-      setStatusMessage({
-        text: "Generating article and inserting into editor...",
-        type: "info",
-      });
+      setStatusMessage({ text: "Generating article...", type: "info" });
       try {
         const response = await callAjax("generate_single_trending_article", {
           trending_topic: JSON.stringify(selectedTopics[0]),
+          settings: JSON.stringify(settingsPayload),
           language: language.label,
         });
         if (!response.success) throw new Error(response.data);
+
+        // --- MODIFIED LINE ---
         updateEditorContent(
           response.data.article_title,
           response.data.article_content,
-          ""
+          response.data.subtitle
         );
+
         setStatusMessage({
-          text: "✅ Article content inserted into the editor!",
+          text: "✅ Article inserted! Saving post to generate image...",
           type: "success",
         });
+        await savePost();
+        if (articleSettings.includeImages) {
+          setStatusMessage({
+            text: "✅ Post saved. Generating featured image...",
+            type: "info",
+          });
+          const postId = document
+            .getElementById("atm-studio-root")
+            .getAttribute("data-post-id");
+          await callAjax("generate_featured_image", {
+            post_id: postId,
+            prompt: "",
+          });
+          setStatusMessage({
+            text: "✅ All done! Article and featured image generated.",
+            type: "success",
+          });
+        } else {
+          setStatusMessage({
+            text: "✅ Article inserted and saved!",
+            type: "success",
+          });
+        }
         setSelectedTopics([]);
       } catch (err) {
         setStatusMessage({ text: `Error: ${err.message}`, type: "error" });
@@ -172,7 +267,7 @@ const TrendingForm = () => {
       try {
         const response = await callAjax("generate_trending_articles", {
           trending_topics: JSON.stringify(selectedTopics),
-          settings: JSON.stringify(articleSettings),
+          settings: JSON.stringify(settingsPayload),
           language: language.label,
         });
         if (!response.success) throw new Error(response.data);
@@ -206,7 +301,7 @@ const TrendingForm = () => {
         />
         <div
           className="atm-form-grid"
-          style={{ gridTemplateColumns: "1fr 1fr 1fr" }}
+          style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
         >
           <CustomDropdown
             label="Region"
@@ -230,20 +325,28 @@ const TrendingForm = () => {
             disabled={isLoadingTrends}
           />
         </div>
-        <Button
-          isPrimary
-          onClick={fetchTrendingTopics}
-          disabled={isLoadingTrends || isGeneratingArticle}
-        >
-          {isLoadingTrends ? (
-            <>
-              <Spinner />
-              Searching...
-            </>
-          ) : (
-            "Search For Trends"
-          )}
-        </Button>
+        <div className="atm-form-actions-row">
+          <Button
+            isPrimary
+            onClick={fetchTrendingTopics}
+            disabled={isLoadingTrends || isGeneratingArticle}
+          >
+            {isLoadingTrends ? (
+              <>
+                <Spinner />
+                Searching...
+              </>
+            ) : (
+              "Search For Trends"
+            )}
+          </Button>
+          <ToggleControl
+            label="Force Fresh Results"
+            help="Bypass cache"
+            checked={forceFresh}
+            onChange={setForceFresh}
+          />
+        </div>
       </div>
 
       {statusMessage.text && (
@@ -289,22 +392,29 @@ const TrendingForm = () => {
                     topic.related_trends?.length > 0) && (
                     <div className="atm-related-keywords">
                       <strong>Related:</strong>
-                      <ul>
-                        {topic.related_keywords?.slice(0, 3).map((kw) => (
-                          <li key={kw}>{kw}</li>
-                        ))}
-                      </ul>
-                      <div className="atm-related-trends-scroll">
-                        {topic.related_trends?.map((rt) => (
-                          <div
-                            key={rt.title}
-                            className="atm-related-trend-item"
-                          >
-                            {rt.title}{" "}
-                            <span className="traffic">({rt.traffic})</span>
-                          </div>
-                        ))}
-                      </div>
+                      {topic.related_keywords?.length > 0 && (
+                        <ul>
+                          {topic.related_keywords.slice(0, 3).map((kw) => (
+                            <li key={kw}>{kw}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {topic.related_trends?.length > 0 && (
+                        <div
+                          className="atm-related-trends-scroll"
+                          ref={draggableRef}
+                        >
+                          {topic.related_trends.map((rt) => (
+                            <div
+                              key={rt.title}
+                              className="atm-related-trend-item"
+                            >
+                              {rt.title}{" "}
+                              <span className="traffic">({rt.traffic})</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -313,19 +423,53 @@ const TrendingForm = () => {
           </div>
           <div className="atm-form-section atm-generation-actions">
             <h3 className="atm-section-title">{`Generate ${selectedTopics.length} Article(s)`}</h3>
-            {selectedTopics.length > 1 && (
-              <CheckboxControl
-                label="Auto-publish articles (otherwise save as draft)"
-                checked={articleSettings.autoPublish}
-                onChange={(value) =>
-                  setArticleSettings((prev) => ({
-                    ...prev,
-                    autoPublish: value,
-                  }))
+            <div
+              className="atm-form-grid"
+              style={{ gridTemplateColumns: "1fr 1fr" }}
+            >
+              <CustomDropdown
+                label="Writing Style"
+                text={articleSettings.writingStyle.label}
+                options={writingStyles}
+                onChange={(val) =>
+                  setArticleSettings((p) => ({ ...p, writingStyle: val }))
                 }
                 disabled={isGeneratingArticle}
               />
-            )}
+              <CustomDropdown
+                label="Word Count"
+                text={articleSettings.wordCount.label}
+                options={wordCounts}
+                onChange={(val) =>
+                  setArticleSettings((p) => ({ ...p, wordCount: val }))
+                }
+                disabled={isGeneratingArticle}
+              />
+            </div>
+            <div
+              className="atm-form-grid"
+              style={{ gridTemplateColumns: "1fr 1fr" }}
+            >
+              <ToggleControl
+                label="Generate a featured image"
+                checked={articleSettings.includeImages}
+                onChange={(val) =>
+                  setArticleSettings((p) => ({ ...p, includeImages: val }))
+                }
+                disabled={isGeneratingArticle}
+              />
+              {selectedTopics.length > 1 && (
+                <ToggleControl
+                  label="Auto-publish articles"
+                  help="Otherwise save as draft"
+                  checked={articleSettings.autoPublish}
+                  onChange={(val) =>
+                    setArticleSettings((p) => ({ ...p, autoPublish: val }))
+                  }
+                  disabled={isGeneratingArticle}
+                />
+              )}
+            </div>
             <Button
               isPrimary
               onClick={generateArticlesFromTrends}

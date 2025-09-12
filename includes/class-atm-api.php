@@ -339,12 +339,45 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
-    
+    /**
+     * Advanced similarity check for trend titles.
+     */
+    private static function _are_trends_similar($title1, $title2) {
+        $normalize = function($title) {
+            $title = strtolower($title);
+            // Remove common words that don't add much meaning
+            $stopwords = [' a ',' an ',' the ',' at ',' in ',' on ',' and ',' or ',' vs ',' today', ' news'];
+            $title = str_replace($stopwords, ' ', $title);
+            // Remove punctuation and extra spaces
+            return preg_replace(['/[^\w\s]/', '/\s+/'], ['', ' '], trim($title));
+        };
+
+        $norm1 = $normalize($title1);
+        $norm2 = $normalize($title2);
+
+        if ($norm1 === $norm2) return true;
+
+        // Check if one is a substring of the other after normalization
+        if (strpos($norm1, $norm2) !== false || strpos($norm2, $norm1) !== false) return true;
+
+        // Check percentage similarity
+        similar_text($norm1, $norm2, $percent);
+        return $percent > 85;
+    }
 
     /**
-     * Main function to fetch trending topics, now exclusively from SerpApi.
+     * Main function to fetch, cache, and group trending topics from SerpApi.
      */
-    public static function fetch_trending_topics($keyword, $region, $language, $date) {
+    public static function fetch_trending_topics($keyword, $region, $language, $date, $force_fresh = false) {
+        $cache_key = 'atm_trends_' . md5($keyword . $region . $language . $date);
+        
+        if (!$force_fresh) {
+            $cached_trends = get_transient($cache_key);
+            if ($cached_trends !== false) {
+                return $cached_trends;
+            }
+        }
+
         try {
             $trends = self::_fetch_trends_from_serpapi($keyword, $region, $language, $date);
         } catch (Exception $e) {
@@ -352,41 +385,36 @@ class ATM_API {
             throw $e;
         }
 
-        // New grouping logic to handle duplicates
+        // New, more advanced grouping logic
         $grouped_trends = [];
-        $processed_titles = [];
-
-        // Prioritize by traffic to process the most important ones first
+        $processed_indices = [];
         usort($trends, fn($a, $b) => ($b['traffic_numeric'] ?? 0) <=> ($a['traffic_numeric'] ?? 0));
 
-        foreach ($trends as $current_trend) {
-            if (in_array($current_trend['title'], $processed_titles)) {
+        for ($i = 0; $i < count($trends); $i++) {
+            if (in_array($i, $processed_indices)) {
                 continue;
             }
 
-            $main_trend = $current_trend;
+            $main_trend = $trends[$i];
             $main_trend['related_trends'] = [];
-            $processed_titles[] = $main_trend['title'];
+            $processed_indices[] = $i;
 
-            foreach ($trends as $other_trend) {
-                if ($main_trend['title'] === $other_trend['title']) {
+            for ($j = $i + 1; $j < count($trends); $j++) {
+                if (in_array($j, $processed_indices)) {
                     continue;
                 }
-                if (in_array($other_trend['title'], $processed_titles)) {
-                    continue;
-                }
-
-                // Group if titles are very similar (e.g., "trump 9/11" and "trump 9/11 memorial")
-                similar_text(strtolower($main_trend['title']), strtolower($other_trend['title']), $percent);
-                if ($percent > 80) {
-                    $main_trend['related_trends'][] = $other_trend;
-                    $processed_titles[] = $other_trend['title'];
+                if (self::_are_trends_similar($main_trend['title'], $trends[$j]['title'])) {
+                    $main_trend['related_trends'][] = $trends[$j];
+                    $processed_indices[] = $j;
                 }
             }
             $grouped_trends[] = $main_trend;
         }
 
-        return ['trends' => array_slice($grouped_trends, 0, 24)];
+        $result = ['trends' => array_slice($grouped_trends, 0, 50)]; // Increased limit
+        set_transient($cache_key, $result, HOUR_IN_SECONDS); // Cache for 1 hour
+
+        return $result;
     }
 
     /**
@@ -450,34 +478,42 @@ class ATM_API {
     }
 
     /**
-     * Generate a single article from a trending topic with an intelligent prompt.
+     * Generate a single article from a trending topic with an advanced, strict prompt.
      */
     public static function generate_article_from_trend($topic, $settings, $language = 'English') {
-        $system_prompt = "You are an expert news editor with a talent for writing viral, engaging articles. Your task is to write a comprehensive article in {$language} about the trending topic: '{$topic['title']}'.
+        $writing_style = esc_html($settings['writingStyle'] ?? 'professional journalistic');
+        $word_count = esc_html($settings['wordCount'] ?? '800-1200');
 
-        **CONTEXT:**
-        - Snippet: {$topic['snippet']}
-        - Related News: " . implode(', ', $topic['related_keywords'] ?? []) . "
+        $system_prompt = "You are an expert news reporter and editor. Your task is to write a clear, engaging, and well-structured news article in {$language} based on the provided trending topic information. Use your web search ability to verify all information and add any missing context.
 
-        Use your web search ability to understand EXACTLY WHY this is trending RIGHT NOW (e.g., a recent event, anniversary, controversial statement, etc.). Your article must be about this specific, timely context.
+        **TRENDING TOPIC:** {$topic['title']}
+        **INITIAL CONTEXT:** {$topic['snippet']}
 
-        **TITLE REQUIREMENTS:**
-        - The title MUST be specific and timely, not generic. It should capture the reason for the current trend.
-        - BAD (Generic): 'Trump and the 9/11 Memorial: A Comprehensive Overview'
-        - GOOD (Specific): 'Trump's Absence at 9/11 Memorial Ceremony Sparks Renewed Controversy'
-        - BAD (Generic): 'Trump's Face Today'
-        - GOOD (Specific): 'AI-Distorted Images of Trump's Face Fuel Health Speculation Online'
+        Follow these strict guidelines:
+        - **Language**: Write the entire article in {$language}. This is mandatory.
+        - **Style**: Adopt a {$writing_style} tone. Be objective, fact-based, and write like a human.
+        - **Originality**: Do not copy verbatim from any source. You must rewrite, summarize, and humanize the content.
+        - **Length**: Aim for approximately {$word_count} words.
+        - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+        - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
+        - **CRITICAL**: Do NOT include any final heading such as \"Conclusion\", \"Summary\", \"Final Thoughts\", \"In Summary\", \"To Conclude\", \"Wrapping Up\", \"Looking Ahead\", \"What's Next\", \"The Bottom Line\", \"Key Takeaways\", or any similar conclusory heading. The article should end naturally with the concluding paragraph itself, without any heading above it.
 
-        **CRITICAL OUTPUT RULES:**
-        Your response MUST be a single, valid JSON object with two keys:
-        1. \"title\": An engaging, specific, and timely title in {$language}, based on your web search.
-        2. \"content\": The full article content in Markdown format, also in {$language}.
+        **Link Formatting Rules:**
+        - When including external links, NEVER use the website URL as the anchor text.
+        - Always link to the specific article URL, NOT the homepage.
+        - Use ONLY 1-3 descriptive words as anchor text.
+        - Example: [Reuters](https://reuters.com/actual-article-url) reported that...
+        - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+        - Do NOT use generic phrases like \"click here\", \"read more\", or \"this article\" as anchor text.
+        - Anchor text should be relevant keywords from the article topic.
+        - Keep anchor text extremely concise (maximum 2 words).
+        - Make links feel natural within the sentence flow.
 
-        **CONTENT RULES:**
-        - The `content` MUST NOT begin with a title or heading. Start directly with the first paragraph.
-        - Use clear H2 and H3 headings for structure. Do NOT use H1 headings.
-        - Write a compelling article that explains the story behind the trend.
-        - End naturally without a 'Conclusion' heading.";
+        **Final Output Format:**
+        Your entire output MUST be a single, valid JSON object with three keys:
+        1. \"title\": A clear and compelling news headline in {$language}, written in the style of a professional news outlet. It must be concise, factual, and highlight the most newsworthy element of the story.
+        2. \"subheadline\": A brief, one-sentence subheadline that expands on the main headline, written in {$language}.
+        3. \"content\": A complete news article in {$language}, formatted using Markdown. The article must follow professional journalistic style: clear, objective, and factual. Structure it with an engaging lead paragraph, followed by supporting details, quotes, and context. Use H2 (##) for section headings, avoid H1. REMEMBER: NO conclusion headings whatsoever - end with a natural concluding paragraph that has no heading above it.";
 
         $raw_response = self::enhance_content_with_openrouter(
             ['content' => $topic['title']],

@@ -12,20 +12,20 @@ class ATM_Ajax {
 
         try {
             $topic = isset($_POST['trending_topic']) ? json_decode(stripslashes($_POST['trending_topic']), true) : [];
+            $settings = isset($_POST['settings']) ? json_decode(stripslashes($_POST['settings']), true) : [];
             $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : 'English';
 
             if (empty($topic)) {
                 throw new Exception('Missing topic for article generation.');
             }
-
-            // The generate_article_from_trend method does not have settings for word count or tone,
-            // so we call it with the available parameters.
-            $article_data = ATM_API::generate_article_from_trend($topic, [], $language);
+            
+            $article_data = ATM_API::generate_article_from_trend($topic, $settings, $language);
             
             // This action RETURNS the content instead of creating a post.
             wp_send_json_success([
                 'article_title' => $article_data['title'],
                 'article_content' => $article_data['content'],
+                'subtitle' => $article_data['subheadline'] ?? '' // <-- ADD THIS LINE
             ]);
 
         } catch (Exception $e) {
@@ -40,8 +40,9 @@ class ATM_Ajax {
             $region = isset($_POST['region']) ? sanitize_text_field($_POST['region']) : 'US';
             $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : 'en';
             $date = isset($_POST['date']) ? sanitize_text_field($_POST['date']) : 'now 7-d';
+            $force_fresh = isset($_POST['force_fresh']) && $_POST['force_fresh'] === 'true';
 
-            $result = ATM_API::fetch_trending_topics($keyword, $region, $language, $date);
+            $result = ATM_API::fetch_trending_topics($keyword, $region, $language, $date, $force_fresh);
 
             wp_send_json_success($result);
         } catch (Exception $e) {
@@ -51,7 +52,7 @@ class ATM_Ajax {
 
     public function generate_trending_articles() {
         check_ajax_referer('atm_nonce', 'nonce');
-        @ini_set('max_execution_time', 600); // 10 minutes for potentially multiple articles
+        @ini_set('max_execution_time', 600);
 
         try {
             $topics = isset($_POST['trending_topics']) ? json_decode(stripslashes($_POST['trending_topics']), true) : [];
@@ -65,13 +66,11 @@ class ATM_Ajax {
             $successful_count = 0;
             foreach ($topics as $topic) {
                 try {
-                    // 1. Generate Article Content & Title
                     $article_data = ATM_API::generate_article_from_trend($topic, $settings, $language);
                     $post_status = ($settings['autoPublish'] ?? false) ? 'publish' : 'draft';
                     $Parsedown = new Parsedown();
                     $html_content = $Parsedown->text($article_data['content']);
 
-                    // 2. Create the Post
                     $post_id = wp_insert_post([
                         'post_title'   => sanitize_text_field($article_data['title']),
                         'post_content' => wp_kses_post($html_content),
@@ -81,7 +80,17 @@ class ATM_Ajax {
 
                     if (is_wp_error($post_id)) continue;
                     
+                    // --- START: ADDED SUBLITLE LOGIC ---
+                    if (!empty($article_data['subheadline'])) {
+                        $subtitle_key = get_option('atm_theme_subtitle_key', '_bunyad_sub_title');
+                        update_post_meta($post_id, $subtitle_key, sanitize_text_field($article_data['subheadline']));
+                    }
+                    // --- END: ADDED SUBLITLE LOGIC ---
+
+                    // Existing image generation logic would go here if needed...
+                    
                     $successful_count++;
+
                 } catch (Exception $e) {
                     error_log("ATM Trending Article Failed for '{$topic['title']}': " . $e->getMessage());
                     continue;
