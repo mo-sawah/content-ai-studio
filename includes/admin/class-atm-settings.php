@@ -661,6 +661,52 @@ private function render_api_tab() {
                 <tr><th scope="row">ScrapingAnt API Key</th><td><input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" /><p class="description">Required for RSS scraping. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p></td></tr>
                 <tr><th scope="row">Mercury Reader API Key (Optional)</th><td><input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p></td></tr>
                 <tr><th scope="row">TwitterAPI.io Key</th><td><input type="password" name="atm_twitterapi_key" value="<?php echo esc_attr($options['twitterapi_key']); ?>" class="regular-text" /><p class="description">Required for Twitter/X news search. Get a free key from <a href="https://twitterapi.io/" target="_blank">TwitterAPI.io</a>.</p></td></tr>
+                <tr>
+                <th scope="row">Nano Banana</th>
+                <td>
+                    <?php $nb_backend = get_option('atm_nanobanana_backend', 'gemini'); ?>
+                    <select name="atm_nanobanana_backend">
+                    <option value="gemini" <?php selected($nb_backend, 'gemini'); ?>>Gemini API (AI Studio)</option>
+                    <option value="vertex" <?php selected($nb_backend, 'vertex'); ?>>Vertex AI (Service Account)</option>
+                    </select>
+                    <p class="description">
+                    Use "Gemini API" if your AI Studio key has access to Gemini 2.5 Flash Image. Otherwise use Vertex AI.
+                    </p>
+                </td>
+                </tr>
+
+                <tr>
+                <th scope="row">Vertex Project ID</th>
+                <td>
+                    <input type="text" name="atm_vertex_project_id"
+                        value="<?php echo esc_attr(get_option('atm_vertex_project_id', '')); ?>"
+                        class="regular-text" />
+                    <p class="description">Your Google Cloud Project ID (not numeric project number).</p>
+                </td>
+                </tr>
+
+                <tr>
+                <th scope="row">Vertex Location</th>
+                <td>
+                    <input type="text" name="atm_vertex_location"
+                        value="<?php echo esc_attr(get_option('atm_vertex_location', 'us-central1')); ?>"
+                        class="regular-text" />
+                    <p class="description">Common: us-central1, europe-west4. Must match where the model is available.</p>
+                </td>
+                </tr>
+
+                <tr>
+                <th scope="row">Vertex Service Account JSON</th>
+                <td>
+                    <textarea name="atm_vertex_sa_json" rows="10" style="width: 100%; font-family: monospace;"><?php
+                    echo esc_textarea(get_option('atm_vertex_sa_json', ''));
+                    ?></textarea>
+                    <p class="description">
+                    Paste the full Service Account key JSON for a service account with Vertex AI permissions.
+                    Stored in the database for admins only. Rotate regularly and keep backups secure.
+                    </p>
+                </td>
+                </tr>
             </table>
         </div>
 
@@ -788,6 +834,12 @@ private function render_advanced_tab() {
             update_option('atm_nanobanana_model', sanitize_text_field($_POST['atm_nanobanana_model']));
         }
 
+        // Nano Banana backend selector
+        if (isset($_POST['atm_nanobanana_backend'])) {
+            $backend = $_POST['atm_nanobanana_backend'] === 'vertex' ? 'vertex' : 'gemini';
+            update_option('atm_nanobanana_backend', $backend);
+        }
+
         if (isset($_POST['atm_vertex_project_id'])) {
             update_option('atm_vertex_project_id', sanitize_text_field($_POST['atm_vertex_project_id']));
         }
@@ -795,7 +847,6 @@ private function render_advanced_tab() {
             update_option('atm_vertex_location', sanitize_text_field($_POST['atm_vertex_location']));
         }
         if (isset($_POST['atm_vertex_sa_json'])) {
-            // Store the raw JSON safely
             $json = wp_unslash($_POST['atm_vertex_sa_json']);
             update_option('atm_vertex_sa_json', $json);
         }
@@ -956,6 +1007,12 @@ private function render_advanced_tab() {
             'google_news_cse_id' => get_option('atm_google_news_cse_id', ''),
             'twitterapi_key' => get_option('atm_twitterapi_key', ''),
             'nanobanana_model' => get_option('atm_nanobanana_model', 'gemini-2.5-flash-image'),
+            
+            //Vertex AI Settings
+            'vertex_project_id' => get_option('atm_vertex_project_id', ''),
+            'vertex_location'   => get_option('atm_vertex_location', 'us-central1'),
+            // Do NOT include SA JSON here for security reasons unless you really need it in JS
+            'nanobanana_backend' => get_option('atm_nanobanana_backend', 'gemini'),
 
             // Model Settings
             'article_model'    => get_option('atm_article_model', 'openai/gpt-4o'),
