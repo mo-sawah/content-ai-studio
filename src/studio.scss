@@ -4789,3 +4789,37 @@ textarea:focus {
   flex-direction: column;
   gap: 1rem;
 }
+
+.atm-related-keywords {
+  ul {
+    display: block; // Changed from flex
+    li {
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+  }
+}
+
+.atm-related-trends-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px; /* For scrollbar visibility */
+  margin-top: 8px;
+}
+
+.atm-related-trend-item {
+  flex-shrink: 0;
+  background-color: #e2e8f0;
+  color: #334155;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  .traffic {
+    color: #64748b;
+    font-weight: 400;
+  }
+}

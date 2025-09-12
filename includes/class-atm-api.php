@@ -351,16 +351,47 @@ class ATM_API {
             error_log('ATM Trending Topics Error: ' . $e->getMessage());
             throw $e;
         }
-        
-        // Sort trends by traffic
+
+        // New grouping logic to handle duplicates
+        $grouped_trends = [];
+        $processed_titles = [];
+
+        // Prioritize by traffic to process the most important ones first
         usort($trends, fn($a, $b) => ($b['traffic_numeric'] ?? 0) <=> ($a['traffic_numeric'] ?? 0));
 
-        return ['trends' => array_slice($trends, 0, 24)];
+        foreach ($trends as $current_trend) {
+            if (in_array($current_trend['title'], $processed_titles)) {
+                continue;
+            }
+
+            $main_trend = $current_trend;
+            $main_trend['related_trends'] = [];
+            $processed_titles[] = $main_trend['title'];
+
+            foreach ($trends as $other_trend) {
+                if ($main_trend['title'] === $other_trend['title']) {
+                    continue;
+                }
+                if (in_array($other_trend['title'], $processed_titles)) {
+                    continue;
+                }
+
+                // Group if titles are very similar (e.g., "trump 9/11" and "trump 9/11 memorial")
+                similar_text(strtolower($main_trend['title']), strtolower($other_trend['title']), $percent);
+                if ($percent > 80) {
+                    $main_trend['related_trends'][] = $other_trend;
+                    $processed_titles[] = $other_trend['title'];
+                }
+            }
+            $grouped_trends[] = $main_trend;
+        }
+
+        return ['trends' => array_slice($grouped_trends, 0, 24)];
     }
 
     /**
      * Fetch quantitative trends from Google Trends via SerpApi.
-     * UPDATED to handle new parameters and response formats.
+     * UPDATED to better handle related news snippets.
      */
     private static function _fetch_trends_from_serpapi($keyword, $region, $language, $date) {
         $api_key = get_option('atm_serpapi_key');
@@ -368,18 +399,13 @@ class ATM_API {
             throw new Exception('SerpApi key is not configured in AI Studio -> API Keys.');
         }
 
-        $params = [
-            'api_key' => $api_key,
-            'engine' => 'google_trends',
-        ];
-
+        $params = [ 'api_key' => $api_key, 'engine' => 'google_trends' ];
         if (empty($keyword)) {
             $params['type'] = 'TRENDING_SEARCHES';
         } else {
             $params['q'] = $keyword;
             $params['data_type'] = 'RELATED_QUERIES';
         }
-
         if (!empty($region)) $params['gl'] = $region;
         if (!empty($language)) $params['hl'] = $language;
         if (!empty($date)) $params['date'] = $date;
@@ -390,12 +416,10 @@ class ATM_API {
         
         $body = wp_remote_retrieve_body($response);
         $result = json_decode($body, true);
-        
         if (isset($result['error'])) throw new Exception('SerpApi Error: ' . $result['error']);
 
         $trends = [];
         $source_data = [];
-
         if (!empty($keyword) && isset($result['related_queries']['rising'])) {
             $source_data = $result['related_queries']['rising'];
         } elseif (empty($keyword) && isset($result['trending_searches'])) {
@@ -405,42 +429,55 @@ class ATM_API {
         foreach ($source_data as $item) {
             $title = $item['title'] ?? $item['query'] ?? '';
             if (empty($title)) continue;
+            
+            $related_keywords = [];
+            if (!empty($item['news'])) {
+                foreach ($item['news'] as $news_item) {
+                    $related_keywords[] = sanitize_text_field($news_item['title']);
+                }
+            }
 
             $trends[] = [
                 'title' => sanitize_text_field($title),
                 'traffic' => esc_html($item['subtitle'] ?? ($item['value'] ?? '')),
                 'traffic_numeric' => intval(preg_replace('/[^\d]/', '', $item['subtitle'] ?? ($item['value'] ?? '0'))),
-                'snippet' => esc_html($item['snippet'] ?? "A rising search trend related to '{$keyword}'."),
+                'snippet' => esc_html($item['snippet'] ?? "A rising search trend. Use web search to discover the context."),
                 'url' => esc_url_raw($item['explore_link'] ?? ($item['link'] ?? '')),
-                'related_keywords' => array_map('sanitize_text_field', $item['related_queries'] ?? []),
+                'related_keywords' => $related_keywords,
             ];
         }
         return $trends;
     }
 
     /**
-     * Generate a single article from a trending topic.
-     * UPDATED to accept language.
+     * Generate a single article from a trending topic with an intelligent prompt.
      */
     public static function generate_article_from_trend($topic, $settings, $language = 'English') {
-        $tone = esc_html($settings['tone'] ?? 'professional');
-        
-        $system_prompt = "You are an expert journalist. Your task is to write a comprehensive, engaging, and SEO-friendly article in {$language} about the trending topic: '{$topic['title']}'.
-        Use your web search ability to gather the most current information.
+        $system_prompt = "You are an expert news editor with a talent for writing viral, engaging articles. Your task is to write a comprehensive article in {$language} about the trending topic: '{$topic['title']}'.
 
-        **CONTEXT:** {$topic['snippet']}
+        **CONTEXT:**
+        - Snippet: {$topic['snippet']}
+        - Related News: " . implode(', ', $topic['related_keywords'] ?? []) . "
 
-        **CRITICAL INSTRUCTIONS:**
-        - **Language:** The entire article must be written in {$language}.
-        - **Tone:** Adopt a {$tone} writing style.
-        - **Structure:** Use clear H2 and H3 headings. Do NOT include an H1 heading.
-        - **Content:** Cover the topic in depth. Explain what it is, why it's trending, and what the implications are.
-        - **Conclusion:** End with a strong concluding paragraph without a 'Conclusion' heading.
+        Use your web search ability to understand EXACTLY WHY this is trending RIGHT NOW (e.g., a recent event, anniversary, controversial statement, etc.). Your article must be about this specific, timely context.
 
-        **OUTPUT FORMAT (JSON):**
-        Your entire response MUST be a single, valid JSON object with two keys:
-        1. \"title\": A compelling, SEO-friendly title for the article, written in {$language}.
-        2. \"content\": The full article content in Markdown format, written in {$language}.";
+        **TITLE REQUIREMENTS:**
+        - The title MUST be specific and timely, not generic. It should capture the reason for the current trend.
+        - BAD (Generic): 'Trump and the 9/11 Memorial: A Comprehensive Overview'
+        - GOOD (Specific): 'Trump's Absence at 9/11 Memorial Ceremony Sparks Renewed Controversy'
+        - BAD (Generic): 'Trump's Face Today'
+        - GOOD (Specific): 'AI-Distorted Images of Trump's Face Fuel Health Speculation Online'
+
+        **CRITICAL OUTPUT RULES:**
+        Your response MUST be a single, valid JSON object with two keys:
+        1. \"title\": An engaging, specific, and timely title in {$language}, based on your web search.
+        2. \"content\": The full article content in Markdown format, also in {$language}.
+
+        **CONTENT RULES:**
+        - The `content` MUST NOT begin with a title or heading. Start directly with the first paragraph.
+        - Use clear H2 and H3 headings for structure. Do NOT use H1 headings.
+        - Write a compelling article that explains the story behind the trend.
+        - End naturally without a 'Conclusion' heading.";
 
         $raw_response = self::enhance_content_with_openrouter(
             ['content' => $topic['title']],

@@ -15,8 +15,6 @@ const callAjax = (action, data) =>
     type: "POST",
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
-
-// HELPER FUNCTION: This is the key to sending content to the editor.
 const updateEditorContent = (title, markdownContent, subtitle) => {
   if (window.ATM_BlockUtils) {
     window.ATM_BlockUtils.updateEditorContent(title, markdownContent, subtitle);
@@ -30,8 +28,6 @@ const updateEditorContent = (title, markdownContent, subtitle) => {
     }
   }
 };
-
-// Custom Dropdown Component (styled like the rest of the plugin)
 const CustomDropdown = ({ label, text, options, onChange, disabled }) => {
   const dropdownRef = useRef(null);
   useEffect(() => {
@@ -43,10 +39,10 @@ const CustomDropdown = ({ label, text, options, onChange, disabled }) => {
       );
     }
   }, [text]);
-
   return (
     <div className="atm-dropdown-field" ref={dropdownRef}>
-      <label className="atm-dropdown-label">{label}</label>
+      {" "}
+      <label className="atm-dropdown-label">{label}</label>{" "}
       <DropdownMenu
         className="atm-custom-dropdown"
         icon={chevronDown}
@@ -56,7 +52,7 @@ const CustomDropdown = ({ label, text, options, onChange, disabled }) => {
           onClick: () => onChange(option),
         }))}
         disabled={disabled}
-      />
+      />{" "}
     </div>
   );
 };
@@ -68,10 +64,9 @@ const TrendingForm = () => {
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ text: "", type: "" });
-
   const [region, setRegion] = useState({ label: "United States", value: "US" });
   const [language, setLanguage] = useState({ label: "English", value: "en" });
-  const [date, setDate] = useState({ label: "Past Week", value: "now 7-d" });
+  const [date, setDate] = useState({ label: "Past Day", value: "now 1-d" });
   const [articleSettings, setArticleSettings] = useState({
     autoPublish: false,
   });
@@ -115,7 +110,7 @@ const TrendingForm = () => {
       setTrendingTopics(response.data.trends || []);
       setStatusMessage({
         text: response.data.trends?.length
-          ? `Found ${response.data.trends.length} trending topics.`
+          ? `Found ${response.data.trends.length} unique trending topics.`
           : "No trending topics found. Try a different keyword or timeframe.",
         type: "info",
       });
@@ -143,10 +138,7 @@ const TrendingForm = () => {
       return;
     }
     setIsGeneratingArticle(true);
-
-    // --- START: MODIFIED LOGIC ---
     if (selectedTopics.length === 1) {
-      // SINGLE ARTICLE: Generate and insert into the current editor.
       setStatusMessage({
         text: "Generating article and inserting into editor...",
         type: "info",
@@ -156,28 +148,23 @@ const TrendingForm = () => {
           trending_topic: JSON.stringify(selectedTopics[0]),
           language: language.label,
         });
-
         if (!response.success) throw new Error(response.data);
-
-        // Use the helper function to update the editor
         updateEditorContent(
           response.data.article_title,
           response.data.article_content,
-          "" // Subtitle not currently supported by this flow
+          ""
         );
-
         setStatusMessage({
           text: "✅ Article content inserted into the editor!",
           type: "success",
         });
-        setSelectedTopics([]); // Clear selection
+        setSelectedTopics([]);
       } catch (err) {
         setStatusMessage({ text: `Error: ${err.message}`, type: "error" });
       } finally {
         setIsGeneratingArticle(false);
       }
     } else {
-      // MULTIPLE ARTICLES: Use the original bulk-creation method.
       setStatusMessage({
         text: `Generating ${selectedTopics.length} new draft posts...`,
         type: "info",
@@ -188,21 +175,18 @@ const TrendingForm = () => {
           settings: JSON.stringify(articleSettings),
           language: language.label,
         });
-
         if (!response.success) throw new Error(response.data);
-
         setStatusMessage({
           text: `✅ Successfully created ${response.data.successful_count} new draft posts!`,
           type: "success",
         });
-        setSelectedTopics([]); // Clear selection
+        setSelectedTopics([]);
       } catch (err) {
         setStatusMessage({ text: `Error: ${err.message}`, type: "error" });
       } finally {
         setIsGeneratingArticle(false);
       }
     }
-    // --- END: MODIFIED LOGIC ---
   };
 
   useEffect(() => {
@@ -301,14 +285,26 @@ const TrendingForm = () => {
                       View on Google Trends ↗
                     </a>
                   </div>
-                  {topic.related_keywords && (
+                  {(topic.related_keywords?.length > 0 ||
+                    topic.related_trends?.length > 0) && (
                     <div className="atm-related-keywords">
                       <strong>Related:</strong>
                       <ul>
-                        {topic.related_keywords.slice(0, 3).map((kw) => (
+                        {topic.related_keywords?.slice(0, 3).map((kw) => (
                           <li key={kw}>{kw}</li>
                         ))}
                       </ul>
+                      <div className="atm-related-trends-scroll">
+                        {topic.related_trends?.map((rt) => (
+                          <div
+                            key={rt.title}
+                            className="atm-related-trend-item"
+                          >
+                            {rt.title}{" "}
+                            <span className="traffic">({rt.traffic})</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
