@@ -30,35 +30,148 @@ const updateEditorContent = (title, markdownContent, subtitle) => {
   }
 };
 
-const CustomDropdown = ({ label, text, options, onChange, disabled }) => {
+// --- START: NEW DATA AND SEARCHABLE DROPDOWN COMPONENT ---
+
+// Data for searchable dropdowns
+const COUNTRIES_WITH_CODES = [
+  { label: "Global", value: "" },
+  { label: "United States", value: "US" },
+  { label: "United Kingdom", value: "GB" },
+  { label: "Canada", value: "CA" },
+  { label: "Australia", value: "AU" },
+  { label: "Germany", value: "DE" },
+  { label: "France", value: "FR" },
+  { label: "India", value: "IN" },
+  { label: "Brazil", value: "BR" },
+  { label: "Japan", value: "JP" },
+  { label: "Mexico", value: "MX" },
+  { label: "Spain", value: "ES" },
+  { label: "Italy", value: "IT" },
+  { label: "Russia", value: "RU" },
+  { label: "South Korea", value: "KR" },
+  { label: "Netherlands", value: "NL" },
+  { label: "Sweden", value: "SE" },
+  { label: "Switzerland", value: "CH" },
+  { label: "Turkey", value: "TR" },
+  { label: "Argentina", value: "AR" },
+];
+const LANGUAGES_WITH_CODES = [
+  { label: "English", value: "en" },
+  { label: "Spanish", value: "es" },
+  { label: "French", value: "fr" },
+  { label: "German", value: "de" },
+  { label: "Italian", value: "it" },
+  { label: "Portuguese", value: "pt" },
+  { label: "Russian", value: "ru" },
+  { label: "Chinese", value: "zh" },
+  { label: "Japanese", value: "ja" },
+  { label: "Korean", value: "ko" },
+  { label: "Arabic", value: "ar" },
+  { label: "Dutch", value: "nl" },
+  { label: "Swedish", value: "sv" },
+  { label: "Turkish", value: "tr" },
+  { label: "Hindi", value: "hi" },
+];
+
+// Extract labels for the component options
+const COUNTRY_OPTIONS = COUNTRIES_WITH_CODES.map((c) => c.label);
+const LANGUAGE_OPTIONS = LANGUAGES_WITH_CODES.map((l) => l.label);
+
+// Create maps for looking up codes from labels
+const COUNTRY_MAP = Object.fromEntries(
+  COUNTRIES_WITH_CODES.map((c) => [c.label, c.value])
+);
+const LANGUAGE_MAP = Object.fromEntries(
+  LANGUAGES_WITH_CODES.map((l) => [l.label, l.value])
+);
+
+// Reusable Searchable Dropdown Component from NewsSearchForm.js
+const AdvancedSearchableDropdown = ({
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+  disabled = false,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef(null);
+  const inputRef = useRef(null);
+  const filteredOptions = options.filter((option) =>
+    option.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   useEffect(() => {
-    if (dropdownRef.current) {
-      const width = dropdownRef.current.offsetWidth;
-      document.documentElement.style.setProperty(
-        "--atm-dropdown-width",
-        `${width}px`
-      );
-    }
-  }, [text]);
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+  const handleOptionSelect = (option) => {
+    onChange(option);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
   return (
-    <div className="atm-dropdown-field">
-      {" "}
-      <label className="atm-dropdown-label">{label}</label>{" "}
-      <DropdownMenu
-        className="atm-custom-dropdown"
-        icon={chevronDown}
-        text={text}
-        controls={options.map((option) => ({
-          title: option.label,
-          onClick: () => onChange(option),
-        }))}
-        disabled={disabled}
-      />{" "}
+    <div className="atm-advanced-filter" ref={dropdownRef}>
+      <label className="atm-filter-label">{label}</label>
+      <div
+        className={`atm-filter-input-container ${isOpen ? "open" : ""} ${disabled ? "disabled" : ""}`}
+        onClick={() => !disabled && setIsOpen(true)}
+      >
+        <div className="atm-single-value">{value || placeholder}</div>
+        <svg
+          className={`atm-filter-chevron ${isOpen ? "open" : ""}`}
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </div>
+      {isOpen && (
+        <div className="atm-filter-dropdown">
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search..."
+            className="atm-filter-input-search"
+            autoFocus
+          />
+          <div className="atm-filter-options-list">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <div
+                  key={option}
+                  className={`atm-filter-option ${value === option ? "selected" : ""}`}
+                  onClick={() => handleOptionSelect(option)}
+                >
+                  {option}
+                </div>
+              ))
+            ) : (
+              <div className="atm-filter-no-results">No results found</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-const useDraggableScroll = () => {
+// --- END: NEW DATA AND SEARCHABLE DROPDOWN COMPONENT ---
+
+const useDraggableScroll = (dependency) => {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
@@ -97,7 +210,7 @@ const useDraggableScroll = () => {
       el.removeEventListener("mouseup", mouseUp);
       el.removeEventListener("mousemove", mouseMove);
     };
-  }, []);
+  }, [dependency]);
   return ref;
 };
 
@@ -111,9 +224,10 @@ const TrendingForm = () => {
   const [forceFresh, setForceFresh] = useState(false);
   const { savePost } = useDispatch("core/editor");
 
-  const [region, setRegion] = useState({ label: "United States", value: "US" });
-  const [language, setLanguage] = useState({ label: "English", value: "en" });
-  const [date, setDate] = useState({ label: "Past Day", value: "now 1-d" });
+  // State now uses strings for labels
+  const [region, setRegion] = useState("Global");
+  const [language, setLanguage] = useState("English");
+  const [date, setDate] = useState({ label: "Past Day", value: "now 1-d" }); // Date can remain simple
 
   const [articleSettings, setArticleSettings] = useState({
     writingStyle: {
@@ -125,22 +239,6 @@ const TrendingForm = () => {
     autoPublish: false,
   });
 
-  const regions = [
-    { label: "United States", value: "US" },
-    { label: "United Kingdom", value: "GB" },
-    { label: "Canada", value: "CA" },
-    { label: "Australia", value: "AU" },
-    { label: "Germany", value: "DE" },
-    { label: "France", value: "FR" },
-    { label: "India", value: "IN" },
-    { label: "Global", value: "" },
-  ];
-  const languages = [
-    { label: "English", value: "en" },
-    { label: "Spanish", value: "es" },
-    { label: "German", value: "de" },
-    { label: "French", value: "fr" },
-  ];
   const dates = [
     { label: "Past Day", value: "now 1-d" },
     { label: "Past Week", value: "now 7-d" },
@@ -155,7 +253,7 @@ const TrendingForm = () => {
     { label: "Medium (~800 words)", value: "800-1200" },
     { label: "Long (~1500 words)", value: "1500-2000" },
   ];
-  const draggableRef = useDraggableScroll();
+  const draggableRef = useDraggableScroll(trendingTopics);
 
   const fetchTrendingTopics = async (searchKeyword = "") => {
     setIsLoadingTrends(true);
@@ -163,10 +261,14 @@ const TrendingForm = () => {
     setTrendingTopics([]);
     setSelectedTopics([]);
     try {
+      // Look up codes from labels before sending
+      const regionCode = COUNTRY_MAP[region] ?? "";
+      const langCode = LANGUAGE_MAP[language] ?? "en";
+
       const response = await callAjax("fetch_trending_topics", {
         keyword: searchKeyword,
-        region: region.value,
-        language: language.value,
+        region: regionCode,
+        language: langCode,
         date: date.value,
         force_fresh: forceFresh,
       });
@@ -190,7 +292,6 @@ const TrendingForm = () => {
     else
       setSelectedTopics((prev) => prev.filter((t) => t.title !== topic.title));
   };
-
   const generateArticlesFromTrends = async () => {
     if (selectedTopics.length === 0) {
       setStatusMessage({
@@ -208,10 +309,11 @@ const TrendingForm = () => {
     if (selectedTopics.length === 1) {
       setStatusMessage({ text: "Generating article...", type: "info" });
       try {
+        const langCode = LANGUAGE_MAP[language] ?? "en";
         const response = await callAjax("generate_single_trending_article", {
           trending_topic: JSON.stringify(selectedTopics[0]),
           settings: JSON.stringify(settingsPayload),
-          language: language.label,
+          language: language,
         });
         if (!response.success) throw new Error(response.data);
         updateEditorContent(
@@ -220,7 +322,7 @@ const TrendingForm = () => {
           response.data.subtitle
         );
         setStatusMessage({
-          text: "✅ Article inserted! Saving post to generate image...",
+          text: "✅ Article inserted! Saving post...",
           type: "success",
         });
         await savePost();
@@ -258,10 +360,11 @@ const TrendingForm = () => {
         type: "info",
       });
       try {
+        const langCode = LANGUAGE_MAP[language] ?? "en";
         const response = await callAjax("generate_trending_articles", {
           trending_topics: JSON.stringify(selectedTopics),
           settings: JSON.stringify(settingsPayload),
-          language: language.label,
+          language: language,
         });
         if (!response.success) throw new Error(response.data);
         setStatusMessage({
@@ -292,27 +395,34 @@ const TrendingForm = () => {
           className="atm-form-grid"
           style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
         >
-          <CustomDropdown
+          <AdvancedSearchableDropdown
             label="Region"
-            text={region.label}
-            options={regions}
+            placeholder="Select a region..."
+            options={COUNTRY_OPTIONS}
+            value={region}
             onChange={setRegion}
             disabled={isLoadingTrends || isGeneratingArticle}
           />
-          <CustomDropdown
+          <AdvancedSearchableDropdown
             label="Language"
-            text={language.label}
-            options={languages}
+            placeholder="Select a language..."
+            options={LANGUAGE_OPTIONS}
+            value={language}
             onChange={setLanguage}
             disabled={isLoadingTrends || isGeneratingArticle}
           />
-          <CustomDropdown
-            label="Date"
-            text={date.label}
-            options={dates}
-            onChange={setDate}
-            disabled={isLoadingTrends || isGeneratingArticle}
-          />
+          <div className="atm-simple-dropdown-wrapper">
+            <label className="atm-filter-label">Date</label>
+            <DropdownMenu
+              icon={chevronDown}
+              text={date.label}
+              controls={dates.map((option) => ({
+                title: option.label,
+                onClick: () => setDate(option),
+              }))}
+              disabled={isLoadingTrends || isGeneratingArticle}
+            />
+          </div>
         </div>
         <div className="atm-form-actions-column">
           <ToggleControl
@@ -420,22 +530,26 @@ const TrendingForm = () => {
               className="atm-form-grid"
               style={{ gridTemplateColumns: "1fr 1fr" }}
             >
-              <CustomDropdown
-                label="Writing Style"
+              <DropdownMenu
+                icon={chevronDown}
                 text={articleSettings.writingStyle.label}
-                options={writingStyles}
-                onChange={(val) =>
-                  setArticleSettings((p) => ({ ...p, writingStyle: val }))
-                }
+                label="Writing Style"
+                controls={writingStyles.map((option) => ({
+                  title: option.label,
+                  onClick: () =>
+                    setArticleSettings((p) => ({ ...p, writingStyle: option })),
+                }))}
                 disabled={isGeneratingArticle || selectedTopics.length === 0}
               />
-              <CustomDropdown
-                label="Word Count"
+              <DropdownMenu
+                icon={chevronDown}
                 text={articleSettings.wordCount.label}
-                options={wordCounts}
-                onChange={(val) =>
-                  setArticleSettings((p) => ({ ...p, wordCount: val }))
-                }
+                label="Word Count"
+                controls={wordCounts.map((option) => ({
+                  title: option.label,
+                  onClick: () =>
+                    setArticleSettings((p) => ({ ...p, wordCount: option })),
+                }))}
                 disabled={isGeneratingArticle || selectedTopics.length === 0}
               />
             </div>

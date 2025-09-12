@@ -340,27 +340,27 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     /**
-     * Advanced similarity check for trend titles.
+     * Advanced similarity check for trend titles, now language-aware.
      */
-    private static function _are_trends_similar($title1, $title2) {
-        $normalize = function($title) {
+    private static function _are_trends_similar($title1, $title2, $language = 'en') {
+        $normalize = function($title, $lang) {
             $title = strtolower($title);
-            // Remove common words that don't add much meaning
-            $stopwords = [' a ',' an ',' the ',' at ',' in ',' on ',' and ',' or ',' vs ',' today', ' news'];
-            $title = str_replace($stopwords, ' ', $title);
-            // Remove punctuation and extra spaces
-            return preg_replace(['/[^\w\s]/', '/\s+/'], ['', ' '], trim($title));
+            // Only apply English stopwords for English language searches
+            if ($lang === 'en') {
+                $stopwords = [' a ',' an ',' the ',' at ',' in ',' on ',' and ',' or ',' vs ',' today', ' news', ' speech', ' memorial'];
+                $title = str_replace($stopwords, ' ', $title);
+            }
+            // Use Unicode-aware regex to remove punctuation and extra spaces
+            return preg_replace(['/[^\p{L}\p{N}\s]/u', '/\s+/u'], ['', ' '], trim($title));
         };
 
-        $norm1 = $normalize($title1);
-        $norm2 = $normalize($title2);
+        $norm1 = $normalize($title1, $language);
+        $norm2 = $normalize($title2, $language);
 
         if ($norm1 === $norm2) return true;
 
-        // Check if one is a substring of the other after normalization
         if (strpos($norm1, $norm2) !== false || strpos($norm2, $norm1) !== false) return true;
 
-        // Check percentage similarity
         similar_text($norm1, $norm2, $percent);
         return $percent > 85;
     }
@@ -403,7 +403,7 @@ class ATM_API {
                 if (in_array($j, $processed_indices)) {
                     continue;
                 }
-                if (self::_are_trends_similar($main_trend['title'], $trends[$j]['title'])) {
+                if (self::_are_trends_similar($main_trend['title'], $trends[$j]['title'], $language)) {
                     $main_trend['related_trends'][] = $trends[$j];
                     $processed_indices[] = $j;
                 }
