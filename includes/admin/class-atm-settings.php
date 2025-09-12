@@ -608,7 +608,7 @@ private function render_general_tab() {
                             <select name="atm_image_provider">
                                 <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
                                 <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
-                                <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>BlockFlow (FLUX)</option>
+                                <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>Black Forrest Labs</option>
                             </select>
                         </td>
                     </tr>
@@ -649,7 +649,7 @@ private function render_api_tab() {
                 <tr><th scope="row">OpenRouter API Key</th><td><input type="password" name="atm_openrouter_api_key" value="<?php echo esc_attr($options['openrouter_key']); ?>" class="regular-text" required /></td></tr>
                 <tr><th scope="row">OpenAI API Key</th><td><input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" /><p class="description">Used for DALL-E 3 image generation and OpenAI TTS voices.</p></td></tr>
                 <tr><th scope="row">Google AI API Key</th><td><input type="password" name="atm_google_api_key" value="<?php echo esc_attr($options['google_key']); ?>" class="regular-text" /><p class="description">Used for Imagen 4 image generation. Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p></td></tr>
-                <tr><th scope="row">BlockFlow API Key</th><td><input type="password" name="atm_blockflow_api_key" value="<?php echo esc_attr($options['blockflow_key']); ?>" class="regular-text" /><p class="description">Required for FLUX image generation. Get a key from <a href="https://app.blockflow.ai/" target="_blank">BlockFlow.ai</a>.</p></td></tr>
+                <tr><th scope="row">Black Forrest LabsAPI Key</th><td><input type="password" name="atm_blockflow_api_key" value="<?php echo esc_attr($options['blockflow_key']); ?>" class="regular-text" /><p class="description">Required for FLUX image generation. Get a key from <a href="https://dashboard.bfl.ai/" target="_blank">bfl.ai</a>.</p></td></tr>
                 <tr><th scope="row">ElevenLabs API Key</th><td><input type="password" name="atm_elevenlabs_api_key" value="<?php echo esc_attr($options['elevenlabs_key']); ?>" class="regular-text" /><p class="description">Get a key from <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a> for additional high-quality voices.</p></td></tr>
                 <tr><th scope="row">News API Key</th><td><input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a>.</p></td></tr>
                 <tr><th scope="row">GNews API Key</th><td><input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p></td></tr>
@@ -996,13 +996,21 @@ private function render_advanced_tab() {
 
             // Model Arrays
             'flux_models' => [
-                'flux-1-schnell'        => 'FLUX 1 Schnell',
-                'flux-1-dev'            => 'FLUX 1 Dev (Fast)',
-                'flux-pro'              => 'FLUX Pro',
-                'flux-pro-1.1'          => 'FLUX Pro 1.1',
-                'flux-pro-1.1-ultra'    => 'FLUX Pro 1.1 Ultra (High Quality)',
-                'flux-kontext-pro'      => 'FLUX Kontext Pro',
-                'flux-kontext-max'      => 'FLUX Kontext Max (Best Quality)',
+                // Pro models (highest quality)
+                'flux-pro-1.1-ultra' => 'FLUX Pro 1.1 Ultra (Best Quality)',
+                'flux-pro-1.1-ultra-raw' => 'FLUX Pro 1.1 Ultra Raw (Unfiltered)',
+                'flux-pro-1.1' => 'FLUX Pro 1.1 (High Quality)',
+                'flux-pro-1.1-raw' => 'FLUX Pro 1.1 Raw (Unfiltered)',
+                'flux-pro' => 'FLUX Pro (Professional)',
+                'flux-pro-raw' => 'FLUX Pro Raw (Unfiltered)',
+                
+                // Dev models (good balance)
+                'flux-1-dev' => 'FLUX 1 Dev (Balanced)',
+                'flux-1-dev-raw' => 'FLUX 1 Dev Raw (Unfiltered)',
+                
+                // Fast models
+                'flux-1-schnell' => 'FLUX 1 Schnell (Fastest)',
+                'flux-1-schnell-raw' => 'FLUX 1 Schnell Raw (Fast + Unfiltered)',
             ],
             'article_models'   => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
