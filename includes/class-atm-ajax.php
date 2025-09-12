@@ -1424,113 +1424,40 @@ public function translate_text() {
             $this->ensure_angles_table_exists();
             
             $final_title = $article_title;
-            $angle_combination = '';
-            $angle_description = '';
+            $angle_data = null;
             
-            // Generate angle locally if no title provided
+            // STAGE 1: Generate intelligent angle if no title provided
             if (empty($article_title) && !empty($keyword)) {
                 $tracking_keyword = $keyword;
                 $previous_angles = $this->get_previous_angles($tracking_keyword);
                 
-                // Generate angle locally (no API call)
-                $angle_info = $this->generate_local_angle_and_title($tracking_keyword, $previous_angles);
-                $angle_combination = $angle_info['combination_key'];
-                $angle_description = $this->build_angle_description($angle_info['combination']);
+                error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $tracking_keyword);
                 
-                error_log("ATM Debug: Generated angle: " . $angle_description);
+                // Generate intelligent angle with classification
+                $angle_data = $this->generate_intelligent_angle_classification($tracking_keyword, $previous_angles);
                 
-                // Store angle but don't generate title yet - let AI do it
-                $this->store_content_angle($tracking_keyword, $angle_description, '[AI Generated]');
+                error_log("ATM Debug: Generated intelligent angle: " . $angle_data['angle_description']);
                 
-                // Clear final_title so AI knows to generate one
+                // Store the angle BEFORE content generation
+                $this->store_content_angle($tracking_keyword, $angle_data['angle_description'], '[AI Generated]');
+                
+                // Clear final_title so Stage 2 knows to generate one
                 $final_title = '';
             }
             
-            // Build system prompt for BOTH title and content generation
+            // STAGE 2: Build comprehensive system prompt for title + content generation
             $writing_styles = ATM_API::get_writing_styles();
             $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
-            
             if (!empty($custom_prompt)) {
                 $base_prompt = $custom_prompt;
             }
             
-            // Add angle-specific instructions
-            if (!empty($angle_description)) {
-            $title_enhancement = "
+            // Add intelligent angle context if generated
+            if ($angle_data) {
+                $base_prompt .= $this->build_comprehensive_angle_context($angle_data, $keyword);
+            }
             
-        **ADVANCED TITLE CREATION STRATEGY:**
-        Based on the angle above, create a title using one of these proven formulas:
-
-        **Problem-Solution Formulas:**
-        - 'Why [Audience] in [Industry] Struggle with [Keyword] (And How to Fix It)'
-        - 'The [Keyword] Mistakes That Are Costing [Industry] [Audience] Money'
-        - 'How [Industry] [Audience] Can Finally Master [Keyword] in [Time]'
-
-        **Benefit-Driven Formulas:**
-        - '[Number] [Keyword] Strategies That Transform [Industry] [Audience]'
-        - 'The [Keyword] Secret [Industry] Leaders Don't Want You to Know'
-        - 'How [Industry] [Audience] Use [Keyword] to [Specific Benefit]'
-
-        **Urgency/Trend Formulas:**
-        - '[Time]: The Year [Keyword] Changes [Industry] Forever'
-        - 'Why [Industry] [Audience] Must Embrace [Keyword] in [Time]'
-        - 'The [Keyword] Revolution Coming to [Industry] in [Time]'
-
-        **Contrarian Formulas:**
-        - 'Why Everything [Industry] [Audience] Know About [Keyword] is Wrong'
-        - 'The [Keyword] Advice That's Actually Hurting [Industry] Businesses'
-        - 'Forget Traditional [Keyword]: Here's What [Industry] Leaders Actually Do'
-
-        **Case Study/Story Formulas:**
-        - 'How This [Industry] [Audience] Used [Keyword] to [Specific Result]'
-        - 'From Zero to Hero: [Keyword] Success Story in [Industry]'
-        - 'Case Study: [Keyword] Transformation in [Industry] ([Time] Results)'
-
-        Choose the formula that best fits the angle and keyword. Make it specific, compelling, and avoid generic language.";
-
-            $base_prompt .= "\n\n**MANDATORY CONTENT ANGLE:**\n" . $angle_description . $title_enhancement;
-            $base_prompt .= "\n\nYou MUST create both the title and content specifically for this angle. Do not write generic content.";
-        }
-            
-            $output_instructions = '
-**Final Output Format:**
-Your entire output MUST be a single, valid JSON object with three keys:
-1. "title": ' . (empty($final_title) ? 'A compelling, specific title that perfectly matches the required angle and keyword' : '"' . $final_title . '"') . '
-2. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
-3. "content": The full article text, formatted using Markdown.
-
-**CRITICAL CONTENT RULES:**
-- The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
-- The `content` field must NOT start with a title or any heading (like `# Heading`). It must begin directly with the first paragraph of the introduction.
-- Do NOT include a final heading titled "Conclusion", "Summary", "Final Thoughts", "In Summary", "To Conclude", "Wrapping Up", "Looking Ahead", "What\'s Next", "The Bottom Line", "Key Takeaways", or any similar conclusory heading. The article should end naturally with the concluding paragraph itself.
-- Do NOT start with generic section headers like "Introduction", "Overview", "Background", etc.
-- Write in a natural, flowing manner without artificial structure markers.
-
-**Title Requirements (if generating):**
-- Must be compelling and clickable (8-18 words)
-- Should reflect the specific angle provided
-- Include the keyword naturally
-- Use power words and emotional triggers
-- Avoid generic phrases like "Complete Guide" or "Everything You Need to Know"
-- Make it specific to the target audience and angle
-
-**Content Requirements:**
-- Must target the exact angle specified above
-- Begin with an engaging hook paragraph
-- Use natural transitions between sections
-- End with a strong concluding paragraph (no heading above it)
-
-**Link Formatting Rules:**
-- When including external links, NEVER use the website URL as the anchor text
-- Use ONLY 1-3 descriptive words as anchor text
-- Example: railway that [had a deadly crash](https://reuters.com/specific-article) last week and will...
-- Example: Example: [Digital Media](https://wikipedia.com/actual-article-url) reported that...
-- Do NOT use generic phrases like "click here", "read more", or "this article" as anchor text
-- Anchor text should be relevant keywords from the article topic (e.g., marketing, design, finance, AI)
-- Keep anchor text extremely concise (maximum 2 words)
-- Make links feel natural within the sentence flow
-- Avoid long phrases as anchor text';
-            
+            $output_instructions = $this->get_enhanced_output_instructions($final_title);
             $system_prompt = $base_prompt . "\n\n" . $output_instructions;
             
             if ($post) {
@@ -1540,19 +1467,21 @@ Your entire output MUST be a single, valid JSON object with three keys:
                 $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
             }
             
-            // Single API call for both title and content
+            // STAGE 2: Single API call for title + content with web search
             $user_content = empty($final_title) ? $keyword : $final_title;
+            
+            error_log("ATM Debug: Making content generation API call");
             
             $raw_response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $user_content], 
                 $system_prompt, 
                 $model_override ?: get_option('atm_article_model'), 
                 true, // JSON mode
-                true, // enable web search
+                true, // enable web search for current information
                 $creativity_level
             );
             
-            // Process response
+            // Process response (existing code)
             $json_string = trim($raw_response);
             if (!str_starts_with($json_string, '{')) {
                 if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
@@ -1571,8 +1500,8 @@ Your entire output MUST be a single, valid JSON object with three keys:
             $final_content = trim($result['content']);
 
             // Update the stored angle with the actual generated title
-            if (!empty($angle_description) && !empty($generated_title)) {
-                $this->update_stored_angle($tracking_keyword, $angle_description, $generated_title);
+            if ($angle_data && !empty($generated_title)) {
+                $this->update_stored_angle($tracking_keyword, $angle_data['angle_description'], $generated_title);
             }
 
             // Save subtitle
@@ -1586,10 +1515,144 @@ Your entire output MUST be a single, valid JSON object with three keys:
                 'article_content' => $final_content, 
                 'subtitle' => $subtitle
             ]);
+            
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
     }
+
+    /**
+     * STAGE 1: Generate intelligent angle with classification (no web search)
+     */
+    private function generate_intelligent_angle_classification($keyword, $previous_angles) {
+        $previous_angles_text = '';
+        if (!empty($previous_angles)) {
+            $previous_angles_text = "\n\nPREVIOUS ANGLES ALREADY USED:\n";
+            foreach ($previous_angles as $i => $angle_data) {
+                $previous_angles_text .= "- " . ($i + 1) . ". " . $angle_data['angle'] . "\n";
+            }
+            $previous_angles_text .= "\nYou MUST create a completely different angle.";
+        }
+        
+        $classification_prompt = "Analyze the keyword '$keyword' and create a unique article angle.
+
+    **ANALYSIS REQUIRED:**
+    1. Classify the keyword type (person, business, technology, health, entertainment, location, event, product, concept)
+    2. Determine the most appropriate content approach
+    3. Create a specific, unique angle that hasn't been used before
+
+    {$previous_angles_text}
+
+    **OUTPUT FORMAT (JSON):**
+    {
+    \"keyword_type\": \"category of the keyword\",
+    \"content_approach\": \"best format for this topic\",
+    \"target_audience\": \"who would be interested in this\",
+    \"angle_description\": \"Specific unique angle in one detailed sentence\",
+    \"title_guidance\": \"Specific instructions for creating an engaging title\"
+    }
+
+    **REQUIREMENTS:**
+    - The angle must be factually grounded and respectful
+    - Must be completely different from previous angles
+    - Should be interesting and clickable
+    - Must be appropriate for the keyword type
+
+    Return only the JSON object.";
+
+        $raw_response = ATM_API::enhance_content_with_openrouter(
+            ['content' => $keyword],
+            $classification_prompt,
+            'anthropic/claude-3-haiku', // Fast, cost-effective model
+            true, // JSON mode
+            false // NO web search - saves cost and time
+        );
+        
+        $result = json_decode($raw_response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log('ATM Angle Classification - Invalid JSON: ' . $raw_response);
+            throw new Exception('Failed to generate article angle. Please try again.');
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Build comprehensive angle context for Stage 2
+     */
+    private function build_comprehensive_angle_context($angle_data, $keyword) {
+        return "\n\n**INTELLIGENT CONTENT STRATEGY:**
+        
+    **Keyword Analysis:**
+    - Topic: '$keyword'
+    - Type: {$angle_data['keyword_type']}
+    - Target Audience: {$angle_data['target_audience']}
+    - Content Approach: {$angle_data['content_approach']}
+
+    **MANDATORY ANGLE:**
+    {$angle_data['angle_description']}
+
+    **Title Creation Instructions:**
+    {$angle_data['title_guidance']}
+
+    **CRITICAL REQUIREMENTS:**
+    1. The title and content MUST align with this specific angle
+    2. Content must be factually accurate and well-researched
+    3. Use current, verifiable information from web search
+    4. Stay focused on this unique perspective throughout
+    5. Make the content valuable and engaging for the target audience
+    6. Ensure the angle is clearly reflected in both title and content structure
+
+    **CONTENT QUALITY STANDARDS:**
+    - Use specific examples and current data
+    - Include relevant context and background
+    - Avoid speculation or unverified claims
+    - Be respectful and objective, especially for people/sensitive topics
+    - Create genuine value for readers interested in this angle";
+    }
+
+    /**
+     * Enhanced output instructions with better content rules
+     */
+    private function get_enhanced_output_instructions($final_title) {
+        return '**Final Output Format:**
+    Your entire output MUST be a single, valid JSON object with three keys:
+    1. "title": ' . (empty($final_title) ? 'A compelling, specific title that perfectly matches the required angle and keyword. Use the title guidance provided above.' : '"' . $final_title . '"') . '
+    2. "subheadline": A creative and engaging one-sentence subtitle that complements the main title.
+    3. "content": The full article text, formatted using Markdown.
+
+    **CRITICAL CONTENT RULES:**
+    - The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+    - The `content` field must NOT start with a title or any heading. It must begin directly with the first paragraph of the introduction.
+    - Do NOT include a final heading titled "Conclusion", "Summary", "Final Thoughts", "In Summary", "To Conclude", "Wrapping Up", "Looking Ahead", "What\'s Next", "The Bottom Line", "Key Takeaways", or any similar conclusory heading.
+    - Do NOT start with generic section headers like "Introduction", "Overview", "Background".
+    - End with a natural concluding paragraph that has no heading above it.
+    - Write in a natural, flowing manner without artificial structure markers.
+
+    **TITLE REQUIREMENTS (if generating):**
+    - Must be compelling and clickable (8-18 words)
+    - Should perfectly reflect the specific angle provided
+    - Include the keyword naturally
+    - Use power words and emotional triggers appropriate to the topic
+    - Avoid generic phrases and make it specific to the angle
+
+    **LINK FORMATTING RULES:**
+    - When including external links, NEVER use the website URL as the anchor text
+    - Use ONLY 1-3 descriptive words as anchor text
+    - Keep anchor text extremely concise (maximum 2 words)
+    - Make links feel natural within the sentence flow
+    - Ensure all information is current and accurate using web search data
+
+    **CONTENT REQUIREMENTS:**
+    - Must target the exact angle specified above
+    - Begin with an engaging hook paragraph that relates to the angle
+    - Use natural transitions between sections
+    - Include current, factual information from web search
+    - Focus on providing genuine value to the target audience
+    - Maintain the specific perspective throughout the entire article';
+    }
+
+
 
     // Add this helper method to update the stored angle with real title
     private function update_stored_angle($keyword, $angle_description, $actual_title) {
