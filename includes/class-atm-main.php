@@ -9,216 +9,6 @@ class ATM_Main {
     private static $instance = null;
     private static $hooks_initialized = false;
 
-    public function add_automation_menu() {
-        // This will be added as submenu under AI Studio
-        add_submenu_page(
-            'content-ai-studio', // parent slug
-            'AI Automation', // page title
-            'Automation', // menu title
-            'manage_options', // capability
-            'ai-automation', // menu slug
-            array($this, 'render_automation_page') // callback
-        );
-        
-        add_submenu_page(
-            'content-ai-studio',
-            'Campaign Manager',
-            'Campaigns',
-            'manage_options',
-            'ai-automation-campaigns',
-            array($this, 'render_campaigns_page')
-        );
-    }
-    
-    // Render main automation page
-    public function render_automation_page() {
-    ?>
-    <div class="wrap">
-        <div class="atm-studio-wrapper">
-            <div class="atm-sidebar">
-                <div class="atm-sidebar-header">
-                    <h2>AI Automation</h2>
-                    <p>Campaign Manager</p>
-                </div>
-            </div>
-            <div class="atm-main-content">
-                <div class="atm-content-header">
-                    <h1 class="atm-content-title">General Articles</h1>
-                    <p class="atm-content-subtitle">Configure and schedule your automated content campaign.</p>
-                </div>
-                <div class="atm-content-body">
-                    <div id="atm-automation-root"></div>
-                    <div style="padding: 20px; text-align: center;">
-                        <h3>Automation Interface Loading...</h3>
-                        <p>If this message persists, check the browser console for JavaScript errors.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        console.log("ATM Debug: Page loaded, checking automation setup...");
-        
-        // Check if the scripts are loaded
-        setTimeout(() => {
-            const automationScript = document.querySelector('script[src*="automation.js"]');
-            const rootElement = document.getElementById('atm-automation-root');
-            
-            console.log("ATM Debug: Automation script found:", !!automationScript);
-            console.log("ATM Debug: Root element found:", !!rootElement);
-            console.log("ATM Debug: React available:", typeof window.React !== 'undefined');
-            console.log("ATM Debug: wp.element available:", typeof window.wp?.element !== 'undefined');
-            
-            if (automationScript) {
-                console.log("ATM Debug: Script src:", automationScript.src);
-            }
-            
-            if (!automationScript) {
-                rootElement.innerHTML = '<div style="background: #fee2e2; color: #dc2626; padding: 20px; border-radius: 8px; margin: 20px;"><h3>Build Missing</h3><p>The automation.js file is not found. Please run your build process to compile the automation interface.</p></div>';
-            }
-        }, 1000);
-    </script>
-    <?php
-}
-    
-    // Render campaigns management page
-    public function render_campaigns_page() {
-        echo '<div id="atm-campaigns-root" class="atm-studio-container"></div>';
-    }
-    
-    public static function create_automation_tables() {
-        global $wpdb;
-        $charset_collate = $wpdb->get_charset_collate();
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-
-        // Main campaigns table
-        $table_campaigns = $wpdb->prefix . 'atm_automation_campaigns';
-        $sql_campaigns = "CREATE TABLE $table_campaigns (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
-            name varchar(255) NOT NULL,
-            type enum('article', 'news', 'video', 'podcast') NOT NULL,
-            status enum('active', 'paused', 'completed', 'error') DEFAULT 'active',
-            
-            -- Scheduling
-            frequency_value int(11) NOT NULL DEFAULT 1,
-            frequency_unit enum('minute', 'hour', 'day', 'week') NOT NULL DEFAULT 'hour',
-            start_date datetime DEFAULT CURRENT_TIMESTAMP,
-            end_date datetime NULL,
-            max_posts int(11) DEFAULT 0, -- 0 = unlimited
-            posts_generated int(11) DEFAULT 0,
-            
-            -- WordPress Settings
-            post_status enum('publish', 'draft', 'scheduled') DEFAULT 'publish',
-            author_id bigint(20) NOT NULL,
-            category_ids text, -- JSON array of category IDs
-            tag_ids text, -- JSON array of tag IDs
-            generate_featured_image tinyint(1) DEFAULT 0,
-            
-            -- Content Settings (JSON)
-            content_settings longtext NOT NULL, -- All generator-specific settings as JSON
-            
-            -- Execution Info
-            last_executed datetime NULL,
-            next_execution datetime NULL,
-            consecutive_failures int(11) DEFAULT 0,
-            
-            -- Metadata
-            created_by bigint(20) NOT NULL,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            
-            PRIMARY KEY (id),
-            KEY status (status),
-            KEY type (type),
-            KEY next_execution (next_execution),
-            KEY author_id (author_id),
-            KEY created_by (created_by)
-        ) $charset_collate;";
-        
-        // Execution history table
-        $table_executions = $wpdb->prefix . 'atm_automation_executions';
-        $sql_executions = "CREATE TABLE $table_executions (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
-            campaign_id bigint(20) NOT NULL,
-            
-            -- Execution Details
-            status enum('pending', 'running', 'completed', 'failed') DEFAULT 'pending',
-            started_at datetime DEFAULT CURRENT_TIMESTAMP,
-            completed_at datetime NULL,
-            
-            -- Results
-            post_id bigint(20) NULL, -- Created post ID if successful
-            generated_title varchar(500) NULL,
-            error_message text NULL,
-            execution_data longtext NULL, -- JSON with execution details
-            
-            -- Performance
-            execution_time_seconds decimal(10,3) NULL,
-            api_calls_made int(11) DEFAULT 0,
-            
-            PRIMARY KEY (id),
-            KEY campaign_id (campaign_id),
-            KEY status (status),
-            KEY started_at (started_at),
-            FOREIGN KEY (campaign_id) REFERENCES $table_campaigns(id) ON DELETE CASCADE
-        ) $charset_collate;";
-        
-        // Queue table for managing execution order
-        $table_queue = $wpdb->prefix . 'atm_automation_queue';
-        $sql_queue = "CREATE TABLE $table_queue (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
-            campaign_id bigint(20) NOT NULL,
-            scheduled_for datetime NOT NULL,
-            priority int(11) DEFAULT 5, -- 1 = highest, 10 = lowest
-            attempts int(11) DEFAULT 0,
-            max_attempts int(11) DEFAULT 3,
-            
-            -- Status tracking
-            status enum('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
-            locked_at datetime NULL,
-            locked_by varchar(255) NULL, -- Process identifier
-            
-            -- Metadata
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            
-            PRIMARY KEY (id),
-            KEY campaign_id (campaign_id),
-            KEY scheduled_for (scheduled_for),
-            KEY status (status),
-            KEY priority (priority),
-            FOREIGN KEY (campaign_id) REFERENCES $table_campaigns(id) ON DELETE CASCADE
-        ) $charset_collate;";
-
-        // Content tracking table to avoid duplicates
-        $table_content_tracking = $wpdb->prefix . 'atm_automation_content_tracking';
-        $sql_content_tracking = "CREATE TABLE $table_content_tracking (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
-            campaign_id bigint(20) NOT NULL,
-            content_hash varchar(64) NOT NULL, -- SHA256 of content/title
-            source_identifier varchar(500) NULL, -- URL, keyword, etc.
-            post_id bigint(20) NULL,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            
-            PRIMARY KEY (id),
-            UNIQUE KEY unique_content (campaign_id, content_hash),
-            KEY campaign_id (campaign_id),
-            KEY source_identifier (source_identifier(255)),
-            FOREIGN KEY (campaign_id) REFERENCES $table_campaigns(id) ON DELETE CASCADE
-        ) $charset_collate;";
-
-        // Execute all table creations
-        dbDelta($sql_campaigns);
-        dbDelta($sql_executions);
-        dbDelta($sql_queue);
-        dbDelta($sql_content_tracking);
-        
-        // Create indexes for performance
-        $wpdb->query("CREATE INDEX idx_next_execution_status ON $table_campaigns (next_execution, status)");
-        $wpdb->query("CREATE INDEX idx_queue_processing ON $table_queue (scheduled_for, status, priority)");
-    }
-    
     public function check_database_tables() {
         // Only run once per day
         $last_check = get_option('atm_last_db_check');
@@ -596,7 +386,6 @@ class ATM_Main {
 
     private function load_dependencies() {
         $required_files = [
-            'includes/automation/class-atm-automation-processor.php', // Add this line
             'includes/admin/class-atm-meta-box.php',
             'includes/admin/class-atm-settings.php',
             'includes/class-atm-ajax.php',
@@ -605,6 +394,7 @@ class ATM_Main {
             'includes/class-atm-theme-subtitle-manager.php',
             'includes/class-atm-frontend.php',
             'includes/class-atm-licensing.php',
+            'includes/class-atm-campaign-manager.php',
             'includes/lib/Parsedown.php',
             'includes/class-atm-listicle.php',
             'includes/class-atm-humanize.php'
@@ -632,6 +422,7 @@ class ATM_Main {
         $settings = class_exists('ATM_Settings') ? new ATM_Settings() : null;
         $ajax = class_exists('ATM_Ajax') ? new ATM_Ajax() : null;
         $frontend = class_exists('ATM_Frontend') ? new ATM_Frontend() : null;
+        $campaign_manager = class_exists('ATM_Campaign_Manager') ? new ATM_Campaign_Manager() : null;
         $listicle = class_exists('ATM_Listicle_Generator') ? new ATM_Listicle_Generator() : null;
         $humanize = class_exists('ATM_Humanize') ? new ATM_Humanize() : null;
 
@@ -669,16 +460,11 @@ class ATM_Main {
         add_action('wp_ajax_check_script_progress', array($ajax, 'check_script_progress'));
         add_action('atm_cleanup_used_articles', array('ATM_Main', 'cleanup_old_used_articles'));
         add_action('atm_cleanup_angles', array('ATM_Main', 'cleanup_old_angles'));
-        add_action('atm_process_automation_queue', array('ATM_Automation_Processor', 'process_queue'));
-        add_action('admin_menu', array($this, 'add_automation_menu'));
 
-        // Automation Hooks
-        add_action('atm_process_automation_queue', array('ATM_Automation_Processor', 'process_queue'));
-        add_action('atm_generate_featured_image_job', array('ATM_Automation_Processor', 'run_image_generation_job'), 10, 2); // <-- ADD THIS LINE
-        add_action('admin_menu', array($this, 'add_automation_menu'));
 
         // Add cleanup for script jobs
         add_action('atm_cleanup_script_jobs', array('ATM_Main', 'cleanup_old_script_jobs'));
+
 
         // License check - only add meta boxes if licensed and meta box class exists
         if (class_exists('ATM_Licensing') && ATM_Licensing::is_license_active() && $meta_box) {
@@ -705,6 +491,11 @@ class ATM_Main {
         
         add_action('wp_enqueue_scripts', array($this, 'enqueue_listicle_styles'), 100);
         add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
+
+        // Campaign manager hooks
+        if (class_exists('ATM_Campaign_Manager')) {
+            ATM_Campaign_Manager::schedule_main_cron();
+        }
     }
 
     public static function cleanup_old_script_jobs() {
@@ -719,156 +510,128 @@ class ATM_Main {
     }
     
     public function enqueue_admin_scripts($hook) {
-        $screen = get_current_screen();
-        if (!$screen) {
-            return;
-        }
-
-        // --- Improved Page Detection (from second code) ---
-        $is_automation_page = strpos($screen->id, 'ai-automation') !== false;
-        $is_post_editor = in_array($hook, ['post.php', 'post-new.php']);
-        $is_plugin_settings_page = ($screen->id === 'toplevel_page_content-ai-studio' || strpos($screen->id, 'ai-studio_page_') === 0);
-
-        // If it's none of the above, stop loading scripts.
-        if (!$is_post_editor && !$is_automation_page && !$is_plugin_settings_page) {
-            return;
-        }
-
-        wp_enqueue_media();
-
-        // Register the marked library from CDN
-        wp_register_script(
-            'marked-library',
-            'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
-            array(),
-            '4.0.12',
-            true
-        );
-
-        // Enqueue admin script FIRST (contains global block utilities)
-        $dependencies = array('jquery', 'wp-blocks', 'wp-data', 'wp-element', 'wp-editor', 'wp-components', 'marked-library');
-        wp_enqueue_script(
-            'atm-admin-script',
-            ATM_PLUGIN_URL . 'assets/js/admin.js',
-            $dependencies,
-            ATM_VERSION,
-            true
-        );
-
-        // KEEP THE ORIGINAL ADMIN.CSS (this was missing in second code)
-        wp_enqueue_style(
-            'atm-admin-style',
-            ATM_PLUGIN_URL . 'assets/css/admin.css',
-            array(),
-            ATM_VERSION
-        );
-
-        // Enqueue Gutenberg sidebar script
-        $script_asset_path = ATM_PLUGIN_PATH . 'build/index.asset.php';
-        if (file_exists($script_asset_path)) {
-            $script_asset = require($script_asset_path);
-            wp_enqueue_script(
-                'atm-gutenberg-sidebar',
-                ATM_PLUGIN_URL . 'build/index.js',
-                array_merge($script_asset['dependencies'], ['atm-admin-script']), // Add dependency
-                $script_asset['version'],
-                true
-            );
-            
-            $style_path = ATM_PLUGIN_PATH . 'build/index.css';
-            if (file_exists($style_path)) {
-                wp_enqueue_style(
-                    'atm-gutenberg-sidebar-style',
-                    ATM_PLUGIN_URL . 'build/index.css',
-                    array(),
-                    $script_asset['version']
-                );
-            }
-        }
-
-        // --- Prepare Localized Data (improved from second code) ---
-        $localized_data = array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('atm_nonce'),
-            'plugin_url' => ATM_PLUGIN_URL,
-            'tts_voices' => ['alloy' => 'Alloy', 'echo' => 'Echo', 'fabel' => 'Fable', 'onyx' => 'Onyx', 'nova' => 'Nova', 'shimmer' => 'Shimmer'],
-        );
-
-        // Add settings data if available
-        if (class_exists('ATM_Settings')) {
-            $settings_class = new ATM_Settings();
-            $settings = $settings_class->get_settings();
-            $localized_data['article_models'] = $settings['article_models'];
-            $localized_data['content_models'] = $settings['content_models'];
-            $localized_data['image_provider'] = $settings['image_provider'];
-            $localized_data['audio_provider'] = $settings['audio_provider'];
-        }
-
-        // Add API data if available
-        if (class_exists('ATM_API')) {
-            $api_class = new ATM_API();
-            $localized_data['writing_styles'] = $api_class->get_writing_styles();
-            $localized_data['elevenlabs_voices'] = ATM_API::get_elevenlabs_voices();
-        }
-
-        // Add post-specific data
-        $post_id = get_the_ID();
-        if ($post_id) {
-            $localized_data['existing_podcast_url'] = get_post_meta($post_id, '_atm_podcast_url', true);
-            $localized_data['existing_podcast_script'] = get_post_meta($post_id, '_atm_podcast_script', true);
-        }
-
-        // Single localization point (improvement from second code)
-        wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
-
-        // --- Conditionally Load the Correct React Application (improved from second code) ---
-        if ($is_automation_page) {
-            $automation_asset_path = ATM_PLUGIN_PATH . 'build/automation.asset.php';
-            if (file_exists($automation_asset_path)) {
-                $automation_asset = require($automation_asset_path);
-                wp_enqueue_script(
-                    'atm-automation-app',
-                    ATM_PLUGIN_URL . 'build/automation.js',
-                    array_merge($automation_asset['dependencies'], ['atm-admin-script']),
-                    $automation_asset['version'],
-                    true
-                );
-                wp_localize_script('atm-automation-app', 'atm_automation_data', $localized_data);
-
-                // Enqueue the main studio style for consistent UI
-                wp_enqueue_style(
-                    'atm-studio-style',
-                    ATM_PLUGIN_URL . 'build/studio.css',
-                    array(),
-                    ATM_VERSION
-                );
-            }
-        } else {
-            // This handles the post editor and settings pages
-            $studio_asset_path = ATM_PLUGIN_PATH . 'build/studio.asset.php';
-            if (file_exists($studio_asset_path)) {
-                $studio_asset = require($studio_asset_path);
-                wp_enqueue_script(
-                    'atm-studio-app',
-                    ATM_PLUGIN_URL . 'build/studio.js',
-                    array_merge($studio_asset['dependencies'], ['atm-admin-script']),
-                    $studio_asset['version'],
-                    true
-                );
-
-                $studio_style_path = ATM_PLUGIN_PATH . 'build/studio.css';
-                if (file_exists($studio_style_path)) {
-                    wp_enqueue_style(
-                        'atm-studio-style',
-                        ATM_PLUGIN_URL . 'build/studio.css',
-                        array(),
-                        $studio_asset['version']
-                    );
-                }
-                wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data);
-            }
+    $screen = get_current_screen();
+    $is_plugin_page = false;
+    
+    if ($screen) {
+        if ($screen->id === 'toplevel_page_content-ai-studio' || strpos($screen->id, 'ai-studio_page_') === 0) {
+             $is_plugin_page = true;
         }
     }
+
+    if ($hook !== 'post.php' && $hook !== 'post-new.php' && !$is_plugin_page) {
+        return;
+    }
+
+    wp_enqueue_media();
+
+    // Register the marked library from CDN
+    wp_register_script(
+        'marked-library',
+        'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
+        array(),
+        '4.0.12',
+        true
+    );
+
+    // Enqueue admin script FIRST (contains global block utilities)
+    $dependencies = array('jquery', 'wp-blocks', 'wp-data', 'wp-element', 'wp-editor', 'wp-components', 'marked-library');
+    wp_enqueue_script(
+        'atm-admin-script',
+        ATM_PLUGIN_URL . 'assets/js/admin.js',
+        $dependencies,
+        ATM_VERSION,
+        true
+    );
+
+    wp_enqueue_style(
+        'atm-admin-style',
+        ATM_PLUGIN_URL . 'assets/css/admin.css',
+        array(),
+        ATM_VERSION
+    );
+
+    // Enqueue Gutenberg sidebar script
+    $script_asset_path = ATM_PLUGIN_PATH . 'build/index.asset.php';
+    if (file_exists($script_asset_path)) {
+        $script_asset = require($script_asset_path);
+        wp_enqueue_script(
+            'atm-gutenberg-sidebar',
+            ATM_PLUGIN_URL . 'build/index.js',
+            array_merge($script_asset['dependencies'], ['atm-admin-script']), // Add dependency
+            $script_asset['version'],
+            true
+        );
+        
+        $style_path = ATM_PLUGIN_PATH . 'build/index.css';
+        if (file_exists($style_path)) {
+            wp_enqueue_style(
+                'atm-gutenberg-sidebar-style',
+                ATM_PLUGIN_URL . 'build/index.css',
+                array(),
+                $script_asset['version']
+            );
+        }
+    }
+
+    // Enqueue Studio App for meta box (depends on admin script)
+    $studio_asset_path = ATM_PLUGIN_PATH . 'build/studio.asset.php';
+    if (file_exists($studio_asset_path)) {
+        $studio_asset = require($studio_asset_path);
+        wp_enqueue_script(
+            'atm-studio-app',
+            ATM_PLUGIN_URL . 'build/studio.js',
+            array_merge($studio_asset['dependencies'], ['atm-admin-script']), // Add dependency
+            $studio_asset['version'],
+            true
+        );
+        
+        $studio_style_path = ATM_PLUGIN_PATH . 'build/studio.css';
+        if (file_exists($studio_style_path)) {
+            wp_enqueue_style(
+                'atm-studio-style',
+                ATM_PLUGIN_URL . 'build/studio.css',
+                array(),
+                $studio_asset['version']
+            );
+        }
+    }
+
+    // Prepare localized data
+    $localized_data = array(
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('atm_nonce'),
+        'plugin_url' => ATM_PLUGIN_URL,
+        'tts_voices' => ['alloy' => 'Alloy', 'echo' => 'Echo', 'fabel' => 'Fable', 'onyx' => 'Onyx', 'nova' => 'Nova', 'shimmer' => 'Shimmer'],
+    );
+
+    // Add settings data if available
+    if (class_exists('ATM_Settings')) {
+        $settings_class = new ATM_Settings();
+        $settings = $settings_class->get_settings();
+        $localized_data['article_models'] = $settings['article_models'];
+        $localized_data['content_models'] = $settings['content_models'];
+        $localized_data['image_provider'] = $settings['image_provider'];
+        $localized_data['audio_provider'] = $settings['audio_provider'];
+    }
+
+    // Add API data if available
+    if (class_exists('ATM_API')) {
+        $api_class = new ATM_API();
+        $localized_data['writing_styles'] = $api_class->get_writing_styles();
+        $localized_data['elevenlabs_voices'] = ATM_API::get_elevenlabs_voices();
+    }
+
+    // Add post-specific data
+    $post_id = get_the_ID();
+    if ($post_id) {
+        $localized_data['existing_podcast_url'] = get_post_meta($post_id, '_atm_podcast_url', true);
+        $localized_data['existing_podcast_script'] = get_post_meta($post_id, '_atm_podcast_script', true);
+    }
+
+    wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
+    wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data);
+}
 
     public function register_tinymce_button() {
         if (!current_user_can('edit_posts') && !current_user_can('edit_pages') && get_user_option('rich_editing') !== 'true') {
@@ -960,7 +723,7 @@ class ATM_Main {
             }
         }
         
-        self::create_automation_tables(); // Add this new line
+        self::create_campaigns_table();
         self::create_podcast_progress_table(); // Add this line
         self::create_script_jobs_table(); // Add this line
         self::create_used_articles_table(); // Add this line

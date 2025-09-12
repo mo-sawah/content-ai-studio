@@ -160,8 +160,211 @@ class ATM_Settings {
 
         add_menu_page('Content AI Studio', 'AI Studio', 'manage_options', 'content-ai-studio', array($this, 'render_settings_page'), $icon_svg, 25);
         add_submenu_page('content-ai-studio', 'Settings', 'Settings', 'manage_options', 'content-ai-studio', array($this, 'render_settings_page'));
+        add_submenu_page('content-ai-studio', 'Automatic', 'Automatic', 'manage_options', 'content-ai-studio-automatic', array($this, 'render_automatic_page'));
         add_submenu_page('content-ai-studio', 'About Content AI Studio', 'About', 'manage_options', 'content-ai-studio-about', array($this, 'render_about_page'));
         add_submenu_page('content-ai-studio', 'Support', 'Support', 'manage_options', 'content-ai-studio-support', array($this, 'render_support_page'));
+    }
+
+    public function render_automatic_page() {
+        // This function will decide whether to show the list or the add/edit form
+        $action = $_GET['action'] ?? 'list';
+        $campaign_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+        echo '<div class="wrap atm-settings">';
+        
+        if ('edit' === $action || 'add' === $action) {
+            $this->render_campaign_form($campaign_id);
+        } else {
+            $this->render_campaigns_list();
+        }
+
+        echo '</div>';
+    }
+
+    // Add these two new functions to class-atm-settings.php
+
+    private function render_campaigns_list() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'content_ai_campaigns';
+        $campaigns = $wpdb->get_results("SELECT * FROM $table_name ORDER BY id DESC");
+        ?>
+        <div class="atm-header">
+            <h1>⚙️ Automatic Campaigns</h1>
+            <p class="atm-subtitle">Create and manage automated content generation schedules.</p>
+        </div>
+        <a href="?page=content-ai-studio-automatic&action=add" class="page-title-action">Add New Campaign</a>
+        
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th>Keyword</th>
+                    <th>Frequency</th>
+                    <th>Next Run</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($campaigns as $campaign): ?>
+                    <tr>
+                        <td><strong><?php echo esc_html($campaign->keyword); ?></strong></td>
+                        <td>Every <?php echo esc_html($campaign->frequency_value . ' ' . $campaign->frequency_unit); ?>(s)</td>
+                        <td><?php echo esc_html(wp_next_scheduled('atm_run_campaign_' . $campaign->id, [$campaign->id]) ? date('Y-m-d H:i:s', wp_next_scheduled('atm_run_campaign_' . $campaign->id, [$campaign->id])) : 'Not Scheduled'); ?></td>
+                        <td><?php echo $campaign->is_active ? 'Active' : 'Paused'; ?></td>
+                        <td>
+                            <a href="?page=content-ai-studio-automatic&action=edit&id=<?php echo $campaign->id; ?>">Edit</a> | 
+                            <a href="#" class="atm-delete-campaign" data-id="<?php echo $campaign->id; ?>">Delete</a> | 
+                            <a href="#" class="atm-run-campaign" data-id="<?php echo $campaign->id; ?>">Run Now</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php
+    }
+
+    private function render_campaign_form($campaign_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'content_ai_campaigns';
+        $campaign = null;
+        $is_editing = $campaign_id > 0;
+
+        if ($is_editing) {
+            $campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
+        }
+
+        // Set default values for a new campaign
+        $defaults = [
+        'keyword' => '', 'country' => '', 'article_type' => 'Informative',
+        'custom_prompt' => ATM_API::get_default_article_prompt(),
+        'generate_image' => 0, 'category_id' => get_option('default_category'),
+        'author_id' => get_current_user_id(), 'post_status' => 'draft',
+        'frequency_value' => 1, 'frequency_unit' => 'day',
+        'source_keywords' => '',           // <-- Add this
+        'source_urls' => '',               // <-- Add this
+        'strict_keyword_matching' => 1     // <-- Add this
+        ];
+
+        // Merge campaign data with defaults
+        $data = (object) wp_parse_args($campaign, $defaults);
+        ?>
+        <div class="atm-header">
+            <h1><?php echo $is_editing ? 'Edit Campaign' : 'Add New Campaign'; ?></h1>
+            <?php if ($is_editing): ?>
+                <a href="?page=content-ai-studio-automatic" class="page-title-action">Add New</a>
+            <?php endif; ?>
+        </div>
+        <form method="post" id="atm-campaign-form">
+            <input type="hidden" name="action" value="atm_save_campaign">
+            <input type="hidden" name="campaign_id" value="<?php echo esc_attr($campaign_id); ?>">
+            <div class="atm-settings-card">
+                <h2>Campaign Details</h2>
+                <div class="atm-settings-grid" style="grid-template-columns: 1fr 1fr 1fr; align-items: end;">
+                    <div class="form-group">
+                        <label for="atm-keyword">Keyword</label>
+                        <input type="text" id="atm-keyword" name="keyword" value="<?php echo esc_attr($data->keyword); ?>" class="regular-text" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="atm-country">Country</label>
+                        <input type="text" id="atm-country" name="country" value="<?php echo esc_attr($data->country); ?>" class="regular-text" placeholder="e.g., United States">
+                    </div>
+                    <div class="form-group">
+                        <label for="atm-article-type">Article Type</label>
+                        <select id="atm-article-type" name="article_type">
+                            <?php $types = ['News', 'Informative', 'Review', 'How-To', 'Opinion', 'Tutorial', 'Listicle']; ?>
+                            <?php foreach($types as $type): ?>
+                                <option value="<?php echo esc_attr($type); ?>" <?php selected($data->article_type, $type); ?>><?php echo esc_html($type); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label for="atm-custom-prompt">Custom Prompt (Optional)</label>
+                    <textarea id="atm-custom-prompt" name="custom_prompt" rows="8"><?php echo esc_textarea($data->custom_prompt); ?></textarea>
+                    <p class="description">This prompt will be used to generate the article. The keyword, country, and article type will be automatically included.</p>
+                </div>
+            </div>
+
+            <div class="atm-settings-card">
+            <h2>📰 Sources</h2>
+            <div class="form-group">
+                <label for="atm-source-keywords">Source Keywords</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="text" id="atm-source-keywords" name="source_keywords" value="<?php echo esc_attr($data->source_keywords ?? ''); ?>" class="regular-text" style="flex-grow: 1;" placeholder="us politics, tech reviews, etc.">
+                    
+                    <?php // This button will submit the form to save and trigger the source finding logic ?>
+                    <button type="submit" name="find_sources" value="1" class="button button-secondary">Find Sources</button>
+                </div>
+                <p class="description">Enter comma-separated keywords. The AI will find the top 10 most relevant news source pages for each. Google News is always included.</p>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label for="atm-source-urls">Source URLs (one per line)</label>
+                <textarea id="atm-source-urls" name="source_urls" rows="10"><?php echo esc_textarea($data->source_urls ?? ''); ?></textarea>
+                <p class="description">The AI will crawl these pages to find the latest articles. You can add, edit, or remove URLs.</p>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label>
+                    <input type="checkbox" name="strict_keyword_matching" value="1" <?php checked($data->strict_keyword_matching ?? 1, 1); ?>>
+                    <strong>Strict Keyword Matching:</strong> Only use articles from these sources if their title contains one of your main keywords.
+                </label>
+            </div>
+        </div>
+
+            <div class="atm-settings-card">
+                <h2>Post Settings</h2>
+                <div class="form-group">
+                    <label><input type="checkbox" name="generate_image" value="1" <?php checked($data->generate_image, 1); ?>> Generate Featured Image</label>
+                </div>
+                <div class="atm-settings-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-top: 1.5rem; align-items: end;">
+                    <div class="form-group">
+                        <label for="atm-category">Default Category</label>
+                        <?php wp_dropdown_categories(['name' => 'category_id', 'id' => 'atm-category', 'selected' => $data->category_id, 'show_option_none' => 'Select Category', 'option_none_value' => '0', 'hide_empty' => 0, 'class' => '']); ?>
+                    </div>
+                    <div class="form-group">
+                        <label for="atm-author">Author</label>
+                        <?php wp_dropdown_users(['name' => 'author_id', 'id' => 'atm-author', 'selected' => $data->author_id, 'capability' => 'edit_posts']); ?>
+                    </div>
+                    <div class="form-group">
+                        <label for="atm-post-status">Post Status</label>
+                        <select id="atm-post-status" name="post_status">
+                            <option value="draft" <?php selected($data->post_status, 'draft'); ?>>Draft</option>
+                            <option value="pending" <?php selected($data->post_status, 'pending'); ?>>Pending Review</option>
+                            <option value="publish" <?php selected($data->post_status, 'publish'); ?>>Publish</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="atm-settings-card">
+                <h2>Schedule</h2>
+                <div style="display: flex; gap: 1rem; align-items: end;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="atm-frequency-value">Run Every</label>
+                        <input type="number" id="atm-frequency-value" name="frequency_value" value="<?php echo esc_attr($data->frequency_value); ?>" min="1" style="width: 100px;">
+                    </div>
+                    <div class="form-group" style="flex: 2;">
+                        <select id="atm-frequency-unit" name="frequency_unit">
+                            <option value="minute" <?php selected($data->frequency_unit, 'minute'); ?>>Minute(s)</option>
+                            <option value="hour" <?php selected($data->frequency_unit, 'hour'); ?>>Hour(s)</option>
+                            <option value="day" <?php selected($data->frequency_unit, 'day'); ?>>Day(s)</option>
+                            <option value="week" <?php selected($data->frequency_unit, 'week'); ?>>Week(s)</option>
+                            <option value="month" <?php selected($data->frequency_unit, 'month'); ?>>Month(s)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <?php submit_button($is_editing ? 'Update Campaign' : 'Publish Campaign', 'primary', 'submit', false, ['id' => 'atm-save-campaign-btn']); ?>
+            
+            <?php if ($is_editing): ?>
+                <button type="button" class="button button-secondary" id="atm-run-now-btn" data-id="<?php echo $campaign_id; ?>">Generate Article</button>
+                <span id="atm-run-now-status" style="margin-left: 10px; font-style: italic;"></span>
+            <?php endif; ?>
+        </form>
+        <?php
     }
     
     public function render_about_page() {
