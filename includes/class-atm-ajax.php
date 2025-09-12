@@ -984,92 +984,6 @@ class ATM_Ajax {
             wp_send_json_error($e->getMessage());
         }
     }
-
-    public function save_campaign() {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permission denied.');
-        }
-        check_ajax_referer('atm_nonce', 'nonce');
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'content_ai_campaigns';
-
-        $campaign_id = isset($_POST['campaign_id']) ? intval($_POST['campaign_id']) : 0;
-
-        $data = [
-            'keyword'          => sanitize_text_field($_POST['keyword']),
-            'country'          => sanitize_text_field($_POST['country']),
-            'article_type'     => sanitize_text_field($_POST['article_type']),
-            'custom_prompt'    => wp_kses_post(stripslashes($_POST['custom_prompt'])),
-            'generate_image'   => isset($_POST['generate_image']) ? 1 : 0,
-            'category_id'      => intval($_POST['category_id']),
-            'author_id'        => intval($_POST['author_id']),
-            'post_status'      => sanitize_text_field($_POST['post_status']),
-            'frequency_value'  => intval($_POST['frequency_value']),
-            'frequency_unit'   => sanitize_text_field($_POST['frequency_unit']),
-        ];
-
-        $is_new = $campaign_id === 0;
-
-        if ($is_new) {
-            $wpdb->insert($table_name, $data);
-            $campaign_id = $wpdb->insert_id;
-        } else {
-            $wpdb->update($table_name, $data, ['id' => $campaign_id]);
-        }
-
-        // --- NEW LOGIC for Find Sources button ---
-        if (isset($_POST['find_sources']) && $_POST['find_sources'] == '1') {
-            $keywords = sanitize_text_field($_POST['source_keywords']);
-            if (!empty($keywords)) {
-                $found_urls = ATM_API::find_news_sources_for_keywords($keywords);
-                // Append new sources to existing ones, avoiding duplicates
-                $existing_urls = isset($_POST['source_urls']) ? array_filter(explode("\n", $_POST['source_urls'])) : [];
-                $all_urls = array_unique(array_merge($existing_urls, $found_urls));
-                $data['source_urls'] = implode("\n", $all_urls);
-            }
-        }
-        // --- END NEW LOGIC ---
-        
-        // Set the next_run time
-        $interval_string = "+{$data['frequency_value']} {$data['frequency_unit']}";
-        // If it's a new campaign, schedule it to run in 5 mins. Otherwise, respect the new interval from now.
-        $start_time = current_time('timestamp', 1);
-        $next_run_timestamp = strtotime($interval_string, $start_time);
-        $next_run_mysql = date('Y-m-d H:i:s', $next_run_timestamp);
-
-        $wpdb->update($table_name, ['next_run' => $next_run_mysql], ['id' => $campaign_id]);
-
-        wp_send_json_success(['message' => 'Campaign saved successfully!', 'redirect_url' => admin_url('admin.php?page=content-ai-studio-automatic')]);
-    }
-
-    // Find the empty delete_campaign function and replace it with this:
-    public function delete_campaign() {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permission denied.');
-        }
-        check_ajax_referer('atm_nonce', 'nonce');
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'content_ai_campaigns';
-        $campaign_id = intval($_POST['id']);
-
-        ATM_Campaign_Manager::unschedule_campaign($campaign_id);
-        $wpdb->delete($table_name, ['id' => $campaign_id]);
-
-        wp_send_json_success(['message' => 'Campaign deleted.']);
-    }
-
-    // Find the empty run_campaign_now function and replace it with this:
-    public function run_campaign_now() {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permission denied.');
-        }
-        check_ajax_referer('atm_nonce', 'nonce');
-        $campaign_id = intval($_POST['id']);
-
-        ATM_Campaign_Manager::execute_campaign($campaign_id);
-        
-        wp_send_json_success(['message' => 'Campaign executed successfully! A new article is being generated.']);
-    }
     
     public function generate_key_takeaways() {
         if (!ATM_Licensing::is_license_active()) {
@@ -1354,11 +1268,6 @@ public function translate_text() {
         add_action('wp_ajax_create_multipage_article', array($this, 'create_multipage_article'));
         add_action('wp_ajax_get_multipage_page_content', array($this, 'get_multipage_page_content')); // New AJAX action for frontend
         // --- END ---
-
-        // Campaign Management Actions
-        add_action('wp_ajax_atm_save_campaign', array($this, 'save_campaign'));
-        add_action('wp_ajax_atm_delete_campaign', array($this, 'delete_campaign'));
-        add_action('wp_ajax_atm_run_campaign_now', array($this, 'run_campaign_now'));
 
         // NEW hooks for comments tool
         add_action('wp_ajax_generate_post_comments', array($this, 'generate_post_comments'));

@@ -22,6 +22,11 @@ define('ATM_PLUGIN_PATH', plugin_dir_path(__FILE__));
 // Include all the necessary files
 require_once ATM_PLUGIN_PATH . 'includes/class-atm-main.php';
 
+// Load Action Scheduler
+if ( ! class_exists( 'ActionScheduler' ) ) {
+    require_once ATM_PLUGIN_PATH . 'includes/lib/action-scheduler/action-scheduler.php';
+}
+
 // Initialize the main plugin class
 function atm_run_plugin() {
     new ATM_Main();

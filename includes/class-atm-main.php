@@ -9,6 +9,169 @@ class ATM_Main {
     private static $instance = null;
     private static $hooks_initialized = false;
 
+    public function add_automation_menu() {
+        // This will be added as submenu under AI Studio
+        add_submenu_page(
+            'content-ai-studio', // parent slug
+            'AI Automation', // page title
+            'Automation', // menu title
+            'manage_options', // capability
+            'ai-automation', // menu slug
+            array($this, 'render_automation_page') // callback
+        );
+        
+        add_submenu_page(
+            'content-ai-studio',
+            'Campaign Manager',
+            'Campaigns',
+            'manage_options',
+            'ai-automation-campaigns',
+            array($this, 'render_campaigns_page')
+        );
+    }
+    
+    // Render main automation page
+    public function render_automation_page() {
+        echo '<div id="atm-automation-root" class="atm-studio-container"></div>';
+    }
+    
+    // Render campaigns management page
+    public function render_campaigns_page() {
+        echo '<div id="atm-campaigns-root" class="atm-studio-container"></div>';
+    }
+    
+    public static function create_automation_tables() {
+        global $wpdb;
+        $charset_collate = $wpdb->get_charset_collate();
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+
+        // Main campaigns table
+        $table_campaigns = $wpdb->prefix . 'atm_automation_campaigns';
+        $sql_campaigns = "CREATE TABLE $table_campaigns (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL,
+            type enum('article', 'news', 'video', 'podcast') NOT NULL,
+            status enum('active', 'paused', 'completed', 'error') DEFAULT 'active',
+            
+            -- Scheduling
+            frequency_value int(11) NOT NULL DEFAULT 1,
+            frequency_unit enum('minute', 'hour', 'day', 'week') NOT NULL DEFAULT 'hour',
+            start_date datetime DEFAULT CURRENT_TIMESTAMP,
+            end_date datetime NULL,
+            max_posts int(11) DEFAULT 0, -- 0 = unlimited
+            posts_generated int(11) DEFAULT 0,
+            
+            -- WordPress Settings
+            post_status enum('publish', 'draft', 'scheduled') DEFAULT 'publish',
+            author_id bigint(20) NOT NULL,
+            category_ids text, -- JSON array of category IDs
+            tag_ids text, -- JSON array of tag IDs
+            generate_featured_image tinyint(1) DEFAULT 0,
+            
+            -- Content Settings (JSON)
+            content_settings longtext NOT NULL, -- All generator-specific settings as JSON
+            
+            -- Execution Info
+            last_executed datetime NULL,
+            next_execution datetime NULL,
+            consecutive_failures int(11) DEFAULT 0,
+            
+            -- Metadata
+            created_by bigint(20) NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            
+            PRIMARY KEY (id),
+            KEY status (status),
+            KEY type (type),
+            KEY next_execution (next_execution),
+            KEY author_id (author_id),
+            KEY created_by (created_by)
+        ) $charset_collate;";
+        
+        // Execution history table
+        $table_executions = $wpdb->prefix . 'atm_automation_executions';
+        $sql_executions = "CREATE TABLE $table_executions (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            campaign_id bigint(20) NOT NULL,
+            
+            -- Execution Details
+            status enum('pending', 'running', 'completed', 'failed') DEFAULT 'pending',
+            started_at datetime DEFAULT CURRENT_TIMESTAMP,
+            completed_at datetime NULL,
+            
+            -- Results
+            post_id bigint(20) NULL, -- Created post ID if successful
+            generated_title varchar(500) NULL,
+            error_message text NULL,
+            execution_data longtext NULL, -- JSON with execution details
+            
+            -- Performance
+            execution_time_seconds decimal(10,3) NULL,
+            api_calls_made int(11) DEFAULT 0,
+            
+            PRIMARY KEY (id),
+            KEY campaign_id (campaign_id),
+            KEY status (status),
+            KEY started_at (started_at),
+            FOREIGN KEY (campaign_id) REFERENCES $table_campaigns(id) ON DELETE CASCADE
+        ) $charset_collate;";
+        
+        // Queue table for managing execution order
+        $table_queue = $wpdb->prefix . 'atm_automation_queue';
+        $sql_queue = "CREATE TABLE $table_queue (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            campaign_id bigint(20) NOT NULL,
+            scheduled_for datetime NOT NULL,
+            priority int(11) DEFAULT 5, -- 1 = highest, 10 = lowest
+            attempts int(11) DEFAULT 0,
+            max_attempts int(11) DEFAULT 3,
+            
+            -- Status tracking
+            status enum('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
+            locked_at datetime NULL,
+            locked_by varchar(255) NULL, -- Process identifier
+            
+            -- Metadata
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            
+            PRIMARY KEY (id),
+            KEY campaign_id (campaign_id),
+            KEY scheduled_for (scheduled_for),
+            KEY status (status),
+            KEY priority (priority),
+            FOREIGN KEY (campaign_id) REFERENCES $table_campaigns(id) ON DELETE CASCADE
+        ) $charset_collate;";
+
+        // Content tracking table to avoid duplicates
+        $table_content_tracking = $wpdb->prefix . 'atm_automation_content_tracking';
+        $sql_content_tracking = "CREATE TABLE $table_content_tracking (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            campaign_id bigint(20) NOT NULL,
+            content_hash varchar(64) NOT NULL, -- SHA256 of content/title
+            source_identifier varchar(500) NULL, -- URL, keyword, etc.
+            post_id bigint(20) NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            
+            PRIMARY KEY (id),
+            UNIQUE KEY unique_content (campaign_id, content_hash),
+            KEY campaign_id (campaign_id),
+            KEY source_identifier (source_identifier(255)),
+            FOREIGN KEY (campaign_id) REFERENCES $table_campaigns(id) ON DELETE CASCADE
+        ) $charset_collate;";
+
+        // Execute all table creations
+        dbDelta($sql_campaigns);
+        dbDelta($sql_executions);
+        dbDelta($sql_queue);
+        dbDelta($sql_content_tracking);
+        
+        // Create indexes for performance
+        $wpdb->query("CREATE INDEX idx_next_execution_status ON $table_campaigns (next_execution, status)");
+        $wpdb->query("CREATE INDEX idx_queue_processing ON $table_queue (scheduled_for, status, priority)");
+    }
+    
     public function check_database_tables() {
         // Only run once per day
         $last_check = get_option('atm_last_db_check');
@@ -386,6 +549,7 @@ class ATM_Main {
 
     private function load_dependencies() {
         $required_files = [
+            'includes/automation/class-atm-automation-processor.php', // Add this line
             'includes/admin/class-atm-meta-box.php',
             'includes/admin/class-atm-settings.php',
             'includes/class-atm-ajax.php',
@@ -394,7 +558,6 @@ class ATM_Main {
             'includes/class-atm-theme-subtitle-manager.php',
             'includes/class-atm-frontend.php',
             'includes/class-atm-licensing.php',
-            'includes/class-atm-campaign-manager.php',
             'includes/lib/Parsedown.php',
             'includes/class-atm-listicle.php',
             'includes/class-atm-humanize.php'
@@ -422,7 +585,6 @@ class ATM_Main {
         $settings = class_exists('ATM_Settings') ? new ATM_Settings() : null;
         $ajax = class_exists('ATM_Ajax') ? new ATM_Ajax() : null;
         $frontend = class_exists('ATM_Frontend') ? new ATM_Frontend() : null;
-        $campaign_manager = class_exists('ATM_Campaign_Manager') ? new ATM_Campaign_Manager() : null;
         $listicle = class_exists('ATM_Listicle_Generator') ? new ATM_Listicle_Generator() : null;
         $humanize = class_exists('ATM_Humanize') ? new ATM_Humanize() : null;
 
@@ -460,6 +622,13 @@ class ATM_Main {
         add_action('wp_ajax_check_script_progress', array($ajax, 'check_script_progress'));
         add_action('atm_cleanup_used_articles', array('ATM_Main', 'cleanup_old_used_articles'));
         add_action('atm_cleanup_angles', array('ATM_Main', 'cleanup_old_angles'));
+        add_action('atm_process_automation_queue', array('ATM_Automation_Processor', 'process_queue'));
+        add_action('admin_menu', array($this, 'add_automation_menu'));
+
+        // Automation Hooks
+        add_action('atm_process_automation_queue', array('ATM_Automation_Processor', 'process_queue'));
+        add_action('atm_generate_featured_image_job', array('ATM_Automation_Processor', 'run_image_generation_job'), 10, 2); // <-- ADD THIS LINE
+        add_action('admin_menu', array($this, 'add_automation_menu'));
 
 
         // Add cleanup for script jobs
@@ -492,10 +661,6 @@ class ATM_Main {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_listicle_styles'), 100);
         add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
 
-        // Campaign manager hooks
-        if (class_exists('ATM_Campaign_Manager')) {
-            ATM_Campaign_Manager::schedule_main_cron();
-        }
     }
 
     public static function cleanup_old_script_jobs() {
@@ -723,7 +888,7 @@ class ATM_Main {
             }
         }
         
-        self::create_campaigns_table();
+        self::create_automation_tables(); // Add this new line
         self::create_podcast_progress_table(); // Add this line
         self::create_script_jobs_table(); // Add this line
         self::create_used_articles_table(); // Add this line
