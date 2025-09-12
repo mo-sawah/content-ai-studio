@@ -2398,108 +2398,113 @@ Generate ONLY the script dialogue, no stage directions.";
     }
     
     public static function generate_image_with_blockflow($prompt, $model_override = '', $size_override = '') {
-        $api_key = get_option('atm_blockflow_api_key');
-        if (empty($api_key)) {
-            throw new Exception('BlockFlow API key is not configured.');
-        }
+    $api_key = get_option('atm_blockflow_api_key');
+    if (empty($api_key)) {
+        throw new Exception('BlockFlow API key is not configured.');
+    }
 
-        $model = !empty($model_override) ? $model_override : get_option('atm_flux_model', 'flux-1-schnell');
-        $size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1024x1024');
+    $model = !empty($model_override) ? $model_override : get_option('atm_flux_model', 'flux-pro-1.1');
+    $size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1024x1024');
 
-        // Convert size to aspect ratio
-        $aspect_ratio_map = [
-            '1024x1024' => '1:1',
-            '1792x1024' => '16:9', 
-            '1024x1792' => '9:16'
-        ];
-        $aspect_ratio = $aspect_ratio_map[$size] ?? '1:1';
+    // Convert size to aspect ratio
+    $aspect_ratio_map = [
+        '1024x1024' => '1:1',
+        '1792x1024' => '16:9',
+        '1024x1792' => '9:16'
+    ];
+    $aspect_ratio = $aspect_ratio_map[$size] ?? '1:1';
 
-        // Correct endpoint format
-        $endpoint = 'https://api.bfl.ai/v1/' . $model . '/text-to-image';
+    // Initial request to the correct endpoint
+    $endpoint = 'https://api.bfl.ai/v1/' . $model;
+    
+    $initial_response = wp_remote_post($endpoint, [
+        'headers' => [
+            'accept' => 'application/json',
+            'x-key' => $api_key,
+            'Content-Type' => 'application/json',
+        ],
+        'body' => json_encode([
+            'prompt' => self::enhance_image_prompt($prompt),
+            'aspect_ratio' => $aspect_ratio
+        ]),
+        'timeout' => 30
+    ]);
 
-        $initial_response = wp_remote_post($endpoint, [
+    if (is_wp_error($initial_response)) {
+        throw new Exception('BlockFlow API connection failed: ' . $initial_response->get_error_message());
+    }
+
+    $response_code = wp_remote_retrieve_response_code($initial_response);
+    $body = wp_remote_retrieve_body($initial_response);
+
+    if ($response_code !== 200) {
+        error_log('BlockFlow API Error - Response Code: ' . $response_code . ', Body: ' . $body);
+        throw new Exception('BlockFlow API initial request failed: ' . $body);
+    }
+
+    $initial_data = json_decode($body, true);
+    
+    // Both id and polling_url should be returned
+    if (!isset($initial_data['id']) || !isset($initial_data['polling_url'])) {
+        throw new Exception('BlockFlow API response missing id or polling_url: ' . $body);
+    }
+
+    $job_id = $initial_data['id'];
+    $polling_url = $initial_data['polling_url']; // Use the returned URL, don't construct it
+
+    // Polling loop using the returned polling_url
+    $final_result = null;
+    $max_attempts = 180; // 90 seconds max
+    $attempts = 0;
+
+    while ($attempts < $max_attempts) {
+        usleep(500000); // 0.5 second delay
+
+        $polling_response = wp_remote_get($polling_url, [
             'headers' => [
-                'x-key' => $api_key,
-                'Content-Type' => 'application/json',
+                'accept' => 'application/json',
+                'x-key' => $api_key
             ],
-            'body' => json_encode([
-                'prompt' => self::enhance_image_prompt($prompt),
-                'aspect_ratio' => $aspect_ratio
-            ]),
-            'timeout' => 30
+            'timeout' => 15
         ]);
 
-        if (is_wp_error($initial_response)) {
-            throw new Exception('BlockFlow API connection failed: ' . $initial_response->get_error_message());
-        }
-
-        $response_code = wp_remote_retrieve_response_code($initial_response);
-        $body = wp_remote_retrieve_body($initial_response);
-
-        if ($response_code !== 200) {
-            error_log('BlockFlow API Error - Response Code: ' . $response_code . ', Body: ' . $body);
-            throw new Exception('BlockFlow API initial request failed: ' . $body);
-        }
-
-        $initial_data = json_decode($body, true);
-        if (!isset($initial_data['id'])) {
-            throw new Exception('BlockFlow API did not return a job ID.');
-        }
-
-        $job_id = $initial_data['id'];
-        
-        // Poll for result using the job ID
-        $polling_url = 'https://api.bfl.ai/v1/get_result?id=' . $job_id;
-        
-        $final_result = null;
-        $max_attempts = 180; // 90 seconds max
-        $attempts = 0;
-
-        while ($attempts < $max_attempts) {
-            usleep(500000); // Wait 0.5 seconds
-
-            $polling_response = wp_remote_get($polling_url, [
-                'headers' => ['x-key' => $api_key],
-                'timeout' => 15
-            ]);
-
-            if (is_wp_error($polling_response)) {
-                $attempts++;
-                continue;
-            }
-
-            $result_data = json_decode(wp_remote_retrieve_body($polling_response), true);
-
-            if (isset($result_data['status']) && $result_data['status'] === 'Ready') {
-                $final_result = $result_data;
-                break;
-            }
-
-            if (isset($result_data['status']) && in_array($result_data['status'], ['Error', 'Failed'])) {
-                throw new Exception('BlockFlow image generation failed with status: ' . $result_data['status']);
-            }
-
+        if (is_wp_error($polling_response)) {
             $attempts++;
+            continue;
         }
 
-        if (is_null($final_result)) {
-            throw new Exception('BlockFlow image generation timed out.');
+        $result_data = json_decode(wp_remote_retrieve_body($polling_response), true);
+
+        if (isset($result_data['status']) && $result_data['status'] === 'Ready') {
+            $final_result = $result_data;
+            break;
         }
 
-        if (!isset($final_result['result']['sample'])) {
-            throw new Exception('BlockFlow API response did not contain a final image URL.');
+        if (isset($result_data['status']) && in_array($result_data['status'], ['Error', 'Failed'])) {
+            throw new Exception('BlockFlow generation failed: ' . ($result_data['error'] ?? 'Unknown error'));
         }
 
-        $image_download_url = $final_result['result']['sample'];
-
-        // Download and return image data
-        $image_response = wp_remote_get($image_download_url);
-        if (is_wp_error($image_response)) {
-            throw new Exception('Failed to download image: ' . $image_response->get_error_message());
-        }
-
-        return wp_remote_retrieve_body($image_response);
+        $attempts++;
     }
+
+    if (is_null($final_result)) {
+        throw new Exception('BlockFlow image generation timed out after 90 seconds.');
+    }
+
+    if (!isset($final_result['result']['sample'])) {
+        throw new Exception('BlockFlow API response missing image URL.');
+    }
+
+    // Download the image
+    $image_url = $final_result['result']['sample'];
+    $image_response = wp_remote_get($image_url, ['timeout' => 30]);
+    
+    if (is_wp_error($image_response)) {
+        throw new Exception('Failed to download image: ' . $image_response->get_error_message());
+    }
+
+    return wp_remote_retrieve_body($image_response);
+}
 
 public static function generate_chart_config_from_prompt($prompt) {
         $system_prompt = "You are an expert data visualization assistant specializing in Apache ECharts. Your task is to generate a valid ECharts JSON configuration object based on the user's request.
