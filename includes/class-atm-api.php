@@ -340,6 +340,180 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     /**
+     * Generate an image using Vertex AI Gemini 2.5 Flash Image (Nano Banana).
+     * Requires: atm_vertex_project_id, atm_vertex_location, and a valid Service Account JSON in atm_vertex_sa_json.
+     * Returns raw image bytes (PNG) or throws Exception on failure.
+     */
+    public static function generate_image_with_gemini_nanobanana_vertex($prompt, $size_override = '', $model_override = '') {
+        $project  = trim(get_option('atm_vertex_project_id', ''));
+        $location = trim(get_option('atm_vertex_location', 'us-central1'));
+        if ($project === '' || $location === '') {
+            throw new Exception('Vertex AI project/location not configured.');
+        }
+
+        $access_token = self::get_vertex_access_token_from_sa();
+
+        $model = $model_override ?: trim(get_option('atm_nanobanana_model', 'gemini-2.5-flash-image'));
+        if ($model === '') {
+            $model = 'gemini-2.5-flash-image';
+        }
+
+        $endpoint = sprintf(
+            'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent',
+            $location,
+            rawurlencode($project),
+            rawurlencode($location),
+            rawurlencode($model)
+        );
+
+        // Map sizes; some rollouts infer size; these may be ignored if unsupported.
+        $size = $size_override ?: get_option('atm_image_size', '1024x1024');
+        $dims = [
+            '1024x1024' => [1024, 1024],
+            '1792x1024' => [1792, 1024],
+            '1024x1792' => [1024, 1792],
+        ];
+        [$width, $height] = $dims[$size] ?? [1024, 1024];
+
+        $body = [
+            'contents' => [[
+                'role'  => 'user',
+                'parts' => [[ 'text' => self::enhance_image_prompt($prompt) ]]
+            ]],
+            // The image_generation tool enables image creation.
+            'tools' => [
+                [ 'image_generation' => (object)[] ]
+            ],
+            // Use Vertex naming; both generationConfig and generation_config are commonly accepted.
+            'generationConfig' => [
+                // Avoid setting responseMimeType to image/* (not needed); image is returned as inlineData.
+                // Optionally pass guidance; often optional for image gen:
+                // 'imageGenerationConfig' => [ 'width' => $width, 'height' => $height ],
+            ],
+        ];
+
+        $response = wp_remote_post($endpoint, [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $access_token,
+                'Content-Type'  => 'application/json',
+            ],
+            'timeout' => 180,
+            'body'    => wp_json_encode($body),
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Vertex AI request failed: ' . $response->get_error_message());
+        }
+
+        $code = wp_remote_retrieve_response_code($response);
+        $raw  = wp_remote_retrieve_body($response);
+        if ($code < 200 || $code >= 300) {
+            throw new Exception('Vertex AI error: ' . $raw);
+        }
+
+        $json = json_decode($raw, true);
+        if (!is_array($json)) {
+            throw new Exception('Vertex AI returned non-JSON.');
+        }
+
+        // Extract first image inlineData
+        $cands = $json['candidates'] ?? [];
+        foreach ($cands as $cand) {
+            $parts = $cand['content']['parts'] ?? [];
+            foreach ($parts as $part) {
+                if (isset($part['inlineData']['data'], $part['inlineData']['mimeType'])) {
+                    $mime = strtolower($part['inlineData']['mimeType']);
+                    if (strpos($mime, 'image/') === 0) {
+                        $bin = base64_decode($part['inlineData']['data']);
+                        if ($bin !== false && $bin !== '') {
+                            return $bin;
+                        }
+                    }
+                }
+            }
+        }
+
+        throw new Exception('Vertex AI response did not include image data.');
+    }
+
+    /**
+     * Obtain a Vertex AI access token using a Google Cloud Service Account JSON (stored in option atm_vertex_sa_json).
+     * Caches the token in a transient to avoid refreshing every request.
+     */
+    private static function get_vertex_access_token_from_sa() {
+        $cached = get_transient('atm_vertex_sa_token');
+        if (is_array($cached) && !empty($cached['access_token']) && $cached['expires_at'] > (time() + 60)) {
+            return $cached['access_token'];
+        }
+
+        $sa_json_raw = get_option('atm_vertex_sa_json', '');
+        if (empty($sa_json_raw)) {
+            throw new Exception('Vertex AI Service Account JSON is not configured.');
+        }
+
+        $sa = json_decode($sa_json_raw, true);
+        if (!is_array($sa) || empty($sa['client_email']) || empty($sa['private_key'])) {
+            throw new Exception('Invalid Service Account JSON.');
+        }
+
+        $now = time();
+        $exp = $now + 3600; // 1 hour
+        $header = ['alg' => 'RS256', 'typ' => 'JWT'];
+        $claims = [
+            'iss'   => $sa['client_email'],
+            'scope' => 'https://www.googleapis.com/auth/cloud-platform',
+            'aud'   => 'https://oauth2.googleapis.com/token',
+            'iat'   => $now,
+            'exp'   => $exp,
+        ];
+
+        $b64 = function ($data) {
+            return rtrim(strtr(base64_encode(json_encode($data)), '+/', '-_'), '=');
+        };
+
+        $signing_input = $b64($header) . '.' . $b64($claims);
+        $signature = '';
+        $ok = openssl_sign($signing_input, $signature, $sa['private_key'], 'sha256');
+        if (!$ok) {
+            throw new Exception('Failed to sign JWT with service account key.');
+        }
+        $jwt = $signing_input . '.' . rtrim(strtr(base64_encode($signature), '+/', '-_'), '=');
+
+        $response = wp_remote_post('https://oauth2.googleapis.com/token', [
+            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
+            'body' => [
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                'assertion'  => $jwt,
+            ],
+            'timeout' => 30,
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Google OAuth token request failed: ' . $response->get_error_message());
+        }
+
+        $code = wp_remote_retrieve_response_code($response);
+        $raw  = wp_remote_retrieve_body($response);
+        if ($code < 200 || $code >= 300) {
+            throw new Exception('Google OAuth error: ' . $raw);
+        }
+
+        $json = json_decode($raw, true);
+        if (!is_array($json) || empty($json['access_token'])) {
+            throw new Exception('Invalid OAuth token response.');
+        }
+
+        $token = $json['access_token'];
+        $expires_in = isset($json['expires_in']) ? (int)$json['expires_in'] : 3600;
+        set_transient('atm_vertex_sa_token', [
+            'access_token' => $token,
+            'expires_at'   => time() + $expires_in - 60
+        ], $expires_in - 60);
+
+        return $token;
+    }
+
+    /**
      * Generate an image with Google's Gemini 2.5 Flash Image (aka Nano Banana) via Generative Language API.
      * Returns raw binary image data (PNG) or throws Exception on failure.
      *
@@ -508,6 +682,11 @@ class ATM_API {
                 return [
                     'data' => self::generate_image_with_blockflow($prompt, '', $size_override),
                     'is_url' => false
+                ];
+                case 'nanobanana': // Gemini 2.5 Flash Image (Vertex AI)
+                return [
+                    'data'   => self::generate_image_with_gemini_nanobanana_vertex($prompt, $size_override),
+                    'is_url' => false,
                 ];
             case 'nanobanana': // Gemini 2.5 Flash Image (Nano Banana)
                 return [

@@ -788,6 +788,18 @@ private function render_advanced_tab() {
             update_option('atm_nanobanana_model', sanitize_text_field($_POST['atm_nanobanana_model']));
         }
 
+        if (isset($_POST['atm_vertex_project_id'])) {
+            update_option('atm_vertex_project_id', sanitize_text_field($_POST['atm_vertex_project_id']));
+        }
+        if (isset($_POST['atm_vertex_location'])) {
+            update_option('atm_vertex_location', sanitize_text_field($_POST['atm_vertex_location']));
+        }
+        if (isset($_POST['atm_vertex_sa_json'])) {
+            // Store the raw JSON safely
+            $json = wp_unslash($_POST['atm_vertex_sa_json']);
+            update_option('atm_vertex_sa_json', $json);
+        }
+
         // Model Settings
         if (isset($_POST['atm_article_model'])) {
             update_option('atm_article_model', sanitize_text_field($_POST['atm_article_model']));

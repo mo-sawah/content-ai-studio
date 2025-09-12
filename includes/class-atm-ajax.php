@@ -2266,6 +2266,10 @@ public function translate_text() {
                     $image_data = ATM_API::generate_image_with_google_imagen($final_prompt, $size_override);
                     $is_url = false;
                     break;
+                case 'nanobanana': // Vertex AI - Gemini 2.5 Flash Image
+                    $image_data = ATM_API::generate_image_with_gemini_nanobanana_vertex($final_prompt, $size_override);
+                    $is_url = false;
+                    break;
                 case 'nanobanana': // NEW: Gemini 2.5 Flash Image
                     $image_data = ATM_API::generate_image_with_gemini_nanobanana($final_prompt, $size_override);
                     $is_url = false;
