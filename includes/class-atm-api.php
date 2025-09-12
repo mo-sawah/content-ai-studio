@@ -433,15 +433,16 @@ class ATM_API {
         ];
 
         if (empty($keyword)) {
+            // CORRECTED LOGIC: For general trends, we ONLY specify the type.
+            // We do NOT send a 'q' parameter.
             $params['type'] = 'TRENDING_SEARCHES';
-            // FIX: SerpApi requires a 'q' param even for general trends. We use the region name as a generic query.
-            $region_map = ['US' => 'United States', 'GB' => 'United Kingdom', 'CA' => 'Canada', 'AU' => 'Australia', 'DE' => 'Germany', 'FR' => 'France', 'IN' => 'India'];
-            $params['q'] = $region_map[$region] ?? 'World';
         } else {
+            // This logic for keyword-specific searches is correct and remains unchanged.
             $params['q'] = $keyword;
             $params['data_type'] = 'RELATED_QUERIES';
         }
 
+        // These parameters are still correct.
         if (!empty($region)) $params['gl'] = $region;
         if (!empty($language)) $params['hl'] = $language;
         if (!empty($date)) $params['date'] = $date;
