@@ -32,8 +32,55 @@ class ATM_Main {
     
     // Render main automation page
     public function render_automation_page() {
-        echo '<div id="atm-automation-root" class="atm-studio-container"></div>';
-    }
+    ?>
+    <div class="wrap">
+        <div class="atm-studio-wrapper">
+            <div class="atm-sidebar">
+                <div class="atm-sidebar-header">
+                    <h2>AI Automation</h2>
+                    <p>Campaign Manager</p>
+                </div>
+            </div>
+            <div class="atm-main-content">
+                <div class="atm-content-header">
+                    <h1 class="atm-content-title">General Articles</h1>
+                    <p class="atm-content-subtitle">Configure and schedule your automated content campaign.</p>
+                </div>
+                <div class="atm-content-body">
+                    <div id="atm-automation-root"></div>
+                    <div style="padding: 20px; text-align: center;">
+                        <h3>Automation Interface Loading...</h3>
+                        <p>If this message persists, check the browser console for JavaScript errors.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        console.log("ATM Debug: Page loaded, checking automation setup...");
+        
+        // Check if the scripts are loaded
+        setTimeout(() => {
+            const automationScript = document.querySelector('script[src*="automation.js"]');
+            const rootElement = document.getElementById('atm-automation-root');
+            
+            console.log("ATM Debug: Automation script found:", !!automationScript);
+            console.log("ATM Debug: Root element found:", !!rootElement);
+            console.log("ATM Debug: React available:", typeof window.React !== 'undefined');
+            console.log("ATM Debug: wp.element available:", typeof window.wp?.element !== 'undefined');
+            
+            if (automationScript) {
+                console.log("ATM Debug: Script src:", automationScript.src);
+            }
+            
+            if (!automationScript) {
+                rootElement.innerHTML = '<div style="background: #fee2e2; color: #dc2626; padding: 20px; border-radius: 8px; margin: 20px;"><h3>Build Missing</h3><p>The automation.js file is not found. Please run your build process to compile the automation interface.</p></div>';
+            }
+        }, 1000);
+    </script>
+    <?php
+}
     
     // Render campaigns management page
     public function render_campaigns_page() {
