@@ -3,6 +3,7 @@ import { useState } from "@wordpress/element";
 import CreativeForm from "./CreativeForm";
 import MultipageArticlesForm from "./MultipageArticlesForm";
 import ListicleForm from "./ListicleForm";
+import TrendingForm from "./TrendingForm"; // <-- ADD THIS LINE
 
 function ArticleGenerator({ setActiveView }) {
   const [activeTab, setActiveTab] = useState("creative");
@@ -30,6 +31,30 @@ function ArticleGenerator({ setActiveView }) {
       ),
       gradient: "from-blue-500 to-purple-600",
     },
+    // --- START: NEW ARTICLE TYPE ---
+    {
+      id: "trending",
+      title: "Trending Articles",
+      description: "Generate content on current hot topics",
+      icon: (
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+          />
+        </svg>
+      ),
+      gradient: "from-red-500 to-pink-600",
+    },
+    // --- END: NEW ARTICLE TYPE ---
     {
       id: "listicle",
       title: "Listicle Articles",
@@ -104,6 +129,7 @@ function ArticleGenerator({ setActiveView }) {
       {/* Content based on selected type */}
       <div className="atm-tab-content">
         {activeTab === "creative" && <CreativeForm />}
+        {activeTab === "trending" && <TrendingForm />}
         {activeTab === "listicle" && <ListicleForm />}
         {activeTab === "multipage" && <MultipageArticlesForm />}
       </div>
