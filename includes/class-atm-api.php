@@ -339,6 +339,122 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    /**
+     * Generate an image with Google's Gemini 2.5 Flash Image (aka Nano Banana) via Generative Language API.
+     * Returns raw binary image data (PNG) or throws Exception on failure.
+     *
+     * Uses the Google AI Studio API key stored in atm_google_api_key.
+     * Model defaults to 'gemini-2.5-flash-image' but can be overridden with $model_override
+     * or an option 'atm_nanobanana_model'.
+     */
+    public static function generate_image_with_gemini_nanobanana($prompt, $size_override = '', $model_override = '') {
+        $api_key = trim(get_option('atm_google_api_key', ''));
+        if (empty($api_key)) {
+            throw new Exception('Google AI API key is not configured in settings.');
+        }
+
+        // Model slug from AI Studio. If Google later publishes a versioned variant (e.g. ...-001), you can override it in settings.
+        $model = $model_override ?: trim(get_option('atm_nanobanana_model', 'gemini-2.5-flash-image'));
+        if ($model === '') {
+            $model = 'gemini-2.5-flash-image';
+        }
+
+        $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent';
+
+        // Map admin sizes to width/height. Some Gemini releases will infer size from prompt; the fields below are optional.
+        $size = $size_override ?: get_option('atm_image_size', '1024x1024');
+        $dims = [
+            '1024x1024' => [1024, 1024],
+            '1792x1024' => [1792, 1024],
+            '1024x1792' => [1024, 1792],
+        ];
+        list($width, $height) = $dims[$size] ?? [1024, 1024];
+
+        $body = [
+            'contents' => [
+                [
+                    'role'  => 'user',
+                    'parts' => [
+                        [ 'text' => self::enhance_image_prompt($prompt) ]
+                    ]
+                ]
+            ],
+            // generationConfig is where we request an image payload back.
+            'generationConfig' => [
+                'responseMimeType' => 'image/png',
+                // Some rollouts accept optional guidance (ignored if unsupported)
+                // 'imageGenerationConfig' => [ 'width' => $width, 'height' => $height ],
+                // 'temperature' => 0.8,
+                // 'topP' => 0.95,
+            ],
+        ];
+
+        $response = wp_remote_post($endpoint, [
+            'headers' => [
+                'x-goog-api-key' => $api_key,
+                'Content-Type'   => 'application/json',
+            ],
+            'timeout' => 180,
+            'body'    => wp_json_encode($body),
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Gemini API request failed: ' . $response->get_error_message());
+        }
+
+        $code = wp_remote_retrieve_response_code($response);
+        $raw  = wp_remote_retrieve_body($response);
+
+        if ($code < 200 || $code >= 300) {
+            $j = json_decode($raw, true);
+            $msg = is_array($j) && isset($j['error']) ? (is_string($j['error']) ? $j['error'] : wp_json_encode($j['error'])) : $raw;
+            throw new Exception('Gemini API error: ' . $msg);
+        }
+
+        $json = json_decode($raw, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Gemini API returned a non-JSON response.');
+        }
+
+        // Find the first inlineData part with mimeType image/*
+        if (isset($json['candidates'][0]['content']['parts']) && is_array($json['candidates'][0]['content']['parts'])) {
+            foreach ($json['candidates'][0]['content']['parts'] as $part) {
+                if (isset($part['inlineData']['data']) && isset($part['inlineData']['mimeType'])) {
+                    $mime = strtolower((string)$part['inlineData']['mimeType']);
+                    if (strpos($mime, 'image/') === 0) {
+                        $bin = base64_decode($part['inlineData']['data']);
+                        if ($bin === false || $bin === '') {
+                            throw new Exception('Gemini returned invalid base64 image data.');
+                        }
+                        return $bin; // raw PNG/JPEG bytes
+                    }
+                }
+            }
+        }
+
+        // Some variants may return multiple candidates
+        if (isset($json['candidates']) && is_array($json['candidates'])) {
+            foreach ($json['candidates'] as $cand) {
+                if (isset($cand['content']['parts']) && is_array($cand['content']['parts'])) {
+                    foreach ($cand['content']['parts'] as $part) {
+                        if (isset($part['inlineData']['data']) && isset($part['inlineData']['mimeType'])) {
+                            $mime = strtolower((string)$part['inlineData']['mimeType']);
+                            if (strpos($mime, 'image/') === 0) {
+                                $bin = base64_decode($part['inlineData']['data']);
+                                if ($bin === false || $bin === '') {
+                                    continue;
+                                }
+                                return $bin;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        throw new Exception('Gemini API response did not include image data.');
+    }
+
     public static function get_contextual_seed($keyword) {
         $current_month = date('F');
         $current_year = date('Y'); 
@@ -391,6 +507,11 @@ class ATM_API {
             case 'blockflow':
                 return [
                     'data' => self::generate_image_with_blockflow($prompt, '', $size_override),
+                    'is_url' => false
+                ];
+            case 'nanobanana': // Gemini 2.5 Flash Image (Nano Banana)
+                return [
+                    'data'   => self::generate_image_with_gemini_nanobanana($prompt, $size_override),
                     'is_url' => false
                 ];
             case 'openai':

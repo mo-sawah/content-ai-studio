@@ -608,6 +608,7 @@ private function render_general_tab() {
                             <select name="atm_image_provider">
                                 <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
                                 <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
+                                <option value="nanobanana" <?php selected($options['image_provider'], 'nanobanana'); ?>>Nano Banana (Gemini 2.5 Flash Image)</option>
                                 <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>Black Forrest Labs</option>
                             </select>
                         </td>
@@ -783,6 +784,9 @@ private function render_advanced_tab() {
         if (isset($_POST['atm_mercury_api_key'])) {
             update_option('atm_mercury_api_key', sanitize_text_field($_POST['atm_mercury_api_key']));
         }
+        if (isset($_POST['atm_nanobanana_model'])) {
+            update_option('atm_nanobanana_model', sanitize_text_field($_POST['atm_nanobanana_model']));
+        }
 
         // Model Settings
         if (isset($_POST['atm_article_model'])) {
@@ -939,6 +943,7 @@ private function render_advanced_tab() {
             'google_news_search_api_key' => get_option('atm_google_news_search_api_key', ''),
             'google_news_cse_id' => get_option('atm_google_news_cse_id', ''),
             'twitterapi_key' => get_option('atm_twitterapi_key', ''),
+            'nanobanana_model' => get_option('atm_nanobanana_model', 'gemini-2.5-flash-image'),
 
             // Model Settings
             'article_model'    => get_option('atm_article_model', 'openai/gpt-4o'),
