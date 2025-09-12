@@ -16,6 +16,21 @@ const callAjax = (action, data) =>
     data: { action, nonce: atm_studio_data.nonce, ...data },
   });
 
+// HELPER FUNCTION: This is the key to sending content to the editor.
+const updateEditorContent = (title, markdownContent, subtitle) => {
+  if (window.ATM_BlockUtils) {
+    window.ATM_BlockUtils.updateEditorContent(title, markdownContent, subtitle);
+  } else {
+    console.error("ATM: Block utilities not loaded");
+    const htmlContent = window.marked
+      ? window.marked.parse(markdownContent)
+      : markdownContent;
+    if (window.wp && window.wp.data) {
+      wp.data.dispatch("core/editor").editPost({ title, content: htmlContent });
+    }
+  }
+};
+
 // Custom Dropdown Component (styled like the rest of the plugin)
 const CustomDropdown = ({ label, text, options, onChange, disabled }) => {
   const dropdownRef = useRef(null);
@@ -54,12 +69,9 @@ const TrendingForm = () => {
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ text: "", type: "" });
 
-  // Search Parameters
   const [region, setRegion] = useState({ label: "United States", value: "US" });
   const [language, setLanguage] = useState({ label: "English", value: "en" });
   const [date, setDate] = useState({ label: "Past Week", value: "now 7-d" });
-
-  // Article Settings
   const [articleSettings, setArticleSettings] = useState({
     autoPublish: false,
   });
@@ -92,7 +104,6 @@ const TrendingForm = () => {
     setStatusMessage({ text: "Searching Google Trends...", type: "info" });
     setTrendingTopics([]);
     setSelectedTopics([]);
-
     try {
       const response = await callAjax("fetch_trending_topics", {
         keyword: keyword.trim(),
@@ -100,7 +111,6 @@ const TrendingForm = () => {
         language: language.value,
         date: date.value,
       });
-
       if (!response.success) throw new Error(response.data);
       setTrendingTopics(response.data.trends || []);
       setStatusMessage({
@@ -133,27 +143,66 @@ const TrendingForm = () => {
       return;
     }
     setIsGeneratingArticle(true);
-    setStatusMessage({
-      text: `Generating ${selectedTopics.length} article(s)...`,
-      type: "info",
-    });
-    try {
-      const response = await callAjax("generate_trending_articles", {
-        trending_topics: JSON.stringify(selectedTopics),
-        settings: JSON.stringify(articleSettings),
-        language: language.label, // Pass language name for prompt
-      });
-      if (!response.success) throw new Error(response.data);
-      setSelectedTopics([]);
+
+    // --- START: MODIFIED LOGIC ---
+    if (selectedTopics.length === 1) {
+      // SINGLE ARTICLE: Generate and insert into the current editor.
       setStatusMessage({
-        text: `✅ Successfully generated ${response.data.successful_count} article(s)!`,
-        type: "success",
+        text: "Generating article and inserting into editor...",
+        type: "info",
       });
-    } catch (err) {
-      setStatusMessage({ text: `Error: ${err.message}`, type: "error" });
-    } finally {
-      setIsGeneratingArticle(false);
+      try {
+        const response = await callAjax("generate_single_trending_article", {
+          trending_topic: JSON.stringify(selectedTopics[0]),
+          language: language.label,
+        });
+
+        if (!response.success) throw new Error(response.data);
+
+        // Use the helper function to update the editor
+        updateEditorContent(
+          response.data.article_title,
+          response.data.article_content,
+          "" // Subtitle not currently supported by this flow
+        );
+
+        setStatusMessage({
+          text: "✅ Article content inserted into the editor!",
+          type: "success",
+        });
+        setSelectedTopics([]); // Clear selection
+      } catch (err) {
+        setStatusMessage({ text: `Error: ${err.message}`, type: "error" });
+      } finally {
+        setIsGeneratingArticle(false);
+      }
+    } else {
+      // MULTIPLE ARTICLES: Use the original bulk-creation method.
+      setStatusMessage({
+        text: `Generating ${selectedTopics.length} new draft posts...`,
+        type: "info",
+      });
+      try {
+        const response = await callAjax("generate_trending_articles", {
+          trending_topics: JSON.stringify(selectedTopics),
+          settings: JSON.stringify(articleSettings),
+          language: language.label,
+        });
+
+        if (!response.success) throw new Error(response.data);
+
+        setStatusMessage({
+          text: `✅ Successfully created ${response.data.successful_count} new draft posts!`,
+          type: "success",
+        });
+        setSelectedTopics([]); // Clear selection
+      } catch (err) {
+        setStatusMessage({ text: `Error: ${err.message}`, type: "error" });
+      } finally {
+        setIsGeneratingArticle(false);
+      }
     }
+    // --- END: MODIFIED LOGIC ---
   };
 
   useEffect(() => {
@@ -268,14 +317,19 @@ const TrendingForm = () => {
           </div>
           <div className="atm-form-section atm-generation-actions">
             <h3 className="atm-section-title">{`Generate ${selectedTopics.length} Article(s)`}</h3>
-            <CheckboxControl
-              label="Auto-publish articles (otherwise save as draft)"
-              checked={articleSettings.autoPublish}
-              onChange={(value) =>
-                setArticleSettings((prev) => ({ ...prev, autoPublish: value }))
-              }
-              disabled={isGeneratingArticle}
-            />
+            {selectedTopics.length > 1 && (
+              <CheckboxControl
+                label="Auto-publish articles (otherwise save as draft)"
+                checked={articleSettings.autoPublish}
+                onChange={(value) =>
+                  setArticleSettings((prev) => ({
+                    ...prev,
+                    autoPublish: value,
+                  }))
+                }
+                disabled={isGeneratingArticle}
+              />
+            )}
             <Button
               isPrimary
               onClick={generateArticlesFromTrends}
@@ -287,9 +341,15 @@ const TrendingForm = () => {
                   Generating...
                 </>
               ) : (
-                "Generate Selected Articles"
+                `Generate ${selectedTopics.length > 0 ? selectedTopics.length : ""} Selected Article(s)`
               )}
             </Button>
+            {selectedTopics.length > 1 && (
+              <p className="components-base-control__help">
+                When generating multiple articles, new draft posts will be
+                created.
+              </p>
+            )}
           </div>
         </>
       )}

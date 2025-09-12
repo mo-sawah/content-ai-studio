@@ -6,6 +6,33 @@ if (!defined('ABSPATH')) {
 
 class ATM_Ajax {
 
+    public function generate_single_trending_article() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        @ini_set('max_execution_time', 300);
+
+        try {
+            $topic = isset($_POST['trending_topic']) ? json_decode(stripslashes($_POST['trending_topic']), true) : [];
+            $language = isset($_POST['language']) ? sanitize_text_field($_POST['language']) : 'English';
+
+            if (empty($topic)) {
+                throw new Exception('Missing topic for article generation.');
+            }
+
+            // The generate_article_from_trend method does not have settings for word count or tone,
+            // so we call it with the available parameters.
+            $article_data = ATM_API::generate_article_from_trend($topic, [], $language);
+            
+            // This action RETURNS the content instead of creating a post.
+            wp_send_json_success([
+                'article_title' => $article_data['title'],
+                'article_content' => $article_data['content'],
+            ]);
+
+        } catch (Exception $e) {
+            wp_send_json_error($e->getMessage());
+        }
+    }
+
     public function fetch_trending_topics() {
         check_ajax_referer('atm_nonce', 'nonce');
         try {
@@ -1298,6 +1325,7 @@ public function translate_text() {
 
         add_action('wp_ajax_fetch_trending_topics', array($this, 'fetch_trending_topics'));
         add_action('wp_ajax_generate_trending_articles', array($this, 'generate_trending_articles'));
+        add_action('wp_ajax_generate_single_trending_article', array($this, 'generate_single_trending_article'));
 
         add_action('wp_ajax_search_google_news', array($this, 'search_google_news'));
         add_action('wp_ajax_generate_article_from_news_source', array($this, 'generate_article_from_news_source'));
