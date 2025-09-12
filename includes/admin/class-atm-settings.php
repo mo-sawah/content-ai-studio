@@ -661,19 +661,6 @@ private function render_api_tab() {
                 <tr><th scope="row">ScrapingAnt API Key</th><td><input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" /><p class="description">Required for RSS scraping. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p></td></tr>
                 <tr><th scope="row">Mercury Reader API Key (Optional)</th><td><input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p></td></tr>
                 <tr><th scope="row">TwitterAPI.io Key</th><td><input type="password" name="atm_twitterapi_key" value="<?php echo esc_attr($options['twitterapi_key']); ?>" class="regular-text" /><p class="description">Required for Twitter/X news search. Get a free key from <a href="https://twitterapi.io/" target="_blank">TwitterAPI.io</a>.</p></td></tr>
-                <tr>
-                <th scope="row">Nano Banana</th>
-                <td>
-                    <?php $nb_backend = get_option('atm_nanobanana_backend', 'gemini'); ?>
-                    <select name="atm_nanobanana_backend">
-                    <option value="gemini" <?php selected($nb_backend, 'gemini'); ?>>Gemini API (AI Studio)</option>
-                    <option value="vertex" <?php selected($nb_backend, 'vertex'); ?>>Vertex AI (Service Account)</option>
-                    </select>
-                    <p class="description">
-                    Use "Gemini API" if your AI Studio key has access to Gemini 2.5 Flash Image. Otherwise use Vertex AI.
-                    </p>
-                </td>
-                </tr>
 
                 <tr>
                 <th scope="row">Vertex Project ID</th>
