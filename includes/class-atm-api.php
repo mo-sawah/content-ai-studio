@@ -427,13 +427,21 @@ class ATM_API {
             throw new Exception('SerpApi key is not configured in AI Studio -> API Keys.');
         }
 
-        $params = [ 'api_key' => $api_key, 'engine' => 'google_trends' ];
+        $params = [
+            'api_key' => $api_key,
+            'engine' => 'google_trends',
+        ];
+
         if (empty($keyword)) {
             $params['type'] = 'TRENDING_SEARCHES';
+            // FIX: SerpApi requires a 'q' param even for general trends. We use the region name as a generic query.
+            $region_map = ['US' => 'United States', 'GB' => 'United Kingdom', 'CA' => 'Canada', 'AU' => 'Australia', 'DE' => 'Germany', 'FR' => 'France', 'IN' => 'India'];
+            $params['q'] = $region_map[$region] ?? 'World';
         } else {
             $params['q'] = $keyword;
             $params['data_type'] = 'RELATED_QUERIES';
         }
+
         if (!empty($region)) $params['gl'] = $region;
         if (!empty($language)) $params['hl'] = $language;
         if (!empty($date)) $params['date'] = $date;

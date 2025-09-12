@@ -4871,3 +4871,17 @@ textarea:focus {
   flex-direction: column;
   gap: 1rem;
 }
+
+/* --- Trending Form Layout & Button Fixes --- */
+.atm-form-actions-column {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* Increased gap */
+}
+
+.atm-search-buttons-wrapper {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}

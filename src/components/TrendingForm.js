@@ -277,44 +277,17 @@ const TrendingForm = () => {
     }
   };
 
-  useEffect(() => {
-    fetchTrendingTopics("");
-  }, []);
-
   return (
     <div className="atm-form-container">
       <div className="atm-form-section">
         <h3 className="atm-section-title">Find Trending Topics</h3>
-        <div className="atm-keyword-search-wrapper">
-          <TextControl
-            label="Keyword"
-            value={keyword}
-            onChange={setKeyword}
-            placeholder="Search for trends related to a keyword..."
-            help="Search for a specific topic."
-            className="atm-keyword-input-flex"
-          />
-          <Button
-            isSecondary
-            onClick={() => fetchTrendingTopics(keyword.trim())}
-            disabled={isLoadingTrends || isGeneratingArticle || !keyword.trim()}
-          >
-            Search Keyword
-          </Button>
-        </div>
-        <div className="atm-top-trends-wrapper">
-          <Button
-            isSecondary
-            onClick={() => fetchTrendingTopics("")}
-            disabled={isLoadingTrends || isGeneratingArticle}
-          >
-            Find Top Trends
-          </Button>
-          <p className="components-base-control__help">
-            Find the top overall trending topics for the selected region.
-          </p>
-        </div>
-
+        <TextControl
+          label="Keyword"
+          value={keyword}
+          onChange={setKeyword}
+          placeholder="e.g., AI, renewable energy, summer movies..."
+          help="Search for trends related to a specific topic."
+        />
         <div
           className="atm-form-grid"
           style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
@@ -324,21 +297,21 @@ const TrendingForm = () => {
             text={region.label}
             options={regions}
             onChange={setRegion}
-            disabled={isLoadingTrends}
+            disabled={isLoadingTrends || isGeneratingArticle}
           />
           <CustomDropdown
             label="Language"
             text={language.label}
             options={languages}
             onChange={setLanguage}
-            disabled={isLoadingTrends}
+            disabled={isLoadingTrends || isGeneratingArticle}
           />
           <CustomDropdown
             label="Date"
             text={date.label}
             options={dates}
             onChange={setDate}
-            disabled={isLoadingTrends}
+            disabled={isLoadingTrends || isGeneratingArticle}
           />
         </div>
         <div className="atm-form-actions-column">
@@ -348,6 +321,24 @@ const TrendingForm = () => {
             checked={forceFresh}
             onChange={setForceFresh}
           />
+          <div className="atm-search-buttons-wrapper">
+            <Button
+              isSecondary
+              onClick={() => fetchTrendingTopics(keyword.trim())}
+              disabled={
+                isLoadingTrends || isGeneratingArticle || !keyword.trim()
+              }
+            >
+              Search with Keyword
+            </Button>
+            <Button
+              isPrimary
+              onClick={() => fetchTrendingTopics("")}
+              disabled={isLoadingTrends || isGeneratingArticle}
+            >
+              Fetch Top Trends
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -436,7 +427,7 @@ const TrendingForm = () => {
                 onChange={(val) =>
                   setArticleSettings((p) => ({ ...p, writingStyle: val }))
                 }
-                disabled={isGeneratingArticle}
+                disabled={isGeneratingArticle || selectedTopics.length === 0}
               />
               <CustomDropdown
                 label="Word Count"
@@ -445,7 +436,7 @@ const TrendingForm = () => {
                 onChange={(val) =>
                   setArticleSettings((p) => ({ ...p, wordCount: val }))
                 }
-                disabled={isGeneratingArticle}
+                disabled={isGeneratingArticle || selectedTopics.length === 0}
               />
             </div>
             <div
@@ -459,7 +450,7 @@ const TrendingForm = () => {
                 onChange={(val) =>
                   setArticleSettings((p) => ({ ...p, includeImages: val }))
                 }
-                disabled={isGeneratingArticle}
+                disabled={isGeneratingArticle || selectedTopics.length === 0}
               />
               {selectedTopics.length > 1 && (
                 <ToggleControl
@@ -469,7 +460,7 @@ const TrendingForm = () => {
                   onChange={(val) =>
                     setArticleSettings((p) => ({ ...p, autoPublish: val }))
                   }
-                  disabled={isGeneratingArticle}
+                  disabled={isGeneratingArticle || selectedTopics.length === 0}
                 />
               )}
             </div>
