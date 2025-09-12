@@ -353,43 +353,49 @@ class ATM_API {
 
         $access_token = self::get_vertex_access_token_from_sa();
 
-        $model = $model_override ?: trim(get_option('atm_nanobanana_model', 'gemini-2.5-flash-image'));
+        $model = $model_override ?: trim(get_option('atm_nanobanana_model', 'imagen-3.0-generate-001'));
         if ($model === '') {
-            $model = 'gemini-2.5-flash-image';
+            $model = 'imagen-3.0-generate-001';
         }
 
+        // Use the correct Vertex AI endpoint for Imagen
         $endpoint = sprintf(
-            'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent',
+            'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:predict',
             $location,
             rawurlencode($project),
             rawurlencode($location),
             rawurlencode($model)
         );
 
-        // Map sizes; some rollouts infer size; these may be ignored if unsupported.
+        // Map sizes to aspect ratios
         $size = $size_override ?: get_option('atm_image_size', '1024x1024');
-        $dims = [
-            '1024x1024' => [1024, 1024],
-            '1792x1024' => [1792, 1024],
-            '1024x1792' => [1024, 1792],
-        ];
-        [$width, $height] = $dims[$size] ?? [1024, 1024];
+        $aspect_ratio = '1:1'; // default
+        switch ($size) {
+            case '1792x1024':
+                $aspect_ratio = '16:9';
+                break;
+            case '1024x1792':
+                $aspect_ratio = '9:16';
+                break;
+            case '1024x1024':
+            default:
+                $aspect_ratio = '1:1';
+                break;
+        }
 
+        // Correct Vertex AI payload structure for Imagen
         $body = [
-            'contents' => [[
-                'role'  => 'user',
-                'parts' => [[ 'text' => self::enhance_image_prompt($prompt) ]]
-            ]],
-            // The image_generation tool enables image creation.
-            'tools' => [
-                [ 'image_generation' => (object)[] ]
+            'instances' => [
+                [
+                    'prompt' => self::enhance_image_prompt($prompt)
+                ]
             ],
-            // Use Vertex naming; both generationConfig and generation_config are commonly accepted.
-            'generationConfig' => [
-                // Avoid setting responseMimeType to image/* (not needed); image is returned as inlineData.
-                // Optionally pass guidance; often optional for image gen:
-                // 'imageGenerationConfig' => [ 'width' => $width, 'height' => $height ],
-            ],
+            'parameters' => [
+                'sampleCount' => 1,
+                'aspectRatio' => $aspect_ratio,
+                'safetyFilterLevel' => 'block_some',
+                'personGeneration' => 'allow_adult'
+            ]
         ];
 
         $response = wp_remote_post($endpoint, [
@@ -416,20 +422,11 @@ class ATM_API {
             throw new Exception('Vertex AI returned non-JSON.');
         }
 
-        // Extract first image inlineData
-        $cands = $json['candidates'] ?? [];
-        foreach ($cands as $cand) {
-            $parts = $cand['content']['parts'] ?? [];
-            foreach ($parts as $part) {
-                if (isset($part['inlineData']['data'], $part['inlineData']['mimeType'])) {
-                    $mime = strtolower($part['inlineData']['mimeType']);
-                    if (strpos($mime, 'image/') === 0) {
-                        $bin = base64_decode($part['inlineData']['data']);
-                        if ($bin !== false && $bin !== '') {
-                            return $bin;
-                        }
-                    }
-                }
+        // Extract image from Vertex AI response
+        if (isset($json['predictions'][0]['bytesBase64Encoded'])) {
+            $bin = base64_decode($json['predictions'][0]['bytesBase64Encoded']);
+            if ($bin !== false && $bin !== '') {
+                return $bin;
             }
         }
 
