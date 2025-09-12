@@ -602,14 +602,14 @@ private function render_general_tab() {
             <div class="atm-settings-card">
                 <h2>🖼️ Image Generation Defaults</h2>
                 <table class="form-table">
-                    <tr>
+                    <<tr>
                         <th scope="row">Default Image Provider</th>
                         <td>
                             <select name="atm_image_provider">
                                 <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
                                 <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
-                                <option value="nanobanana" <?php selected($options['image_provider'], 'nanobanana'); ?>>Nano Banana (Gemini 2.5 Flash Image)</option>
-                                <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>Black Forrest Labs</option>
+                                <option value="nanobanana" <?php selected($options['image_provider'], 'nanobanana'); ?>>Gemini 2.5 Flash Image</option>
+                                <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>Black Forest Labs (FLUX)</option>
                             </select>
                         </td>
                     </tr>
