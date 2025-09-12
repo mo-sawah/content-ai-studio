@@ -58,8 +58,6 @@ const CustomDropdown = ({ label, text, options, onChange, disabled }) => {
     </div>
   );
 };
-
-// Drag-to-scroll custom hook
 const useDraggableScroll = () => {
   const ref = useRef(null);
   useEffect(() => {
@@ -103,7 +101,6 @@ const useDraggableScroll = () => {
   return ref;
 };
 
-// Main Component
 const TrendingForm = () => {
   const [keyword, setKeyword] = useState("");
   const [trendingTopics, setTrendingTopics] = useState([]);
@@ -160,14 +157,14 @@ const TrendingForm = () => {
   ];
   const draggableRef = useDraggableScroll();
 
-  const fetchTrendingTopics = async () => {
+  const fetchTrendingTopics = async (searchKeyword = "") => {
     setIsLoadingTrends(true);
     setStatusMessage({ text: "Searching Google Trends...", type: "info" });
     setTrendingTopics([]);
     setSelectedTopics([]);
     try {
       const response = await callAjax("fetch_trending_topics", {
-        keyword: keyword.trim(),
+        keyword: searchKeyword,
         region: region.value,
         language: language.value,
         date: date.value,
@@ -208,7 +205,6 @@ const TrendingForm = () => {
       writingStyle: articleSettings.writingStyle.value,
       wordCount: articleSettings.wordCount.value,
     };
-
     if (selectedTopics.length === 1) {
       setStatusMessage({ text: "Generating article...", type: "info" });
       try {
@@ -218,14 +214,11 @@ const TrendingForm = () => {
           language: language.label,
         });
         if (!response.success) throw new Error(response.data);
-
-        // --- MODIFIED LINE ---
         updateEditorContent(
           response.data.article_title,
           response.data.article_content,
           response.data.subtitle
         );
-
         setStatusMessage({
           text: "✅ Article inserted! Saving post to generate image...",
           type: "success",
@@ -285,20 +278,43 @@ const TrendingForm = () => {
   };
 
   useEffect(() => {
-    fetchTrendingTopics();
+    fetchTrendingTopics("");
   }, []);
 
   return (
     <div className="atm-form-container">
       <div className="atm-form-section">
         <h3 className="atm-section-title">Find Trending Topics</h3>
-        <TextControl
-          label="Keyword"
-          value={keyword}
-          onChange={setKeyword}
-          placeholder="e.g., AI, renewable energy, summer movies..."
-          help="Leave empty for general trends in the selected region."
-        />
+        <div className="atm-keyword-search-wrapper">
+          <TextControl
+            label="Keyword"
+            value={keyword}
+            onChange={setKeyword}
+            placeholder="Search for trends related to a keyword..."
+            help="Search for a specific topic."
+            className="atm-keyword-input-flex"
+          />
+          <Button
+            isSecondary
+            onClick={() => fetchTrendingTopics(keyword.trim())}
+            disabled={isLoadingTrends || isGeneratingArticle || !keyword.trim()}
+          >
+            Search Keyword
+          </Button>
+        </div>
+        <div className="atm-top-trends-wrapper">
+          <Button
+            isSecondary
+            onClick={() => fetchTrendingTopics("")}
+            disabled={isLoadingTrends || isGeneratingArticle}
+          >
+            Find Top Trends
+          </Button>
+          <p className="components-base-control__help">
+            Find the top overall trending topics for the selected region.
+          </p>
+        </div>
+
         <div
           className="atm-form-grid"
           style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
@@ -325,24 +341,10 @@ const TrendingForm = () => {
             disabled={isLoadingTrends}
           />
         </div>
-        <div className="atm-form-actions-row">
-          <Button
-            isPrimary
-            onClick={fetchTrendingTopics}
-            disabled={isLoadingTrends || isGeneratingArticle}
-          >
-            {isLoadingTrends ? (
-              <>
-                <Spinner />
-                Searching...
-              </>
-            ) : (
-              "Search For Trends"
-            )}
-          </Button>
+        <div className="atm-form-actions-column">
           <ToggleControl
             label="Force Fresh Results"
-            help="Bypass cache"
+            help="Bypass the 1-hour cache to get new data."
             checked={forceFresh}
             onChange={setForceFresh}
           />
@@ -452,6 +454,7 @@ const TrendingForm = () => {
             >
               <ToggleControl
                 label="Generate a featured image"
+                help="A relevant image will be generated and set as the post's featured image."
                 checked={articleSettings.includeImages}
                 onChange={(val) =>
                   setArticleSettings((p) => ({ ...p, includeImages: val }))
