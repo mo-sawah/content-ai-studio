@@ -104,12 +104,12 @@ class ATM_Automation_API {
             }
 
             $system_prompt = $base_prompt . "\n\n**AUTOMATION CONTENT GENERATION INSTRUCTIONS:**
-
             Follow these strict formatting guidelines:
             - **Style**: Write in a professional, engaging tone appropriate for the topic
             - **Length**: Aim for " . ($settings['word_count'] ? $settings['word_count'] : '800-1200') . " words
             - **HTML Format**: Use clean HTML with <h2> for main sections, <h3> for subsections, <p> for paragraphs, <ul>/<ol> for lists
             - **CRITICAL**: Do NOT use H1 headings anywhere in the content
+            - **CRITICAL**: The content must begin with a regular paragraph, NOT with any heading (H1, H2, H3, etc.)
             - **CRITICAL**: Do NOT include conclusion headings like 'Conclusion', 'Summary', 'Final Thoughts', etc.
             - End with a natural concluding paragraph without any heading
 
