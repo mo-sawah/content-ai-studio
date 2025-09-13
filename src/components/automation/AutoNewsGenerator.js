@@ -716,10 +716,11 @@ function AutoNewsGenerator({ setActiveView, editingCampaign }) {
         )}
 
         {/* Common settings section - reuse from your existing implementation */}
-        <div className="atm-common-settings">
-          {/* Add common settings like schedule, AI model, writing style, etc. */}
-          {/* This should match your current automation form structure */}
-        </div>
+        <CampaignSettingsForm
+          campaignData={campaignData}
+          setCampaignData={setCampaignData}
+          isLoading={isLoading}
+        />
 
         {/* Form actions */}
         <div className="atm-form-actions">

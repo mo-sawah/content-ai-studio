@@ -5,7 +5,12 @@ import AutoArticleGenerator from "./AutoArticleGenerator";
 import AutoNewsGenerator from "./AutoNewsGenerator";
 import AutoVideoGenerator from "./AutoVideoGenerator";
 import AutoPodcastGenerator from "./AutoPodcastGenerator";
-import CampaignManager from "./CampaignManager";
+
+// Add this import for your dashboard
+import CampaignDashboard from "./CampaignDashboard"; // <-- ADD THIS LINE
+
+// You can probably remove CampaignManager if CampaignDashboard is replacing it
+// import CampaignManager from "./CampaignManager";
 
 function AutomationApp() {
   const [activeView, setActiveView] = useState("hub");
@@ -175,10 +180,19 @@ function AutomationApp() {
           />
         );
       case "campaigns":
+        // This is the key change: use CampaignDashboard
         return (
-          <CampaignManager
-            setActiveView={setActiveView}
-            setEditingCampaign={setEditingCampaign}
+          <CampaignDashboard
+            // CampaignDashboard needs these props to function correctly
+            campaigns={campaigns} // You'll need to fetch campaigns here
+            refreshCampaigns={loadCampaigns} // Function to reload campaigns
+            onEditCampaign={(campaign) => {
+              setEditingCampaign(campaign);
+              setActiveView(campaign.type);
+            }}
+            onDeleteCampaign={handleDeleteCampaign} // Pass delete function
+            onToggleCampaign={handleToggleCampaign} // Pass toggle function
+            onRunCampaign={handleRunCampaign} // Pass run now function
           />
         );
       default:
