@@ -1,6 +1,7 @@
 // src/components/automation/CampaignManager.js
 import { useState, useEffect } from "@wordpress/element";
 import { Button, Spinner } from "@wordpress/components";
+import CampaignDashboard from "./CampaignDashboard";
 
 function CampaignManager({ setActiveView, setEditingCampaign }) {
   const [campaigns, setCampaigns] = useState([]);
@@ -122,6 +123,18 @@ function CampaignManager({ setActiveView, setEditingCampaign }) {
     setEditingCampaign(campaign);
     setActiveView(campaign.type); // Navigate to the appropriate automation type
   };
+
+  return (
+    <CampaignDashboard
+      campaigns={campaigns}
+      isLoading={isLoading}
+      onEditCampaign={handleEditCampaign}
+      onDeleteCampaign={handleDeleteCampaign}
+      onToggleCampaign={handleToggleCampaign}
+      onRunCampaign={handleRunCampaign}
+      refreshCampaigns={loadCampaigns}
+    />
+  );
 
   const getTypeIcon = (type) => {
     const icons = {

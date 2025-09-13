@@ -20,6 +20,7 @@ class ATM_Automation_Database {
         global $wpdb;
         $table_name = $wpdb->prefix . 'atm_automation_campaigns';
         
+        // Check if status column exists
         $column_exists = $wpdb->get_results($wpdb->prepare(
             "SHOW COLUMNS FROM $table_name LIKE %s",
             'status'
@@ -28,6 +29,8 @@ class ATM_Automation_Database {
         if (empty($column_exists)) {
             $wpdb->query("ALTER TABLE $table_name ADD COLUMN status varchar(20) DEFAULT 'idle' AFTER is_active");
             error_log('ATM Automation: Added status column to campaigns table');
+        } else {
+            error_log('ATM Automation: Status column already exists');
         }
     }
 

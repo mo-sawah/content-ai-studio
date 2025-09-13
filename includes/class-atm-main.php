@@ -840,29 +840,27 @@ class ATM_Main {
             }
         }
         
-        // self::create_campaigns_table();
+        // Create main ATM tables
         self::create_podcast_progress_table();
         self::create_script_jobs_table();
         self::create_used_articles_table();
         self::create_content_angles_table();
         self::verify_content_angles_table();
-        self::create_automation_tables_directly();
-        self::verify_automation_tables();
 
-        // Debug: Check if automation class exists
-        error_log('ATM Debug: ATM_Automation_Database class exists: ' . (class_exists('ATM_Automation_Database') ? 'YES' : 'NO'));
-        
+        // Create automation tables and schema updates
         if (class_exists('ATM_Automation_Database')) {
             error_log('ATM Debug: About to create automation tables...');
+            
+            // Create base tables first
             ATM_Automation_Database::create_tables();
-            error_log('ATM Debug: Automation tables creation called');
+            
+            // Then add new columns
+            ATM_Automation_Database::add_status_column();
+            ATM_Automation_Database::update_schema_for_subtypes();
+            
+            error_log('ATM Debug: Automation tables creation completed');
         } else {
             error_log('ATM Debug: ATM_Automation_Database class not found during activation');
-        }
-
-        // Update automation schema for sub-types
-        if (class_exists('ATM_Automation_Database')) {
-            ATM_Automation_Database::update_schema_for_subtypes();
         }
 
         do_action('atm_activation');
