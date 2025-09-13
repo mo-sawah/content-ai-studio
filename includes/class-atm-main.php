@@ -427,7 +427,6 @@ class ATM_Main {
         $settings = class_exists('ATM_Settings') ? new ATM_Settings() : null;
         $ajax = class_exists('ATM_Ajax') ? new ATM_Ajax() : null;
         $frontend = class_exists('ATM_Frontend') ? new ATM_Frontend() : null;
-        $campaign_manager = class_exists('ATM_Campaign_Manager') ? new ATM_Campaign_Manager() : null;
         $listicle = class_exists('ATM_Listicle_Generator') ? new ATM_Listicle_Generator() : null;
         $humanize = class_exists('ATM_Humanize') ? new ATM_Humanize() : null;
 
@@ -501,10 +500,6 @@ class ATM_Main {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_listicle_styles'), 100);
         add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
 
-        // Campaign manager hooks
-        if (class_exists('ATM_Campaign_Manager')) {
-            ATM_Campaign_Manager::schedule_main_cron();
-        }
     }
 
     public static function cleanup_old_script_jobs() {
@@ -740,6 +735,10 @@ class ATM_Main {
 
         // Force table creation check
         self::verify_content_angles_table();
+
+        if (class_exists('ATM_Automation_Database')) {
+            ATM_Automation_Database::create_tables();
+        }
 
         do_action('atm_activation');
 
