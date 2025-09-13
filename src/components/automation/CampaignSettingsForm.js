@@ -4,430 +4,513 @@ import {
   TextControl,
   TextareaControl,
   ToggleControl,
-  Card,
-  CardBody,
-  CardHeader,
+  SelectControl,
   Flex,
   FlexItem,
+  Card,
+  CardBody,
   __experimentalSpacer as Spacer,
 } from "@wordpress/components";
-import CustomDropdown from "../common/CustomDropdown";
 
-const SettingsSection = ({ title, description, children, icon }) => (
-  <Card className="atm-settings-card">
-    <CardHeader>
-      <Flex align="center" gap={3}>
-        <span className="atm-section-icon">{icon}</span>
-        <div>
-          <h4 className="atm-section-title">{title}</h4>
-          {description && (
-            <p className="atm-section-description">{description}</p>
-          )}
-        </div>
-      </Flex>
-    </CardHeader>
-    <CardBody>{children}</CardBody>
-  </Card>
-);
+function CampaignSettingsForm({
+  campaignData,
+  setCampaignData,
+  isLoading,
+  categories = [],
+  authors = [],
+}) {
+  const [expandedSections, setExpandedSections] = useState({
+    schedule: true,
+    publishing: true,
+    ai: true,
+    advanced: false,
+  });
 
-function CampaignSettingsForm({ campaignData, setCampaignData, isLoading }) {
+  const toggleSection = (section) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
   const schedulePresets = [
-    {
-      label: "Every 15 minutes",
-      value: { schedule_value: 15, schedule_unit: "minute" },
-    },
-    {
-      label: "Every 30 minutes",
-      value: { schedule_value: 30, schedule_unit: "minute" },
-    },
-    {
-      label: "Every hour",
-      value: { schedule_value: 1, schedule_unit: "hour" },
-    },
-    {
-      label: "Every 2 hours",
-      value: { schedule_value: 2, schedule_unit: "hour" },
-    },
-    {
-      label: "Every 6 hours",
-      value: { schedule_value: 6, schedule_unit: "hour" },
-    },
-    {
-      label: "Every 12 hours",
-      value: { schedule_value: 12, schedule_unit: "hour" },
-    },
-    { label: "Daily", value: { schedule_value: 1, schedule_unit: "day" } },
-    {
-      label: "Every 2 days",
-      value: { schedule_value: 2, schedule_unit: "day" },
-    },
-    { label: "Weekly", value: { schedule_value: 1, schedule_unit: "week" } },
-    { label: "Custom", value: null },
+    { label: "Every 15 minutes", value: 15, unit: "minute" },
+    { label: "Every 30 minutes", value: 30, unit: "minute" },
+    { label: "Every hour", value: 1, unit: "hour" },
+    { label: "Every 2 hours", value: 2, unit: "hour" },
+    { label: "Every 6 hours", value: 6, unit: "hour" },
+    { label: "Every 12 hours", value: 12, unit: "hour" },
+    { label: "Daily", value: 1, unit: "day" },
+    { label: "Every 2 days", value: 2, unit: "day" },
+    { label: "Weekly", value: 1, unit: "week" },
   ];
 
-  const currentScheduleLabel =
-    schedulePresets.find(
-      (preset) =>
-        preset.value &&
-        preset.value.schedule_value === campaignData.schedule_value &&
-        preset.value.schedule_unit === campaignData.schedule_unit
-    )?.label || "Custom";
+  const applySchedulePreset = (preset) => {
+    setCampaignData({
+      ...campaignData,
+      schedule_value: preset.value,
+      schedule_unit: preset.unit,
+    });
+  };
 
-  const handleSchedulePreset = (preset) => {
-    if (preset.value) {
-      setCampaignData({
-        ...campaignData,
-        schedule_value: preset.value.schedule_value,
-        schedule_unit: preset.value.schedule_unit,
-      });
-    }
+  const calculatePostsPerDay = () => {
+    const minutes =
+      campaignData.schedule_value *
+      (campaignData.schedule_unit === "minute"
+        ? 1
+        : campaignData.schedule_unit === "hour"
+          ? 60
+          : campaignData.schedule_unit === "day"
+            ? 1440
+            : 10080); // week
+    return Math.round((24 * 60) / minutes);
   };
 
   return (
-    <div className="atm-campaign-settings">
+    <div className="atm-campaign-settings-form">
       {/* Schedule Settings */}
-      <SettingsSection
-        title="Schedule Configuration"
-        description="Control when and how often your campaign runs"
-        icon="⏰"
-      >
-        <div className="atm-schedule-grid">
-          <div className="atm-schedule-presets">
-            <label className="atm-field-label">Quick Presets</label>
-            <CustomDropdown
-              text={currentScheduleLabel}
-              options={schedulePresets}
-              onChange={handleSchedulePreset}
-              disabled={isLoading}
-            />
+      <Card className="atm-settings-section">
+        <div
+          className="atm-section-header"
+          onClick={() => toggleSection("schedule")}
+        >
+          <div className="atm-section-title">
+            <span className="atm-section-icon">⏰</span>
+            <h3>Schedule Settings</h3>
           </div>
+          <button
+            className={`atm-collapse-btn ${expandedSections.schedule ? "expanded" : ""}`}
+          >
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
 
-          <div className="atm-schedule-custom">
-            <label className="atm-field-label">Custom Schedule</label>
-            <Flex gap={2} align="end">
-              <FlexItem>
-                <TextControl
-                  label="Every"
-                  type="number"
-                  value={campaignData.schedule_value}
+        {expandedSections.schedule && (
+          <CardBody>
+            <div className="atm-schedule-presets">
+              <label className="atm-label">Quick Presets</label>
+              <div className="atm-preset-buttons">
+                {schedulePresets.map((preset, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className={`atm-preset-btn ${
+                      campaignData.schedule_value === preset.value &&
+                      campaignData.schedule_unit === preset.unit
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() => applySchedulePreset(preset)}
+                    disabled={isLoading}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Spacer marginTop={4} />
+
+            <div className="atm-custom-schedule">
+              <label className="atm-label">Custom Schedule</label>
+              <Flex gap={3} align="end">
+                <FlexItem>
+                  <TextControl
+                    label="Every"
+                    type="number"
+                    value={campaignData.schedule_value || 1}
+                    onChange={(value) =>
+                      setCampaignData({
+                        ...campaignData,
+                        schedule_value: Math.max(1, parseInt(value) || 1),
+                      })
+                    }
+                    disabled={isLoading}
+                    min="1"
+                  />
+                </FlexItem>
+                <FlexItem>
+                  <SelectControl
+                    label="Unit"
+                    value={campaignData.schedule_unit || "hour"}
+                    options={[
+                      { label: "Minutes", value: "minute" },
+                      { label: "Hours", value: "hour" },
+                      { label: "Days", value: "day" },
+                      { label: "Weeks", value: "week" },
+                    ]}
+                    onChange={(value) =>
+                      setCampaignData({
+                        ...campaignData,
+                        schedule_unit: value,
+                      })
+                    }
+                    disabled={isLoading}
+                  />
+                </FlexItem>
+              </Flex>
+            </div>
+
+            <div className="atm-schedule-preview">
+              <div className="atm-preview-card">
+                <div className="atm-preview-stat">
+                  <span className="atm-stat-number">
+                    {calculatePostsPerDay()}
+                  </span>
+                  <span className="atm-stat-label">Posts per day</span>
+                </div>
+                <div className="atm-preview-stat">
+                  <span className="atm-stat-number">
+                    {calculatePostsPerDay() * 7}
+                  </span>
+                  <span className="atm-stat-label">Posts per week</span>
+                </div>
+                <div className="atm-preview-stat">
+                  <span className="atm-stat-number">
+                    {Math.round(calculatePostsPerDay() * 30.4)}
+                  </span>
+                  <span className="atm-stat-label">Posts per month</span>
+                </div>
+              </div>
+            </div>
+          </CardBody>
+        )}
+      </Card>
+
+      {/* Publishing Settings */}
+      <Card className="atm-settings-section">
+        <div
+          className="atm-section-header"
+          onClick={() => toggleSection("publishing")}
+        >
+          <div className="atm-section-title">
+            <span className="atm-section-icon">📝</span>
+            <h3>Publishing & Organization</h3>
+          </div>
+          <button
+            className={`atm-collapse-btn ${expandedSections.publishing ? "expanded" : ""}`}
+          >
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {expandedSections.publishing && (
+          <CardBody>
+            <div className="atm-publishing-grid">
+              <div className="atm-form-group">
+                <SelectControl
+                  label="Content Mode"
+                  value={campaignData.content_mode || "draft"}
+                  options={[
+                    { label: "Save as Draft", value: "draft" },
+                    { label: "Publish Immediately", value: "publish" },
+                  ]}
                   onChange={(value) =>
                     setCampaignData({
                       ...campaignData,
-                      schedule_value: Math.max(1, parseInt(value) || 1),
+                      content_mode: value,
                     })
                   }
                   disabled={isLoading}
-                  min="1"
-                  className="atm-schedule-value"
+                  help={
+                    campaignData.content_mode === "draft"
+                      ? "Posts will be saved as drafts for manual review"
+                      : "Posts will be published automatically"
+                  }
                 />
-              </FlexItem>
-              <FlexItem>
-                <CustomDropdown
-                  text={campaignData.schedule_unit}
-                  options={[
-                    { label: "Minutes", value: "minute" },
-                    { label: "Hours", value: "hour" },
-                    { label: "Days", value: "day" },
-                    { label: "Weeks", value: "week" },
-                  ]}
-                  onChange={(option) =>
+              </div>
+
+              <div className="atm-form-group">
+                <SelectControl
+                  label="Author"
+                  value={campaignData.author_id || 1}
+                  options={authors.map((author) => ({
+                    label: author.label,
+                    value: author.value,
+                  }))}
+                  onChange={(value) =>
                     setCampaignData({
                       ...campaignData,
-                      schedule_unit: option.value,
+                      author_id: parseInt(value),
                     })
                   }
                   disabled={isLoading}
                 />
-              </FlexItem>
-            </Flex>
-          </div>
-        </div>
-
-        <Spacer marginTop={4} />
-
-        <div className="atm-schedule-info">
-          <div className="atm-info-card">
-            <span className="atm-info-icon">📊</span>
-            <div>
-              <strong>Expected Output:</strong>
-              <br />~
-              {Math.round(
-                (24 * 60) /
-                  (campaignData.schedule_value *
-                    (campaignData.schedule_unit === "minute"
-                      ? 1
-                      : campaignData.schedule_unit === "hour"
-                        ? 60
-                        : campaignData.schedule_unit === "day"
-                          ? 1440
-                          : 10080))
-              )}{" "}
-              posts per day
+              </div>
             </div>
-          </div>
-        </div>
-      </SettingsSection>
 
-      {/* Publishing Settings */}
-      <SettingsSection
-        title="Publishing & Organization"
-        description="Control how and where your content is published"
-        icon="📝"
-      >
-        <div className="atm-publishing-grid">
-          <div className="atm-content-mode">
-            <CustomDropdown
-              label="Content Mode"
-              text={
-                campaignData.content_mode === "draft"
-                  ? "Save as Draft"
-                  : "Publish Immediately"
-              }
-              options={[
-                { label: "Save as Draft", value: "draft" },
-                { label: "Publish Immediately", value: "publish" },
-              ]}
-              onChange={(option) =>
-                setCampaignData({
-                  ...campaignData,
-                  content_mode: option.value,
-                })
-              }
-              disabled={isLoading}
-              help={
-                campaignData.content_mode === "draft"
-                  ? "Posts will be saved as drafts for manual review"
-                  : "Posts will be published automatically"
-              }
-            />
-          </div>
-
-          <div className="atm-author-selection">
-            <CustomDropdown
-              label="Author"
-              text={
-                atm_automation_data?.authors?.find(
-                  (a) => a.value == campaignData.author_id
-                )?.label || "Select Author"
-              }
-              options={atm_automation_data?.authors || []}
-              onChange={(option) =>
-                setCampaignData({
-                  ...campaignData,
-                  author_id: option.value,
-                })
-              }
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="atm-category-selection">
-            {/* Category selection component - implement based on your existing CategoryMultiSelect */}
-            <label className="atm-field-label">Categories</label>
-            <div className="atm-category-tags">
-              {/* Display selected categories as tags */}
-              <span className="atm-placeholder-text">Select categories...</span>
+            <div className="atm-categories-section">
+              <label className="atm-label">Categories</label>
+              <div className="atm-category-grid">
+                {categories.map((category) => (
+                  <div key={category.value} className="atm-category-item">
+                    <input
+                      type="checkbox"
+                      id={`cat-${category.value}`}
+                      checked={
+                        campaignData.category_ids?.includes(category.value) ||
+                        false
+                      }
+                      onChange={(e) => {
+                        const currentIds = campaignData.category_ids || [];
+                        const newIds = e.target.checked
+                          ? [...currentIds, category.value]
+                          : currentIds.filter((id) => id !== category.value);
+                        setCampaignData({
+                          ...campaignData,
+                          category_ids: newIds,
+                        });
+                      }}
+                      disabled={isLoading}
+                    />
+                    <label htmlFor={`cat-${category.value}`}>
+                      {category.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
             </div>
+          </CardBody>
+        )}
+      </Card>
+
+      {/* AI Settings */}
+      <Card className="atm-settings-section">
+        <div className="atm-section-header" onClick={() => toggleSection("ai")}>
+          <div className="atm-section-title">
+            <span className="atm-section-icon">🤖</span>
+            <h3>AI & Content Settings</h3>
           </div>
-        </div>
-      </SettingsSection>
-
-      {/* AI & Content Settings */}
-      <SettingsSection
-        title="AI & Content Generation"
-        description="Configure AI model, writing style, and content parameters"
-        icon="🤖"
-      >
-        <div className="atm-ai-settings-grid">
-          <CustomDropdown
-            label="AI Model"
-            text={campaignData.settings?.ai_model || "Use Default Model"}
-            options={[
-              { label: "Use Default Model", value: "" },
-              { label: "GPT-4o (Recommended)", value: "openai/gpt-4o" },
-              {
-                label: "Claude 3.5 Sonnet",
-                value: "anthropic/claude-3-5-sonnet-20241022",
-              },
-              { label: "GPT-4o Mini (Faster)", value: "openai/gpt-4o-mini" },
-            ]}
-            onChange={(option) =>
-              setCampaignData({
-                ...campaignData,
-                settings: { ...campaignData.settings, ai_model: option.value },
-              })
-            }
-            disabled={isLoading}
-          />
-
-          <CustomDropdown
-            label="Writing Style"
-            text={getWritingStyleLabel(campaignData.settings?.writing_style)}
-            options={[
-              { label: "Standard SEO", value: "default_seo" },
-              { label: "Professional Business", value: "professional" },
-              { label: "Conversational", value: "conversational" },
-              { label: "Technical/Expert", value: "technical" },
-              { label: "News Reporting", value: "news" },
-              { label: "Educational", value: "educational" },
-            ]}
-            onChange={(option) =>
-              setCampaignData({
-                ...campaignData,
-                settings: {
-                  ...campaignData.settings,
-                  writing_style: option.value,
-                },
-              })
-            }
-            disabled={isLoading}
-          />
-
-          <CustomDropdown
-            label="Creativity Level"
-            text={getCreativityLabel(campaignData.settings?.creativity_level)}
-            options={[
-              { label: "Conservative (Factual)", value: "low" },
-              { label: "Balanced", value: "medium" },
-              { label: "Creative (Dynamic)", value: "high" },
-            ]}
-            onChange={(option) =>
-              setCampaignData({
-                ...campaignData,
-                settings: {
-                  ...campaignData.settings,
-                  creativity_level: option.value,
-                },
-              })
-            }
-            disabled={isLoading}
-          />
+          <button
+            className={`atm-collapse-btn ${expandedSections.ai ? "expanded" : ""}`}
+          >
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
         </div>
 
-        <Spacer marginTop={4} />
+        {expandedSections.ai && (
+          <CardBody>
+            <div className="atm-ai-grid">
+              <SelectControl
+                label="AI Model"
+                value={campaignData.settings?.ai_model || ""}
+                options={[
+                  { label: "Use Default Model", value: "" },
+                  { label: "GPT-4o (Recommended)", value: "openai/gpt-4o" },
+                  {
+                    label: "Claude 3.5 Sonnet",
+                    value: "anthropic/claude-3-5-sonnet-20241022",
+                  },
+                  {
+                    label: "GPT-4o Mini (Faster)",
+                    value: "openai/gpt-4o-mini",
+                  },
+                ]}
+                onChange={(value) =>
+                  setCampaignData({
+                    ...campaignData,
+                    settings: { ...campaignData.settings, ai_model: value },
+                  })
+                }
+                disabled={isLoading}
+              />
 
-        <div className="atm-content-params">
-          <TextControl
-            label="Target Word Count"
-            type="number"
-            placeholder="Leave empty for default (800-1200 words)"
-            value={campaignData.settings?.word_count || ""}
-            onChange={(value) =>
-              setCampaignData({
-                ...campaignData,
-                settings: {
-                  ...campaignData.settings,
-                  word_count: parseInt(value) || 0,
-                },
-              })
-            }
-            disabled={isLoading}
-            help="Specify desired article length. Leave empty for automatic sizing."
-          />
+              <SelectControl
+                label="Writing Style"
+                value={campaignData.settings?.writing_style || "default_seo"}
+                options={[
+                  { label: "Standard SEO", value: "default_seo" },
+                  { label: "Professional Business", value: "professional" },
+                  { label: "Conversational", value: "conversational" },
+                  { label: "Technical/Expert", value: "technical" },
+                  { label: "News Reporting", value: "news" },
+                  { label: "Educational", value: "educational" },
+                ]}
+                onChange={(value) =>
+                  setCampaignData({
+                    ...campaignData,
+                    settings: {
+                      ...campaignData.settings,
+                      writing_style: value,
+                    },
+                  })
+                }
+                disabled={isLoading}
+              />
 
-          <ToggleControl
-            label="Generate Featured Images"
-            help="Automatically create AI-generated featured images for each post"
-            checked={campaignData.settings?.generate_image || false}
-            onChange={(value) =>
-              setCampaignData({
-                ...campaignData,
-                settings: { ...campaignData.settings, generate_image: value },
-              })
-            }
-            disabled={isLoading}
-          />
-        </div>
-      </SettingsSection>
+              <SelectControl
+                label="Creativity Level"
+                value={campaignData.settings?.creativity_level || "high"}
+                options={[
+                  { label: "Conservative (Factual)", value: "low" },
+                  { label: "Balanced", value: "medium" },
+                  { label: "Creative (Dynamic)", value: "high" },
+                ]}
+                onChange={(value) =>
+                  setCampaignData({
+                    ...campaignData,
+                    settings: {
+                      ...campaignData.settings,
+                      creativity_level: value,
+                    },
+                  })
+                }
+                disabled={isLoading}
+              />
+
+              <TextControl
+                label="Target Word Count"
+                type="number"
+                placeholder="Leave empty for default"
+                value={campaignData.settings?.word_count || ""}
+                onChange={(value) =>
+                  setCampaignData({
+                    ...campaignData,
+                    settings: {
+                      ...campaignData.settings,
+                      word_count: parseInt(value) || 0,
+                    },
+                  })
+                }
+                disabled={isLoading}
+                help="Specify desired article length. Leave empty for automatic sizing."
+              />
+            </div>
+
+            <Spacer marginTop={4} />
+
+            <div className="atm-content-options">
+              <ToggleControl
+                label="Generate Featured Images"
+                help="Automatically create AI-generated featured images for each post"
+                checked={campaignData.settings?.generate_image || false}
+                onChange={(value) =>
+                  setCampaignData({
+                    ...campaignData,
+                    settings: {
+                      ...campaignData.settings,
+                      generate_image: value,
+                    },
+                  })
+                }
+                disabled={isLoading}
+              />
+            </div>
+          </CardBody>
+        )}
+      </Card>
 
       {/* Advanced Settings */}
-      <SettingsSection
-        title="Advanced Configuration"
-        description="Custom prompts and advanced automation settings"
-        icon="⚙️"
-      >
-        <TextareaControl
-          label="Custom Prompt (Optional)"
-          placeholder="Leave empty to use the selected writing style. If you write a prompt here, it will be used instead of the writing style template."
-          value={campaignData.settings?.custom_prompt || ""}
-          onChange={(value) =>
-            setCampaignData({
-              ...campaignData,
-              settings: { ...campaignData.settings, custom_prompt: value },
-            })
-          }
-          rows="6"
-          disabled={isLoading}
-          help="Custom prompts override the selected writing style. Use this for very specific content requirements."
-        />
-
-        <Spacer marginTop={4} />
-
-        <div className="atm-advanced-toggles">
-          <ToggleControl
-            label="Campaign Active"
-            help="Enable or disable this campaign"
-            checked={campaignData.is_active}
-            onChange={(value) =>
-              setCampaignData({
-                ...campaignData,
-                is_active: value,
-              })
-            }
-            disabled={isLoading}
-          />
-
-          <ToggleControl
-            label="Skip Weekends"
-            help="Pause campaign execution on Saturdays and Sundays"
-            checked={campaignData.settings?.skip_weekends || false}
-            onChange={(value) =>
-              setCampaignData({
-                ...campaignData,
-                settings: { ...campaignData.settings, skip_weekends: value },
-              })
-            }
-            disabled={isLoading}
-          />
-
-          <ToggleControl
-            label="Quality Check Mode"
-            help="Add extra validation to ensure higher content quality (slower execution)"
-            checked={campaignData.settings?.quality_check || false}
-            onChange={(value) =>
-              setCampaignData({
-                ...campaignData,
-                settings: { ...campaignData.settings, quality_check: value },
-              })
-            }
-            disabled={isLoading}
-          />
+      <Card className="atm-settings-section">
+        <div
+          className="atm-section-header"
+          onClick={() => toggleSection("advanced")}
+        >
+          <div className="atm-section-title">
+            <span className="atm-section-icon">⚙️</span>
+            <h3>Advanced Settings</h3>
+          </div>
+          <button
+            className={`atm-collapse-btn ${expandedSections.advanced ? "expanded" : ""}`}
+          >
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
         </div>
-      </SettingsSection>
+
+        {expandedSections.advanced && (
+          <CardBody>
+            <TextareaControl
+              label="Custom Prompt (Optional)"
+              placeholder="Leave empty to use the selected writing style. Custom prompts override the writing style template."
+              value={campaignData.settings?.custom_prompt || ""}
+              onChange={(value) =>
+                setCampaignData({
+                  ...campaignData,
+                  settings: { ...campaignData.settings, custom_prompt: value },
+                })
+              }
+              rows="6"
+              disabled={isLoading}
+              help="For very specific content requirements. This will override the selected writing style."
+            />
+
+            <Spacer marginTop={4} />
+
+            <div className="atm-advanced-options">
+              <ToggleControl
+                label="Campaign Active"
+                help="Enable or disable this campaign"
+                checked={campaignData.is_active !== false}
+                onChange={(value) =>
+                  setCampaignData({
+                    ...campaignData,
+                    is_active: value,
+                  })
+                }
+                disabled={isLoading}
+              />
+
+              <ToggleControl
+                label="Skip Weekends"
+                help="Pause campaign execution on Saturdays and Sundays"
+                checked={campaignData.settings?.skip_weekends || false}
+                onChange={(value) =>
+                  setCampaignData({
+                    ...campaignData,
+                    settings: {
+                      ...campaignData.settings,
+                      skip_weekends: value,
+                    },
+                  })
+                }
+                disabled={isLoading}
+              />
+
+              <ToggleControl
+                label="Quality Check Mode"
+                help="Add extra validation to ensure higher content quality (slower execution)"
+                checked={campaignData.settings?.quality_check || false}
+                onChange={(value) =>
+                  setCampaignData({
+                    ...campaignData,
+                    settings: {
+                      ...campaignData.settings,
+                      quality_check: value,
+                    },
+                  })
+                }
+                disabled={isLoading}
+              />
+            </div>
+          </CardBody>
+        )}
+      </Card>
     </div>
   );
 }
-
-// Helper functions
-const getWritingStyleLabel = (style) => {
-  const styles = {
-    default_seo: "Standard SEO",
-    professional: "Professional Business",
-    conversational: "Conversational",
-    technical: "Technical/Expert",
-    news: "News Reporting",
-    educational: "Educational",
-  };
-  return styles[style] || "Standard SEO";
-};
-
-const getCreativityLabel = (level) => {
-  const levels = {
-    low: "Conservative (Factual)",
-    medium: "Balanced",
-    high: "Creative (Dynamic)",
-  };
-  return levels[level] || "Creative (Dynamic)";
-};
 
 export default CampaignSettingsForm;
