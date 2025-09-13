@@ -279,59 +279,33 @@ class ATM_Ajax {
      * Run automation campaign immediately
      */
     public function run_automation_campaign_now() {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permission denied.');
+        if (!ATM_Licensing::is_license_active()) {
+            wp_send_json_error('Please activate your license key.');
         }
         check_ajax_referer('atm_nonce', 'nonce');
         
         try {
             $campaign_id = intval($_POST['campaign_id']);
+            
             if (!$campaign_id) {
-                throw new Exception('Invalid campaign ID.');
+                throw new Exception('Campaign ID is required.');
             }
             
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'atm_automation_campaigns';
-            
-            $campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
-            if (!$campaign) {
-                throw new Exception('Campaign not found.');
-            }
-            
-            // Log execution start
-            $this->log_automation_execution($campaign_id, 'started', 'Manual execution started');
-            
-            $settings = json_decode($campaign->settings, true) ?: [];
-            
-            // Execute based on campaign type
-            switch ($campaign->type) {
-                case 'articles':
-                    $result = $this->execute_article_automation($campaign, $settings);
-                    break;
-                default:
-                    throw new Exception('Campaign type not yet implemented: ' . $campaign->type);
-            }
+            // Use the automation API instead of trying to call non-existent method
+            $result = ATM_Automation_API::execute_campaign($campaign_id);
             
             if ($result['success']) {
-                // Update next run time
-                $this->update_campaign_next_run($campaign_id, $campaign->schedule_type, $campaign->schedule_value, $campaign->schedule_unit);
-                
-                // Log successful execution
-                $this->log_automation_execution($campaign_id, 'completed', 'Execution completed successfully', $result['post_id']);
-                
                 wp_send_json_success([
                     'message' => 'Campaign executed successfully!',
-                    'post_id' => $result['post_id'],
-                    'post_url' => $result['post_url']
+                    'post_id' => $result['post_id'] ?? null,
+                    'post_url' => $result['post_url'] ?? null
                 ]);
             } else {
                 throw new Exception($result['message']);
             }
             
         } catch (Exception $e) {
-            if (isset($campaign_id)) {
-                $this->log_automation_execution($campaign_id, 'failed', $e->getMessage());
-            }
+            error_log('ATM Manual Campaign Run Error: ' . $e->getMessage());
             wp_send_json_error($e->getMessage());
         }
     }
