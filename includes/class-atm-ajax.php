@@ -340,84 +340,78 @@ class ATM_Ajax {
      * Execute article automation using existing article generation logic
      */
     private function execute_article_automation($campaign, $settings) {
-        try {
-            // Get model with proper fallbacks
-            $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
-            if (empty($ai_model)) {
-                $ai_model = 'openai/gpt-4o';
-            }
+    try {
+        // Get model with proper fallbacks
+        $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
+        if (empty($ai_model)) {
+            $ai_model = 'openai/gpt-4o';
+        }
+        
+        error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
+        
+        // Ensure angles table exists (reuse existing method)
+        $this->ensure_angles_table_exists();
+        
+        // Get previous angles for this keyword (reuse existing method)
+        $previous_angles = $this->get_previous_angles($campaign->keyword);
+        error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $campaign->keyword);
+        
+        // ALWAYS generate angle using existing method
+        $angle_data = $this->generate_massive_scale_angle($campaign->keyword, $previous_angles);
+        error_log("ATM Debug: Generated angle: " . ($angle_data['angle_description'] ?? 'none'));
+        
+        // Store the angle BEFORE content generation (reuse existing method)
+        if ($angle_data && isset($angle_data['angle_description'])) {
+            $this->store_content_angle($campaign->keyword, $angle_data['angle_description'], '[Automation Generated]');
+        }
+        
+        // Build system prompt
+        $writing_styles = ATM_API::get_writing_styles();
+        $base_prompt = isset($writing_styles[$settings['writing_style'] ?? 'default_seo']) ? 
+            $writing_styles[$settings['writing_style'] ?? 'default_seo']['prompt'] : 
+            $writing_styles['default_seo']['prompt'];
             
-            // ADD THIS ANGLE SYSTEM CODE:
-            // Get previous angles for this keyword to ensure diversity
-            $previous_angles = $this->get_previous_automation_angles($campaign->keyword);
-            
-            // Generate intelligent angle if we have previous ones
-            $angle_data = null;
-            if (count($previous_angles) > 0) {
-                $angle_data = $this->generate_automation_angle($campaign->keyword, $previous_angles);
-                // Store the new angle
-                if ($angle_data && isset($angle_data['angle_description'])) {
-                    $this->store_automation_angle($campaign->keyword, $angle_data['angle_description'], '[Automation Generated]');
-                }
-
-                // After you get $result from the AI generation
-                if ($angle_data && !empty($result['title'])) {
-                    $this->update_automation_angle_title($campaign->keyword, $angle_data['angle_description'], $result['title']);
-                }
-            }
-            
-            error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
-            
-            // Use the standard system prompt
-            $writing_styles = ATM_API::get_writing_styles();
-            $base_prompt = isset($writing_styles[$settings['writing_style'] ?? 'default_seo']) ? 
-                $writing_styles[$settings['writing_style'] ?? 'default_seo']['prompt'] : 
-                $writing_styles['default_seo']['prompt'];
-                
-            if (!empty($settings['custom_prompt'])) {
-                $base_prompt = $settings['custom_prompt'];
-            }
-            
-            // ADD ANGLE CONTEXT TO PROMPT:
-            if ($angle_data) {
-                $base_prompt .= "\n\n**MANDATORY ANGLE:** " . $angle_data['angle_description'];
-                $base_prompt .= "\nYou MUST write from this specific perspective and angle only.";
-            }
+        if (!empty($settings['custom_prompt'])) {
+            $base_prompt = $settings['custom_prompt'];
+        }
+        
+        // ADD ANGLE CONTEXT TO PROMPT:
+        if ($angle_data && isset($angle_data['angle_description'])) {
+            $base_prompt .= "\n\n**MANDATORY ANGLE:** " . $angle_data['angle_description'];
+            $base_prompt .= "\nYou MUST write from this specific perspective and angle only.";
+        }
 
         $system_prompt = $base_prompt . "\n\n**AUTOMATION CONTENT GENERATION INSTRUCTIONS:**
 
-        Follow these strict formatting guidelines:
-        - **Style**: Write in a professional, engaging tone appropriate for the topic
-        - **Length**: Aim for " . ($settings['word_count'] ? $settings['word_count'] : '800-1200') . " words
-        - **HTML Format**: Use clean HTML with <h2> for main sections, <h3> for subsections, <p> for paragraphs, <ul>/<ol> for lists
-        - **CRITICAL**: Do NOT use H1 headings anywhere in the content
-        - **CRITICAL**: The content must begin with a regular paragraph, NOT with any heading (H1, H2, H3, etc.)
-        - **CRITICAL**: Do NOT include conclusion headings like 'Conclusion', 'Summary', 'Final Thoughts', etc.
-        - End with a natural concluding paragraph without any heading
+Follow these strict formatting guidelines:
+- **Style**: Write in a professional, engaging tone appropriate for the topic
+- **Length**: Aim for " . ($settings['word_count'] ? $settings['word_count'] : '800-1200') . " words
+- **HTML Format**: Use clean HTML with <h2> for main sections, <h3> for subsections, <p> for paragraphs, <ul>/<ol> for lists
+- **CRITICAL**: Do NOT use H1 headings anywhere in the content
+- **CRITICAL**: The content must begin with a regular paragraph, NOT with any heading (H1, H2, H3, etc.)
+- **CRITICAL**: Do NOT include conclusion headings like 'Conclusion', 'Summary', 'Final Thoughts', etc.
+- End with a natural concluding paragraph without any heading
 
-        **Link Formatting Rules:**
-        - Use descriptive anchor text (1-3 words maximum)  
-        - Link to specific, relevant sources when appropriate
-        - Never use URLs as anchor text
-        - Example: According to [recent research](url), the findings show...
+**Link Formatting Rules:**
+- Use descriptive anchor text (1-3 words maximum)  
+- Link to specific, relevant sources when appropriate
+- Never use URLs as anchor text
+- Example: According to [recent research](url), the findings show...
 
-        **Output Format:**
-        Return a JSON object with exactly these keys:
-        1. \"title\": An engaging, SEO-friendly headline
-        2. \"subheadline\": A compelling one-sentence subtitle  
-        3. \"content\": The complete article as clean HTML (not Markdown)
+**Output Format:**
+Return a JSON object with exactly these keys:
+1. \"title\": An engaging, SEO-friendly headline
+2. \"subheadline\": A compelling one-sentence subtitle  
+3. \"content\": The complete article as clean HTML (not Markdown)
 
-        **Content Quality Requirements:**
-        - Use current, factual information with web search
-        - Include specific examples and data when relevant
-        - Write for human readers, not search engines
-        - Ensure content flows naturally between sections
-        - Maintain consistency in tone throughout";
+**Content Quality Requirements:**
+- Use current, factual information with web search
+- Include specific examples and data when relevant
+- Write for human readers, not search engines
+- Ensure content flows naturally between sections
+- Maintain consistency in tone throughout";
 
-        if ($settings['word_count'] ?? 0 > 0) {
-            $system_prompt .= " Target approximately " . $settings['word_count'] . " words.";
-        }
-        
+        // Generate content using existing API
         $raw_response = ATM_API::enhance_content_with_openrouter(
             ['content' => $campaign->keyword],
             $system_prompt,
@@ -441,10 +435,10 @@ class ATM_Ajax {
             throw new Exception('Invalid AI response format.');
         }
         
-        // Create post with SIMPLE content handling
+        // Create post with clean content
         $post_data = [
             'post_title' => wp_strip_all_tags($result['title']),
-            'post_content' => wp_kses_post($result['content']), // Just basic sanitization
+            'post_content' => wp_kses_post($result['content']),
             'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
             'post_author' => $campaign->author_id,
             'post_category' => $campaign->category_id ? [$campaign->category_id] : []
@@ -455,10 +449,15 @@ class ATM_Ajax {
             throw new Exception('Failed to create post: ' . $post_id->get_error_message());
         }
         
-        // Save subtitle and metadata
+        // Save subtitle
         if (!empty($result['subheadline'])) {
             update_post_meta($post_id, '_bunyad_sub_title', $result['subheadline']);
             update_post_meta($post_id, '_atm_subtitle', $result['subheadline']);
+        }
+        
+        // Update angle with actual title (reuse existing method)
+        if ($angle_data && isset($angle_data['angle_description']) && !empty($result['title'])) {
+            $this->update_stored_angle($campaign->keyword, $angle_data['angle_description'], $result['title']);
         }
         
         // Save automation metadata
@@ -484,6 +483,8 @@ class ATM_Ajax {
         return ['success' => false, 'message' => $e->getMessage()];
     }
 }
+
+
 
    /**
      * Check if Gutenberg is active
