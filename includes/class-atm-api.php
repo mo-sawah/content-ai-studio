@@ -339,6 +339,173 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    public static function get_automation_writing_styles() {
+        return [
+            'default_seo' => [
+                'label' => 'Standard SEO Article',
+                'prompt' => 'You are an expert SEO content writer creating high-quality, engaging articles. Write comprehensive, well-researched content that provides real value to readers while being optimized for search engines.
+
+    **CONTENT REQUIREMENTS:**
+    - Create engaging, informative content with a natural flow
+    - Use current information and examples from web search
+    - Include specific details, statistics, and actionable insights
+    - Write in a professional yet conversational tone
+    - Structure content with clear headings and subheadings
+    - Ensure content is factually accurate and up-to-date
+    - Make the article comprehensive and authoritative on the topic
+
+    **WORDPRESS EDITOR COMPATIBILITY:**
+    - Format ALL content as clean HTML (not Markdown)
+    - Use <h2> for main sections, <h3> for subsections
+    - Wrap all paragraphs in <p> tags with proper spacing
+    - Use <strong> for emphasis, <em> for italics
+    - Format links as <a href="URL" target="_blank" rel="noopener">text</a>
+    - Structure lists with <ul><li> or <ol><li> tags
+    - Ensure content renders perfectly in both Gutenberg and Classic Editor
+    - Add proper spacing between elements: </p>\n\n<h2>
+
+    **STRUCTURE GUIDELINES:**
+    - Start with an engaging hook paragraph
+    - Use 4-6 main sections with descriptive <h2> headings
+    - Include relevant subsections with <h3> headings
+    - End with a natural conclusion (no "Conclusion" heading)
+    - Maintain smooth transitions between sections'
+            ],
+            
+            'news_article' => [
+                'label' => 'News Article Style',
+                'prompt' => 'You are a professional news reporter creating factual, timely news articles. Write in an objective, journalistic style with current information.
+
+    **JOURNALISM STANDARDS:**
+    - Lead with the most newsworthy information
+    - Use inverted pyramid structure
+    - Include quotes and credible sources
+    - Maintain objectivity and factual accuracy
+    - Write compelling headlines and subheadings
+    - Provide context and background information
+
+    **WORDPRESS FORMATTING:**
+    - Format as clean HTML for universal editor compatibility
+    - Use <h2> for main sections, <h3> for subsections  
+    - Proper <p> tag wrapping with clean spacing
+    - Format links with target="_blank" rel="noopener"
+    - Structure quotes in <blockquote> tags when appropriate
+    - Ensure readability in both Block Editor and Classic Editor'
+            ],
+            
+            'tutorial_guide' => [
+                'label' => 'Tutorial & How-to Guide',
+                'prompt' => 'You are an expert instructor creating comprehensive, step-by-step tutorials. Write detailed guides that help users achieve specific goals.
+
+    **TUTORIAL STANDARDS:**
+    - Break down complex processes into clear steps
+    - Use numbered lists for sequential instructions
+    - Include tips, warnings, and best practices
+    - Provide troubleshooting guidance
+    - Use clear, actionable language
+    - Include relevant examples and use cases
+
+    **WORDPRESS FORMATTING:**
+    - Use clean HTML formatting for both editors
+    - Structure steps with <ol><li> for numbered sequences
+    - Use <ul><li> for feature lists or tips
+    - Employ <h2> for major sections, <h3> for sub-steps
+    - Format code or technical terms with <code> tags
+    - Ensure proper paragraph spacing with <p> tags'
+            ],
+            
+            'listicle_style' => [
+                'label' => 'Listicle Format',
+                'prompt' => 'You are creating engaging listicle content that combines entertainment with information. Write list-based articles that are scannable and shareable.
+
+    **LISTICLE REQUIREMENTS:**
+    - Create compelling numbered or bulleted lists
+    - Use descriptive subheadings for each list item
+    - Include brief explanations for each point
+    - Make content highly scannable and engaging
+    - Add relevant examples or case studies
+    - Ensure each point provides unique value
+
+    **HTML STRUCTURE:**
+    - Use <h2> for main list item headings
+    - Use <h3> for sub-items or categories
+    - Structure content with proper <p> tags
+    - Format emphasis with <strong> and <em>
+    - Include relevant links with proper attributes
+    - Optimize for both Gutenberg blocks and Classic Editor'
+            ],
+            
+            'professional_analysis' => [
+                'label' => 'Professional Analysis',
+                'prompt' => 'You are a subject matter expert providing in-depth professional analysis. Create authoritative content with detailed insights and expert perspectives.
+
+    **ANALYSIS STANDARDS:**
+    - Provide comprehensive topic coverage
+    - Include data, statistics, and research findings
+    - Offer expert insights and professional opinions
+    - Compare different approaches or solutions
+    - Present balanced viewpoints when appropriate
+    - Use industry-standard terminology accurately
+
+    **WORDPRESS COMPATIBILITY:**
+    - Format as semantic HTML for universal compatibility
+    - Use proper heading hierarchy (<h2>, <h3>)
+    - Structure complex information in organized paragraphs
+    - Include bullet points for key findings
+    - Format data tables if needed with proper HTML
+    - Ensure professional presentation in both editors'
+            ]
+        ];
+    }
+
+    /**
+     * Get the enhanced system prompt for automation
+     */
+    public static function get_automation_system_prompt($writing_style, $custom_prompt = '', $word_count = 0) {
+        $styles = self::get_automation_writing_styles();
+        $base_prompt = $styles[$writing_style]['prompt'] ?? $styles['default_seo']['prompt'];
+        
+        if (!empty($custom_prompt)) {
+            $base_prompt = $custom_prompt;
+        }
+        
+        $system_prompt = $base_prompt . "\n\n**UNIVERSAL WORDPRESS OUTPUT FORMAT:**
+
+    Return ONLY a valid JSON object with these exact keys:
+    {
+    \"title\": \"SEO-optimized article headline (60-80 characters)\",
+    \"subheadline\": \"Engaging subtitle that complements the main title\",
+    \"content\": \"Complete article as clean HTML with proper structure\"
+    }
+
+    **CRITICAL HTML FORMATTING RULES:**
+    1. Use ONLY clean HTML tags - NO Markdown syntax
+    2. Structure: <h2> main sections, <h3> subsections
+    3. Paragraphs: All text in <p> tags with proper spacing
+    4. Emphasis: <strong> for bold, <em> for italic
+    5. Links: <a href=\"URL\" target=\"_blank\" rel=\"noopener\">text</a>
+    6. Lists: <ul><li> or <ol><li> with proper nesting
+    7. Spacing: Add \\n\\n between major elements
+    8. Compatibility: Must render perfectly in both Gutenberg and Classic Editor
+
+    **CONTENT QUALITY STANDARDS:**
+    - Write engaging, valuable content that serves the reader
+    - Use current information from web search when available
+    - Include specific examples, data, and actionable insights
+    - Maintain consistent tone and style throughout
+    - Ensure factual accuracy and cite sources appropriately
+    - Create content that establishes authority on the topic
+
+    **EXAMPLE STRUCTURE:**
+    \"<p>Engaging introduction that hooks the reader and introduces the topic.</p>\\n\\n<h2>First Main Section</h2>\\n<p>Detailed content with <strong>key points</strong> and relevant information.</p>\\n\\n<h3>Important Subsection</h3>\\n<p>More specific details with <a href='https://example.com' target='_blank' rel='noopener'>relevant source</a>.</p>\\n\\n<ul>\\n<li>Key point one with specific details</li>\\n<li>Key point two with actionable advice</li>\\n<li>Key point three with practical examples</li>\\n</ul>\\n\\n<h2>Second Main Section</h2>\\n<p>Continue with valuable, well-structured content...</p>\"";
+
+        if ($word_count > 0) {
+            $system_prompt .= "\n\n**WORD COUNT TARGET:** Approximately {$word_count} words in the content section.";
+        }
+        
+        return $system_prompt;
+    }
+
     /**
      * Advanced similarity check for trend titles, now language-aware.
      */
