@@ -517,10 +517,225 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           />
         )}
 
-        {/* Common settings section - shown for all types */}
+        {/* Common Campaign Settings - CRITICAL SECTION I MISSED */}
         <div className="atm-common-settings">
-          {/* Add common settings like AI model, writing style, etc. */}
-          {/* This section should be similar to your current implementation */}
+          <h4>Campaign Schedule & Settings</h4>
+
+          {/* Schedule Settings */}
+          <div className="atm-grid-3">
+            <div className="atm-field-group">
+              <label>Run Every</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <TextControl
+                  type="number"
+                  value={campaignData.schedule_value}
+                  onChange={(value) =>
+                    setCampaignData({
+                      ...campaignData,
+                      schedule_value: parseInt(value) || 1,
+                    })
+                  }
+                  disabled={isLoading}
+                  min="1"
+                  style={{ width: "80px" }}
+                />
+                <CustomDropdown
+                  text={campaignData.schedule_unit}
+                  options={[
+                    { label: "Hours", value: "hour" },
+                    { label: "Days", value: "day" },
+                    { label: "Weeks", value: "week" },
+                  ]}
+                  onChange={(option) =>
+                    setCampaignData({
+                      ...campaignData,
+                      schedule_unit: option.value,
+                    })
+                  }
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <CustomDropdown
+              label="Content Mode"
+              text={
+                campaignData.content_mode === "draft"
+                  ? "Save as Draft"
+                  : "Publish Immediately"
+              }
+              options={[
+                { label: "Save as Draft", value: "draft" },
+                { label: "Publish Immediately", value: "publish" },
+              ]}
+              onChange={(option) =>
+                setCampaignData({
+                  ...campaignData,
+                  content_mode: option.value,
+                })
+              }
+              disabled={isLoading}
+            />
+
+            <ToggleControl
+              label="Campaign Active"
+              checked={campaignData.is_active}
+              onChange={(value) =>
+                setCampaignData({
+                  ...campaignData,
+                  is_active: value,
+                })
+              }
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* AI & Content Settings */}
+          <div className="atm-grid-3">
+            <CustomDropdown
+              label="AI Model"
+              text={campaignData.settings?.ai_model || "Use Default Model"}
+              options={[
+                { label: "Use Default Model", value: "" },
+                { label: "GPT-4o", value: "openai/gpt-4o" },
+                {
+                  label: "Claude 3.5 Sonnet",
+                  value: "anthropic/claude-3-5-sonnet-20241022",
+                },
+                { label: "GPT-4o Mini", value: "openai/gpt-4o-mini" },
+              ]}
+              onChange={(option) =>
+                setCampaignData({
+                  ...campaignData,
+                  settings: {
+                    ...campaignData.settings,
+                    ai_model: option.value,
+                  },
+                })
+              }
+              disabled={isLoading}
+            />
+
+            <CustomDropdown
+              label="Writing Style"
+              text={campaignData.settings?.writing_style || "Standard SEO"}
+              options={[
+                { label: "Standard SEO", value: "default_seo" },
+                { label: "Professional", value: "professional" },
+                { label: "Conversational", value: "conversational" },
+                { label: "Technical", value: "technical" },
+              ]}
+              onChange={(option) =>
+                setCampaignData({
+                  ...campaignData,
+                  settings: {
+                    ...campaignData.settings,
+                    writing_style: option.value,
+                  },
+                })
+              }
+              disabled={isLoading}
+            />
+
+            <CustomDropdown
+              label="Creativity Level"
+              text={
+                campaignData.settings?.creativity_level || "High Creativity"
+              }
+              options={[
+                { label: "Low Creativity", value: "low" },
+                { label: "Medium Creativity", value: "medium" },
+                { label: "High Creativity", value: "high" },
+              ]}
+              onChange={(option) =>
+                setCampaignData({
+                  ...campaignData,
+                  settings: {
+                    ...campaignData.settings,
+                    creativity_level: option.value,
+                  },
+                })
+              }
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="atm-grid-2">
+            <TextControl
+              label="Word Count (Optional)"
+              type="number"
+              placeholder="Leave empty for default"
+              value={campaignData.settings?.word_count || ""}
+              onChange={(value) =>
+                setCampaignData({
+                  ...campaignData,
+                  settings: {
+                    ...campaignData.settings,
+                    word_count: parseInt(value) || 0,
+                  },
+                })
+              }
+              disabled={isLoading}
+            />
+
+            <ToggleControl
+              label="Generate Featured Images"
+              checked={campaignData.settings?.generate_image || false}
+              onChange={(value) =>
+                setCampaignData({
+                  ...campaignData,
+                  settings: { ...campaignData.settings, generate_image: value },
+                })
+              }
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* Category and Author Selection */}
+          <div className="atm-grid-2">
+            <CategoryMultiSelect
+              selectedCategories={campaignData.category_ids}
+              onCategoriesChange={(categories) =>
+                setCampaignData({
+                  ...campaignData,
+                  category_ids: categories,
+                })
+              }
+              categories={atm_automation_data?.categories || []}
+              disabled={isLoading}
+            />
+
+            <CustomDropdown
+              label="Author"
+              text={
+                atm_automation_data?.authors?.find(
+                  (a) => a.value == campaignData.author_id
+                )?.label || "Select Author"
+              }
+              options={atm_automation_data?.authors || []}
+              onChange={(option) =>
+                setCampaignData({
+                  ...campaignData,
+                  author_id: option.value,
+                })
+              }
+              disabled={isLoading}
+            />
+          </div>
+
+          <TextareaControl
+            label="Custom Prompt (Optional)"
+            placeholder="Leave empty to use the selected writing style. If you write a prompt here, it will be used instead."
+            value={campaignData.settings?.custom_prompt || ""}
+            onChange={(value) =>
+              setCampaignData({
+                ...campaignData,
+                settings: { ...campaignData.settings, custom_prompt: value },
+              })
+            }
+            rows="4"
+            disabled={isLoading}
+          />
         </div>
 
         {/* Form actions */}

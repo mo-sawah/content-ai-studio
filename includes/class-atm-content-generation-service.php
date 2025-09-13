@@ -21,8 +21,11 @@ class ATM_Content_Generation_Service {
      */
     public static function generate_article_content($params) {
         try {
+            // For automation, post_id is not required initially
+            $is_automation = isset($params['is_automation']) && $params['is_automation'] === true;
+            
             // Validate required parameters
-            $required_params = ['keyword', 'post_id'];
+            $required_params = $is_automation ? ['keyword'] : ['keyword', 'post_id'];
             foreach ($required_params as $param) {
                 if (empty($params[$param])) {
                     throw new Exception("Missing required parameter: $param");
@@ -32,13 +35,12 @@ class ATM_Content_Generation_Service {
             // Extract parameters with defaults
             $keyword = sanitize_text_field($params['keyword']);
             $article_title = isset($params['article_title']) ? sanitize_text_field($params['article_title']) : '';
-            $post_id = intval($params['post_id']);
+            $post_id = intval($params['post_id'] ?? 0); // Allow 0 for automation
             $model_override = isset($params['model']) ? sanitize_text_field($params['model']) : '';
             $style_key = isset($params['writing_style']) ? sanitize_key($params['writing_style']) : 'default_seo';
             $custom_prompt = isset($params['custom_prompt']) ? wp_kses_post(stripslashes($params['custom_prompt'])) : '';
             $word_count = isset($params['word_count']) ? intval($params['word_count']) : 0;
             $creativity_level = isset($params['creativity_level']) ? sanitize_text_field($params['creativity_level']) : 'high';
-            $is_automation = isset($params['is_automation']) ? (bool)$params['is_automation'] : false;
             
             if (empty($article_title) && empty($keyword)) {
                 throw new Exception("Please provide a keyword or an article title.");
