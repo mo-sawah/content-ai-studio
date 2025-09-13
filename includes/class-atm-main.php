@@ -400,7 +400,6 @@ class ATM_Main {
             'includes/class-atm-theme-subtitle-manager.php',
             'includes/class-atm-frontend.php',
             'includes/class-atm-licensing.php',
-            'includes/class-atm-campaign-manager.php',
             'includes/lib/Parsedown.php',
             'includes/class-atm-listicle.php',
             'includes/class-atm-humanize.php'
