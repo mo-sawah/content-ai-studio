@@ -860,6 +860,11 @@ class ATM_Main {
             error_log('ATM Debug: ATM_Automation_Database class not found during activation');
         }
 
+        // Update automation schema for sub-types
+        if (class_exists('ATM_Automation_Database')) {
+            ATM_Automation_Database::update_schema_for_subtypes();
+        }
+
         do_action('atm_activation');
     }
 

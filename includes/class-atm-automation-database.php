@@ -12,7 +12,26 @@ if (!defined('ABSPATH')) {
 }
 
 class ATM_Automation_Database {
-    
+
+    /**
+     * Update database schema to support sub-types
+     */
+    public static function update_schema_for_subtypes() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        // Check if sub_type column exists
+        $column_exists = $wpdb->get_results($wpdb->prepare(
+            "SHOW COLUMNS FROM $table_name LIKE %s",
+            'sub_type'
+        ));
+        
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN sub_type varchar(50) DEFAULT 'standard' AFTER type");
+            error_log('ATM Automation: Added sub_type column to campaigns table');
+        }
+    }
+        
     /**
      * Create all automation tables
      */

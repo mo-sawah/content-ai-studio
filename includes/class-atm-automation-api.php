@@ -17,69 +17,76 @@ class ATM_Automation_API {
      * Execute automation campaign
      */
     public static function execute_campaign($campaign_id) {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
-        
-        $campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
-        if (!$campaign) {
-            return ['success' => false, 'message' => 'Campaign not found.'];
-        }
-        
-        $settings = json_decode($campaign->settings, true) ?: [];
-        
         try {
-            // Log execution start
-            self::log_execution($campaign_id, 'started', 'Execution started');
+            $campaign = ATM_Automation_Database::get_campaign($campaign_id);
+            if (!$campaign) {
+                throw new Exception("Campaign not found: $campaign_id");
+            }
+
+            if (!$campaign->is_active) {
+                return ['success' => false, 'message' => 'Campaign is not active'];
+            }
+
+            $settings = json_decode($campaign->settings, true) ?: [];
             
-            $result = null;
-            
+            // Route to appropriate handler based on type and sub_type
             switch ($campaign->type) {
                 case 'articles':
-                    $result = self::execute_article_automation($campaign, $settings);
-                    break;
-                    
+                    return self::execute_article_campaign($campaign, $settings);
                 case 'news':
-                    $result = self::execute_news_automation($campaign, $settings);
-                    break;
-                    
+                    return self::execute_news_campaign($campaign, $settings);
                 case 'videos':
-                    $result = self::execute_video_automation($campaign, $settings);
-                    break;
-                    
+                    return self::execute_video_automation($campaign, $settings);
                 case 'podcasts':
-                    $result = self::execute_podcast_automation($campaign, $settings);
-                    break;
-                    
+                    return self::execute_podcast_automation($campaign, $settings);
                 default:
                     throw new Exception('Unknown campaign type: ' . $campaign->type);
             }
-            
-            if ($result && $result['success']) {
-                // Update next run time
-                self::update_campaign_next_run($campaign_id, $campaign->schedule_type, $campaign->schedule_value, $campaign->schedule_unit);
-                
-                // Log successful execution
-                self::log_execution($campaign_id, 'completed', 'Execution completed successfully', $result['post_id'] ?? null);
-                
-                return [
-                    'success' => true,
-                    'message' => 'Campaign executed successfully.',
-                    'post_id' => $result['post_id'] ?? null,
-                    'post_url' => $result['post_url'] ?? null
-                ];
-            } else {
-                throw new Exception($result['message'] ?? 'Campaign execution failed.');
-            }
-            
+
         } catch (Exception $e) {
-            // Log execution failure
-            self::log_execution($campaign_id, 'failed', $e->getMessage());
-            
-            return [
-                'success' => false,
-                'message' => $e->getMessage()
-            ];
+            error_log('ATM Automation Campaign Execution Error: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Execute article campaign (with sub-types)
+     */
+    private static function execute_article_campaign($campaign, $settings) {
+        $sub_type = $campaign->sub_type ?? 'standard';
+        
+        switch ($sub_type) {
+            case 'standard':
+                return self::execute_article_automation($campaign, $settings);
+            case 'trending':
+                return self::execute_trending_automation($campaign, $settings);
+            case 'listicle':
+                return self::execute_listicle_automation($campaign, $settings);
+            case 'multipage':
+                return self::execute_multipage_automation($campaign, $settings);
+            default:
+                return self::execute_article_automation($campaign, $settings);
+        }
+    }
+
+    /**
+     * Execute news campaign (with sub-types)
+     */
+    private static function execute_news_campaign($campaign, $settings) {
+        $sub_type = $campaign->sub_type ?? 'search';
+        
+        // Map sub_type to news_method for backward compatibility
+        $news_method_map = [
+            'search' => 'google_news',
+            'twitter' => 'twitter',
+            'rss' => 'rss',
+            'apis' => 'api_news',
+            'live' => 'live_news'
+        ];
+        
+        $settings['news_method'] = $news_method_map[$sub_type] ?? 'google_news';
+        
+        return self::execute_news_automation($campaign, $settings);
     }
     
     /**
