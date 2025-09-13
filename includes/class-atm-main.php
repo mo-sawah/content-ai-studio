@@ -727,7 +727,7 @@ class ATM_Main {
             }
         }
         
-        self::create_campaigns_table();
+        // self::create_campaigns_table();
         self::create_podcast_progress_table(); // Add this line
         self::create_script_jobs_table(); // Add this line
         self::create_used_articles_table(); // Add this line
