@@ -14,6 +14,73 @@ if (!defined('ABSPATH')) {
 class ATM_Automation_Database {
 
     /**
+     * Add status column to campaigns table
+     */
+    public static function add_status_column() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        $column_exists = $wpdb->get_results($wpdb->prepare(
+            "SHOW COLUMNS FROM $table_name LIKE %s",
+            'status'
+        ));
+        
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN status varchar(20) DEFAULT 'idle' AFTER is_active");
+            error_log('ATM Automation: Added status column to campaigns table');
+        }
+    }
+
+    /**
+     * Update campaign status
+     */
+    public static function update_campaign_status($campaign_id, $status) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        $valid_statuses = ['idle', 'running', 'paused', 'failed'];
+        if (!in_array($status, $valid_statuses)) {
+            return false;
+        }
+        
+        return $wpdb->update(
+            $table_name,
+            ['status' => $status, 'updated_at' => current_time('mysql')],
+            ['id' => $campaign_id],
+            ['%s', '%s'],
+            ['%d']
+        ) !== false;
+    }
+
+    /**
+     * Get campaign execution statistics
+     */
+    public static function get_campaign_stats($campaign_id) {
+        global $wpdb;
+        $executions_table = $wpdb->prefix . 'atm_automation_executions';
+        
+        $stats = $wpdb->get_row($wpdb->prepare(
+            "SELECT 
+                COUNT(*) as total_executions,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful,
+                COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed,
+                MAX(executed_at) as last_execution,
+                AVG(execution_time) as avg_execution_time
+            FROM $executions_table 
+            WHERE campaign_id = %d",
+            $campaign_id
+        ));
+        
+        return $stats ?: (object)[
+            'total_executions' => 0,
+            'successful' => 0, 
+            'failed' => 0,
+            'last_execution' => null,
+            'avg_execution_time' => null
+        ];
+    }
+
+    /**
      * Get campaign by ID
      */
     public static function get_campaign($campaign_id) {

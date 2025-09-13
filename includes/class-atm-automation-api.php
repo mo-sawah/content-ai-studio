@@ -17,37 +17,97 @@ class ATM_Automation_API {
      * Execute automation campaign
      */
     public static function execute_campaign($campaign_id) {
-        try {
-            $campaign = ATM_Automation_Database::get_campaign($campaign_id);
-            if (!$campaign) {
-                throw new Exception("Campaign not found: $campaign_id");
-            }
-
-            if (!$campaign->is_active) {
-                return ['success' => false, 'message' => 'Campaign is not active'];
-            }
-
-            $settings = json_decode($campaign->settings, true) ?: [];
-            
-            // Route to appropriate handler based on type and sub_type
-            switch ($campaign->type) {
-                case 'articles':
-                    return self::execute_article_campaign($campaign, $settings);
-                case 'news':
-                    return self::execute_news_campaign($campaign, $settings);
-                case 'videos':
-                    return self::execute_video_automation($campaign, $settings);
-                case 'podcasts':
-                    return self::execute_podcast_automation($campaign, $settings);
-                default:
-                    throw new Exception('Unknown campaign type: ' . $campaign->type);
-            }
-
-        } catch (Exception $e) {
-            error_log('ATM Automation Campaign Execution Error: ' . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
+    $start_time = microtime(true);
+    $start_memory = memory_get_usage();
+    
+    try {
+        // Mark campaign as running
+        ATM_Automation_Database::update_campaign_status($campaign_id, 'running');
+        
+        $campaign = ATM_Automation_Database::get_campaign($campaign_id);
+        if (!$campaign) {
+            throw new Exception("Campaign not found: $campaign_id");
         }
+
+        if (!$campaign->is_active) {
+            ATM_Automation_Database::update_campaign_status($campaign_id, 'paused');
+            return ['success' => false, 'message' => 'Campaign is not active'];
+        }
+
+        $settings = json_decode($campaign->settings, true) ?: [];
+        
+        // Execute based on type
+        $result = null;
+        switch ($campaign->type) {
+            case 'articles':
+                $result = self::execute_article_campaign($campaign, $settings);
+                break;
+            case 'news':
+                $result = self::execute_news_campaign($campaign, $settings);
+                break;
+            case 'videos':
+                $result = self::execute_video_automation($campaign, $settings);
+                break;
+            case 'podcasts':
+                $result = self::execute_podcast_automation($campaign, $settings);
+                break;
+            default:
+                throw new Exception('Unknown campaign type: ' . $campaign->type);
+        }
+
+        // Calculate execution metrics
+        $execution_time = microtime(true) - $start_time;
+        $memory_usage = memory_get_usage() - $start_memory;
+        
+        if ($result['success']) {
+            // Update next run time
+            ATM_Automation_Database::update_next_run(
+                $campaign_id, 
+                $campaign->schedule_value, 
+                $campaign->schedule_unit
+            );
+            
+            // Mark as idle and log success
+            ATM_Automation_Database::update_campaign_status($campaign_id, 'idle');
+            ATM_Automation_Database::log_execution(
+                $campaign_id, 
+                'completed', 
+                'Successfully generated content', 
+                $result['post_id'] ?? null,
+                $execution_time,
+                format_bytes($memory_usage)
+            );
+        } else {
+            // Mark as failed and log error
+            ATM_Automation_Database::update_campaign_status($campaign_id, 'failed');
+            ATM_Automation_Database::log_execution(
+                $campaign_id, 
+                'failed', 
+                $result['message'] ?? 'Unknown error',
+                null,
+                $execution_time,
+                format_bytes($memory_usage)
+            );
+        }
+        
+        return $result;
+
+    } catch (Exception $e) {
+        // Mark as failed and log error
+        ATM_Automation_Database::update_campaign_status($campaign_id, 'failed');
+        ATM_Automation_Database::log_execution(
+            $campaign_id, 
+            'failed', 
+            $e->getMessage(),
+            null,
+            microtime(true) - $start_time,
+            format_bytes(memory_get_usage() - $start_memory)
+        );
+        
+        error_log('ATM Automation Campaign Execution Error: ' . $e->getMessage());
+        return ['success' => false, 'message' => $e->getMessage()];
     }
+}
 
     /**
      * Execute article campaign (with sub-types)
