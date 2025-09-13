@@ -30,3 +30,4 @@ add_action('plugins_loaded', 'atm_run_plugin');
 
 // Activation hook for creating assets
 register_activation_hook(__FILE__, array('ATM_Main', 'activate'));
+register_deactivation_hook(__FILE__, array('ATM_Main', 'deactivate'));

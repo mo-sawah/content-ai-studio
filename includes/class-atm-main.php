@@ -9,6 +9,11 @@ class ATM_Main {
     private static $instance = null;
     private static $hooks_initialized = false;
 
+    public static function deactivate() {
+        // Trigger automation deactivation  
+        do_action('atm_deactivation');
+    }
+
     public function check_database_tables() {
         // Only run once per day
         $last_check = get_option('atm_last_db_check');
@@ -390,6 +395,7 @@ class ATM_Main {
             'includes/admin/class-atm-settings.php',
             'includes/class-atm-ajax.php',
             'includes/class-atm-api.php',
+            'includes/class-atm-automation.php',
             'includes/class-atm-twitter-api.php',  // ADD THIS LINE
             'includes/class-atm-theme-subtitle-manager.php',
             'includes/class-atm-frontend.php',
@@ -433,6 +439,10 @@ class ATM_Main {
         
         if ($meta_box) {
             add_action('add_meta_boxes', array($meta_box, 'add_meta_boxes'));
+        }
+
+        if (class_exists('ATM_Automation')) {
+            ATM_Automation::get_instance();
         }
 
         if (!wp_next_scheduled('atm_cleanup_used_articles')) {
@@ -731,6 +741,8 @@ class ATM_Main {
 
         // Force table creation check
         self::verify_content_angles_table();
+
+        do_action('atm_activation');
 
     }
 
