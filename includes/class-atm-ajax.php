@@ -340,149 +340,130 @@ class ATM_Ajax {
      * Execute article automation using existing article generation logic
      */
     private function execute_article_automation($campaign, $settings) {
-    try {
-        // Get model with proper fallbacks
-        $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
-        if (empty($ai_model)) {
-            $ai_model = 'openai/gpt-4o';
-        }
-        
-        error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
-        
-        // Ensure angles table exists (reuse existing method)
-        $this->ensure_angles_table_exists();
-        
-        // Get previous angles for this keyword (reuse existing method)
-        $previous_angles = $this->get_previous_angles($campaign->keyword);
-        error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $campaign->keyword);
-        
-        // ALWAYS generate angle using existing method
-        $angle_data = $this->generate_massive_scale_angle($campaign->keyword, $previous_angles);
-        error_log("ATM Debug: Generated angle: " . ($angle_data['angle_description'] ?? 'none'));
-        
-        // Store the angle BEFORE content generation (reuse existing method)
-        if ($angle_data && isset($angle_data['angle_description'])) {
-            $this->store_content_angle($campaign->keyword, $angle_data['angle_description'], '[Automation Generated]');
-        }
-        
-        // Build system prompt
-        $writing_styles = ATM_API::get_writing_styles();
-        $base_prompt = isset($writing_styles[$settings['writing_style'] ?? 'default_seo']) ? 
-            $writing_styles[$settings['writing_style'] ?? 'default_seo']['prompt'] : 
-            $writing_styles['default_seo']['prompt'];
-            
-        if (!empty($settings['custom_prompt'])) {
-            $base_prompt = $settings['custom_prompt'];
-        }
-        
-        // ADD ANGLE CONTEXT TO PROMPT:
-        if ($angle_data && isset($angle_data['angle_description'])) {
-            $base_prompt .= "\n\n**MANDATORY ANGLE:** " . $angle_data['angle_description'];
-            $base_prompt .= "\nYou MUST write from this specific perspective and angle only.";
-        }
-
-        $system_prompt = $base_prompt . "\n\n**AUTOMATION CONTENT GENERATION INSTRUCTIONS:**
-
-Follow these strict formatting guidelines:
-- **Style**: Write in a professional, engaging tone appropriate for the topic
-- **Length**: Aim for " . ($settings['word_count'] ? $settings['word_count'] : '800-1200') . " words
-- **HTML Format**: Use clean HTML with <h2> for main sections, <h3> for subsections, <p> for paragraphs, <ul>/<ol> for lists
-- **CRITICAL**: Do NOT use H1 headings anywhere in the content
-- **CRITICAL**: The content must begin with a regular paragraph, NOT with any heading (H1, H2, H3, etc.)
-- **CRITICAL**: Do NOT include conclusion headings like 'Conclusion', 'Summary', 'Final Thoughts', etc.
-- End with a natural concluding paragraph without any heading
-
-**Link Formatting Rules:**
-- Use descriptive anchor text (1-3 words maximum)  
-- Link to specific, relevant sources when appropriate
-- Never use URLs as anchor text
-- Example: According to [recent research](url), the findings show...
-
-**Output Format:**
-Return a JSON object with exactly these keys:
-1. \"title\": An engaging, SEO-friendly headline
-2. \"subheadline\": A compelling one-sentence subtitle  
-3. \"content\": The complete article as clean HTML (not Markdown)
-
-**Content Quality Requirements:**
-- Use current, factual information with web search
-- Include specific examples and data when relevant
-- Write for human readers, not search engines
-- Ensure content flows naturally between sections
-- Maintain consistency in tone throughout";
-
-        // Generate content using existing API
-        $raw_response = ATM_API::enhance_content_with_openrouter(
-            ['content' => $campaign->keyword],
-            $system_prompt,
-            $ai_model,
-            true, // JSON mode
-            true, // web search
-            $settings['creativity_level'] ?? 'high'
-        );
-        
-        // Parse JSON response
-        $json_string = trim($raw_response);
-        if (!str_starts_with($json_string, '{')) {
-            if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
-                $json_string = $matches[0];
+        try {
+            // Get model with proper fallbacks
+            $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
+            if (empty($ai_model)) {
+                $ai_model = 'openai/gpt-4o';
             }
+            
+            error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
+            
+            // Ensure angles table exists (use existing method)
+            $this->ensure_angles_table_exists();
+            
+            // Get previous angles for this keyword (use existing method)
+            $previous_angles = $this->get_previous_angles($campaign->keyword);
+            error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $campaign->keyword);
+            
+            // Generate intelligent angle (use existing method - same as manual)
+            $angle_data = $this->generate_intelligent_angle_classification($campaign->keyword, $previous_angles);
+            error_log("ATM Debug: Generated angle: " . ($angle_data['angle_description'] ?? 'none'));
+            
+            // Store the angle BEFORE content generation (use existing method)
+            if ($angle_data && isset($angle_data['angle_description'])) {
+                $this->store_content_angle($campaign->keyword, $angle_data['angle_description'], '[Automation Generated]');
+            }
+            
+            // Build system prompt
+            $writing_styles = ATM_API::get_writing_styles();
+            $base_prompt = isset($writing_styles[$settings['writing_style'] ?? 'default_seo']) ? 
+                $writing_styles[$settings['writing_style'] ?? 'default_seo']['prompt'] : 
+                $writing_styles['default_seo']['prompt'];
+                
+            if (!empty($settings['custom_prompt'])) {
+                $base_prompt = $settings['custom_prompt'];
+            }
+            
+            // Add intelligent angle context (use existing method)
+            if ($angle_data) {
+                $base_prompt .= $this->build_comprehensive_angle_context($angle_data, $campaign->keyword);
+            }
+            
+            // Use existing output instructions method
+            $output_instructions = $this->get_enhanced_output_instructions(''); // Empty title so it generates one
+            $system_prompt = $base_prompt . "\n\n" . $output_instructions;
+            
+            if ($settings['word_count'] ?? 0 > 0) {
+                $system_prompt .= " The final article should be approximately " . $settings['word_count'] . " words long.";
+            }
+            
+            // Generate content using existing API
+            $raw_response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $campaign->keyword],
+                $system_prompt,
+                $ai_model,
+                true, // JSON mode
+                true, // web search
+                $settings['creativity_level'] ?? 'high'
+            );
+            
+            // Parse JSON response (same as manual)
+            $json_string = trim($raw_response);
+            if (!str_starts_with($json_string, '{')) {
+                if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                    $json_string = $matches[0];
+                }
+            }
+            
+            $result = json_decode($json_string, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+                error_log('ATM Automation: Invalid JSON response: ' . $raw_response);
+                throw new Exception('Invalid AI response format.');
+            }
+            
+            $generated_title = $result['title'] ?? '';
+            $subtitle = $result['subheadline'] ?? $result['subtitle'] ?? '';
+            $final_content = trim($result['content']);
+            
+            // Update the stored angle with the actual generated title (use existing method)
+            if ($angle_data && !empty($generated_title)) {
+                $this->update_stored_angle($campaign->keyword, $angle_data['angle_description'], $generated_title);
+            }
+            
+            // Create post with clean content
+            $post_data = [
+                'post_title' => wp_strip_all_tags($generated_title),
+                'post_content' => wp_kses_post($final_content),
+                'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
+                'post_author' => $campaign->author_id,
+                'post_category' => $campaign->category_id ? [$campaign->category_id] : []
+            ];
+            
+            $post_id = wp_insert_post($post_data, true);
+            if (is_wp_error($post_id)) {
+                throw new Exception('Failed to create post: ' . $post_id->get_error_message());
+            }
+            
+            // Save subtitle (same as manual)
+            if (!empty($subtitle)) {
+                update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
+                update_post_meta($post_id, '_atm_subtitle', $subtitle);
+            }
+            
+            // Save automation metadata
+            update_post_meta($post_id, '_atm_automation_generated', true);
+            update_post_meta($post_id, '_atm_campaign_id', $campaign->id);
+            update_post_meta($post_id, '_atm_generation_date', current_time('mysql'));
+            
+            // Generate featured image if requested
+            if ($settings['generate_image'] ?? false) {
+                $this->generate_automation_featured_image($post_id, $generated_title);
+            }
+            
+            error_log("ATM Automation: Successfully created post ID {$post_id} for campaign '{$campaign->name}'");
+            
+            return [
+                'success' => true,
+                'post_id' => $post_id,
+                'post_url' => get_permalink($post_id)
+            ];
+            
+        } catch (Exception $e) {
+            error_log('ATM Automation Article Generation Error: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
         }
-        
-        $result = json_decode($json_string, true);
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
-            error_log('ATM Automation: Invalid JSON response: ' . $raw_response);
-            throw new Exception('Invalid AI response format.');
-        }
-        
-        // Create post with clean content
-        $post_data = [
-            'post_title' => wp_strip_all_tags($result['title']),
-            'post_content' => wp_kses_post($result['content']),
-            'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
-            'post_author' => $campaign->author_id,
-            'post_category' => $campaign->category_id ? [$campaign->category_id] : []
-        ];
-        
-        $post_id = wp_insert_post($post_data, true);
-        if (is_wp_error($post_id)) {
-            throw new Exception('Failed to create post: ' . $post_id->get_error_message());
-        }
-        
-        // Save subtitle
-        if (!empty($result['subheadline'])) {
-            update_post_meta($post_id, '_bunyad_sub_title', $result['subheadline']);
-            update_post_meta($post_id, '_atm_subtitle', $result['subheadline']);
-        }
-        
-        // Update angle with actual title (reuse existing method)
-        if ($angle_data && isset($angle_data['angle_description']) && !empty($result['title'])) {
-            $this->update_stored_angle($campaign->keyword, $angle_data['angle_description'], $result['title']);
-        }
-        
-        // Save automation metadata
-        update_post_meta($post_id, '_atm_automation_generated', true);
-        update_post_meta($post_id, '_atm_campaign_id', $campaign->id);
-        update_post_meta($post_id, '_atm_generation_date', current_time('mysql'));
-        
-        // Generate featured image if requested
-        if ($settings['generate_image'] ?? false) {
-            $this->generate_automation_featured_image($post_id, $result['title']);
-        }
-        
-        error_log("ATM Automation: Successfully created post ID {$post_id} for campaign '{$campaign->name}'");
-        
-        return [
-            'success' => true,
-            'post_id' => $post_id,
-            'post_url' => get_permalink($post_id)
-        ];
-        
-    } catch (Exception $e) {
-        error_log('ATM Automation Article Generation Error: ' . $e->getMessage());
-        return ['success' => false, 'message' => $e->getMessage()];
     }
-}
 
 
 
