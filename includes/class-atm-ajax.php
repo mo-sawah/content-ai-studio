@@ -337,191 +337,129 @@ class ATM_Ajax {
     }
 
     /**
-     * Execute article automation using existing article generation logic
-     */
-    private function execute_article_automation($campaign, $settings) {
-        try {
-            // Get model with proper fallbacks
-            $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
-            if (empty($ai_model)) {
-                $ai_model = 'openai/gpt-4o';
-            }
-            
-            error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
-            
-            // Get enhanced system prompt for automation
-            $writing_style = $settings['writing_style'] ?? 'default_seo';
-            $custom_prompt = $settings['custom_prompt'] ?? '';
-            $word_count = $settings['word_count'] ?? 0;
-            
-            // Use the enhanced prompt system
-            if (method_exists('ATM_API', 'get_automation_system_prompt')) {
-                $system_prompt = ATM_API::get_automation_system_prompt($writing_style, $custom_prompt, $word_count);
-            } else {
-                // Fallback to basic prompt construction
-                $writing_styles = ATM_API::get_writing_styles();
-                $base_prompt = isset($writing_styles[$writing_style]) ? 
-                    $writing_styles[$writing_style]['prompt'] : 
-                    $writing_styles['default_seo']['prompt'];
-                    
-                if (!empty($custom_prompt)) {
-                    $base_prompt = $custom_prompt;
-                }
-                
-                $system_prompt = $base_prompt . "\n\n**WORDPRESS EDITOR COMPATIBILITY:**
-    Return a JSON object with 'title', 'subheadline', and 'content' keys.
-    Format content as clean HTML (not Markdown) with proper <h2>, <h3>, <p> tags.
-    Ensure compatibility with both Gutenberg Block Editor and Classic Editor.
-    Use <strong> for bold, <em> for italic, proper <a> tags for links.
-    Structure with proper spacing: </p>\\n\\n<h2> between elements.";
-
-                if ($word_count > 0) {
-                    $system_prompt .= "\n\nTarget approximately " . $word_count . " words.";
-                }
-            }
-            
-            // Generate content
-            $raw_response = ATM_API::enhance_content_with_openrouter(
-                ['content' => $campaign->keyword],
-                $system_prompt,
-                $ai_model,
-                true, // JSON mode
-                true, // web search
-                $settings['creativity_level'] ?? 'high'
-            );
-            
-            // Parse JSON response
-            $json_string = trim($raw_response);
-            if (!str_starts_with($json_string, '{')) {
-                if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
-                    $json_string = $matches[0];
-                }
-            }
-            
-            $result = json_decode($json_string, true);
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
-                error_log('ATM Automation: Invalid JSON response: ' . $raw_response);
-                throw new Exception('Invalid AI response format.');
-            }
-            
-            // Process content for WordPress compatibility
-            $processed_content = $this->process_content_for_editors($result['content']);
-            
-            // Create post
-            $post_data = [
-                'post_title' => wp_strip_all_tags($result['title']),
-                'post_content' => $processed_content,
-                'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
-                'post_author' => $campaign->author_id,
-                'post_category' => $campaign->category_id ? [$campaign->category_id] : []
-            ];
-            
-            $post_id = wp_insert_post($post_data, true);
-            if (is_wp_error($post_id)) {
-                throw new Exception('Failed to create post: ' . $post_id->get_error_message());
-            }
-            
-            // Save subtitle and metadata
-            if (!empty($result['subheadline'])) {
-                update_post_meta($post_id, '_bunyad_sub_title', $result['subheadline']);
-                update_post_meta($post_id, '_atm_subtitle', $result['subheadline']);
-            }
-            
-            // Save automation metadata
-            update_post_meta($post_id, '_atm_automation_generated', true);
-            update_post_meta($post_id, '_atm_campaign_id', $campaign->id);
-            update_post_meta($post_id, '_atm_generation_date', current_time('mysql'));
-            update_post_meta($post_id, '_atm_editor_compatible', true);
-            
-            // Generate featured image if requested
-            if ($settings['generate_image'] ?? false) {
-                $this->generate_automation_featured_image($post_id, $result['title']);
-            }
-            
-            // Log successful generation
-            error_log("ATM Automation: Successfully created post ID {$post_id} for campaign '{$campaign->name}'");
-            
-            return [
-                'success' => true,
-                'post_id' => $post_id,
-                'post_url' => get_permalink($post_id)
-            ];
-            
-        } catch (Exception $e) {
-            error_log('ATM Automation Article Generation Error: ' . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
+ * Execute article automation using existing article generation logic
+ */
+private function execute_article_automation($campaign, $settings) {
+    try {
+        // Get model with proper fallbacks
+        $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
+        if (empty($ai_model)) {
+            $ai_model = 'openai/gpt-4o';
         }
-    }
+        
+        error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
+        
+        // Build enhanced system prompt
+        $writing_styles = ATM_API::get_writing_styles();
+        $base_prompt = isset($writing_styles[$settings['writing_style'] ?? 'default_seo']) ? 
+            $writing_styles[$settings['writing_style'] ?? 'default_seo']['prompt'] : 
+            $writing_styles['default_seo']['prompt'];
+            
+        if (!empty($settings['custom_prompt'])) {
+            $base_prompt = $settings['custom_prompt'];
+        }
 
-    /**
-     * Process content for both Gutenberg and Classic Editor compatibility
-     */
-    private function process_content_for_editors($content) {
-        // Clean and sanitize content
-        $content = wp_kses_post($content);
-        
-        // Handle escaped newlines from JSON
-        $content = str_replace('\\n', "\n", $content);
-        
-        // Ensure proper HTML structure
-        $content = $this->ensure_proper_html_structure($content);
-        
-        // Add proper spacing for editor compatibility
-        $content = $this->add_editor_spacing($content);
-        
-        return trim($content);
-    }
+        $system_prompt = $base_prompt . "\n\n**AUTOMATION CONTENT GENERATION INSTRUCTIONS:**
 
-    /**
-     * Ensure proper HTML structure
-     */
-    private function ensure_proper_html_structure($content) {
-        // Fix common HTML structure issues
-        
-        // Ensure paragraphs are properly closed
-        $content = preg_replace('/<p([^>]*)>([^<]+)(?!<\/p>)/', '<p$1>$2</p>', $content);
-        
-        // Fix nested paragraph issues
-        $content = preg_replace('/<p[^>]*><\/p>/', '', $content); // Remove empty paragraphs
-        
-        // Ensure headings have proper structure
-        $content = preg_replace('/<h([1-6])([^>]*)>([^<]+)(?!<\/h\1>)/', '<h$1$2>$3</h$1>', $content);
-        
-        // Fix list structure
-        $content = preg_replace('/<li([^>]*)>([^<]+)(?!<\/li>)/', '<li$1>$2</li>', $content);
-        
-        // Ensure links have proper attributes
-        $content = preg_replace('/<a\s+href=["\']([^"\']+)["\'](?![^>]*target=)([^>]*)>/', '<a href="$1" target="_blank" rel="noopener"$2>', $content);
-        
-        return $content;
-    }
+        Follow these strict formatting guidelines:
+        - **Style**: Write in a professional, engaging tone appropriate for the topic
+        - **Length**: Aim for " . ($settings['word_count'] ? $settings['word_count'] : '800-1200') . " words
+        - **HTML Format**: Use clean HTML with <h2> for main sections, <h3> for subsections, <p> for paragraphs, <ul>/<ol> for lists
+        - **CRITICAL**: Do NOT use H1 headings anywhere in the content
+        - **CRITICAL**: Do NOT include conclusion headings like 'Conclusion', 'Summary', 'Final Thoughts', etc.
+        - End with a natural concluding paragraph without any heading
 
-    /**
-     * Add proper spacing for editor compatibility
-     */
-    private function add_editor_spacing($content) {
-        // Add spacing around headings
-        $content = preg_replace('/<\/p>\s*<h([1-6])/', "</p>\n\n<h$1", $content);
-        $content = preg_replace('/<\/h([1-6])>\s*<p>/', "</h$1>\n<p>", $content);
-        
-        // Add spacing around lists
-        $content = preg_replace('/<\/p>\s*<([uo]l)>/', "</p>\n\n<$1>", $content);
-        $content = preg_replace('/<\/([uo]l)>\s*<p>/', "</$1>\n\n<p>", $content);
-        
-        // Add spacing around blockquotes
-        $content = preg_replace('/<\/p>\s*<blockquote>/', "</p>\n\n<blockquote>", $content);
-        $content = preg_replace('/<\/blockquote>\s*<p>/', "</blockquote>\n\n<p>", $content);
-        
-        // Clean up excessive spacing
-        $content = preg_replace('/\n{3,}/', "\n\n", $content);
-        
-        // Ensure content starts and ends properly
-        $content = trim($content);
-        
-        return $content;
-    }
+        **Link Formatting Rules:**
+        - Use descriptive anchor text (1-3 words maximum)  
+        - Link to specific, relevant sources when appropriate
+        - Never use URLs as anchor text
+        - Example: According to [recent research](url), the findings show...
 
-    /**
+        **Output Format:**
+        Return a JSON object with exactly these keys:
+        1. \"title\": An engaging, SEO-friendly headline
+        2. \"subheadline\": A compelling one-sentence subtitle  
+        3. \"content\": The complete article as clean HTML (not Markdown)
+
+        **Content Quality Requirements:**
+        - Use current, factual information with web search
+        - Include specific examples and data when relevant
+        - Write for human readers, not search engines
+        - Ensure content flows naturally between sections
+        - Maintain consistency in tone throughout";
+
+        if ($settings['word_count'] ?? 0 > 0) {
+            $system_prompt .= " Target approximately " . $settings['word_count'] . " words.";
+        }
+        
+        $raw_response = ATM_API::enhance_content_with_openrouter(
+            ['content' => $campaign->keyword],
+            $system_prompt,
+            $ai_model,
+            true, // JSON mode
+            true, // web search
+            $settings['creativity_level'] ?? 'high'
+        );
+        
+        // Parse JSON response
+        $json_string = trim($raw_response);
+        if (!str_starts_with($json_string, '{')) {
+            if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                $json_string = $matches[0];
+            }
+        }
+        
+        $result = json_decode($json_string, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+            error_log('ATM Automation: Invalid JSON response: ' . $raw_response);
+            throw new Exception('Invalid AI response format.');
+        }
+        
+        // Create post with SIMPLE content handling
+        $post_data = [
+            'post_title' => wp_strip_all_tags($result['title']),
+            'post_content' => wp_kses_post($result['content']), // Just basic sanitization
+            'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
+            'post_author' => $campaign->author_id,
+            'post_category' => $campaign->category_id ? [$campaign->category_id] : []
+        ];
+        
+        $post_id = wp_insert_post($post_data, true);
+        if (is_wp_error($post_id)) {
+            throw new Exception('Failed to create post: ' . $post_id->get_error_message());
+        }
+        
+        // Save subtitle and metadata
+        if (!empty($result['subheadline'])) {
+            update_post_meta($post_id, '_bunyad_sub_title', $result['subheadline']);
+            update_post_meta($post_id, '_atm_subtitle', $result['subheadline']);
+        }
+        
+        // Save automation metadata
+        update_post_meta($post_id, '_atm_automation_generated', true);
+        update_post_meta($post_id, '_atm_campaign_id', $campaign->id);
+        update_post_meta($post_id, '_atm_generation_date', current_time('mysql'));
+        
+        // Generate featured image if requested
+        if ($settings['generate_image'] ?? false) {
+            $this->generate_automation_featured_image($post_id, $result['title']);
+        }
+        
+        error_log("ATM Automation: Successfully created post ID {$post_id} for campaign '{$campaign->name}'");
+        
+        return [
+            'success' => true,
+            'post_id' => $post_id,
+            'post_url' => get_permalink($post_id)
+        ];
+        
+    } catch (Exception $e) {
+        error_log('ATM Automation Article Generation Error: ' . $e->getMessage());
+        return ['success' => false, 'message' => $e->getMessage()];
+    }
+}
+
+   /**
      * Check if Gutenberg is active
      */
     private function is_gutenberg_active() {
@@ -533,100 +471,6 @@ class ATM_Ajax {
         // Fallback check for older WordPress versions
         return function_exists('gutenberg_init') || function_exists('register_block_type');
     }
-
-    /**
-     * Optimize content for Gutenberg Block Editor
-     */
-    private function optimize_for_gutenberg($content) {
-        // Gutenberg handles HTML well, but we can add some optimizations
-        
-        // Ensure headings are properly spaced for block recognition
-        $content = preg_replace('/<h([1-6])([^>]*)>/', "\n<h$1$2>", $content);
-        $content = preg_replace('/<\/h([1-6])>/', "</h$1>\n", $content);
-        
-        // Ensure paragraphs are properly separated
-        $content = preg_replace('/<p([^>]*)>/', "\n<p$1>", $content);
-        $content = preg_replace('/<\/p>/', "</p>\n", $content);
-        
-        // Ensure lists are properly formatted for blocks
-        $content = preg_replace('/<ul([^>]*)>/', "\n<ul$1>", $content);
-        $content = preg_replace('/<\/ul>/', "</ul>\n", $content);
-        $content = preg_replace('/<ol([^>]*)>/', "\n<ol$1>", $content);
-        $content = preg_replace('/<\/ol>/', "</ol>\n", $content);
-        
-        // Clean up extra whitespace
-        $content = preg_replace('/\n{3,}/', "\n\n", $content);
-        
-        return trim($content);
-    }
-
-    /**
-     * Optimize content for Classic Editor
-     */
-    private function optimize_for_classic_editor($content) {
-        // Classic Editor needs more explicit HTML formatting
-        
-        // Ensure all content is wrapped in HTML tags
-        $lines = explode("\n", $content);
-        $processed_lines = [];
-        
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (empty($line)) {
-                continue;
-            }
-            
-            // If line doesn't start with HTML tag, wrap in paragraph
-            if (!preg_match('/^<[a-zA-Z]/', $line)) {
-                $line = "<p>$line</p>";
-            }
-            
-            $processed_lines[] = $line;
-        }
-        
-        // Join with proper spacing
-        $content = implode("\n\n", $processed_lines);
-        
-        // Add extra spacing around headings for Classic Editor
-        $content = preg_replace('/<h([1-6])/', "\n<h$1", $content);
-        $content = preg_replace('/<\/h([1-6])>/', "</h$1>\n", $content);
-        
-        return trim($content);
-    }
-
-    /**
-     * Basic Markdown to HTML conversion fallback
-     */
-    private function basic_markdown_to_html($markdown) {
-        // Convert headers
-        $html = preg_replace('/^### (.*?)$/m', '<h3>$1</h3>', $markdown);
-        $html = preg_replace('/^## (.*?)$/m', '<h2>$1</h2>', $html);
-        $html = preg_replace('/^# (.*?)$/m', '<h1>$1</h1>', $html);
-        
-        // Convert bold and italic
-        $html = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $html);
-        $html = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $html);
-        
-        // Convert links
-        $html = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2">$1</a>', $html);
-        
-        // Convert line breaks to paragraphs
-        $paragraphs = explode("\n\n", $html);
-        $html = '';
-        foreach ($paragraphs as $paragraph) {
-            $paragraph = trim($paragraph);
-            if (!empty($paragraph)) {
-                // Don't wrap headings in paragraphs
-                if (preg_match('/^<h[1-6]/', $paragraph)) {
-                    $html .= $paragraph . "\n";
-                } else {
-                    $html .= '<p>' . nl2br($paragraph) . '</p>' . "\n";
-                }
-            }
-        }
-        
-        return $html;
-}
 
     /**
      * Get automation campaigns

@@ -82,44 +82,58 @@ class ATM_Automation_API {
         }
     }
     
-    /**
+        /**
      * Execute article automation campaign
      */
     private static function execute_article_automation($campaign, $settings) {
         try {
             // Get model with proper fallbacks
             $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
-            
-            // Ensure we always have a valid model
             if (empty($ai_model)) {
-                $ai_model = 'openai/gpt-4o'; // Fallback to a known working model
+                $ai_model = 'openai/gpt-4o';
             }
             
-            // Use existing article generation logic but with automation settings
-            $content_data = [
-                'keyword' => $campaign->keyword,
-                'article_title' => '', // Let AI generate title
-                'model' => $ai_model,
-                'writing_style' => $settings['writing_style'] ?? 'default_seo',
-                'custom_prompt' => $settings['custom_prompt'] ?? '',
-                'word_count' => $settings['word_count'] ?? 0,
-                'creativity_level' => $settings['creativity_level'] ?? 'high'
-            ];
-            
-            // Build system prompt
+            // Build enhanced system prompt
             $writing_styles = ATM_API::get_writing_styles();
-            $base_prompt = isset($writing_styles[$content_data['writing_style']]) ? 
-                $writing_styles[$content_data['writing_style']]['prompt'] : 
+            $base_prompt = isset($writing_styles[$settings['writing_style'] ?? 'default_seo']) ? 
+                $writing_styles[$settings['writing_style'] ?? 'default_seo']['prompt'] : 
                 $writing_styles['default_seo']['prompt'];
                 
-            if (!empty($content_data['custom_prompt'])) {
-                $base_prompt = $content_data['custom_prompt'];
+            if (!empty($settings['custom_prompt'])) {
+                $base_prompt = $settings['custom_prompt'];
             }
+
+            $system_prompt = $base_prompt . "\n\n**AUTOMATION CONTENT GENERATION INSTRUCTIONS:**
+
+            Follow these strict formatting guidelines:
+            - **Style**: Write in a professional, engaging tone appropriate for the topic
+            - **Length**: Aim for " . ($settings['word_count'] ? $settings['word_count'] : '800-1200') . " words
+            - **HTML Format**: Use clean HTML with <h2> for main sections, <h3> for subsections, <p> for paragraphs, <ul>/<ol> for lists
+            - **CRITICAL**: Do NOT use H1 headings anywhere in the content
+            - **CRITICAL**: Do NOT include conclusion headings like 'Conclusion', 'Summary', 'Final Thoughts', etc.
+            - End with a natural concluding paragraph without any heading
+
+            **Link Formatting Rules:**
+            - Use descriptive anchor text (1-3 words maximum)  
+            - Link to specific, relevant sources when appropriate
+            - Never use URLs as anchor text
+            - Example: According to [recent research](url), the findings show...
+
+            **Output Format:**
+            Return a JSON object with exactly these keys:
+            1. \"title\": An engaging, SEO-friendly headline
+            2. \"subheadline\": A compelling one-sentence subtitle  
+            3. \"content\": The complete article as clean HTML (not Markdown)
+
+            **Content Quality Requirements:**
+            - Use current, factual information with web search
+            - Include specific examples and data when relevant
+            - Write for human readers, not search engines
+            - Ensure content flows naturally between sections
+            - Maintain consistency in tone throughout";
             
-            $system_prompt = $base_prompt . "\n\nReturn a JSON object with 'title', 'subheadline', and 'content' keys.";
-            
-            if ($content_data['word_count'] > 0) {
-                $system_prompt .= " The article should be approximately " . $content_data['word_count'] . " words long.";
+            if ($settings['word_count'] ?? 0 > 0) {
+                $system_prompt .= " The article should be approximately " . $settings['word_count'] . " words long.";
             }
             
             error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
@@ -127,13 +141,13 @@ class ATM_Automation_API {
             $raw_response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $campaign->keyword],
                 $system_prompt,
-                $ai_model, // Now guaranteed to have a value
+                $ai_model,
                 true, // JSON mode
                 true, // web search
-                $content_data['creativity_level']
+                $settings['creativity_level'] ?? 'high'
             );
             
-            // Rest of the method remains the same...
+            // Parse JSON response
             $json_string = trim($raw_response);
             if (!str_starts_with($json_string, '{')) {
                 if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
@@ -146,10 +160,10 @@ class ATM_Automation_API {
                 throw new Exception('Invalid AI response format.');
             }
             
-            // Create post
+            // Create post with CLEAN HTML - no processing
             $post_data = [
                 'post_title' => wp_strip_all_tags($result['title']),
-                'post_content' => $result['content'],
+                'post_content' => wp_kses_post($result['content']), // Only basic WordPress sanitization
                 'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
                 'post_author' => $campaign->author_id,
                 'post_category' => $campaign->category_id ? [$campaign->category_id] : []
