@@ -102,7 +102,14 @@ class ATM_Automation_API {
             if (count($previous_angles) > 0) {
                 $angle_data = self::generate_automation_angle($campaign->keyword, $previous_angles);
                 // Store the new angle
-                self::store_automation_angle($campaign->id, $campaign->keyword, $angle_data['angle_description'] ?? 'General coverage');
+                if ($angle_data && isset($angle_data['angle_description'])) {
+                    $this->store_automation_angle($campaign->keyword, $angle_data['angle_description'], '[Automation Generated]');
+                }
+
+                // After you get $result from the AI generation
+                if ($angle_data && !empty($result['title'])) {
+                    $this->update_automation_angle_title($campaign->keyword, $angle_data['angle_description'], $result['title']);
+                }
             }
             
             // Build enhanced system prompt
