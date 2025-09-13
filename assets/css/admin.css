@@ -775,3 +775,339 @@ body.post-new-php #wpfooter {
   border-radius: 6px !important;
   cursor: pointer !important;
 }
+
+/* Add this to the end of your assets/css/admin.css file */
+
+/* Automation System Styles */
+.atm-campaigns-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 24px 32px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.atm-campaigns-header-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.atm-campaigns-header-content p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.atm-campaigns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.atm-campaign-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.atm-campaign-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.atm-campaign-card:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.atm-campaign-card:hover::before {
+  transform: scaleX(1);
+}
+
+.atm-campaign-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.atm-campaign-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #6b7280;
+}
+
+.atm-campaign-content {
+  padding: 24px;
+}
+
+.atm-campaign-content h4 {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.3;
+}
+
+.atm-campaign-keyword {
+  margin: 0 0 20px 0;
+  color: #6b7280;
+  font-size: 14px;
+  font-style: italic;
+  background: #f3f4f6;
+  padding: 6px 12px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.atm-campaign-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.atm-campaign-meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.atm-campaign-meta-item:last-child {
+  border-bottom: none;
+}
+
+.atm-campaign-meta-item .label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.atm-campaign-meta-item .value {
+  color: #1f2937;
+  font-weight: 600;
+  text-align: right;
+}
+
+.atm-campaign-actions {
+  display: flex;
+  gap: 8px;
+  padding: 20px 24px;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.atm-campaign-actions .components-button {
+  flex: 1;
+  justify-content: center;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.atm-campaign-actions .components-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.atm-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.atm-status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.atm-status-badge.paused {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.atm-status-badge.error {
+  background: #fecaca;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.atm-status-badge.running {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+  animation: atm-pulse 2s infinite;
+}
+
+@keyframes atm-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.atm-empty-state {
+  text-align: center;
+  padding: 60px 40px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+.atm-empty-state-icon {
+  margin: 0 auto 24px;
+  color: #9ca3af;
+}
+
+.atm-empty-state h3 {
+  margin: 0 0 12px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.atm-empty-state p {
+  margin: 0 0 24px 0;
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Form styling enhancements */
+.atm-form-container h4 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.atm-form-container h4:not(:first-child) {
+  margin-top: 32px;
+}
+
+.atm-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.atm-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.atm-form-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding-top: 32px;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 32px;
+}
+
+.atm-status-message {
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.atm-status-message.success {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.atm-status-message.error {
+  background: #fecaca;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.atm-status-message.info {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .atm-campaigns-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .atm-campaigns-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .atm-campaigns-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .atm-grid-2,
+  .atm-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .atm-campaign-actions {
+    flex-wrap: wrap;
+  }
+
+  .atm-campaign-actions .components-button {
+    flex: 1;
+    min-width: calc(50% - 4px);
+  }
+
+  .atm-form-actions {
+    flex-direction: column;
+  }
+
+  .atm-form-actions .components-button {
+    width: 100%;
+  }
+}

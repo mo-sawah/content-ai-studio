@@ -56,7 +56,15 @@ class ATM_Automation_Admin {
             return;
         }
         
-        // Enqueue automation React app
+        // IMPORTANT: Enqueue the automation CSS first
+        wp_enqueue_style(
+            'atm-automation-style',
+            ATM_PLUGIN_URL . 'assets/css/automation.css',
+            array(),
+            ATM_VERSION
+        );
+        
+        // Then enqueue the React app
         $automation_asset_path = ATM_PLUGIN_PATH . 'build/automation.asset.php';
         if (file_exists($automation_asset_path)) {
             $automation_asset = require($automation_asset_path);
@@ -69,15 +77,19 @@ class ATM_Automation_Admin {
                 true
             );
             
-            wp_enqueue_style(
-                'atm-automation-style',
-                ATM_PLUGIN_URL . 'build/automation.css',
-                array(),
-                $automation_asset['version']
-            );
+            // Only enqueue build CSS if it exists and doesn't conflict
+            $build_css = ATM_PLUGIN_PATH . 'build/automation.css';
+            if (file_exists($build_css)) {
+                wp_enqueue_style(
+                    'atm-automation-build-style',
+                    ATM_PLUGIN_URL . 'build/automation.css',
+                    array('atm-automation-style'), // Make it depend on our main CSS
+                    $automation_asset['version']
+                );
+            }
         }
         
-        // Prepare localized data
+        // Localize script data with all required data
         $localized_data = array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('atm_nonce'),
@@ -97,12 +109,12 @@ class ATM_Automation_Admin {
             ]
         );
         
-        // Add settings data if available
+        // Add settings data with proper fallbacks
         if (class_exists('ATM_Settings')) {
             $settings_class = new ATM_Settings();
             $settings = $settings_class->get_settings();
             
-            // Ensure we have valid model options
+            // Ensure we always have model options
             $article_models = $settings['article_models'] ?? [];
             if (empty($article_models)) {
                 $article_models = [
@@ -118,7 +130,7 @@ class ATM_Automation_Admin {
             $localized_data['audio_provider'] = $settings['audio_provider'] ?? 'openai';
         }
         
-        // Add API data if available
+        // Add API data with fallbacks
         if (class_exists('ATM_API')) {
             $writing_styles = method_exists('ATM_API', 'get_writing_styles') ? 
                 ATM_API::get_writing_styles() : 
@@ -131,7 +143,6 @@ class ATM_Automation_Admin {
             }
         }
         
-        // CRITICAL: Use the correct variable name that matches your React components
         wp_localize_script('atm-automation-app', 'atm_automation_data', $localized_data);
     }
     
@@ -140,6 +151,274 @@ class ATM_Automation_Admin {
      */
     public function render_automation_page() {
         ?>
+        <style>
+        /* Quick automation styling fix */
+        .atm-campaigns-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 24px 32px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .atm-campaigns-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .atm-campaign-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+        
+        .atm-campaign-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .atm-campaign-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .atm-campaign-content {
+            padding: 24px;
+        }
+        
+        .atm-campaign-content h4 {
+            margin: 0 0 12px 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+            line-height: 1.3;
+        }
+        
+        .atm-campaign-keyword {
+            margin: 0 0 20px 0;
+            color: #6b7280;
+            font-size: 14px;
+            font-style: italic;
+            background: #f3f4f6;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+        
+        .atm-campaign-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .atm-campaign-meta-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .atm-campaign-meta-item:last-child {
+            border-bottom: none;
+        }
+        
+        .atm-campaign-meta-item .label {
+            color: #6b7280;
+            font-weight: 500;
+        }
+        
+        .atm-campaign-meta-item .value {
+            color: #1f2937;
+            font-weight: 600;
+            text-align: right;
+        }
+        
+        .atm-campaign-actions {
+            display: flex;
+            gap: 8px;
+            padding: 20px 24px;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .atm-campaign-actions .components-button {
+            flex: 1;
+            justify-content: center;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .atm-status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .atm-status-badge.active {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .atm-status-badge.paused {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        
+        .atm-status-badge.error {
+            background: #fecaca;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        
+        .atm-status-badge.running {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        
+        .atm-empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .atm-empty-state h3 {
+            margin: 0 0 12px 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        
+        .atm-empty-state p {
+            margin: 0 0 24px 0;
+            color: #6b7280;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .atm-form-container {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .atm-form-container h4 {
+            margin: 0 0 8px 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        
+        .atm-form-container h4:not(:first-child) {
+            margin-top: 32px;
+        }
+        
+        .atm-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .atm-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .atm-form-actions {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            padding-top: 32px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 32px;
+        }
+        
+        .atm-status-message {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid;
+        }
+        
+        .atm-status-message.success {
+            background: #dcfce7;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
+        
+        .atm-status-message.error {
+            background: #fecaca;
+            color: #991b1b;
+            border-color: #fca5a5;
+        }
+        
+        .atm-status-message.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-color: #93c5fd;
+        }
+        
+        /* Responsive fixes */
+        @media (max-width: 768px) {
+            .atm-campaigns-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .atm-campaigns-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 16px;
+            }
+            
+            .atm-grid-2,
+            .atm-grid-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .atm-campaign-actions {
+                flex-wrap: wrap;
+            }
+            
+            .atm-campaign-actions .components-button {
+                flex: 1;
+                min-width: calc(50% - 4px);
+            }
+        }
+        </style>
+        
         <div class="wrap">
             <div id="atm-automation-root" data-page="main"></div>
         </div>
