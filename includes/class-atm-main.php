@@ -506,6 +506,7 @@ class ATM_Main {
             'includes/class-atm-api.php',
             'includes/class-atm-automation.php',
             'includes/class-atm-twitter-api.php',  // ADD THIS LINE
+            'includes/class-atm-content-generator-utility.php',
             'includes/class-atm-theme-subtitle-manager.php',
             'includes/class-atm-frontend.php',
             'includes/class-atm-licensing.php',
