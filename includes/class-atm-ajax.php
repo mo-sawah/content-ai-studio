@@ -426,9 +426,50 @@ class ATM_Ajax {
             $sanitized['custom_prompt'] = wp_kses_post($settings['custom_prompt']);
         }
         
+        // News-specific settings
+        if (isset($settings['news_method'])) {
+            $sanitized['news_method'] = sanitize_text_field($settings['news_method']);
+        }
+        if (isset($settings['article_language'])) {
+            $sanitized['article_language'] = sanitize_text_field($settings['article_language']);
+        }
+        if (isset($settings['source_languages'])) {
+            $sanitized['source_languages'] = array_map('sanitize_text_field', (array)$settings['source_languages']);
+        }
+        if (isset($settings['countries'])) {
+            $sanitized['countries'] = array_map('sanitize_text_field', (array)$settings['countries']);
+        }
+        if (isset($settings['news_source'])) {
+            $sanitized['news_source'] = sanitize_text_field($settings['news_source']);
+        }
+        
+        // Video-specific settings
+        if (isset($settings['video_duration'])) {
+            $sanitized['video_duration'] = sanitize_text_field($settings['video_duration']);
+        }
+        if (isset($settings['video_order'])) {
+            $sanitized['video_order'] = sanitize_text_field($settings['video_order']);
+        }
+        
+        // Podcast-specific settings
+        if (isset($settings['podcast_language'])) {
+            $sanitized['podcast_language'] = sanitize_text_field($settings['podcast_language']);
+        }
+        if (isset($settings['podcast_duration'])) {
+            $sanitized['podcast_duration'] = sanitize_text_field($settings['podcast_duration']);
+        }
+        if (isset($settings['host_a_voice'])) {
+            $sanitized['host_a_voice'] = sanitize_text_field($settings['host_a_voice']);
+        }
+        if (isset($settings['host_b_voice'])) {
+            $sanitized['host_b_voice'] = sanitize_text_field($settings['host_b_voice']);
+        }
+        if (isset($settings['audio_provider'])) {
+            $sanitized['audio_provider'] = sanitize_text_field($settings['audio_provider']);
+        }
+        
         return $sanitized;
     }
-
     /**
      * Helper: Calculate next run time
      */
