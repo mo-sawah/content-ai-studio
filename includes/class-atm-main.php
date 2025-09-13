@@ -9,6 +9,85 @@ class ATM_Main {
     private static $instance = null;
     private static $hooks_initialized = false;
 
+    public static function create_automation_tables_directly() {
+        global $wpdb;
+        $charset_collate = $wpdb->get_charset_collate();
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        
+        // Create campaigns table
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        $sql = "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL,
+            type varchar(50) NOT NULL,
+            keyword varchar(500) NOT NULL,
+            settings longtext,
+            schedule_type varchar(20) DEFAULT 'interval',
+            schedule_value int(11) DEFAULT 1,
+            schedule_unit varchar(10) DEFAULT 'hour',
+            content_mode varchar(20) DEFAULT 'publish',
+            category_id bigint(20) DEFAULT 0,
+            author_id bigint(20) DEFAULT 1,
+            is_active tinyint(1) DEFAULT 1,
+            next_run datetime DEFAULT '0000-00-00 00:00:00',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY type (type),
+            KEY is_active (is_active),
+            KEY next_run (next_run),
+            KEY keyword (keyword(191))
+        ) $charset_collate;";
+        
+        dbDelta($sql);
+        error_log('ATM Debug: Campaigns table creation result - Table exists: ' . ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name ? 'YES' : 'NO'));
+        
+        // Create executions table
+        $executions_table = $wpdb->prefix . 'atm_automation_executions';
+        $sql2 = "CREATE TABLE $executions_table (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            campaign_id mediumint(9) NOT NULL,
+            status varchar(20) NOT NULL,
+            message text,
+            post_id bigint(20) DEFAULT NULL,
+            execution_time decimal(10,3) DEFAULT NULL,
+            memory_usage varchar(20) DEFAULT NULL,
+            executed_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY campaign_id (campaign_id),
+            KEY status (status),
+            KEY executed_at (executed_at),
+            KEY post_id (post_id)
+        ) $charset_collate;";
+        
+        dbDelta($sql2);
+        
+        // Create queue table
+        $queue_table = $wpdb->prefix . 'atm_automation_queue';
+        $sql3 = "CREATE TABLE $queue_table (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            campaign_id mediumint(9) NOT NULL,
+            job_type varchar(50) NOT NULL,
+            job_data longtext,
+            priority int(11) DEFAULT 5,
+            attempts int(11) DEFAULT 0,
+            max_attempts int(11) DEFAULT 3,
+            status varchar(20) DEFAULT 'pending',
+            error_message text,
+            scheduled_at datetime DEFAULT CURRENT_TIMESTAMP,
+            started_at datetime DEFAULT NULL,
+            completed_at datetime DEFAULT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY campaign_id (campaign_id),
+            KEY status (status),
+            KEY priority (priority),
+            KEY scheduled_at (scheduled_at)
+        ) $charset_collate;";
+        
+        dbDelta($sql3);
+    }
+
     public static function deactivate() {
         // Trigger automation deactivation  
         do_action('atm_deactivation');
@@ -728,20 +807,25 @@ class ATM_Main {
         }
         
         // self::create_campaigns_table();
-        self::create_podcast_progress_table(); // Add this line
-        self::create_script_jobs_table(); // Add this line
-        self::create_used_articles_table(); // Add this line
-        self::create_content_angles_table(); // Add this line
-
-        // Force table creation check
+        self::create_podcast_progress_table();
+        self::create_script_jobs_table();
+        self::create_used_articles_table();
+        self::create_content_angles_table();
         self::verify_content_angles_table();
+        self::create_automation_tables_directly();
 
+        // Debug: Check if automation class exists
+        error_log('ATM Debug: ATM_Automation_Database class exists: ' . (class_exists('ATM_Automation_Database') ? 'YES' : 'NO'));
+        
         if (class_exists('ATM_Automation_Database')) {
+            error_log('ATM Debug: About to create automation tables...');
             ATM_Automation_Database::create_tables();
+            error_log('ATM Debug: Automation tables creation called');
+        } else {
+            error_log('ATM Debug: ATM_Automation_Database class not found during activation');
         }
 
         do_action('atm_activation');
-
     }
 
     public static function create_content_angles_table() {
