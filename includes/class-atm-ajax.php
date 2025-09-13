@@ -380,15 +380,38 @@ class ATM_Ajax {
                 $base_prompt .= $this->build_comprehensive_angle_context($angle_data, $campaign->keyword);
             }
             
-            // Use existing output instructions method
-            $output_instructions = $this->get_enhanced_output_instructions(''); // Empty title so it generates one
-            $system_prompt = $base_prompt . "\n\n" . $output_instructions;
-            
-            if ($settings['word_count'] ?? 0 > 0) {
-                $system_prompt .= " The final article should be approximately " . $settings['word_count'] . " words long.";
-            }
-            
-            // Generate content using existing API
+            // ADD YOUR CUSTOM PROMPT HERE:
+            $system_prompt = $base_prompt . "\n\n**AUTOMATION CONTENT GENERATION INSTRUCTIONS:**
+
+    Follow these strict formatting guidelines:
+    - **Style**: Write in a professional, engaging tone appropriate for the topic
+    - **Length**: Aim for " . ($settings['word_count'] ? $settings['word_count'] : '800-1200') . " words
+    - **HTML Format**: Use clean HTML with <h2> for main sections, <h3> for subsections, <p> for paragraphs, <ul>/<ol> for lists
+    - **CRITICAL**: Do NOT use H1 headings anywhere in the content
+    - **CRITICAL**: The content must begin with a regular paragraph, NOT with any heading (H1, H2, H3, etc.)
+    - **CRITICAL**: Do NOT include conclusion headings like 'Conclusion', 'Summary', 'Final Thoughts', etc.
+    - End with a natural concluding paragraph without any heading
+
+    **Link Formatting Rules:**
+    - Use descriptive anchor text (1-3 words maximum)  
+    - Link to specific, relevant sources when appropriate
+    - Never use URLs as anchor text
+    - Example: According to [recent research](url), the findings show...
+
+    **Output Format:**
+    Return a JSON object with exactly these keys:
+    1. \"title\": An engaging, SEO-friendly headline
+    2. \"subheadline\": A compelling one-sentence subtitle  
+    3. \"content\": The complete article as clean HTML (not Markdown)
+
+    **Content Quality Requirements:**
+    - Use current, factual information with web search
+    - Include specific examples and data when relevant
+    - Write for human readers, not search engines
+    - Ensure content flows naturally between sections
+    - Maintain consistency in tone throughout";
+
+            // Rest of your existing code for generation and post creation...
             $raw_response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $campaign->keyword],
                 $system_prompt,
