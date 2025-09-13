@@ -336,185 +336,6 @@ class ATM_Ajax {
         }
     }
 
-    /**
-     * Execute article automation using existing article generation logic
-     */
-    private function execute_article_automation($campaign, $settings) {
-        try {
-            // Get model with proper fallbacks
-            $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
-            if (empty($ai_model)) {
-                $ai_model = 'openai/gpt-4o';
-            }
-            
-            error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
-            
-            // Ensure angles table exists (use existing method)
-            $this->ensure_angles_table_exists();
-            
-            // Get previous angles for this keyword (use existing method)
-            $previous_angles = $this->get_previous_angles($campaign->keyword);
-            error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $campaign->keyword);
-            
-            // Generate intelligent angle (use existing method - same as manual)
-            $angle_data = $this->generate_intelligent_angle_classification($campaign->keyword, $previous_angles);
-            error_log("ATM Debug: Generated angle: " . ($angle_data['angle_description'] ?? 'none'));
-            
-            // Store the angle BEFORE content generation (use existing method)
-            if ($angle_data && isset($angle_data['angle_description'])) {
-                $this->store_content_angle($campaign->keyword, $angle_data['angle_description'], '[Automation Generated]');
-            }
-            
-            // Build system prompt
-            $writing_styles = ATM_API::get_writing_styles();
-            $base_prompt = isset($writing_styles[$settings['writing_style'] ?? 'default_seo']) ? 
-                $writing_styles[$settings['writing_style'] ?? 'default_seo']['prompt'] : 
-                $writing_styles['default_seo']['prompt'];
-                
-            if (!empty($settings['custom_prompt'])) {
-                $base_prompt = $settings['custom_prompt'];
-            }
-            
-            // Add intelligent angle context (use existing method)
-            if ($angle_data) {
-                $base_prompt .= $this->build_comprehensive_angle_context($angle_data, $campaign->keyword);
-            }
-            
-            // ADD YOUR CUSTOM PROMPT HERE:
-            $system_prompt = $base_prompt . "\n\n**AUTOMATION CONTENT GENERATION INSTRUCTIONS:**
-
-    Follow these strict formatting guidelines:
-    - **Style**: Write in a professional, engaging tone appropriate for the topic
-    - **Length**: Aim for " . ($settings['word_count'] ? $settings['word_count'] : '800-1200') . " words
-    - **HTML Format**: Use clean HTML with <h2> for main sections, <h3> for subsections, <p> for paragraphs, <ul>/<ol> for lists
-    - **CRITICAL**: Do NOT use H1 headings anywhere in the content
-    - **CRITICAL**: The content must begin with a regular paragraph, NOT with any heading (H1, H2, H3, etc.)
-    - **CRITICAL**: Do NOT include conclusion headings like 'Conclusion', 'Summary', 'Final Thoughts', etc.
-    - End with a natural concluding paragraph without any heading
-
-    **Link Formatting Rules:**
-    - When including external links, NEVER use the website URL as the anchor text
-    - Use ONLY 1-3 descriptive words as anchor text
-    - Example: railway that [had a deadly crash](https://reuters.com/specific-article) last week and will...
-    - Example: Example: [Digital Marketing](https://yahoo.com/actual-article-url) reported that...
-    - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
-    - Do NOT use generic phrases like \"click here\", \"read more\", or \"this article\" as anchor text
-    - Anchor text should be relevant keywords from the article topic (e.g., marketing, design, finance, AI)
-    - Keep anchor text extremely concise (maximum 2 words)
-    - Make links feel natural within the sentence flow
-    - Avoid long phrases as anchor text
-
-    **Output Format:**
-    Return a JSON object with exactly these keys:
-    1. \"title\": An engaging, SEO-friendly headline
-    2. \"subheadline\": A compelling one-sentence subtitle  
-    3. \"content\": The complete article as clean HTML (not Markdown)
-
-    **Content Quality Requirements:**
-    - Use current, factual information with web search
-    - Include specific examples and data when relevant
-    - Write for human readers, not search engines
-    - Ensure content flows naturally between sections
-    - Maintain consistency in tone throughout";
-
-            // Rest of your existing code for generation and post creation...
-            $raw_response = ATM_API::enhance_content_with_openrouter(
-                ['content' => $campaign->keyword],
-                $system_prompt,
-                $ai_model,
-                true, // JSON mode
-                true, // web search
-                $settings['creativity_level'] ?? 'high'
-            );
-            
-            // Parse JSON response (same as manual)
-            $json_string = trim($raw_response);
-            if (!str_starts_with($json_string, '{')) {
-                if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
-                    $json_string = $matches[0];
-                }
-            }
-            
-            $result = json_decode($json_string, true);
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
-                error_log('ATM Automation: Invalid JSON response: ' . $raw_response);
-                throw new Exception('Invalid AI response format.');
-            }
-            
-            $generated_title = $result['title'] ?? '';
-            $subtitle = $result['subheadline'] ?? $result['subtitle'] ?? '';
-            $final_content = trim($result['content']);
-            
-            // Update the stored angle with the actual generated title (use existing method)
-            if ($angle_data && !empty($generated_title)) {
-                // More flexible update - find the most recent entry for this keyword
-                global $wpdb;
-                $table_name = $wpdb->prefix . 'atm_content_angles';
-                
-                $updated = $wpdb->update(
-                    $table_name,
-                    ['title' => $generated_title],
-                    [
-                        'keyword' => $campaign->keyword,
-                        'title' => '[Automation Generated]'
-                    ],
-                    ['%s'],
-                    ['%s', '%s']
-                );
-                
-                if ($updated) {
-                    error_log("ATM Debug: Successfully updated title to: " . $generated_title);
-                } else {
-                    error_log("ATM Debug: Failed to update title. No matching record found.");
-                    error_log("ATM Debug: Keyword: " . $campaign->keyword);
-                    error_log("ATM Debug: Generated title: " . $generated_title);
-                }
-            }
-            
-            // Create post with clean content
-            $post_data = [
-                'post_title' => wp_strip_all_tags($generated_title),
-                'post_content' => wp_kses_post($final_content),
-                'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
-                'post_author' => $campaign->author_id,
-                'post_category' => $campaign->category_id ? [$campaign->category_id] : []
-            ];
-            
-            $post_id = wp_insert_post($post_data, true);
-            if (is_wp_error($post_id)) {
-                throw new Exception('Failed to create post: ' . $post_id->get_error_message());
-            }
-            
-            // Save subtitle (same as manual)
-            if (!empty($subtitle)) {
-                update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
-                update_post_meta($post_id, '_atm_subtitle', $subtitle);
-            }
-            
-            // Save automation metadata
-            update_post_meta($post_id, '_atm_automation_generated', true);
-            update_post_meta($post_id, '_atm_campaign_id', $campaign->id);
-            update_post_meta($post_id, '_atm_generation_date', current_time('mysql'));
-            
-            // Generate featured image if requested
-            if ($settings['generate_image'] ?? false) {
-                $this->generate_automation_featured_image($post_id, $generated_title);
-            }
-            
-            error_log("ATM Automation: Successfully created post ID {$post_id} for campaign '{$campaign->name}'");
-            
-            return [
-                'success' => true,
-                'post_id' => $post_id,
-                'post_url' => get_permalink($post_id)
-            ];
-            
-        } catch (Exception $e) {
-            error_log('ATM Automation Article Generation Error: ' . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
-
 
 
    /**
@@ -2205,18 +2026,21 @@ public function translate_text() {
             wp_send_json_error('Please activate your license key to use this feature.');
         }
         check_ajax_referer('atm_nonce', 'nonce');
+        
         try {
             $keyword = sanitize_text_field($_POST['keyword']);
             $title_input = isset($_POST['article_title']) ? sanitize_text_field($_POST['article_title']) : '';
             $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
-            $topic = !empty($title_input) ? 'the article title: "' . $title_input . '"' : 'the keyword: "' . $keyword . '"';
-            if (empty($topic)) {
-                throw new Exception("Please provide a keyword or title.");
+            
+            // Use the unified service
+            $result = ATM_Content_Generation_Service::generate_article_title($keyword, $title_input, $model_override);
+            
+            if ($result['success']) {
+                wp_send_json_success(['article_title' => $result['article_title']]);
+            } else {
+                throw new Exception($result['message']);
             }
-            $system_prompt = 'You are an expert SEO content writer. Use your web search ability to understand the current context and popular phrasing for the given topic. Your task is to generate a single, compelling, SEO-friendly title. Return only the title itself, with no extra text or quotation marks.';
-            $generated_title = ATM_API::enhance_content_with_openrouter(['content' => $topic], $system_prompt, $model_override ?: get_option('atm_article_model'));
-            $cleaned_title = trim($generated_title, " \t\n\r\0\x0B\"");
-            wp_send_json_success(['article_title' => $cleaned_title]);
+            
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
@@ -2227,116 +2051,33 @@ public function translate_text() {
             wp_send_json_error('Please activate your license key.');
         }
         check_ajax_referer('atm_nonce', 'nonce');
+        
         try {
-            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-            $post = get_post($post_id);
-            $article_title = isset($_POST['article_title']) ? sanitize_text_field($_POST['article_title']) : '';
-            $keyword = isset($_POST['keyword']) ? sanitize_text_field($_POST['keyword']) : '';
-            $model_override = isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '';
-            $style_key = isset($_POST['writing_style']) ? sanitize_key($_POST['writing_style']) : 'default_seo';
-            $custom_prompt = isset($_POST['custom_prompt']) ? wp_kses_post(stripslashes($_POST['custom_prompt'])) : '';
-            $word_count = isset($_POST['word_count']) ? intval($_POST['word_count']) : 0;
-            $creativity_level = isset($_POST['creativity_level']) ? sanitize_text_field($_POST['creativity_level']) : 'high';
+            // Prepare parameters for the service
+            $params = [
+                'keyword' => isset($_POST['keyword']) ? sanitize_text_field($_POST['keyword']) : '',
+                'article_title' => isset($_POST['article_title']) ? sanitize_text_field($_POST['article_title']) : '',
+                'post_id' => isset($_POST['post_id']) ? intval($_POST['post_id']) : 0,
+                'model' => isset($_POST['model']) ? sanitize_text_field($_POST['model']) : '',
+                'writing_style' => isset($_POST['writing_style']) ? sanitize_key($_POST['writing_style']) : 'default_seo',
+                'custom_prompt' => isset($_POST['custom_prompt']) ? wp_kses_post(stripslashes($_POST['custom_prompt'])) : '',
+                'word_count' => isset($_POST['word_count']) ? intval($_POST['word_count']) : 0,
+                'creativity_level' => isset($_POST['creativity_level']) ? sanitize_text_field($_POST['creativity_level']) : 'high',
+                'is_automation' => false
+            ];
             
-            if (empty($article_title) && empty($keyword)) {
-                throw new Exception("Please provide a keyword or an article title.");
+            // Use the unified service
+            $result = ATM_Content_Generation_Service::generate_article_content($params);
+            
+            if ($result['success']) {
+                wp_send_json_success([
+                    'article_title' => $result['article_title'],
+                    'article_content' => $result['article_content'], 
+                    'subtitle' => $result['subtitle']
+                ]);
+            } else {
+                throw new Exception($result['message']);
             }
-            
-            // Ensure the angles table exists
-            $this->ensure_angles_table_exists();
-            
-            $final_title = $article_title;
-            $angle_data = null;
-            
-            // STAGE 1: Generate intelligent angle if no title provided
-            if (empty($article_title) && !empty($keyword)) {
-                $tracking_keyword = $keyword;
-                $previous_angles = $this->get_previous_angles($tracking_keyword);
-                
-                error_log("ATM Debug: Found " . count($previous_angles) . " previous angles for: " . $tracking_keyword);
-                
-                // Generate intelligent angle with classification
-                $angle_data = $this->generate_intelligent_angle_classification($tracking_keyword, $previous_angles);
-                
-                error_log("ATM Debug: Generated intelligent angle: " . $angle_data['angle_description']);
-                
-                // Store the angle BEFORE content generation
-                $this->store_content_angle($tracking_keyword, $angle_data['angle_description'], '[AI Generated]');
-                
-                // Clear final_title so Stage 2 knows to generate one
-                $final_title = '';
-            }
-            
-            // STAGE 2: Build comprehensive system prompt for title + content generation
-            $writing_styles = ATM_API::get_writing_styles();
-            $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
-            if (!empty($custom_prompt)) {
-                $base_prompt = $custom_prompt;
-            }
-            
-            // Add intelligent angle context if generated
-            if ($angle_data) {
-                $base_prompt .= $this->build_comprehensive_angle_context($angle_data, $keyword);
-            }
-            
-            $output_instructions = $this->get_enhanced_output_instructions($final_title);
-            $system_prompt = $base_prompt . "\n\n" . $output_instructions;
-            
-            if ($post) {
-                $system_prompt = ATM_API::replace_prompt_shortcodes($system_prompt, $post);
-            }
-            if ($word_count > 0) {
-                $system_prompt .= " The final article should be approximately " . $word_count . " words long.";
-            }
-            
-            // STAGE 2: Single API call for title + content with web search
-            $user_content = empty($final_title) ? $keyword : $final_title;
-            
-            error_log("ATM Debug: Making content generation API call");
-            
-            $raw_response = ATM_API::enhance_content_with_openrouter(
-                ['content' => $user_content], 
-                $system_prompt, 
-                $model_override ?: get_option('atm_article_model'), 
-                true, // JSON mode
-                true, // enable web search for current information
-                $creativity_level
-            );
-            
-            // Process response (existing code)
-            $json_string = trim($raw_response);
-            if (!str_starts_with($json_string, '{')) {
-                if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
-                    $json_string = $matches[0];
-                }
-            }
-
-            $result = json_decode($json_string, true);
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
-                error_log('Content AI Studio - Invalid JSON from AI: ' . $raw_response);
-                throw new Exception('The AI returned an invalid response structure. Please try again.');
-            }
-
-            $generated_title = $result['title'] ?? $final_title;
-            $subtitle = $result['subheadline'] ?? $result['subtitle'] ?? '';
-            $final_content = trim($result['content']);
-
-            // Update the stored angle with the actual generated title
-            if ($angle_data && !empty($generated_title)) {
-                $this->update_stored_angle($tracking_keyword, $angle_data['angle_description'], $generated_title);
-            }
-
-            // Save subtitle
-            if ($post_id > 0 && !empty($subtitle)) {
-                update_post_meta($post_id, '_bunyad_sub_title', $subtitle);
-                update_post_meta($post_id, '_atm_subtitle', $subtitle);
-            }
-
-            wp_send_json_success([
-                'article_title' => $generated_title,
-                'article_content' => $final_content, 
-                'subtitle' => $subtitle
-            ]);
             
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
