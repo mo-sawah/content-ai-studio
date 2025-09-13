@@ -441,7 +441,28 @@ class ATM_Ajax {
             
             // Update the stored angle with the actual generated title (use existing method)
             if ($angle_data && !empty($generated_title)) {
-                $this->update_stored_angle($campaign->keyword, $angle_data['angle_description'], $generated_title);
+                // More flexible update - find the most recent entry for this keyword
+                global $wpdb;
+                $table_name = $wpdb->prefix . 'atm_content_angles';
+                
+                $updated = $wpdb->update(
+                    $table_name,
+                    ['title' => $generated_title],
+                    [
+                        'keyword' => $campaign->keyword,
+                        'title' => '[Automation Generated]'
+                    ],
+                    ['%s'],
+                    ['%s', '%s']
+                );
+                
+                if ($updated) {
+                    error_log("ATM Debug: Successfully updated title to: " . $generated_title);
+                } else {
+                    error_log("ATM Debug: Failed to update title. No matching record found.");
+                    error_log("ATM Debug: Keyword: " . $campaign->keyword);
+                    error_log("ATM Debug: Generated title: " . $generated_title);
+                }
             }
             
             // Create post with clean content
