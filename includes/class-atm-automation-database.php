@@ -14,6 +14,284 @@ if (!defined('ABSPATH')) {
 class ATM_Automation_Database {
 
     /**
+     * Get campaign by ID
+     */
+    public static function get_campaign($campaign_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        $campaign = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE id = %d",
+            $campaign_id
+        ));
+        
+        return $campaign;
+    }
+    
+    /**
+     * Get all campaigns with optional filters
+     */
+    public static function get_campaigns($filters = []) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        $where_clauses = [];
+        $where_values = [];
+        
+        if (isset($filters['type'])) {
+            $where_clauses[] = 'type = %s';
+            $where_values[] = $filters['type'];
+        }
+        
+        if (isset($filters['is_active'])) {
+            $where_clauses[] = 'is_active = %d';
+            $where_values[] = $filters['is_active'];
+        }
+        
+        $where_sql = '';
+        if (!empty($where_clauses)) {
+            $where_sql = 'WHERE ' . implode(' AND ', $where_clauses);
+        }
+        
+        $sql = "SELECT * FROM $table_name $where_sql ORDER BY created_at DESC";
+        
+        if (!empty($where_values)) {
+            $sql = $wpdb->prepare($sql, $where_values);
+        }
+        
+        return $wpdb->get_results($sql);
+    }
+    
+    /**
+     * Create new campaign
+     */
+    public static function create_campaign($data) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        // Set next_run based on schedule
+        $next_run = self::calculate_next_run($data['schedule_value'], $data['schedule_unit']);
+        
+        $result = $wpdb->insert(
+            $table_name,
+            [
+                'name' => $data['name'],
+                'type' => $data['type'],
+                'sub_type' => $data['sub_type'] ?? 'standard',
+                'keyword' => $data['keyword'],
+                'settings' => is_array($data['settings']) ? json_encode($data['settings']) : $data['settings'],
+                'schedule_type' => $data['schedule_type'] ?? 'interval',
+                'schedule_value' => $data['schedule_value'],
+                'schedule_unit' => $data['schedule_unit'],
+                'content_mode' => $data['content_mode'],
+                'category_id' => $data['category_id'] ?? 0,
+                'author_id' => $data['author_id'],
+                'is_active' => $data['is_active'] ? 1 : 0,
+                'next_run' => $next_run
+            ],
+            [
+                '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%d', '%d', '%s'
+            ]
+        );
+        
+        if ($result === false) {
+            error_log('ATM Automation: Failed to create campaign - ' . $wpdb->last_error);
+            return false;
+        }
+        
+        return $wpdb->insert_id;
+    }
+    
+    /**
+     * Update campaign
+     */
+    public static function update_campaign($campaign_id, $data) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        $update_data = [];
+        $update_format = [];
+        
+        if (isset($data['name'])) {
+            $update_data['name'] = $data['name'];
+            $update_format[] = '%s';
+        }
+        
+        if (isset($data['type'])) {
+            $update_data['type'] = $data['type'];
+            $update_format[] = '%s';
+        }
+        
+        if (isset($data['sub_type'])) {
+            $update_data['sub_type'] = $data['sub_type'];
+            $update_format[] = '%s';
+        }
+        
+        if (isset($data['keyword'])) {
+            $update_data['keyword'] = $data['keyword'];
+            $update_format[] = '%s';
+        }
+        
+        if (isset($data['settings'])) {
+            $update_data['settings'] = is_array($data['settings']) ? json_encode($data['settings']) : $data['settings'];
+            $update_format[] = '%s';
+        }
+        
+        if (isset($data['schedule_value'])) {
+            $update_data['schedule_value'] = $data['schedule_value'];
+            $update_format[] = '%d';
+        }
+        
+        if (isset($data['schedule_unit'])) {
+            $update_data['schedule_unit'] = $data['schedule_unit'];
+            $update_format[] = '%s';
+        }
+        
+        if (isset($data['content_mode'])) {
+            $update_data['content_mode'] = $data['content_mode'];
+            $update_format[] = '%s';
+        }
+        
+        if (isset($data['category_id'])) {
+            $update_data['category_id'] = $data['category_id'];
+            $update_format[] = '%d';
+        }
+        
+        if (isset($data['author_id'])) {
+            $update_data['author_id'] = $data['author_id'];
+            $update_format[] = '%d';
+        }
+        
+        if (isset($data['is_active'])) {
+            $update_data['is_active'] = $data['is_active'] ? 1 : 0;
+            $update_format[] = '%d';
+        }
+        
+        // Recalculate next_run if schedule changed
+        if (isset($data['schedule_value']) || isset($data['schedule_unit'])) {
+            $schedule_value = $data['schedule_value'] ?? null;
+            $schedule_unit = $data['schedule_unit'] ?? null;
+            
+            // Get current values if not provided
+            if (!$schedule_value || !$schedule_unit) {
+                $current = $wpdb->get_row($wpdb->prepare(
+                    "SELECT schedule_value, schedule_unit FROM $table_name WHERE id = %d",
+                    $campaign_id
+                ));
+                $schedule_value = $schedule_value ?: $current->schedule_value;
+                $schedule_unit = $schedule_unit ?: $current->schedule_unit;
+            }
+            
+            $update_data['next_run'] = self::calculate_next_run($schedule_value, $schedule_unit);
+            $update_format[] = '%s';
+        }
+        
+        if (empty($update_data)) {
+            return true; // Nothing to update
+        }
+        
+        $result = $wpdb->update(
+            $table_name,
+            $update_data,
+            ['id' => $campaign_id],
+            $update_format,
+            ['%d']
+        );
+        
+        return $result !== false;
+    }
+    
+    /**
+     * Delete campaign
+     */
+    public static function delete_campaign($campaign_id) {
+        global $wpdb;
+        $campaigns_table = $wpdb->prefix . 'atm_automation_campaigns';
+        $executions_table = $wpdb->prefix . 'atm_automation_executions';
+        $queue_table = $wpdb->prefix . 'atm_automation_queue';
+        
+        // Delete related records first
+        $wpdb->delete($queue_table, ['campaign_id' => $campaign_id], ['%d']);
+        $wpdb->delete($executions_table, ['campaign_id' => $campaign_id], ['%d']);
+        
+        // Delete the campaign
+        $result = $wpdb->delete($campaigns_table, ['id' => $campaign_id], ['%d']);
+        
+        return $result !== false;
+    }
+    
+    /**
+     * Get campaigns due for execution
+     */
+    public static function get_due_campaigns() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name 
+            WHERE is_active = 1 
+            AND next_run <= %s 
+            ORDER BY next_run ASC",
+            current_time('mysql')
+        ));
+    }
+    
+    /**
+     * Update campaign next run time
+     */
+    public static function update_next_run($campaign_id, $schedule_value, $schedule_unit) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        $next_run = self::calculate_next_run($schedule_value, $schedule_unit);
+        
+        return $wpdb->update(
+            $table_name,
+            ['next_run' => $next_run],
+            ['id' => $campaign_id],
+            ['%s'],
+            ['%d']
+        ) !== false;
+    }
+    
+    /**
+     * Log execution result
+     */
+    public static function log_execution($campaign_id, $status, $message = '', $post_id = null, $execution_time = null, $memory_usage = null) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_executions';
+        
+        return $wpdb->insert(
+            $table_name,
+            [
+                'campaign_id' => $campaign_id,
+                'status' => $status,
+                'message' => $message,
+                'post_id' => $post_id,
+                'execution_time' => $execution_time,
+                'memory_usage' => $memory_usage
+            ],
+            ['%d', '%s', '%s', '%d', '%f', '%s']
+        ) !== false;
+    }
+    
+    /**
+     * Calculate next run time based on schedule
+     */
+    private static function calculate_next_run($schedule_value, $schedule_unit) {
+        $interval_map = [
+            'minute' => 'MINUTE',
+            'hour' => 'HOUR',
+            'day' => 'DAY',
+            'week' => 'WEEK'
+        ];
+        
+        $unit = $interval_map[$schedule_unit] ?? 'HOUR';
+        
+        return date('Y-m-d H:i:s', strtotime("+{$schedule_value} {$unit}"));
+    }
+
+    /**
      * Update database schema to support sub-types
      */
     public static function update_schema_for_subtypes() {
@@ -60,7 +338,7 @@ class ATM_Automation_Database {
             schedule_value int(11) DEFAULT 1,
             schedule_unit varchar(10) DEFAULT 'hour',
             content_mode varchar(20) DEFAULT 'publish',
-            category_id bigint(20) DEFAULT 0,
+            category_ids text DEFAULT NULL,
             author_id bigint(20) DEFAULT 1,
             is_active tinyint(1) DEFAULT 1,
             next_run datetime DEFAULT '0000-00-00 00:00:00',
