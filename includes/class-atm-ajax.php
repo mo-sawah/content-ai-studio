@@ -337,27 +337,45 @@ class ATM_Ajax {
     }
 
     /**
- * Execute article automation using existing article generation logic
- */
-private function execute_article_automation($campaign, $settings) {
-    try {
-        // Get model with proper fallbacks
-        $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
-        if (empty($ai_model)) {
-            $ai_model = 'openai/gpt-4o';
-        }
-        
-        error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
-        
-        // Build enhanced system prompt
-        $writing_styles = ATM_API::get_writing_styles();
-        $base_prompt = isset($writing_styles[$settings['writing_style'] ?? 'default_seo']) ? 
-            $writing_styles[$settings['writing_style'] ?? 'default_seo']['prompt'] : 
-            $writing_styles['default_seo']['prompt'];
+     * Execute article automation using existing article generation logic
+     */
+    private function execute_article_automation($campaign, $settings) {
+        try {
+            // Get model with proper fallbacks
+            $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
+            if (empty($ai_model)) {
+                $ai_model = 'openai/gpt-4o';
+            }
             
-        if (!empty($settings['custom_prompt'])) {
-            $base_prompt = $settings['custom_prompt'];
-        }
+            // ADD THIS ANGLE SYSTEM CODE:
+            // Get previous angles for this keyword to ensure diversity
+            $previous_angles = $this->get_previous_automation_angles($campaign->keyword);
+            
+            // Generate intelligent angle if we have previous ones
+            $angle_data = null;
+            if (count($previous_angles) > 0) {
+                $angle_data = $this->generate_automation_angle($campaign->keyword, $previous_angles);
+                // Store the new angle
+                $this->store_automation_angle($campaign->id, $campaign->keyword, $angle_data['angle_description'] ?? 'General coverage');
+            }
+            
+            error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
+            
+            // Use the standard system prompt
+            $writing_styles = ATM_API::get_writing_styles();
+            $base_prompt = isset($writing_styles[$settings['writing_style'] ?? 'default_seo']) ? 
+                $writing_styles[$settings['writing_style'] ?? 'default_seo']['prompt'] : 
+                $writing_styles['default_seo']['prompt'];
+                
+            if (!empty($settings['custom_prompt'])) {
+                $base_prompt = $settings['custom_prompt'];
+            }
+            
+            // ADD ANGLE CONTEXT TO PROMPT:
+            if ($angle_data) {
+                $base_prompt .= "\n\n**MANDATORY ANGLE:** " . $angle_data['angle_description'];
+                $base_prompt .= "\nYou MUST write from this specific perspective and angle only.";
+            }
 
         $system_prompt = $base_prompt . "\n\n**AUTOMATION CONTENT GENERATION INSTRUCTIONS:**
 
@@ -3139,5 +3157,54 @@ public function translate_text() {
         $attach_data = wp_generate_attachment_metadata($attach_id, $filepath);
         wp_update_attachment_metadata($attach_id, $attach_data);
         return $attach_id;
+    }
+
+    private function get_previous_automation_angles($keyword) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_content_angles';
+        
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT angle, title FROM $table_name WHERE keyword = %s ORDER BY created_at DESC LIMIT 20",
+            $keyword
+        ), ARRAY_A);
+    }
+
+    private function generate_automation_angle($keyword, $previous_angles) {
+        $previous_text = '';
+        if (!empty($previous_angles)) {
+            $previous_text = "\n\nPREVIOUS ANGLES USED:\n";
+            foreach ($previous_angles as $angle) {
+                $previous_text .= "- " . $angle['angle'] . "\n";
+            }
+            $previous_text .= "\nCreate a completely different angle.";
+        }
+        
+        $prompt = "Create a unique content angle for '$keyword'. $previous_text Return JSON with 'angle_description' and 'target_audience'.";
+        
+        try {
+            $response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $keyword],
+                $prompt,
+                'anthropic/claude-3-haiku',
+                true, // JSON mode
+                false // No web search for angle generation
+            );
+            
+            return json_decode($response, true) ?: ['angle_description' => 'General comprehensive coverage'];
+        } catch (Exception $e) {
+            return ['angle_description' => 'General comprehensive coverage'];
+        }
+    }
+
+    private function store_automation_angle($keyword, $angle, $title = '[Automation Generated]') {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_content_angles';
+        
+        $wpdb->insert($table_name, [
+            'keyword' => $keyword,
+            'angle' => $angle,
+            'title' => $title,
+            'created_at' => current_time('mysql')
+        ]);
     }
 }
