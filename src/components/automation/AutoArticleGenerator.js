@@ -6,8 +6,112 @@ import {
   TextareaControl,
   ToggleControl,
   Spinner,
+  BaseControl,
 } from "@wordpress/components";
 import CustomDropdown from "../common/CustomDropdown";
+
+// Multi-Select Category Component
+const CategoryMultiSelect = ({
+  selectedCategories,
+  onCategoriesChange,
+  categories,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleCategoryToggle = (categoryId) => {
+    const newSelected = selectedCategories.includes(categoryId)
+      ? selectedCategories.filter((id) => id !== categoryId)
+      : [...selectedCategories, categoryId];
+    onCategoriesChange(newSelected);
+  };
+
+  const handleRemoveCategory = (categoryId) => {
+    const newSelected = selectedCategories.filter((id) => id !== categoryId);
+    onCategoriesChange(newSelected);
+  };
+
+  const getSelectedCategoryNames = () => {
+    return categories.filter((cat) => selectedCategories.includes(cat.id));
+  };
+
+  return (
+    <div className="atm-category-multiselect">
+      <BaseControl
+        label="Category"
+        help="Select one or more categories for your content"
+      >
+        <div className="atm-category-selector-wrapper">
+          <button
+            type="button"
+            className="atm-category-dropdown-trigger"
+            onClick={() => setIsOpen(!isOpen)}
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              border: "1px solid #ddd",
+              borderRadius: "4px",
+              background: "#fff",
+              textAlign: "left",
+              cursor: "pointer",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              minHeight: "40px",
+            }}
+          >
+            <span>
+              {selectedCategories.length === 0
+                ? "Select Categories"
+                : `${selectedCategories.length} categories selected`}
+            </span>
+            <span
+              style={{
+                transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.2s",
+              }}
+            >
+              ▼
+            </span>
+          </button>
+
+          {isOpen && (
+            <div className="atm-category-selector">
+              {categories.map((category) => (
+                <div key={category.id} className="atm-category-item">
+                  <input
+                    type="checkbox"
+                    id={`category-${category.id}`}
+                    checked={selectedCategories.includes(category.id)}
+                    onChange={() => handleCategoryToggle(category.id)}
+                  />
+                  <label htmlFor={`category-${category.id}`}>
+                    {category.name}
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {selectedCategories.length > 0 && (
+          <div className="atm-selected-categories">
+            {getSelectedCategoryNames().map((category) => (
+              <span key={category.id} className="atm-category-tag">
+                {category.name}
+                <span
+                  className="remove"
+                  onClick={() => handleRemoveCategory(category.id)}
+                >
+                  ×
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
+      </BaseControl>
+    </div>
+  );
+};
 
 function AutoArticleGenerator({ setActiveView, editingCampaign }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -42,8 +146,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
   const [contentModeLabel, setContentModeLabel] = useState(
     "Auto-publish Immediately"
   );
-  const [categoryId, setCategoryId] = useState(0);
-  const [categoryLabel, setCategoryLabel] = useState("Select Category");
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [authorId, setAuthorId] = useState(1);
   const [authorLabel, setAuthorLabel] = useState("Current User");
 
@@ -64,7 +167,22 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
       setScheduleValue(editingCampaign.schedule_value);
       setScheduleUnit(editingCampaign.schedule_unit);
       setContentMode(editingCampaign.content_mode);
-      setCategoryId(editingCampaign.category_id);
+
+      // Handle both new multi-select and old single category formats
+      if (
+        editingCampaign.category_ids &&
+        Array.isArray(editingCampaign.category_ids)
+      ) {
+        setSelectedCategories(editingCampaign.category_ids);
+      } else if (
+        editingCampaign.category_id &&
+        editingCampaign.category_id > 0
+      ) {
+        setSelectedCategories([editingCampaign.category_id]); // Convert single ID to array
+      } else {
+        setSelectedCategories([]);
+      }
+
       setAuthorId(editingCampaign.author_id);
 
       // Update labels based on loaded data
@@ -118,12 +236,6 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
     );
     if (selectedMode) setContentModeLabel(selectedMode.label);
 
-    const categoryOptions = getCategoryOptions();
-    const selectedCategory = categoryOptions.find(
-      (opt) => opt.value === (campaign.category_id || 0)
-    );
-    if (selectedCategory) setCategoryLabel(selectedCategory.label);
-
     const authorOptions = getAuthorOptions();
     const selectedAuthor = authorOptions.find(
       (opt) => opt.value === (campaign.author_id || 1)
@@ -175,14 +287,6 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
     { label: "Queue for Later", value: "queue" },
   ];
 
-  const getCategoryOptions = () => {
-    const categories = window.atm_automation_data?.categories || [];
-    return [
-      { label: "Select Category", value: 0 },
-      ...categories.map((cat) => ({ label: cat.name, value: cat.id })),
-    ];
-  };
-
   const getAuthorOptions = () => {
     const authors = window.atm_automation_data?.authors || [];
     return authors.map((author) => ({ label: author.name, value: author.id }));
@@ -191,6 +295,11 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
   const handleSaveCampaign = async () => {
     if (!campaignName.trim() || !keyword.trim()) {
       setStatusMessage("Campaign name and keyword are required.");
+      return;
+    }
+
+    if (selectedCategories.length === 0) {
+      setStatusMessage("Please select at least one category.");
       return;
     }
 
@@ -224,7 +333,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
         schedule_value: scheduleValue,
         schedule_unit: scheduleUnit,
         content_mode: contentMode,
-        category_id: categoryId,
+        category_ids: selectedCategories,
         author_id: authorId,
         is_active: true,
       };
@@ -456,15 +565,10 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
 
         <h4>Publishing Settings</h4>
         <div className="atm-grid-2">
-          <CustomDropdown
-            label="Category"
-            text={categoryLabel}
-            options={getCategoryOptions()}
-            onChange={(option) => {
-              setCategoryId(option.value);
-              setCategoryLabel(option.label);
-            }}
-            disabled={isLoading}
+          <CategoryMultiSelect
+            selectedCategories={selectedCategories}
+            onCategoriesChange={setSelectedCategories}
+            categories={window.atm_automation_data?.categories || []}
           />
 
           <CustomDropdown
@@ -483,7 +587,12 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           <Button
             isPrimary
             onClick={handleSaveCampaign}
-            disabled={isLoading || !campaignName.trim() || !keyword.trim()}
+            disabled={
+              isLoading ||
+              !campaignName.trim() ||
+              !keyword.trim() ||
+              selectedCategories.length === 0
+            }
           >
             {isLoading ? (
               <>
@@ -504,7 +613,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           )}
 
           <Button
-            isTertiary
+            isSecondary
             onClick={() => setActiveView("campaigns")}
             disabled={isLoading}
           >

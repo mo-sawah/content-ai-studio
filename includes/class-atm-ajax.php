@@ -393,10 +393,16 @@ class ATM_Ajax {
     - End with a natural concluding paragraph without any heading
 
     **Link Formatting Rules:**
-    - Use descriptive anchor text (1-3 words maximum)  
-    - Link to specific, relevant sources when appropriate
-    - Never use URLs as anchor text
-    - Example: According to [recent research](url), the findings show...
+    - When including external links, NEVER use the website URL as the anchor text
+    - Use ONLY 1-3 descriptive words as anchor text
+    - Example: railway that [had a deadly crash](https://reuters.com/specific-article) last week and will...
+    - Example: Example: [Digital Marketing](https://yahoo.com/actual-article-url) reported that...
+    - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+    - Do NOT use generic phrases like \"click here\", \"read more\", or \"this article\" as anchor text
+    - Anchor text should be relevant keywords from the article topic (e.g., marketing, design, finance, AI)
+    - Keep anchor text extremely concise (maximum 2 words)
+    - Make links feel natural within the sentence flow
+    - Avoid long phrases as anchor text
 
     **Output Format:**
     Return a JSON object with exactly these keys:
