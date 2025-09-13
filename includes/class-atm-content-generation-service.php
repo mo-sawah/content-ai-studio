@@ -470,4 +470,292 @@ Your entire output MUST be a single, valid JSON object with three keys:
         
         return $attach_id;
     }
+
+     /**
+     * Generate trending articles
+     */
+    public static function generate_trending_articles($params) {
+        try {
+            $topics = isset($params['trending_topics']) ? $params['trending_topics'] : [];
+            $settings = isset($params['settings']) ? $params['settings'] : [];
+            $language = sanitize_text_field($params['language'] ?? 'English');
+            
+            if (empty($topics) || empty($settings)) {
+                throw new Exception('Missing topics or settings.');
+            }
+            
+            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'generate_article_from_trend')) {
+                throw new Exception('ATM_API trending generation not available');
+            }
+
+            $successful_count = 0;
+            $created_posts = [];
+            
+            foreach ($topics as $topic) {
+                try {
+                    $article_data = ATM_API::generate_article_from_trend($topic, $settings, $language);
+                    $post_status = ($settings['autoPublish'] ?? false) ? 'publish' : 'draft';
+                    
+                    // Convert markdown to HTML if needed
+                    if (class_exists('Parsedown')) {
+                        $Parsedown = new Parsedown();
+                        $html_content = $Parsedown->text($article_data['content']);
+                    } else {
+                        $html_content = $article_data['content'];
+                    }
+
+                    $post_id = wp_insert_post([
+                        'post_title'   => sanitize_text_field($article_data['title']),
+                        'post_content' => wp_kses_post($html_content),
+                        'post_status'  => $post_status,
+                        'post_author'  => get_current_user_id(),
+                    ]);
+
+                    if (!is_wp_error($post_id)) {
+                        // Save subtitle if provided
+                        if (!empty($article_data['subheadline'])) {
+                            $subtitle_key = get_option('atm_theme_subtitle_key', '_bunyad_sub_title');
+                            update_post_meta($post_id, $subtitle_key, sanitize_text_field($article_data['subheadline']));
+                            update_post_meta($post_id, '_atm_subtitle', sanitize_text_field($article_data['subheadline']));
+                        }
+                        
+                        $successful_count++;
+                        $created_posts[] = $post_id;
+                    }
+
+                } catch (Exception $e) {
+                    error_log("ATM Trending Article Failed for '{$topic['title']}': " . $e->getMessage());
+                    continue;
+                }
+            }
+
+            if ($successful_count === 0) {
+                throw new Exception('Could not generate any articles. Please check API logs or try again.');
+            }
+
+            return [
+                'success' => true,
+                'successful_count' => $successful_count,
+                'created_posts' => $created_posts
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Generate single trending article
+     */
+    public static function generate_single_trending_article($params) {
+        try {
+            $topic = isset($params['trending_topic']) ? $params['trending_topic'] : [];
+            $settings = isset($params['settings']) ? $params['settings'] : [];
+            $language = sanitize_text_field($params['language'] ?? 'English');
+
+            if (empty($topic)) {
+                throw new Exception('Missing topic for article generation.');
+            }
+            
+            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'generate_article_from_trend')) {
+                throw new Exception('ATM_API trending generation not available');
+            }
+            
+            $article_data = ATM_API::generate_article_from_trend($topic, $settings, $language);
+            
+            return [
+                'success' => true,
+                'article_title' => $article_data['title'],
+                'article_content' => $article_data['content'],
+                'subtitle' => $article_data['subheadline'] ?? ''
+            ];
+
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Generate multipage article title
+     */
+    public static function generate_multipage_title($params) {
+        try {
+            $keyword = sanitize_text_field($params['keyword'] ?? '');
+            $page_count = intval($params['page_count'] ?? 5);
+            $model = sanitize_text_field($params['model'] ?? '');
+            
+            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'generate_multipage_title')) {
+                throw new Exception('ATM_API multipage generation not available');
+            }
+            
+            $title = ATM_API::generate_multipage_title($keyword, $page_count, $model);
+            
+            return [
+                'success' => true,
+                'article_title' => $title
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Generate multipage outline
+     */
+    public static function generate_multipage_outline($params) {
+        try {
+            $outline_params = [
+                'article_title' => sanitize_text_field($params['article_title'] ?? ''),
+                'page_count' => intval($params['page_count'] ?? 5),
+                'model' => sanitize_text_field($params['model'] ?? ''),
+                'writing_style' => sanitize_text_field($params['writing_style'] ?? ''),
+                'include_subheadlines' => filter_var($params['include_subheadlines'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'enable_web_search' => filter_var($params['enable_web_search'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            ];
+            
+            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'generate_multipage_outline')) {
+                throw new Exception('ATM_API multipage generation not available');
+            }
+            
+            $outline = ATM_API::generate_multipage_outline($outline_params);
+            
+            return [
+                'success' => true,
+                'outline' => $outline
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Generate multipage content
+     */
+    public static function generate_multipage_content($params) {
+        try {
+            $content_params = [
+                'article_title' => sanitize_text_field($params['article_title'] ?? ''),
+                'page_number' => intval($params['page_number'] ?? 1),
+                'total_pages' => intval($params['total_pages'] ?? 5),
+                'page_outline' => wp_kses_post_deep($params['page_outline'] ?? []),
+                'words_per_page' => intval($params['words_per_page'] ?? 500),
+                'model' => sanitize_text_field($params['model'] ?? ''),
+                'writing_style' => sanitize_text_field($params['writing_style'] ?? ''),
+                'custom_prompt' => wp_kses_post(stripslashes($params['custom_prompt'] ?? '')),
+                'include_subheadlines' => filter_var($params['include_subheadlines'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'enable_web_search' => filter_var($params['enable_web_search'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            ];
+            
+            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'generate_multipage_content')) {
+                throw new Exception('ATM_API multipage generation not available');
+            }
+            
+            $content = ATM_API::generate_multipage_content($content_params);
+            
+            return [
+                'success' => true,
+                'page_content' => $content
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+}
+/**
+ * Create multipage article
+ */
+public static function create_multipage_article($params) {
+    try {
+        $post_id = intval($params['post_id'] ?? 0);
+        $main_title = sanitize_text_field($params['main_title'] ?? '');
+        $pages_data = $params['pages'] ?? [];
+
+        if (!$post_id || empty($main_title) || empty($pages_data)) {
+            throw new Exception('Missing required data for multipage creation.');
+        }
+        
+        // Sanitize the pages data
+        $sanitized_pages = [];
+        if (class_exists('Parsedown')) {
+            $Parsedown = new Parsedown();
+        }
+        
+        foreach ($pages_data as $page) {
+            $content_html = isset($page['content']) ? $page['content'] : '';
+            if (isset($Parsedown)) {
+                $content_html = wp_kses_post($Parsedown->text($content_html));
+            }
+            
+            $sanitized_pages[] = [
+                'title' => sanitize_text_field($page['title'] ?? ''),
+                'content_html' => $content_html
+            ];
+        }
+
+        // Save all pages data to a single post meta field
+        update_post_meta($post_id, '_atm_multipage_data', $sanitized_pages);
+
+        // Prepare the content for the editor, which is just the shortcode
+        $editor_content = '[atm_multipage_article]';
+
+        return [
+            'success' => true,
+            'message' => 'Multipage article data saved.',
+            'editor_content' => $editor_content
+        ];
+
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'message' => $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Fetch trending topics
+ */
+public static function fetch_trending_topics($params) {
+    try {
+        $keyword = sanitize_text_field($params['keyword'] ?? '');
+        $region = sanitize_text_field($params['region'] ?? 'US');
+        $language = sanitize_text_field($params['language'] ?? 'en');
+        $date = sanitize_text_field($params['date'] ?? 'now 7-d');
+        $force_fresh = isset($params['force_fresh']) && $params['force_fresh'] === true;
+
+        if (!class_exists('ATM_API') || !method_exists('ATM_API', 'fetch_trending_topics')) {
+            throw new Exception('ATM_API trending topics fetch not available');
+        }
+
+        $result = ATM_API::fetch_trending_topics($keyword, $region, $language, $date, $force_fresh);
+
+        return [
+            'success' => true,
+            'topics' => $result
+        ];
+        
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'message' => $e->getMessage()
+        ];
+    }
+}
 }

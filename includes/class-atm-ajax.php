@@ -1080,89 +1080,36 @@ class ATM_Ajax {
             wp_send_json_error('Please activate your license key.');
         }
         check_ajax_referer('atm_nonce', 'nonce');
-        @ini_set('max_execution_time', 300);
-
+        
         try {
-            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-            $source_url = esc_url_raw($_POST['source_url']);
-            $source_title = sanitize_text_field($_POST['source_title']);
-            $source_snippet = wp_kses_post($_POST['source_snippet']);
-            $source_date = sanitize_text_field($_POST['source_date']);
-            $source_domain = sanitize_text_field($_POST['source_domain']);
-            $generate_image = isset($_POST['generate_image']) && $_POST['generate_image'] === 'true';
-            
-            // --- NEW: Correctly read the article_language for generation ---
-            $article_language = isset($_POST['article_language']) ? sanitize_text_field($_POST['article_language']) : 'English';
-
-            if (empty($source_url) || empty($source_title)) {
-                throw new Exception('Source URL and title are required.');
-            }
-
-            // --- MODIFIED: Pass the article language to the API function ---
-            $result = ATM_API::generate_article_from_news_source(
-                $source_url,
-                $source_title,
-                $source_snippet,
-                $source_date,
-                $source_domain,
-                $article_language // Pass the language
-            );
-
-            // Save subtitle if provided
-            if ($post_id > 0 && !empty($result['subtitle'])) {
-                update_post_meta($post_id, '_bunyad_sub_title', $result['subtitle']);
-                error_log("ATM Plugin: Saved News Search subtitle '{$result['subtitle']}' to SmartMag field for post {$post_id}");
-            }
-
-            // Track this article as used
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'atm_used_news_articles';
-            
-            $wpdb->replace($table_name, [
-                'article_url' => $source_url,
-                'article_title' => $source_title,
-                'used_at' => current_time('mysql'),
-                'post_id' => $post_id
-            ]);
-
-            $response_data = [
-                'article_title' => $result['title'],
-                'article_content' => $result['content'],
-                'subtitle' => $result['subtitle'] ?? ''
+            // Prepare parameters for the unified service
+            $params = [
+                'source_url' => esc_url_raw($_POST['source_url'] ?? ''),
+                'source_title' => sanitize_text_field($_POST['source_title'] ?? ''),
+                'source_snippet' => wp_kses_post($_POST['source_snippet'] ?? ''),
+                'source_date' => sanitize_text_field($_POST['source_date'] ?? ''),
+                'source_domain' => sanitize_text_field($_POST['source_domain'] ?? ''),
+                'article_language' => sanitize_text_field($_POST['article_language'] ?? 'English'),
+                'post_id' => intval($_POST['post_id'] ?? 0),
+                'generate_image' => isset($_POST['generate_image']) && $_POST['generate_image'] === 'true',
+                'is_automation' => false
             ];
-
-            // Generate featured image if requested
-            if ($generate_image && $post_id > 0) {
-                try {
-                    $image_prompt = ATM_API::get_news_image_prompt($result['title']);
-                    $image_result = ATM_API::generate_image_with_configured_provider(
-                        $image_prompt,
-                        get_option('atm_image_size', '1792x1024'),
-                        get_option('atm_image_quality', 'hd')
-                    );
-                    
-                    if ($image_result['is_url']) {
-                        $attachment_id = $this->set_image_from_url($image_result['data'], $post_id);
-                    } else {
-                        $attachment_id = $this->set_image_from_data($image_result['data'], $post_id, $image_prompt);
-                    }
-                    
-                    if (!is_wp_error($attachment_id)) {
-                        set_post_thumbnail($post_id, $attachment_id);
-                        $response_data['featured_image_generated'] = true;
-                        $response_data['featured_image_id'] = $attachment_id;
-                    } else {
-                        error_log('ATM: Featured image generation failed: ' . $attachment_id->get_error_message());
-                        $response_data['featured_image_error'] = $attachment_id->get_error_message();
-                    }
-                } catch (Exception $e) {
-                    error_log('ATM: Featured image generation failed: ' . $e->getMessage());
-                    $response_data['featured_image_error'] = $e->getMessage();
-                }
+            
+            // Use the unified service
+            $result = ATM_News_Generation_Service::generate_from_news_source($params);
+            
+            if ($result['success']) {
+                wp_send_json_success([
+                    'article_title' => $result['article_title'],
+                    'article_content' => $result['article_content'],
+                    'subtitle' => $result['subtitle'],
+                    'featured_image_generated' => $result['featured_image_generated'] ?? false,
+                    'featured_image_error' => $result['featured_image_error'] ?? null
+                ]);
+            } else {
+                throw new Exception($result['message']);
             }
-
-            wp_send_json_success($response_data);
-
+            
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }
