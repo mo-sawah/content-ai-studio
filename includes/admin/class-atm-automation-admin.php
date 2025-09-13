@@ -77,7 +77,7 @@ class ATM_Automation_Admin {
             );
         }
         
-        // Localize script data
+        // Prepare localized data
         $localized_data = array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('atm_nonce'),
@@ -86,35 +86,52 @@ class ATM_Automation_Admin {
             'authors' => $this->get_authors_for_js(),
             'automation_types' => $this->get_automation_types(),
             'schedule_options' => $this->get_schedule_options(),
-            'content_modes' => $this->get_content_modes()
-        );
-        
-        // Add settings data if available
-        if (class_exists('ATM_Settings')) {
-            $settings_class = new ATM_Settings();
-            $settings = $settings_class->get_settings();
-            $localized_data = array_merge($localized_data, [
-                'article_models' => $settings['article_models'],
-                'content_models' => $settings['content_models'],
-                'image_provider' => $settings['image_provider'],
-                'audio_provider' => $settings['audio_provider']
-            ]);
-        }
-        
-        // Add API data if available
-        if (class_exists('ATM_API')) {
-            $localized_data['writing_styles'] = ATM_API::get_writing_styles();
-            $localized_data['elevenlabs_voices'] = ATM_API::get_elevenlabs_voices();
-            $localized_data['tts_voices'] = [
+            'content_modes' => $this->get_content_modes(),
+            'tts_voices' => [
                 'alloy' => 'Alloy', 
                 'echo' => 'Echo', 
                 'fabel' => 'Fable', 
                 'onyx' => 'Onyx', 
                 'nova' => 'Nova', 
                 'shimmer' => 'Shimmer'
-            ];
+            ]
+        );
+        
+        // Add settings data if available
+        if (class_exists('ATM_Settings')) {
+            $settings_class = new ATM_Settings();
+            $settings = $settings_class->get_settings();
+            
+            // Ensure we have valid model options
+            $article_models = $settings['article_models'] ?? [];
+            if (empty($article_models)) {
+                $article_models = [
+                    'openai/gpt-4o' => 'GPT-4 Omni',
+                    'anthropic/claude-3-sonnet' => 'Claude 3 Sonnet',
+                    'google/gemini-pro' => 'Gemini Pro'
+                ];
+            }
+            
+            $localized_data['article_models'] = $article_models;
+            $localized_data['content_models'] = $settings['content_models'] ?? $article_models;
+            $localized_data['image_provider'] = $settings['image_provider'] ?? 'openai';
+            $localized_data['audio_provider'] = $settings['audio_provider'] ?? 'openai';
         }
         
+        // Add API data if available
+        if (class_exists('ATM_API')) {
+            $writing_styles = method_exists('ATM_API', 'get_writing_styles') ? 
+                ATM_API::get_writing_styles() : 
+                ['default_seo' => ['label' => 'Standard SEO', 'prompt' => 'Write a professional, SEO-optimized article.']];
+                
+            $localized_data['writing_styles'] = $writing_styles;
+            
+            if (method_exists('ATM_API', 'get_elevenlabs_voices')) {
+                $localized_data['elevenlabs_voices'] = ATM_API::get_elevenlabs_voices();
+            }
+        }
+        
+        // CRITICAL: Use the correct variable name that matches your React components
         wp_localize_script('atm-automation-app', 'atm_automation_data', $localized_data);
     }
     

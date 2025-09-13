@@ -87,18 +87,26 @@ class ATM_Automation_API {
      */
     private static function execute_article_automation($campaign, $settings) {
         try {
+            // Get model with proper fallbacks
+            $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
+            
+            // Ensure we always have a valid model
+            if (empty($ai_model)) {
+                $ai_model = 'openai/gpt-4o'; // Fallback to a known working model
+            }
+            
             // Use existing article generation logic but with automation settings
             $content_data = [
                 'keyword' => $campaign->keyword,
                 'article_title' => '', // Let AI generate title
-                'model' => $settings['ai_model'] ?? get_option('atm_article_model'),
+                'model' => $ai_model,
                 'writing_style' => $settings['writing_style'] ?? 'default_seo',
                 'custom_prompt' => $settings['custom_prompt'] ?? '',
                 'word_count' => $settings['word_count'] ?? 0,
                 'creativity_level' => $settings['creativity_level'] ?? 'high'
             ];
             
-            // Generate content using existing API method patterns
+            // Build system prompt
             $writing_styles = ATM_API::get_writing_styles();
             $base_prompt = isset($writing_styles[$content_data['writing_style']]) ? 
                 $writing_styles[$content_data['writing_style']]['prompt'] : 
@@ -114,16 +122,18 @@ class ATM_Automation_API {
                 $system_prompt .= " The article should be approximately " . $content_data['word_count'] . " words long.";
             }
             
+            error_log("ATM Automation: Using model: " . $ai_model . " for campaign: " . $campaign->name);
+            
             $raw_response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $campaign->keyword],
                 $system_prompt,
-                $content_data['model'],
+                $ai_model, // Now guaranteed to have a value
                 true, // JSON mode
                 true, // web search
                 $content_data['creativity_level']
             );
             
-            // Parse response
+            // Rest of the method remains the same...
             $json_string = trim($raw_response);
             if (!str_starts_with($json_string, '{')) {
                 if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
@@ -168,6 +178,7 @@ class ATM_Automation_API {
             ];
             
         } catch (Exception $e) {
+            error_log('ATM Automation Article Generation Error: ' . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }

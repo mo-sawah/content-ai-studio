@@ -9,6 +9,36 @@ class ATM_Main {
     private static $instance = null;
     private static $hooks_initialized = false;
 
+    public static function verify_automation_tables() {
+        global $wpdb;
+        
+        $tables = [
+            'atm_automation_campaigns',
+            'atm_automation_executions',
+            'atm_automation_queue'
+        ];
+        
+        $missing_tables = [];
+        
+        foreach ($tables as $table) {
+            $table_name = $wpdb->prefix . $table;
+            $exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+            
+            if (!$exists) {
+                $missing_tables[] = $table;
+            }
+        }
+        
+        if (!empty($missing_tables)) {
+            error_log('ATM: Missing automation tables: ' . implode(', ', $missing_tables));
+            // Recreate missing tables
+            self::create_automation_tables_directly();
+            return false;
+        }
+        
+        return true;
+    }
+
     public static function create_automation_tables_directly() {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
@@ -813,6 +843,7 @@ class ATM_Main {
         self::create_content_angles_table();
         self::verify_content_angles_table();
         self::create_automation_tables_directly();
+        self::verify_automation_tables();
 
         // Debug: Check if automation class exists
         error_log('ATM Debug: ATM_Automation_Database class exists: ' . (class_exists('ATM_Automation_Database') ? 'YES' : 'NO'));

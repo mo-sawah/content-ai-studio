@@ -5,6 +5,7 @@ import {
   TextControl,
   TextareaControl,
   ToggleControl,
+  Spinner,
 } from "@wordpress/components";
 import CustomDropdown from "../common/CustomDropdown";
 
@@ -43,12 +44,8 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
   );
   const [categoryId, setCategoryId] = useState(0);
   const [categoryLabel, setCategoryLabel] = useState("Select Category");
-  const [authorId, setAuthorId] = useState(
-    atm_automation_data?.authors?.[0]?.id || 1
-  );
-  const [authorLabel, setAuthorLabel] = useState(
-    atm_automation_data?.authors?.[0]?.name || "Current User"
-  );
+  const [authorId, setAuthorId] = useState(1);
+  const [authorLabel, setAuthorLabel] = useState("Current User");
 
   // Load editing campaign data
   useEffect(() => {
@@ -69,31 +66,95 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
       setContentMode(editingCampaign.content_mode);
       setCategoryId(editingCampaign.category_id);
       setAuthorId(editingCampaign.author_id);
+
+      // Update labels based on loaded data
+      updateLabelsFromValues(settings, editingCampaign);
+    } else {
+      // Set default values for new campaigns
+      if (window.atm_automation_data?.authors?.[0]) {
+        setAuthorId(window.atm_automation_data.authors[0].id);
+        setAuthorLabel(window.atm_automation_data.authors[0].name);
+      }
     }
   }, [editingCampaign]);
 
-  // Dropdown options
-  const modelOptions = [
-    { label: "Use Default Model", value: "" },
-    ...Object.entries(atm_automation_data?.article_models || {}).map(
-      ([value, label]) => ({
-        label,
-        value,
-      })
-    ),
-  ];
+  const updateLabelsFromValues = (settings, campaign) => {
+    // Update AI model label
+    const modelOptions = getModelOptions();
+    const selectedModel = modelOptions.find(
+      (opt) => opt.value === (settings.ai_model || "")
+    );
+    if (selectedModel) setAiModelLabel(selectedModel.label);
 
-  const styleOptions = Object.entries(
-    atm_automation_data?.writing_styles || {}
-  ).map(([value, data]) => ({ label: data.label || value, value }));
+    // Update writing style label
+    const styleOptions = getStyleOptions();
+    const selectedStyle = styleOptions.find(
+      (opt) => opt.value === (settings.writing_style || "default_seo")
+    );
+    if (selectedStyle) setWritingStyleLabel(selectedStyle.label);
 
-  const creativityOptions = [
+    // Update other labels similarly...
+    const creativityOptions = getCreativityOptions();
+    const selectedCreativity = creativityOptions.find(
+      (opt) => opt.value === (settings.creativity_level || "high")
+    );
+    if (selectedCreativity) setCreativityLevelLabel(selectedCreativity.label);
+
+    const lengthOptions = getLengthOptions();
+    const selectedLength = lengthOptions.find(
+      (opt) => opt.value === (settings.word_count || "")
+    );
+    if (selectedLength) setWordCountLabel(selectedLength.label);
+
+    const scheduleUnitOptions = getScheduleUnitOptions();
+    const selectedUnit = scheduleUnitOptions.find(
+      (opt) => opt.value === (campaign.schedule_unit || "hour")
+    );
+    if (selectedUnit) setScheduleUnitLabel(selectedUnit.label);
+
+    const contentModeOptions = getContentModeOptions();
+    const selectedMode = contentModeOptions.find(
+      (opt) => opt.value === (campaign.content_mode || "publish")
+    );
+    if (selectedMode) setContentModeLabel(selectedMode.label);
+
+    const categoryOptions = getCategoryOptions();
+    const selectedCategory = categoryOptions.find(
+      (opt) => opt.value === (campaign.category_id || 0)
+    );
+    if (selectedCategory) setCategoryLabel(selectedCategory.label);
+
+    const authorOptions = getAuthorOptions();
+    const selectedAuthor = authorOptions.find(
+      (opt) => opt.value === (campaign.author_id || 1)
+    );
+    if (selectedAuthor) setAuthorLabel(selectedAuthor.label);
+  };
+
+  // Safe data access with fallbacks
+  const getModelOptions = () => {
+    const models = window.atm_automation_data?.article_models || {};
+    return [
+      { label: "Use Default Model", value: "" },
+      ...Object.entries(models).map(([value, label]) => ({ label, value })),
+    ];
+  };
+
+  const getStyleOptions = () => {
+    const styles = window.atm_automation_data?.writing_styles || {};
+    return Object.entries(styles).map(([value, data]) => ({
+      label: data.label || value,
+      value,
+    }));
+  };
+
+  const getCreativityOptions = () => [
     { label: "High Creativity", value: "high" },
     { label: "Medium Creativity", value: "medium" },
     { label: "Low Creativity", value: "low" },
   ];
 
-  const lengthOptions = [
+  const getLengthOptions = () => [
     { label: "Default", value: "" },
     { label: "Short (~500 words)", value: "500" },
     { label: "Standard (~800 words)", value: "800" },
@@ -101,31 +162,31 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
     { label: "Long (~2000 words)", value: "2000" },
   ];
 
-  const scheduleUnitOptions = [
+  const getScheduleUnitOptions = () => [
     { label: "Minutes", value: "minute" },
     { label: "Hours", value: "hour" },
     { label: "Days", value: "day" },
     { label: "Weeks", value: "week" },
   ];
 
-  const contentModeOptions = [
+  const getContentModeOptions = () => [
     { label: "Auto-publish Immediately", value: "publish" },
     { label: "Save as Drafts", value: "draft" },
     { label: "Queue for Later", value: "queue" },
   ];
 
-  const categoryOptions = [
-    { label: "Select Category", value: 0 },
-    ...(atm_automation_data?.categories || []).map((cat) => ({
-      label: cat.name,
-      value: cat.id,
-    })),
-  ];
+  const getCategoryOptions = () => {
+    const categories = window.atm_automation_data?.categories || [];
+    return [
+      { label: "Select Category", value: 0 },
+      ...categories.map((cat) => ({ label: cat.name, value: cat.id })),
+    ];
+  };
 
-  const authorOptions = (atm_automation_data?.authors || []).map((author) => ({
-    label: author.name,
-    value: author.id,
-  }));
+  const getAuthorOptions = () => {
+    const authors = window.atm_automation_data?.authors || [];
+    return authors.map((author) => ({ label: author.name, value: author.id }));
+  };
 
   const handleSaveCampaign = async () => {
     if (!campaignName.trim() || !keyword.trim()) {
@@ -169,11 +230,11 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
       };
 
       const response = await jQuery.ajax({
-        url: atm_automation_data.ajax_url,
+        url: window.atm_automation_data?.ajax_url || ajaxurl,
         type: "POST",
         data: {
           action: "atm_save_automation_campaign",
-          nonce: atm_automation_data.nonce,
+          nonce: window.atm_automation_data?.nonce,
           ...campaignData,
         },
       });
@@ -204,11 +265,11 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
 
     try {
       const response = await jQuery.ajax({
-        url: atm_automation_data.ajax_url,
+        url: window.atm_automation_data?.ajax_url || ajaxurl,
         type: "POST",
         data: {
           action: "atm_run_automation_campaign_now",
-          nonce: atm_automation_data.nonce,
+          nonce: window.atm_automation_data?.nonce,
           campaign_id: editingCampaign.id,
         },
       });
@@ -229,6 +290,16 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
       setIsLoading(false);
     }
   };
+
+  if (!window.atm_automation_data) {
+    return (
+      <div className="atm-form-container">
+        <div className="atm-status-message error">
+          Automation data not loaded. Please refresh the page.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="atm-generator-view">
@@ -264,7 +335,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           <CustomDropdown
             label="AI Model"
             text={aiModelLabel}
-            options={modelOptions}
+            options={getModelOptions()}
             onChange={(option) => {
               setAiModel(option.value);
               setAiModelLabel(option.label);
@@ -275,7 +346,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           <CustomDropdown
             label="Writing Style"
             text={writingStyleLabel}
-            options={styleOptions}
+            options={getStyleOptions()}
             onChange={(option) => {
               setWritingStyle(option.value);
               setWritingStyleLabel(option.label);
@@ -286,7 +357,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           <CustomDropdown
             label="Creativity Level"
             text={creativityLevelLabel}
-            options={creativityOptions}
+            options={getCreativityOptions()}
             onChange={(option) => {
               setCreativityLevel(option.value);
               setCreativityLevelLabel(option.label);
@@ -298,7 +369,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
         <CustomDropdown
           label="Word Count"
           text={wordCountLabel}
-          options={lengthOptions}
+          options={getLengthOptions()}
           onChange={(option) => {
             setWordCount(option.value);
             setWordCountLabel(option.label);
@@ -351,11 +422,10 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
               <div style={{ flex: 1 }}>
                 <CustomDropdown
                   text={scheduleUnitLabel}
-                  options={scheduleUnitOptions}
+                  options={getScheduleUnitOptions()}
                   onChange={(option) => {
                     setScheduleUnit(option.value);
                     setScheduleUnitLabel(option.label);
-                    // Auto-adjust value if below minimum
                     const minValues = { minute: 10, hour: 1, day: 1, week: 1 };
                     if (scheduleValue < minValues[option.value]) {
                       setScheduleValue(minValues[option.value]);
@@ -374,7 +444,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           <CustomDropdown
             label="Content Mode"
             text={contentModeLabel}
-            options={contentModeOptions}
+            options={getContentModeOptions()}
             onChange={(option) => {
               setContentMode(option.value);
               setContentModeLabel(option.label);
@@ -389,7 +459,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           <CustomDropdown
             label="Category"
             text={categoryLabel}
-            options={categoryOptions}
+            options={getCategoryOptions()}
             onChange={(option) => {
               setCategoryId(option.value);
               setCategoryLabel(option.label);
@@ -400,7 +470,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           <CustomDropdown
             label="Author"
             text={authorLabel}
-            options={authorOptions}
+            options={getAuthorOptions()}
             onChange={(option) => {
               setAuthorId(option.value);
               setAuthorLabel(option.label);
@@ -415,11 +485,16 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
             onClick={handleSaveCampaign}
             disabled={isLoading || !campaignName.trim() || !keyword.trim()}
           >
-            {isLoading
-              ? "Saving..."
-              : editingCampaign
-                ? "Update Campaign"
-                : "Create Campaign"}
+            {isLoading ? (
+              <>
+                <Spinner />
+                Saving...
+              </>
+            ) : editingCampaign ? (
+              "Update Campaign"
+            ) : (
+              "Create Campaign"
+            )}
           </Button>
 
           {editingCampaign && (
@@ -438,7 +513,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
         </div>
 
         {statusMessage && (
-          <p
+          <div
             className={`atm-status-message ${
               statusMessage.includes("successfully")
                 ? "success"
@@ -448,7 +523,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
             }`}
           >
             {statusMessage}
-          </p>
+          </div>
         )}
       </div>
     </div>
