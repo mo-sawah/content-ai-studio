@@ -511,7 +511,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
         <div className="atm-grid-2">
           <div>
             <label className="components-base-control__label">Run Every</label>
-            <div style={{ display: "flex", gap: "8px", alignItems: "end" }}>
+            <div className="schedule-input-row">
               <input
                 type="number"
                 min={scheduleUnit === "minute" ? 10 : 1}
@@ -520,15 +520,8 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
                   setScheduleValue(parseInt(e.target.value) || 1)
                 }
                 disabled={isLoading}
-                style={{
-                  width: "80px",
-                  height: "40px",
-                  padding: "0 8px",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                }}
               />
-              <div style={{ flex: 1 }}>
+              <div>
                 <CustomDropdown
                   text={scheduleUnitLabel}
                   options={getScheduleUnitOptions()}
