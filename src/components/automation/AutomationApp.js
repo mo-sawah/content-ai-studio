@@ -1,26 +1,21 @@
-// src/components/automation/AutomationApp.js
 import { useState, useEffect } from "@wordpress/element";
 import AutomationHub from "./AutomationHub";
 import AutoArticleGenerator from "./AutoArticleGenerator";
 import AutoNewsGenerator from "./AutoNewsGenerator";
 import AutoVideoGenerator from "./AutoVideoGenerator";
 import AutoPodcastGenerator from "./AutoPodcastGenerator";
-
-// Add this import for your dashboard
-import CampaignDashboard from "./CampaignDashboard"; // <-- ADD THIS LINE
-
-// You can probably remove CampaignManager if CampaignDashboard is replacing it
-// import CampaignManager from "./CampaignManager";
+import CampaignDashboard from "./CampaignDashboard";
 
 function AutomationApp() {
   const [activeView, setActiveView] = useState("hub");
   const [editingCampaign, setEditingCampaign] = useState(null);
+  const [campaigns, setCampaigns] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState("");
 
-  // Get page type from root element
   const rootElement = document.getElementById("atm-automation-root");
   const pageType = rootElement?.getAttribute("data-page") || "main";
 
-  // Set initial view based on page type
   useEffect(() => {
     if (pageType === "campaigns") {
       setActiveView("campaigns");
@@ -28,6 +23,119 @@ function AutomationApp() {
       setActiveView("hub");
     }
   }, [pageType]);
+
+  useEffect(() => {
+    if (activeView === "campaigns") {
+      loadCampaigns();
+    }
+  }, [activeView]);
+
+  const loadCampaigns = async () => {
+    setIsLoading(true);
+    try {
+      const response = await jQuery.ajax({
+        url: atm_automation_data.ajax_url,
+        type: "POST",
+        data: {
+          action: "atm_get_automation_campaigns",
+          nonce: atm_automation_data.nonce,
+        },
+      });
+
+      if (response.success) {
+        setCampaigns(response.data.campaigns);
+      } else {
+        throw new Error(response.data);
+      }
+    } catch (error) {
+      setStatusMessage(`Error loading campaigns: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleCampaign = async (campaignId, currentStatus) => {
+    try {
+      const response = await jQuery.ajax({
+        url: atm_automation_data.ajax_url,
+        type: "POST",
+        data: {
+          action: "atm_toggle_automation_campaign",
+          nonce: atm_automation_data.nonce,
+          campaign_id: campaignId,
+          is_active: !currentStatus,
+        },
+      });
+
+      if (response.success) {
+        setStatusMessage(response.data.message);
+        loadCampaigns();
+      } else {
+        throw new Error(response.data);
+      }
+    } catch (error) {
+      setStatusMessage(`Error: ${error.message}`);
+    }
+  };
+
+  const handleRunCampaign = async (campaignId) => {
+    setStatusMessage("Running campaign...");
+    try {
+      const response = await jQuery.ajax({
+        url: atm_automation_data.ajax_url,
+        type: "POST",
+        data: {
+          action: "atm_run_automation_campaign_now",
+          nonce: atm_automation_data.nonce,
+          campaign_id: campaignId,
+        },
+      });
+
+      if (response.success) {
+        setStatusMessage("Campaign executed successfully!");
+        if (response.data.post_url) {
+          setTimeout(() => {
+            window.open(response.data.post_url, "_blank");
+          }, 1000);
+        }
+      } else {
+        throw new Error(response.data);
+      }
+    } catch (error) {
+      setStatusMessage(`Error: ${error.message}`);
+    }
+  };
+
+  const handleDeleteCampaign = async (campaignId, campaignName) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${campaignName}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await jQuery.ajax({
+        url: atm_automation_data.ajax_url,
+        type: "POST",
+        data: {
+          action: "atm_delete_automation_campaign",
+          nonce: atm_automation_data.nonce,
+          campaign_id: campaignId,
+        },
+      });
+
+      if (response.success) {
+        setStatusMessage("Campaign deleted successfully!");
+        loadCampaigns();
+      } else {
+        throw new Error(response.data);
+      }
+    } catch (error) {
+      setStatusMessage(`Error: ${error.message}`);
+    }
+  };
 
   const navigationItems = [
     {
@@ -180,19 +288,19 @@ function AutomationApp() {
           />
         );
       case "campaigns":
-        // This is the key change: use CampaignDashboard
         return (
           <CampaignDashboard
-            // CampaignDashboard needs these props to function correctly
-            campaigns={campaigns} // You'll need to fetch campaigns here
-            refreshCampaigns={loadCampaigns} // Function to reload campaigns
+            campaigns={campaigns}
+            isLoading={isLoading}
+            statusMessage={statusMessage}
             onEditCampaign={(campaign) => {
               setEditingCampaign(campaign);
               setActiveView(campaign.type);
             }}
-            onDeleteCampaign={handleDeleteCampaign} // Pass delete function
-            onToggleCampaign={handleToggleCampaign} // Pass toggle function
-            onRunCampaign={handleRunCampaign} // Pass run now function
+            onDeleteCampaign={handleDeleteCampaign}
+            onToggleCampaign={handleToggleCampaign}
+            onRunCampaign={handleRunCampaign}
+            refreshCampaigns={loadCampaigns}
           />
         );
       default:

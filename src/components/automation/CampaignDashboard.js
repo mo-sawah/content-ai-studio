@@ -38,30 +38,6 @@ const CampaignCard = ({
     return configs[status] || configs.idle;
   };
 
-  const statusConfig = getStatusConfig(campaign.status || "idle");
-  const typeConfig = getTypeConfig(campaign.type, campaign.sub_type);
-
-  const formatNextRun = (dateString) => {
-    if (!dateString || dateString === "0000-00-00 00:00:00")
-      return "Not scheduled";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = date - now;
-
-    if (diffMs <= 0) return "Due now";
-
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (diffHours > 24) {
-      return `${Math.floor(diffHours / 24)}d ${diffHours % 24}h`;
-    } else if (diffHours > 0) {
-      return `${diffHours}h ${diffMins}m`;
-    } else {
-      return `${diffMins}m`;
-    }
-  };
-
   const getTypeConfig = (type, subType) => {
     const configs = {
       articles: {
@@ -88,10 +64,33 @@ const CampaignCard = ({
     return typeConfigs || { color: "gray", icon: "❓", label: type };
   };
 
+  const statusConfig = getStatusConfig(campaign.status || "idle");
+  const typeConfig = getTypeConfig(campaign.type, campaign.sub_type);
+
+  const formatNextRun = (dateString) => {
+    if (!dateString || dateString === "0000-00-00 00:00:00")
+      return "Not scheduled";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = date - now;
+
+    if (diffMs <= 0) return "Due now";
+
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (diffHours > 24) {
+      return `${Math.floor(diffHours / 24)}d ${diffHours % 24}h`;
+    } else if (diffHours > 0) {
+      return `${diffHours}h ${diffMins}m`;
+    } else {
+      return `${diffMins}m`;
+    }
+  };
+
   return (
     <>
       <div className="atm-campaign-card">
-        {/* Header */}
         <div className="atm-campaign-header">
           <div className="atm-campaign-type">
             <span className="atm-type-icon">{typeConfig.icon}</span>
@@ -104,13 +103,11 @@ const CampaignCard = ({
           </div>
         </div>
 
-        {/* Campaign Info */}
         <div className="atm-campaign-info">
           <h3 className="atm-campaign-name">{campaign.name}</h3>
           <p className="atm-campaign-keyword">{campaign.keyword}</p>
         </div>
 
-        {/* Stats Grid */}
         <div className="atm-campaign-stats">
           <div className="atm-stat-item">
             <span className="atm-stat-label">Schedule</span>
@@ -144,7 +141,6 @@ const CampaignCard = ({
           </div>
         </div>
 
-        {/* Controls */}
         <div className="atm-campaign-controls">
           <div className="atm-campaign-toggle">
             <ToggleControl
@@ -196,7 +192,6 @@ const CampaignCard = ({
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <Modal
           title="Delete Campaign"
@@ -215,7 +210,7 @@ const CampaignCard = ({
             <Button
               variant="primary"
               onClick={() => {
-                onDelete(campaign.id);
+                onDelete(campaign.id, campaign.name);
                 setShowDeleteModal(false);
               }}
               className="atm-delete-confirm"
@@ -231,6 +226,7 @@ const CampaignCard = ({
 
 function CampaignDashboard({
   campaigns,
+  isLoading,
   onEditCampaign,
   onDeleteCampaign,
   onToggleCampaign,
@@ -269,11 +265,19 @@ function CampaignDashboard({
   }, [campaigns, filterType, filterStatus, searchTerm]);
 
   const handleViewStats = (campaignId) => {
-    // Open stats modal or navigate to stats page
     console.log("View stats for campaign:", campaignId);
   };
 
-  if (!campaigns.length) {
+  if (isLoading) {
+    return (
+      <div style={{ textAlign: "center", padding: "40px" }}>
+        <Spinner />
+        <p>Loading campaigns...</p>
+      </div>
+    );
+  }
+
+  if (!campaigns || !campaigns.length) {
     return (
       <div className="atm-empty-state">
         <div className="atm-empty-icon">🤖</div>
@@ -288,7 +292,6 @@ function CampaignDashboard({
 
   return (
     <div className="atm-campaign-dashboard">
-      {/* Filters and Search */}
       <div className="atm-dashboard-filters">
         <div className="atm-search-box">
           <input
@@ -348,7 +351,6 @@ function CampaignDashboard({
         </div>
       </div>
 
-      {/* Campaign Cards Grid */}
       <div className="atm-campaigns-grid">
         {filteredCampaigns.map((campaign) => (
           <CampaignCard
