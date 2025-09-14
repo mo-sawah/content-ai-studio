@@ -206,70 +206,75 @@ class ATM_Ajax {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied.');
         }
-        check_ajax_referer('atm_nonce', 'nonce');
-        
+        check_ajax_referer('atm_nonce', 'nonce'); // This should match your JavaScript
+
         try {
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'atm_automation_campaigns';
-            
+            // Get campaign data from JSON string
+            $campaign_data = isset($_POST['campaign_data']) ? json_decode(stripslashes($_POST['campaign_data']), true) : null;
+            if (json_last_error() !== JSON_ERROR_NONE || !$campaign_data) {
+                throw new Exception('Invalid campaign data received.');
+            }
+
             $campaign_id = isset($_POST['campaign_id']) ? intval($_POST['campaign_id']) : 0;
             $is_new = $campaign_id === 0;
-            
+
             // Validate required fields
-            $name = sanitize_text_field($_POST['name'] ?? '');
-            $type = sanitize_text_field($_POST['type'] ?? '');
-            
-            if (empty($name) || empty($type)) {
+            if (empty($campaign_data['name']) || empty($campaign_data['type'])) {
                 throw new Exception('Campaign name and type are required.');
             }
-            
+
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+
             // Build campaign data
             $data = [
-                'name' => $name,
-                'type' => $type, // 'articles', 'news', 'videos', 'podcasts'
-                'keyword' => sanitize_text_field($_POST['keyword'] ?? ''),
-                'settings' => wp_json_encode($this->sanitize_automation_settings($_POST['settings'] ?? [])),
-                'schedule_type' => sanitize_text_field($_POST['schedule_type'] ?? 'interval'),
-                'schedule_value' => intval($_POST['schedule_value'] ?? 1),
-                'schedule_unit' => sanitize_text_field($_POST['schedule_unit'] ?? 'hour'),
-                'content_mode' => sanitize_text_field($_POST['content_mode'] ?? 'publish'),
-                'category_id' => intval($_POST['category_id'] ?? 0),
-                'author_id' => intval($_POST['author_id'] ?? get_current_user_id()),
-                'is_active' => isset($_POST['is_active']) ? 1 : 0,
+                'name' => sanitize_text_field($campaign_data['name']),
+                'type' => sanitize_text_field($campaign_data['type']),
+                'sub_type' => sanitize_text_field($campaign_data['sub_type'] ?? 'standard'),
+                'keyword' => sanitize_text_field($campaign_data['keyword']),
+                'settings' => wp_json_encode($this->sanitize_automation_settings($campaign_data['settings'] ?? [])),
+                'schedule_type' => 'interval', // Fixed for now
+                'schedule_value' => intval($campaign_data['schedule_value'] ?? 1),
+                'schedule_unit' => sanitize_text_field($campaign_data['schedule_unit'] ?? 'hour'),
+                'content_mode' => sanitize_text_field($campaign_data['content_mode'] ?? 'draft'),
+                'category_id' => intval($campaign_data['category_id'] ?? 0),
+                'author_id' => intval($campaign_data['author_id'] ?? get_current_user_id()),
+                'is_active' => !empty($campaign_data['is_active']) ? 1 : 0,
                 'updated_at' => current_time('mysql')
             ];
-            
+
             if ($is_new) {
                 $data['created_at'] = current_time('mysql');
-                $data['next_run'] = $this->calculate_next_run($data['schedule_type'], $data['schedule_value'], $data['schedule_unit']);
+                $data['next_run'] = $this->calculate_next_run('interval', $data['schedule_value'], $data['schedule_unit']);
                 
                 $result = $wpdb->insert($table_name, $data);
                 if ($result === false) {
                     throw new Exception('Failed to create campaign: ' . $wpdb->last_error);
                 }
                 $campaign_id = $wpdb->insert_id;
+                $message = 'Campaign created successfully!';
             } else {
                 // For updates, recalculate next_run if schedule changed
                 $existing = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
                 if ($existing && (
-                    $existing->schedule_type !== $data['schedule_type'] ||
                     $existing->schedule_value != $data['schedule_value'] ||
                     $existing->schedule_unit !== $data['schedule_unit']
                 )) {
-                    $data['next_run'] = $this->calculate_next_run($data['schedule_type'], $data['schedule_value'], $data['schedule_unit']);
+                    $data['next_run'] = $this->calculate_next_run('interval', $data['schedule_value'], $data['schedule_unit']);
                 }
                 
                 $result = $wpdb->update($table_name, $data, ['id' => $campaign_id]);
                 if ($result === false) {
                     throw new Exception('Failed to update campaign: ' . $wpdb->last_error);
                 }
+                $message = 'Campaign updated successfully!';
             }
-            
+
             wp_send_json_success([
-                'message' => $is_new ? 'Campaign created successfully!' : 'Campaign updated successfully!',
+                'message' => $message,
                 'campaign_id' => $campaign_id
             ]);
-            
+
         } catch (Exception $e) {
             wp_send_json_error($e->getMessage());
         }

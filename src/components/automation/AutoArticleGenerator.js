@@ -77,9 +77,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
         url: atm_automation_data.ajax_url,
         type: "POST",
         data: {
-          action: editingCampaign
-            ? "update_automation_campaign"
-            : "create_automation_campaign",
+          action: "atm_save_automation_campaign",
           nonce: atm_automation_data.nonce,
           campaign_data: JSON.stringify(campaignData),
           campaign_id: editingCampaign?.id || "",
@@ -98,7 +96,7 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
         throw new Error(response.data || "Failed to save campaign");
       }
     } catch (error) {
-      setStatusMessage({ text: "Error: " + error.message, type: "error" });
+      console.error("Campaign save error:", error);
     } finally {
       setIsLoading(false);
     }
