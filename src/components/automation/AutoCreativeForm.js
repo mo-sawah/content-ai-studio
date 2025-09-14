@@ -1,45 +1,16 @@
-// src/components/automation/AutoCreativeForm.js (SIMPLIFIED FOR AUTOMATION)
+// src/components/automation/AutoCreativeForm.js
 import { useState, useEffect } from "@wordpress/element";
 import {
   TextControl,
   TextareaControl,
-  DropdownMenu,
+  SelectControl,
 } from "@wordpress/components";
-import { chevronDown } from "@wordpress/icons";
 
 function AutoCreativeForm({
   campaignData,
   setCampaignData,
   isAutomation = true,
 }) {
-  // Local state for dropdown labels
-  const [articleModelLabel, setArticleModelLabel] =
-    useState("Use Default Model");
-  const [writingStyleLabel, setWritingStyleLabel] = useState(
-    "Standard / SEO-Optimized"
-  );
-  const [wordCountLabel, setWordCountLabel] = useState("Default");
-
-  // Custom dropdown component matching manual dashboard
-  const CustomDropdown = ({ label, text, options, onChange, helpText }) => (
-    <div className="atm-dropdown-field">
-      <label className="atm-dropdown-label">{label}</label>
-      <DropdownMenu
-        className="atm-custom-dropdown"
-        icon={chevronDown}
-        text={text}
-        controls={options.map((option) => ({
-          title: option.label,
-          onClick: () => onChange(option),
-        }))}
-        popoverProps={{
-          className: "atm-popover",
-        }}
-      />
-      {helpText && <p className="atm-dropdown-help">{helpText}</p>}
-    </div>
-  );
-
   // Options for dropdowns with user-friendly labels
   const modelOptions = [
     { label: "Use Default Model", value: "" },
@@ -75,34 +46,11 @@ function AutoCreativeForm({
     { label: "Very Long (~2000 words)", value: "2000" },
   ];
 
-  // Initialize labels on mount
-  useEffect(() => {
-    // Set AI Model label
-    const currentModel = modelOptions.find(
-      (option) => option.value === (campaignData.settings?.ai_model || "")
-    );
-    if (currentModel) {
-      setArticleModelLabel(currentModel.label);
-    }
-
-    // Set Writing Style label
-    const currentStyle = styleOptions.find(
-      (option) =>
-        option.value === (campaignData.settings?.writing_style || "default_seo")
-    );
-    if (currentStyle) {
-      setWritingStyleLabel(currentStyle.label);
-    }
-
-    // Set Word Count label
-    const currentWordCount = wordCountOptions.find(
-      (option) =>
-        option.value === (campaignData.settings?.word_count?.toString() || "")
-    );
-    if (currentWordCount) {
-      setWordCountLabel(currentWordCount.label);
-    }
-  }, [campaignData.settings, modelOptions, styleOptions]);
+  const creativityOptions = [
+    { label: "Conservative (Factual)", value: "low" },
+    { label: "Balanced", value: "medium" },
+    { label: "Creative (Dynamic)", value: "high" },
+  ];
 
   // Update campaign data helpers
   const updateSetting = (key, value) => {
@@ -146,36 +94,41 @@ function AutoCreativeForm({
 
         {/* AI Settings Grid */}
         <div className="atm-grid-3">
-          <CustomDropdown
+          <SelectControl
             label="AI Model"
-            text={articleModelLabel}
+            value={campaignData.settings?.ai_model || ""}
             options={modelOptions}
-            onChange={(option) => {
-              updateSetting("ai_model", option.value);
-              setArticleModelLabel(option.label);
-            }}
+            onChange={(value) => updateSetting("ai_model", value)}
+            help="Choose the AI model for content generation"
           />
 
-          <CustomDropdown
+          <SelectControl
             label="Writing Style"
-            text={writingStyleLabel}
+            value={campaignData.settings?.writing_style || "default_seo"}
             options={styleOptions}
-            onChange={(option) => {
-              updateSetting("writing_style", option.value);
-              setWritingStyleLabel(option.label);
-            }}
+            onChange={(value) => updateSetting("writing_style", value)}
+            help="Select the tone and style for your content"
           />
 
-          <CustomDropdown
+          <SelectControl
             label="Word Count"
-            text={wordCountLabel}
+            value={campaignData.settings?.word_count?.toString() || ""}
             options={wordCountOptions}
-            onChange={(option) => {
-              updateSetting("word_count", parseInt(option.value) || 0);
-              setWordCountLabel(option.label);
+            onChange={(value) => {
+              updateSetting("word_count", value ? parseInt(value) : 0);
             }}
+            help="Target article length"
           />
         </div>
+
+        {/* Creativity Level */}
+        <SelectControl
+          label="Creativity Level"
+          value={campaignData.settings?.creativity_level || "high"}
+          options={creativityOptions}
+          onChange={(value) => updateSetting("creativity_level", value)}
+          help="Control how creative vs factual the content should be"
+        />
 
         {/* Custom Prompt */}
         <TextareaControl

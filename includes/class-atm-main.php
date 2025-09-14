@@ -746,6 +746,16 @@ class ATM_Main {
         $localized_data['existing_podcast_script'] = get_post_meta($post_id, '_atm_podcast_script', true);
     }
 
+    // Add this to the existing localized data array
+    $localized_data['automation_nonce'] = wp_create_nonce('atm_automation_nonce');
+
+    // Also localize for automation app specifically
+    wp_localize_script('atm-automation-app', 'atm_automation_data', array(
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('atm_automation_nonce'),
+        'plugin_url' => ATM_PLUGIN_URL,
+    ));
+
     wp_localize_script('atm-admin-script', 'atm_ajax', $localized_data);
     wp_localize_script('atm-studio-app', 'atm_studio_data', $localized_data);
 }
