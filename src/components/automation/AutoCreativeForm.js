@@ -1,5 +1,5 @@
 // src/components/automation/AutoCreativeForm.js (UPDATED)
-import { useState, useEffect } from "@wordpress/element";
+import { useState, useEffect, useRef } from "@wordpress/element";
 import {
   TextControl,
   TextareaControl,
@@ -97,26 +97,40 @@ function AutoCreativeForm({
     }
   }, [campaignData.settings]);
 
-  // Custom dropdown component matching manual dashboard
-  const CustomDropdown = ({ label, text, options, onChange, helpText }) => (
-    <div className="atm-dropdown-field">
-      <label className="atm-dropdown-label">{label}</label>
-      <DropdownMenu
-        className="atm-custom-dropdown"
-        icon={chevronDown}
-        text={text}
-        controls={options.map((option) => ({
-          title: option.label,
-          onClick: () => onChange(option),
-        }))}
-        popoverProps={{
-          className: "atm-dropdown-popover",
-          position: "bottom left",
-        }}
-      />
-      {helpText && <p className="atm-dropdown-help">{helpText}</p>}
-    </div>
-  );
+  // Custom dropdown component matching manual dashboard with width matching
+  const CustomDropdown = ({ label, text, options, onChange, helpText }) => {
+    const dropdownRef = useRef(null);
+
+    return (
+      <div className="atm-dropdown-field" ref={dropdownRef}>
+        <label className="atm-dropdown-label">{label}</label>
+        <DropdownMenu
+          className="atm-custom-dropdown"
+          icon={chevronDown}
+          text={text}
+          controls={options.map((option) => ({
+            title: option.label,
+            onClick: () => onChange(option),
+          }))}
+          popoverProps={{
+            className: "atm-dropdown-popover",
+            position: "bottom left",
+            onOpen: () => {
+              // Set the popover width to match the dropdown button width
+              if (dropdownRef.current) {
+                const dropdownWidth = dropdownRef.current.offsetWidth;
+                document.documentElement.style.setProperty(
+                  "--atm-popover-width",
+                  `${dropdownWidth}px`
+                );
+              }
+            },
+          }}
+        />
+        {helpText && <p className="atm-dropdown-help">{helpText}</p>}
+      </div>
+    );
+  };
 
   // Update campaign data helpers
   const updateSetting = (key, value) => {

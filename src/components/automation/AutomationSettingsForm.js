@@ -1,4 +1,4 @@
-import { useState, useEffect } from "@wordpress/element";
+import { useState, useEffect, useRef } from "@wordpress/element";
 import {
   Dropdown,
   Button,
@@ -10,29 +10,44 @@ import {
 } from "@wordpress/components";
 import { chevronDown } from "@wordpress/icons";
 
-// Reusable Custom Dropdown Component
-const CustomDropdown = ({ label, text, options, onChange, helpText }) => (
-  <div className="atm-dropdown-field">
-    <label className="atm-dropdown-label">{label}</label>
-    <DropdownMenu
-      className="atm-custom-dropdown"
-      icon={chevronDown}
-      text={text}
-      controls={options.map((option) => ({
-        title: option.label,
-        onClick: () => onChange(option),
-      }))}
-      popoverProps={{
-        className: "atm-dropdown-popover",
-        position: "bottom left",
-      }}
-    />
-    {helpText && <p className="atm-dropdown-help">{helpText}</p>}
-  </div>
-);
+// Reusable Custom Dropdown Component with width matching
+const CustomDropdown = ({ label, text, options, onChange, helpText }) => {
+  const dropdownRef = useRef(null);
 
-// New Multi-Category Selector Component
+  return (
+    <div className="atm-dropdown-field" ref={dropdownRef}>
+      <label className="atm-dropdown-label">{label}</label>
+      <DropdownMenu
+        className="atm-custom-dropdown"
+        icon={chevronDown}
+        text={text}
+        controls={options.map((option) => ({
+          title: option.label,
+          onClick: () => onChange(option),
+        }))}
+        popoverProps={{
+          className: "atm-dropdown-popover",
+          position: "bottom left",
+          onOpen: () => {
+            // Set the popover width to match the dropdown button width
+            if (dropdownRef.current) {
+              const dropdownWidth = dropdownRef.current.offsetWidth;
+              document.documentElement.style.setProperty(
+                "--atm-popover-width",
+                `${dropdownWidth}px`
+              );
+            }
+          },
+        }}
+      />
+      {helpText && <p className="atm-dropdown-help">{helpText}</p>}
+    </div>
+  );
+};
+
+// New Multi-Category Selector Component with width matching
 const CategorySelector = ({ campaignData, setCampaignData, categories }) => {
+  const dropdownRef = useRef(null);
   const selectedCategoryIds = campaignData.settings?.category_ids || [];
 
   const handleCategoryChange = (isChecked, categoryId) => {
@@ -53,12 +68,24 @@ const CategorySelector = ({ campaignData, setCampaignData, categories }) => {
   };
 
   return (
-    <div className="atm-dropdown-field">
+    <div className="atm-dropdown-field" ref={dropdownRef}>
       <label className="atm-dropdown-label">Categories</label>
       <Dropdown
         className="atm-custom-dropdown"
         contentClassName="atm-category-popover"
-        popoverProps={{ position: "bottom left" }} // Fixes popover position
+        popoverProps={{
+          position: "bottom left",
+          onOpen: () => {
+            // Set the popover width to match the dropdown button width
+            if (dropdownRef.current) {
+              const dropdownWidth = dropdownRef.current.offsetWidth;
+              document.documentElement.style.setProperty(
+                "--atm-popover-width",
+                `${dropdownWidth}px`
+              );
+            }
+          },
+        }}
         renderToggle={({ isOpen, onToggle }) => (
           <Button
             variant="secondary"
@@ -297,17 +324,27 @@ function AutomationSettingsForm({
         </div>
 
         <div className="atm-schedule-summary">
-          <div className="atm-summary-stat">
-            <span className="atm-stat-number">{posts.day}</span>
-            <span className="atm-stat-label">Posts per day</span>
-          </div>
-          <div className="atm-summary-stat">
-            <span className="atm-stat-number">{posts.week}</span>
-            <span className="atm-stat-label">Posts per week</span>
-          </div>
-          <div className="atm-summary-stat">
-            <span className="atm-stat-number">{posts.month}</span>
-            <span className="atm-stat-label">Posts per month</span>
+          <div className="atm-summary-content">
+            <div className="atm-summary-header">
+              <h4>Publishing Frequency</h4>
+              <span className="atm-summary-badge">Active Schedule</span>
+            </div>
+            <div className="atm-summary-stats">
+              <div className="atm-summary-stat">
+                <span className="atm-stat-number">{posts.day}</span>
+                <span className="atm-stat-label">per day</span>
+              </div>
+              <div className="atm-summary-divider"></div>
+              <div className="atm-summary-stat">
+                <span className="atm-stat-number">{posts.week}</span>
+                <span className="atm-stat-label">per week</span>
+              </div>
+              <div className="atm-summary-divider"></div>
+              <div className="atm-summary-stat">
+                <span className="atm-stat-number">{posts.month}</span>
+                <span className="atm-stat-label">per month</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

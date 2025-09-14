@@ -814,3 +814,201 @@
 :root {
   --atm-dropdown-width: 320px !important;
 }
+
+// Replace the existing .atm-dropdown-popover styles in your automation.scss with this:
+
+.atm-dropdown-popover {
+  .components-popover__content {
+    // Remove the fixed min-width and let it match the trigger width
+    width: var(--atm-popover-width, auto);
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  .components-menu-group__label {
+    display: none;
+  }
+
+  .components-menu-item__button {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #374151;
+    border-radius: 4px;
+    margin: 2px;
+    transition: all 0.15s ease;
+    white-space: nowrap; // Prevent text wrapping
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover {
+      background: #f8fafc;
+      color: #8b5cf6;
+    }
+
+    &:focus {
+      background: #faf5ff;
+      color: #8b5cf6;
+      box-shadow: none;
+    }
+  }
+}
+
+// Add this new style for category popover specifically
+.atm-category-popover .components-popover__content {
+  // For multi-select category dropdown, keep a reasonable width
+  width: var(--atm-popover-width, 280px);
+  min-width: 250px;
+}
+
+// Replace the existing .atm-schedule-summary styles in your automation.scss with this:
+
+/* Modern and appealing schedule summary */
+.atm-schedule-summary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 0;
+  margin: 24px 0;
+  border: none;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+  overflow: hidden;
+  position: relative;
+
+  // Subtle animated background pattern
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='7' cy='7' r='2'/%3E%3Ccircle cx='27' cy='7' r='2'/%3E%3Ccircle cx='47' cy='7' r='2'/%3E%3Ccircle cx='7' cy='27' r='2'/%3E%3Ccircle cx='27' cy='27' r='2'/%3E%3Ccircle cx='47' cy='27' r='2'/%3E%3Ccircle cx='7' cy='47' r='2'/%3E%3Ccircle cx='27' cy='47' r='2'/%3E%3Ccircle cx='47' cy='47' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.3;
+  }
+
+  .atm-summary-content {
+    position: relative;
+    z-index: 2;
+    padding: 24px;
+  }
+
+  .atm-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+    h4 {
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .atm-summary-badge {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  .atm-summary-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .atm-summary-stat {
+    flex: 1;
+    text-align: center;
+
+    .atm-stat-number {
+      display: block;
+      font-size: 28px;
+      font-weight: 800;
+      color: white;
+      line-height: 1.1;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      margin-bottom: 4px;
+    }
+
+    .atm-stat-label {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  .atm-summary-divider {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    flex-shrink: 0;
+  }
+}
+
+// Hover effect for the entire summary
+.atm-schedule-summary {
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .atm-schedule-summary {
+    .atm-summary-header {
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+
+      h4 {
+        font-size: 16px;
+      }
+
+      .atm-summary-badge {
+        align-self: flex-end;
+      }
+    }
+
+    .atm-summary-stats {
+      gap: 12px;
+    }
+
+    .atm-summary-stat {
+      .atm-stat-number {
+        font-size: 24px;
+      }
+
+      .atm-stat-label {
+        font-size: 12px;
+      }
+    }
+
+    .atm-summary-divider {
+      height: 32px;
+    }
+  }
+}
