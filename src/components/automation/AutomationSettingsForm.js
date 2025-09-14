@@ -1,18 +1,79 @@
-import { useState, useEffect, useRef } from "@wordpress/element";
+import { useState, useEffect } from "@wordpress/element";
 import {
   Dropdown,
   Button,
-  Popover,
   CheckboxControl,
-  DropdownMenu,
   TextControl,
   ToggleControl,
 } from "@wordpress/components";
 import { chevronDown } from "@wordpress/icons";
 import CustomDropdown from "../common/CustomDropdown";
 
-// Reusable Custom Dropdown Component with width matching
-// New Multi-Category Selector Component with width matching
+// Category Selector Component
+const CategorySelector = ({ campaignData, setCampaignData, categories }) => {
+  const selectedCategoryIds = campaignData.settings?.category_ids || [];
+
+  const handleCategoryChange = (isChecked, categoryId) => {
+    const newIds = isChecked
+      ? [...selectedCategoryIds, categoryId]
+      : selectedCategoryIds.filter((id) => id !== categoryId);
+    setCampaignData({
+      ...campaignData,
+      settings: { ...campaignData.settings, category_ids: newIds },
+    });
+  };
+
+  const getButtonText = () => {
+    if (!categories || categories.length === 0) return "No Categories Found";
+    if (selectedCategoryIds.length === 0) return "Select Categories";
+    if (selectedCategoryIds.length === 1) return "1 Category Selected";
+    return `${selectedCategoryIds.length} Categories Selected`;
+  };
+
+  return (
+    <div className="atm-dropdown-field">
+      <label className="atm-dropdown-label">Categories</label>
+      <Dropdown
+        className="atm-custom-dropdown"
+        contentClassName="atm-category-popover"
+        popoverProps={{ position: "bottom left" }}
+        renderToggle={({ isOpen, onToggle }) => (
+          <Button
+            variant="secondary"
+            onClick={onToggle}
+            aria-expanded={isOpen}
+            icon={chevronDown}
+            iconPosition="right"
+            disabled={!categories || categories.length === 0}
+            style={{ width: "100%", justifyContent: "space-between" }}
+          >
+            {getButtonText()}
+          </Button>
+        )}
+        renderContent={() => (
+          <div className="atm-category-list">
+            {categories.length > 0 ? (
+              categories.map((cat) => (
+                <CheckboxControl
+                  key={cat.id}
+                  label={cat.name}
+                  checked={selectedCategoryIds.includes(cat.id)}
+                  onChange={(isChecked) =>
+                    handleCategoryChange(isChecked, cat.id)
+                  }
+                />
+              ))
+            ) : (
+              <p style={{ padding: "8px 12px", color: "#64748b" }}>
+                No categories available.
+              </p>
+            )}
+          </div>
+        )}
+      />
+    </div>
+  );
+};
 
 function AutomationSettingsForm({
   campaignData,

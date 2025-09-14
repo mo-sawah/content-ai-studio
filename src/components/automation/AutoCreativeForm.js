@@ -1,12 +1,9 @@
-// src/components/automation/AutoCreativeForm.js (UPDATED)
-import { useState, useEffect, useRef } from "@wordpress/element";
+import { useState, useEffect } from "@wordpress/element";
 import {
   TextControl,
   TextareaControl,
   ToggleControl,
-  DropdownMenu,
 } from "@wordpress/components";
-import { chevronDown } from "@wordpress/icons";
 import CustomDropdown from "../common/CustomDropdown";
 
 function AutoCreativeForm({
@@ -97,8 +94,6 @@ function AutoCreativeForm({
       setCreativityLabel(currentCreativity.label);
     }
   }, [campaignData.settings]);
-
-  // Custom dropdown component matching manual dashboard with width matching
 
   // Update campaign data helpers
   const updateSetting = (key, value) => {
@@ -192,7 +187,6 @@ function AutoCreativeForm({
         <div className="atm-form-section">
           <h4>Content Options</h4>
           <div className="atm-inline-toggles">
-            {/* "Generate Featured Images" toggle is REMOVED from this file */}
             <ToggleControl
               label="Enable Web Search"
               checked={campaignData.settings?.enable_web_search !== false}

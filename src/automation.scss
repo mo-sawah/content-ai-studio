@@ -1126,3 +1126,14 @@
     ) !important;
   }
 }
+
+/* CSS for matching popover widths */
+.atm-popover .components-popover__content {
+  width: var(--atm-popover-width, auto) !important;
+  min-width: var(--atm-popover-width, 250px) !important;
+}
+
+.atm-category-popover .components-popover__content {
+  width: var(--atm-popover-width, auto) !important;
+  min-width: var(--atm-popover-width, 280px) !important;
+}
