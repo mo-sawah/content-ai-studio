@@ -1,70 +1,199 @@
-// src/components/automation/AutoVideoGenerator.js
-import { useState } from "@wordpress/element";
-import { Button, TextControl } from "@wordpress/components";
+import { useState, useEffect } from "react";
+import { Button, TextControl, Spinner } from "@wordpress/components";
+import AutomationSettingsForm from "./AutomationSettingsForm";
+import CustomDropdown from "../common/CustomDropdown";
 
-function AutoVideoGenerator({ setActiveView, editingCampaign }) {
-  const [campaignName, setCampaignName] = useState("");
-  const [keyword, setKeyword] = useState("");
+// This is the new form section for video-specific settings
+function AutoVideoForm({ campaignData, setCampaignData, isLoading }) {
+  const updateSetting = (key, value) => {
+    setCampaignData((prev) => ({
+      ...prev,
+      settings: { ...prev.settings, [key]: value },
+    }));
+  };
+
+  return (
+    <div className="atm-form-section">
+      <h3>Video Source Configuration</h3>
+      <p className="description">
+        Configure the source and type of videos to search for on YouTube.
+      </p>
+
+      <TextControl
+        label="Video Search Keyword"
+        placeholder="e.g., WordPress tutorials, cooking tips"
+        value={campaignData.keyword || ""}
+        onChange={(value) =>
+          setCampaignData({ ...campaignData, keyword: value })
+        }
+        help="The topic to search for on YouTube."
+        disabled={isLoading}
+      />
+
+      <div className="atm-grid-2">
+        <CustomDropdown
+          label="Search Order"
+          text={campaignData.settings?.video_order || "Relevance"}
+          options={[
+            { label: "Relevance", value: "relevance" },
+            { label: "Most Recent", value: "date" },
+            { label: "Most Viewed", value: "viewCount" },
+            { label: "Highest Rated", value: "rating" },
+          ]}
+          onChange={(option) => updateSetting("video_order", option.value)}
+        />
+        <CustomDropdown
+          label="Video Duration"
+          text={campaignData.settings?.video_duration || "Any"}
+          options={[
+            { label: "Any", value: "any" },
+            { label: "Short (under 4 mins)", value: "short" },
+            { label: "Medium (4-20 mins)", value: "medium" },
+            { label: "Long (over 20 mins)", value: "long" },
+          ]}
+          onChange={(option) => updateSetting("video_duration", option.value)}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Main component, now fully implemented
+function AutoVideoGenerator({
+  setActiveView,
+  editingCampaign,
+  categories,
+  authors,
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState({
+    text: "",
+    type: "info",
+  });
+
+  const [campaignData, setCampaignData] = useState({
+    name: "",
+    type: "videos",
+    sub_type: "youtube", // Default sub_type for videos
+    keyword: "",
+    schedule_value: 1,
+    schedule_unit: "day",
+    content_mode: "draft",
+    author_id: 1,
+    is_active: true,
+    settings: {
+      generate_image: true, // Auto-set featured image from video thumbnail
+      video_order: "relevance",
+      video_duration: "any",
+      category_ids: [],
+    },
+  });
+
+  useEffect(() => {
+    if (editingCampaign) {
+      const mergedSettings = {
+        ...campaignData.settings,
+        ...editingCampaign.settings,
+      };
+      setCampaignData({
+        ...campaignData,
+        ...editingCampaign,
+        settings: mergedSettings,
+      });
+    }
+  }, [editingCampaign]);
+
+  const handleSaveCampaign = async () => {
+    if (!campaignData.name.trim() || !campaignData.keyword.trim()) {
+      setStatusMessage({
+        text: "Campaign Name and Keyword are required.",
+        type: "error",
+      });
+      return;
+    }
+    setIsLoading(true);
+    setStatusMessage({ text: "Saving campaign...", type: "info" });
+    try {
+      const response = await jQuery.ajax({
+        url: atm_automation_data.ajax_url,
+        type: "POST",
+        data: {
+          action: "atm_save_automation_campaign",
+          nonce: atm_automation_data.nonce,
+          campaign_data: JSON.stringify(campaignData),
+          campaign_id: editingCampaign?.id || "",
+        },
+      });
+      if (response.success) {
+        setStatusMessage({
+          text: "Campaign saved successfully!",
+          type: "success",
+        });
+        setTimeout(() => setActiveView("campaigns"), 1500);
+      } else {
+        throw new Error(response.data || "Failed to save campaign");
+      }
+    } catch (error) {
+      setStatusMessage({ text: `Error: ${error.message}`, type: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="atm-generator-view">
       <div className="atm-form-container">
-        <h4>Video Automation Campaign</h4>
-        <p className="components-base-control__help">
-          Configure automated video embedding from YouTube with generated
-          descriptions.
-        </p>
-
-        <div className="atm-grid-2">
+        <div className="atm-form-section">
           <TextControl
             label="Campaign Name"
-            placeholder="e.g., Weekly Tutorial Videos"
-            value={campaignName}
-            onChange={setCampaignName}
-            help="A descriptive name for this video automation campaign"
-          />
-
-          <TextControl
-            label="Video Search Keyword"
-            placeholder="e.g., programming tutorials, cooking tips"
-            value={keyword}
-            onChange={setKeyword}
-            help="Keyword to search for relevant videos on YouTube"
+            placeholder="e.g., Weekly WordPress Videos"
+            value={campaignData.name}
+            onChange={(value) =>
+              setCampaignData({ ...campaignData, name: value })
+            }
+            help="Give your video campaign a unique name."
+            disabled={isLoading}
           />
         </div>
 
-        <div className="atm-under-construction">
-          <div className="atm-construction-icon">
-            <svg
-              width="48"
-              height="48"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-          <h3>Video Automation Coming Soon</h3>
-          <p>This automation type will include:</p>
-          <ul>
-            <li>YouTube video search with advanced filtering</li>
-            <li>Automatic video embedding with responsive design</li>
-            <li>AI-generated descriptions and summaries</li>
-            <li>Duration and quality preferences</li>
-          </ul>
-        </div>
+        <AutoVideoForm
+          campaignData={campaignData}
+          setCampaignData={setCampaignData}
+          isLoading={isLoading}
+        />
+
+        <AutomationSettingsForm
+          campaignData={campaignData}
+          setCampaignData={setCampaignData}
+          isLoading={isLoading}
+          categories={categories}
+          authors={authors}
+        />
 
         <div className="atm-form-actions">
-          <Button isTertiary onClick={() => setActiveView("hub")}>
-            Back to Hub
+          <Button isPrimary onClick={handleSaveCampaign} disabled={isLoading}>
+            {isLoading ? (
+              <Spinner />
+            ) : editingCampaign ? (
+              "Update Campaign"
+            ) : (
+              "Create Campaign"
+            )}
+          </Button>
+          <Button
+            isSecondary
+            onClick={() => setActiveView("hub")}
+            disabled={isLoading}
+          >
+            Cancel
           </Button>
         </div>
+
+        {statusMessage.text && (
+          <p className={`atm-status-message ${statusMessage.type}`}>
+            {statusMessage.text}
+          </p>
+        )}
       </div>
     </div>
   );
