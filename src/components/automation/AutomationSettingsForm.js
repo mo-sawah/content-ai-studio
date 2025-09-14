@@ -84,19 +84,14 @@ function AutomationSettingsForm({ campaignData, setCampaignData, isLoading }) {
             min="1"
           />
 
-          <SelectControl
+          <CustomDropdown
             label="Unit"
-            value={campaignData.schedule_unit || "hour"}
-            onChange={(value) =>
-              setCampaignData({ ...campaignData, schedule_unit: value })
-            }
-            options={[
-              { label: "Minutes", value: "minute" },
-              { label: "Hours", value: "hour" },
-              { label: "Days", value: "day" },
-              { label: "Weeks", value: "week" },
-            ]}
-            disabled={isLoading}
+            text={scheduleUnitLabel}
+            options={scheduleUnitOptions}
+            onChange={(option) => {
+              setCampaignData({ ...campaignData, schedule_unit: option.value });
+              setScheduleUnitLabel(option.label);
+            }}
           />
         </div>
 

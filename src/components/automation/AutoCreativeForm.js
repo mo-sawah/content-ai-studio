@@ -40,21 +40,32 @@ function AutoCreativeForm({
     </div>
   );
 
-  // Options for dropdowns
+  // Options for dropdowns with user-friendly labels
   const modelOptions = [
     { label: "Use Default Model", value: "" },
-    ...(atm_studio_data?.article_models
-      ? Object.entries(atm_studio_data.article_models).map(
-          ([value, label]) => ({ label, value })
-        )
-      : []),
+    { label: "OpenAI: GPT-4o (Best All-Around)", value: "openai/gpt-4o" },
+    {
+      label: "Anthropic: Claude 3 Opus (Top-Tier Writing)",
+      value: "anthropic/claude-3-5-sonnet-20241022",
+    },
+    {
+      label: "Google: Gemini 1.5 Flash (Fast & Capable)",
+      value: "google/gemini-flash-1.5",
+    },
+    {
+      label: "Meta: Llama 3 70B (Great Open Source)",
+      value: "meta-llama/llama-3-70b-instruct",
+    },
   ];
 
-  const styleOptions = atm_studio_data?.writing_styles
-    ? Object.entries(atm_studio_data.writing_styles).map(
-        ([value, { label }]) => ({ label, value })
-      )
-    : [{ label: "Standard SEO", value: "default_seo" }];
+  const styleOptions = [
+    { label: "Standard / SEO-Optimized", value: "default_seo" },
+    { label: "Professional Business", value: "professional" },
+    { label: "Conversational & Friendly", value: "conversational" },
+    { label: "Technical / Expert", value: "technical" },
+    { label: "News / Journalistic", value: "news" },
+    { label: "Educational / Tutorial", value: "educational" },
+  ];
 
   const wordCountOptions = [
     { label: "Default", value: "" },
