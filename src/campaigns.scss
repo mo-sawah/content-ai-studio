@@ -430,12 +430,13 @@
     flex-shrink: 0;
   }
 
-  .atm-campaigns-container .atm-type-icon {
+  .atm-type-icon {
     height: 25px !important;
     width: 20px !important;
+    color: #585858 !important;
   }
 
-  .atm-campaigns-container .atm-type-icon svg {
+  .atm-type-icon svg {
     height: 20px !important;
     width: 20px !important;
   }
