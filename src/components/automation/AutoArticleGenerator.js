@@ -1,4 +1,4 @@
-// src/components/automation/AutoArticleGenerator.js (UPDATED TO MATCH MANUAL STYLING)
+// src/components/automation/AutoArticleGenerator.js (UPDATED to pass props)
 import { useState, useEffect } from "@wordpress/element";
 import { Button, TextControl, Spinner } from "@wordpress/components";
 
@@ -11,7 +11,13 @@ import AutoMultipageArticlesForm from "./AutoMultipageArticlesForm";
 // Import automation settings component
 import AutomationSettingsForm from "./AutomationSettingsForm";
 
-function AutoArticleGenerator({ setActiveView, editingCampaign }) {
+// MODIFIED: Add categories and authors to the component's props
+function AutoArticleGenerator({
+  setActiveView,
+  editingCampaign,
+  categories,
+  authors,
+}) {
   const [activeTab, setActiveTab] = useState("creative");
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState({
@@ -24,30 +30,39 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
     name: "",
     type: "articles",
     sub_type: "creative",
-    // Content settings will be populated by the child forms
     keyword: "",
     article_title: "",
-    writing_style: "default_seo",
-    creativity_level: "high",
-    word_count: "",
-    custom_prompt: "",
-    generate_image: true,
-    // Automation-specific settings
     schedule_value: 1,
     schedule_unit: "hour",
     content_mode: "draft",
     author_id: 1,
     is_active: true,
     settings: {
+      // Default settings
+      writing_style: "default_seo",
+      creativity_level: "high",
+      word_count: 0,
+      custom_prompt: "",
+      generate_image: true,
       skip_weekends: false,
       quality_check: false,
+      category_ids: [],
     },
   });
 
   // Load editing campaign data
   useEffect(() => {
     if (editingCampaign) {
-      setCampaignData({ ...campaignData, ...editingCampaign });
+      // Deep merge settings to avoid overwriting
+      const mergedSettings = {
+        ...campaignData.settings,
+        ...editingCampaign.settings,
+      };
+      setCampaignData({
+        ...campaignData,
+        ...editingCampaign,
+        settings: mergedSettings,
+      });
       setActiveTab(editingCampaign.sub_type || "creative");
     }
   }, [editingCampaign]);
@@ -58,14 +73,15 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
   }, [activeTab]);
 
   const handleSaveCampaign = async () => {
-    // Validation
     if (!campaignData.name.trim()) {
       setStatusMessage({ text: "Campaign name is required.", type: "error" });
       return;
     }
-
-    if (!campaignData.keyword.trim()) {
-      setStatusMessage({ text: "Keyword is required.", type: "error" });
+    if (!campaignData.keyword.trim() && activeTab !== "trending") {
+      setStatusMessage({
+        text: "Keyword is required for this article type.",
+        type: "error",
+      });
       return;
     }
 
@@ -91,11 +107,12 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
             : "Campaign created successfully!",
           type: "success",
         });
-        setTimeout(() => setActiveView("campaigns"), 2000);
+        setTimeout(() => setActiveView("campaigns"), 1500);
       } else {
         throw new Error(response.data || "Failed to save campaign");
       }
     } catch (error) {
+      setStatusMessage({ text: `Error: ${error.message}`, type: "error" });
       console.error("Campaign save error:", error);
     } finally {
       setIsLoading(false);
@@ -182,7 +199,6 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
 
   return (
     <div className="atm-generator-view">
-      {/* Campaign Name - First field for automation */}
       <div className="atm-form-container">
         <div className="atm-form-section">
           <TextControl
@@ -197,7 +213,6 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           />
         </div>
 
-        {/* Article Type Selector - Matching manual dashboard style exactly */}
         <div className="atm-type-selector">
           <div className="atm-type-cards">
             {articleTypes.map((type) => (
@@ -218,17 +233,17 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           </div>
         </div>
 
-        {/* RENDER THE SELECTED MANUAL FORM - This will show the exact same layout as manual */}
         {renderActiveForm()}
 
-        {/* RENDER THE AUTOMATION SETTINGS - Campaign-specific settings */}
+        {/* MODIFIED: Pass the categories and authors props through */}
         <AutomationSettingsForm
           campaignData={campaignData}
           setCampaignData={setCampaignData}
           isLoading={isLoading}
+          categories={categories}
+          authors={authors}
         />
 
-        {/* FINAL ACTIONS */}
         <div className="atm-form-actions">
           <Button
             isPrimary
@@ -236,13 +251,13 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
             disabled={
               isLoading ||
               !campaignData.name.trim() ||
-              !campaignData.keyword.trim()
+              (activeTab !== "trending" && !campaignData.keyword.trim())
             }
           >
             {isLoading ? (
               <>
-                <Spinner />
-                Saving...
+                {" "}
+                <Spinner /> Saving...{" "}
               </>
             ) : editingCampaign ? (
               "Update Campaign"
@@ -250,7 +265,6 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
               "Create Campaign"
             )}
           </Button>
-
           <Button
             isSecondary
             onClick={() => setActiveView("campaigns")}
@@ -260,7 +274,6 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
           </Button>
         </div>
 
-        {/* Status Message */}
         {statusMessage.text && (
           <p className={`atm-status-message ${statusMessage.type}`}>
             {statusMessage.text}
@@ -271,13 +284,12 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
   );
 }
 
-// Helper function to get icon colors matching manual dashboard
 function getIconColorClass(typeId) {
   const colorMap = {
-    creative: "atm-icon-purple", // Purple like Standard Articles
-    trending: "atm-icon-red", // Red like Trending Articles
-    listicle: "atm-icon-green", // Green like Listicle Articles
-    multipage: "atm-icon-orange", // Orange like Multipage Articles
+    creative: "atm-icon-purple",
+    trending: "atm-icon-red",
+    listicle: "atm-icon-green",
+    multipage: "atm-icon-orange",
   };
   return colorMap[typeId] || "atm-icon-purple";
 }

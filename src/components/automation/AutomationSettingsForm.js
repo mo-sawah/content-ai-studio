@@ -47,6 +47,7 @@ const CategorySelector = ({ campaignData, setCampaignData, categories }) => {
   };
 
   const getButtonText = () => {
+    if (!categories || categories.length === 0) return "No Categories Found";
     if (selectedCategoryIds.length === 0) return "Select Categories";
     if (selectedCategoryIds.length === 1) return "1 Category Selected";
     return `${selectedCategoryIds.length} Categories Selected`;
@@ -58,6 +59,7 @@ const CategorySelector = ({ campaignData, setCampaignData, categories }) => {
       <Dropdown
         className="atm-custom-dropdown"
         contentClassName="atm-category-popover"
+        popoverProps={{ position: "bottom left" }} // Fixes popover position
         renderToggle={({ isOpen, onToggle }) => (
           <Button
             variant="secondary"
@@ -65,6 +67,7 @@ const CategorySelector = ({ campaignData, setCampaignData, categories }) => {
             aria-expanded={isOpen}
             icon={chevronDown}
             iconPosition="right"
+            disabled={!categories || categories.length === 0}
           >
             {getButtonText()}
           </Button>
@@ -95,13 +98,11 @@ function AutomationSettingsForm({
   authors = [],
   categories = [],
 }) {
-  // === State for Dropdown Labels ===
   const [unitLabel, setUnitLabel] = useState("Hours");
   const [contentModeLabel, setContentModeLabel] = useState("Save as Draft");
   const [authorLabel, setAuthorLabel] = useState("Default Author");
   const [dayOfWeekLabel, setDayOfWeekLabel] = useState("Any Day");
 
-  // === Options for Dropdowns ===
   const schedulePresets = [
     { label: "Every 15 mins", value: 15, unit: "minute" },
     { label: "Every 30 mins", value: 30, unit: "minute" },
@@ -137,7 +138,6 @@ function AutomationSettingsForm({
       ? authors.map((author) => ({ label: author.name, value: author.id }))
       : [{ label: "Default Author", value: 1 }];
 
-  // === Effects to Sync Labels with Data ===
   useEffect(() => {
     const currentUnit = unitOptions.find(
       (opt) => opt.value === (campaignData.schedule_unit || "hour")
@@ -189,9 +189,15 @@ function AutomationSettingsForm({
         postsPerDay = 0;
     }
     return {
-      day: Math.round(postsPerDay * 10) / 10,
-      week: Math.round(postsPerDay * 7 * 10) / 10,
-      month: Math.round(postsPerDay * 30.4 * 10) / 10,
+      day: postsPerDay < 1 ? postsPerDay.toFixed(2) : Math.round(postsPerDay),
+      week:
+        postsPerDay < 1
+          ? (postsPerDay * 7).toFixed(2)
+          : Math.round(postsPerDay * 7),
+      month:
+        postsPerDay < 1
+          ? (postsPerDay * 30.4).toFixed(2)
+          : Math.round(postsPerDay * 30.4),
     };
   };
 

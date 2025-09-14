@@ -13,8 +13,20 @@ function AutomationApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
 
+  const [appData, setAppData] = useState({ categories: [], authors: [] });
+
   const rootElement = document.getElementById("atm-automation-root");
   const pageType = rootElement?.getAttribute("data-page") || "main";
+
+  // NEW: useEffect to load localized data once when the app starts
+  useEffect(() => {
+    if (window.atm_automation_data) {
+      setAppData({
+        categories: window.atm_automation_data.categories || [],
+        authors: window.atm_automation_data.authors || [],
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (pageType === "campaigns") {
@@ -264,6 +276,8 @@ function AutomationApp() {
           <AutoArticleGenerator
             setActiveView={setActiveView}
             editingCampaign={editingCampaign}
+            categories={appData.categories}
+            authors={appData.authors}
           />
         );
       case "news":
@@ -271,6 +285,8 @@ function AutomationApp() {
           <AutoNewsGenerator
             setActiveView={setActiveView}
             editingCampaign={editingCampaign}
+            categories={appData.categories}
+            authors={appData.authors}
           />
         );
       case "videos":
