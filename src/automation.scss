@@ -792,9 +792,9 @@
 
 /* Force correct alignment for dropdown buttons */
 .atm-custom-dropdown .components-button {
-  display: flex;
-  justify-content: space-between; /* Pushes text left and icon right */
-  align-items: center;
+  display: flex !important;
+  justify-content: space-between !important; /* Pushes text left and icon right */
+  align-items: center !important;
   width: 100%; /* Ensures the button fills the container */
-  text-align: left;
+  text-align: left !important;
 }
