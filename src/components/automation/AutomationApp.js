@@ -13,14 +13,17 @@ function AutomationApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
 
+  // This state holds the data loaded from WordPress (categories, authors, etc.)
   const [appData, setAppData] = useState({ categories: [], authors: [] });
 
   const rootElement = document.getElementById("atm-automation-root");
   const pageType = rootElement?.getAttribute("data-page") || "main";
 
-  // NEW: useEffect to load localized data once when the app starts
+  // This useEffect hook runs once and loads the data from the global object
+  // that PHP creates. This is the key to fixing the empty category selector.
   useEffect(() => {
     if (window.atm_automation_data) {
+      console.log("Loaded data from WordPress:", window.atm_automation_data); // For debugging
       setAppData({
         categories: window.atm_automation_data.categories || [],
         authors: window.atm_automation_data.authors || [],
@@ -268,41 +271,25 @@ function AutomationApp() {
   ];
 
   const renderActiveView = () => {
+    // We now pass the loaded categories and authors down to the generator components
+    const generatorProps = {
+      setActiveView,
+      editingCampaign,
+      categories: appData.categories,
+      authors: appData.authors,
+    };
+
     switch (activeView) {
       case "hub":
         return <AutomationHub setActiveView={setActiveView} />;
       case "articles":
-        return (
-          <AutoArticleGenerator
-            setActiveView={setActiveView}
-            editingCampaign={editingCampaign}
-            categories={appData.categories}
-            authors={appData.authors}
-          />
-        );
+        return <AutoArticleGenerator {...generatorProps} />;
       case "news":
-        return (
-          <AutoNewsGenerator
-            setActiveView={setActiveView}
-            editingCampaign={editingCampaign}
-            categories={appData.categories}
-            authors={appData.authors}
-          />
-        );
+        return <AutoNewsGenerator {...generatorProps} />;
       case "videos":
-        return (
-          <AutoVideoGenerator
-            setActiveView={setActiveView}
-            editingCampaign={editingCampaign}
-          />
-        );
+        return <AutoVideoGenerator {...generatorProps} />;
       case "podcasts":
-        return (
-          <AutoPodcastGenerator
-            setActiveView={setActiveView}
-            editingCampaign={editingCampaign}
-          />
-        );
+        return <AutoPodcastGenerator {...generatorProps} />;
       case "campaigns":
         return (
           <CampaignDashboard

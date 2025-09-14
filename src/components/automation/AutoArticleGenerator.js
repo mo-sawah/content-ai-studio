@@ -1,17 +1,11 @@
-// src/components/automation/AutoArticleGenerator.js (UPDATED to pass props)
 import { useState, useEffect } from "@wordpress/element";
 import { Button, TextControl, Spinner } from "@wordpress/components";
-
-// Import the manual form components - these already have the correct styling
 import AutoCreativeForm from "./AutoCreativeForm";
 import AutoTrendingForm from "./AutoTrendingForm";
 import AutoListicleForm from "./AutoListicleForm";
 import AutoMultipageArticlesForm from "./AutoMultipageArticlesForm";
-
-// Import automation settings component
 import AutomationSettingsForm from "./AutomationSettingsForm";
 
-// MODIFIED: Add categories and authors to the component's props
 function AutoArticleGenerator({
   setActiveView,
   editingCampaign,
@@ -25,7 +19,6 @@ function AutoArticleGenerator({
     type: "info",
   });
 
-  // Central state for the entire campaign
   const [campaignData, setCampaignData] = useState({
     name: "",
     type: "articles",
@@ -38,7 +31,6 @@ function AutoArticleGenerator({
     author_id: 1,
     is_active: true,
     settings: {
-      // Default settings
       writing_style: "default_seo",
       creativity_level: "high",
       word_count: 0,
@@ -50,10 +42,8 @@ function AutoArticleGenerator({
     },
   });
 
-  // Load editing campaign data
   useEffect(() => {
     if (editingCampaign) {
-      // Deep merge settings to avoid overwriting
       const mergedSettings = {
         ...campaignData.settings,
         ...editingCampaign.settings,
@@ -67,7 +57,6 @@ function AutoArticleGenerator({
     }
   }, [editingCampaign]);
 
-  // Update sub_type when tab changes
   useEffect(() => {
     setCampaignData((prev) => ({ ...prev, sub_type: activeTab }));
   }, [activeTab]);
@@ -218,7 +207,9 @@ function AutoArticleGenerator({
             {articleTypes.map((type) => (
               <div
                 key={type.id}
-                className={`atm-type-card ${activeTab === type.id ? "active" : ""}`}
+                className={`atm-type-card ${
+                  activeTab === type.id ? "active" : ""
+                }`}
                 onClick={() => setActiveTab(type.id)}
               >
                 <div className={`atm-type-icon ${getIconColorClass(type.id)}`}>
@@ -235,7 +226,6 @@ function AutoArticleGenerator({
 
         {renderActiveForm()}
 
-        {/* MODIFIED: Pass the categories and authors props through */}
         <AutomationSettingsForm
           campaignData={campaignData}
           setCampaignData={setCampaignData}
@@ -256,8 +246,7 @@ function AutoArticleGenerator({
           >
             {isLoading ? (
               <>
-                {" "}
-                <Spinner /> Saving...{" "}
+                <Spinner /> Saving...
               </>
             ) : editingCampaign ? (
               "Update Campaign"

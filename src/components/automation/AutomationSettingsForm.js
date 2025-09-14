@@ -1,4 +1,3 @@
-// src/components/automation/AutomationSettingsForm.js (FINAL VERSION)
 import { useState, useEffect } from "@wordpress/element";
 import {
   Dropdown,
@@ -74,16 +73,22 @@ const CategorySelector = ({ campaignData, setCampaignData, categories }) => {
         )}
         renderContent={() => (
           <div className="atm-category-list">
-            {categories.map((cat) => (
-              <CheckboxControl
-                key={cat.id}
-                label={cat.name}
-                checked={selectedCategoryIds.includes(cat.id)}
-                onChange={(isChecked) =>
-                  handleCategoryChange(isChecked, cat.id)
-                }
-              />
-            ))}
+            {categories.length > 0 ? (
+              categories.map((cat) => (
+                <CheckboxControl
+                  key={cat.id}
+                  label={cat.name}
+                  checked={selectedCategoryIds.includes(cat.id)}
+                  onChange={(isChecked) =>
+                    handleCategoryChange(isChecked, cat.id)
+                  }
+                />
+              ))
+            ) : (
+              <p style={{ padding: "8px 12px", color: "#64748b" }}>
+                No categories available.
+              </p>
+            )}
           </div>
         )}
       />
@@ -222,7 +227,12 @@ function AutomationSettingsForm({
             <button
               key={index}
               type="button"
-              className={`atm-preset-btn ${campaignData.schedule_value === preset.value && campaignData.schedule_unit === preset.unit ? "active" : ""}`}
+              className={`atm-preset-btn ${
+                campaignData.schedule_value === preset.value &&
+                campaignData.schedule_unit === preset.unit
+                  ? "active"
+                  : ""
+              }`}
               onClick={() => applySchedulePreset(preset)}
               disabled={isLoading}
             >
