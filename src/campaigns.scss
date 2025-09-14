@@ -441,6 +441,10 @@
     width: 20px !important;
   }
 
+  #atm-automation-root .atm-card-actions .components-button {
+    padding: 10px 5px !important;
+  }
+
   .atm-type-text {
     font-size: 13px;
     font-weight: 600;
@@ -1159,5 +1163,90 @@
     break-inside: avoid;
     box-shadow: none;
     border: 1px solid #ccc;
+  }
+}
+
+.atm-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block; // Add this
+  flex-shrink: 0; // Add this
+
+  // Make sure the background colors are applied with higher specificity
+  &.bg-green-500 {
+    background-color: #10b981 !important;
+  }
+
+  &.bg-blue-500 {
+    background-color: #3b82f6 !important;
+  }
+
+  &.bg-gray-500 {
+    background-color: #6b7280 !important;
+  }
+
+  &.bg-red-500 {
+    background-color: #ef4444 !important;
+  }
+}
+
+// Alternative approach - use CSS custom properties
+.atm-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  .atm-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: block;
+    flex-shrink: 0;
+  }
+}
+
+// Ensure the utility classes work properly
+.bg-green-500 {
+  background-color: #10b981 !important;
+}
+.bg-blue-500 {
+  background-color: #3b82f6 !important;
+}
+.bg-gray-500 {
+  background-color: #6b7280 !important;
+}
+.bg-red-500 {
+  background-color: #ef4444 !important;
+}
+
+.atm-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: block;
+  flex-shrink: 0;
+
+  &.atm-dot-green {
+    background-color: #10b981;
+  }
+
+  &.atm-dot-blue {
+    background-color: #3b82f6;
+  }
+
+  &.atm-dot-gray {
+    background-color: #6b7280;
+  }
+
+  &.atm-dot-red {
+    background-color: #ef4444;
   }
 }
