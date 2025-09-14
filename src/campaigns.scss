@@ -430,6 +430,16 @@
     flex-shrink: 0;
   }
 
+  .atm-modern-campaign-card .atm-type-icon {
+    height: 25px;
+    width: 20px;
+  }
+
+  .atm-modern-campaign-card .atm-type-icon svg {
+    height: 20px;
+    width: 20px;
+  }
+
   .atm-type-text {
     font-size: 13px;
     font-weight: 600;
@@ -550,8 +560,8 @@
 
 .atm-card-toggle {
   position: absolute;
-  top: 24px;
-  right: 24px;
+  top: 35px;
+  right: 50px;
 }
 
 .atm-toggle-modern {
