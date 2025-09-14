@@ -1,5 +1,4 @@
-// src/components/automation/AutoCreativeForm.js
-
+// src/components/automation/AutoCreativeForm.js (UPDATED)
 import { useState, useEffect } from "@wordpress/element";
 import {
   TextControl,
@@ -211,11 +210,7 @@ function AutoCreativeForm({
         <div className="atm-form-section">
           <h4>Content Options</h4>
           <div className="atm-inline-toggles">
-            <ToggleControl
-              label="Generate Featured Images"
-              checked={campaignData.settings?.generate_image || false}
-              onChange={(value) => updateSetting("generate_image", value)}
-            />
+            {/* "Generate Featured Images" toggle is REMOVED from this file */}
             <ToggleControl
               label="Enable Web Search"
               checked={campaignData.settings?.enable_web_search !== false}

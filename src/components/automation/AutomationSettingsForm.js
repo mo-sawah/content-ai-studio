@@ -1,6 +1,10 @@
-// src/components/automation/AutomationSettingsForm.js (UPDATED with time input and summary)
+// src/components/automation/AutomationSettingsForm.js (FINAL VERSION)
 import { useState, useEffect } from "@wordpress/element";
 import {
+  Dropdown,
+  Button,
+  Popover,
+  CheckboxControl,
   DropdownMenu,
   TextControl,
   ToggleControl,
@@ -28,16 +32,74 @@ const CustomDropdown = ({ label, text, options, onChange, helpText }) => (
   </div>
 );
 
+// New Multi-Category Selector Component
+const CategorySelector = ({ campaignData, setCampaignData, categories }) => {
+  const selectedCategoryIds = campaignData.settings?.category_ids || [];
+
+  const handleCategoryChange = (isChecked, categoryId) => {
+    const newIds = isChecked
+      ? [...selectedCategoryIds, categoryId]
+      : selectedCategoryIds.filter((id) => id !== categoryId);
+    setCampaignData({
+      ...campaignData,
+      settings: { ...campaignData.settings, category_ids: newIds },
+    });
+  };
+
+  const getButtonText = () => {
+    if (selectedCategoryIds.length === 0) return "Select Categories";
+    if (selectedCategoryIds.length === 1) return "1 Category Selected";
+    return `${selectedCategoryIds.length} Categories Selected`;
+  };
+
+  return (
+    <div className="atm-dropdown-field">
+      <label className="atm-dropdown-label">Categories</label>
+      <Dropdown
+        className="atm-custom-dropdown"
+        contentClassName="atm-category-popover"
+        renderToggle={({ isOpen, onToggle }) => (
+          <Button
+            variant="secondary"
+            onClick={onToggle}
+            aria-expanded={isOpen}
+            icon={chevronDown}
+            iconPosition="right"
+          >
+            {getButtonText()}
+          </Button>
+        )}
+        renderContent={() => (
+          <div className="atm-category-list">
+            {categories.map((cat) => (
+              <CheckboxControl
+                key={cat.id}
+                label={cat.name}
+                checked={selectedCategoryIds.includes(cat.id)}
+                onChange={(isChecked) =>
+                  handleCategoryChange(isChecked, cat.id)
+                }
+              />
+            ))}
+          </div>
+        )}
+      />
+    </div>
+  );
+};
+
 function AutomationSettingsForm({
   campaignData,
   setCampaignData,
   isLoading,
-  authors = [], // Assuming authors are passed as props
+  authors = [],
+  categories = [],
 }) {
   // === State for Dropdown Labels ===
   const [unitLabel, setUnitLabel] = useState("Hours");
   const [contentModeLabel, setContentModeLabel] = useState("Save as Draft");
   const [authorLabel, setAuthorLabel] = useState("Default Author");
+  const [dayOfWeekLabel, setDayOfWeekLabel] = useState("Any Day");
 
   // === Options for Dropdowns ===
   const schedulePresets = [
@@ -54,6 +116,17 @@ function AutomationSettingsForm({
     { label: "Weeks", value: "week" },
   ];
 
+  const dayOfWeekOptions = [
+    { label: "Any Day", value: "" },
+    { label: "Sunday", value: "Sunday" },
+    { label: "Monday", value: "Monday" },
+    { label: "Tuesday", value: "Tuesday" },
+    { label: "Wednesday", value: "Wednesday" },
+    { label: "Thursday", value: "Thursday" },
+    { label: "Friday", value: "Friday" },
+    { label: "Saturday", value: "Saturday" },
+  ];
+
   const contentModeOptions = [
     { label: "Save as Draft", value: "draft" },
     { label: "Publish Immediately", value: "publish" },
@@ -61,10 +134,7 @@ function AutomationSettingsForm({
 
   const authorOptions =
     authors.length > 0
-      ? authors.map((author) => ({
-          label: author.name,
-          value: author.id,
-        }))
+      ? authors.map((author) => ({ label: author.name, value: author.id }))
       : [{ label: "Default Author", value: 1 }];
 
   // === Effects to Sync Labels with Data ===
@@ -73,6 +143,11 @@ function AutomationSettingsForm({
       (opt) => opt.value === (campaignData.schedule_unit || "hour")
     );
     if (currentUnit) setUnitLabel(currentUnit.label);
+
+    const currentDay = dayOfWeekOptions.find(
+      (opt) => opt.value === (campaignData.settings?.schedule_day || "")
+    );
+    if (currentDay) setDayOfWeekLabel(currentDay.label);
 
     const currentMode = contentModeOptions.find(
       (opt) => opt.value === (campaignData.content_mode || "draft")
@@ -97,7 +172,6 @@ function AutomationSettingsForm({
     const value = campaignData.schedule_value || 1;
     const unit = campaignData.schedule_unit || "hour";
     let postsPerDay = 0;
-
     switch (unit) {
       case "minute":
         postsPerDay = (24 * 60) / value;
@@ -114,7 +188,6 @@ function AutomationSettingsForm({
       default:
         postsPerDay = 0;
     }
-
     return {
       day: Math.round(postsPerDay * 10) / 10,
       week: Math.round(postsPerDay * 7 * 10) / 10,
@@ -126,22 +199,24 @@ function AutomationSettingsForm({
   const showTimeInput =
     campaignData.schedule_unit === "day" ||
     campaignData.schedule_unit === "week";
+  const showDayInput = campaignData.schedule_unit === "week";
 
   return (
     <div className="atm-form-container">
       <div className="atm-form-section">
         <h3>Schedule & Frequency</h3>
+        <p className="description">
+          Set how often the campaign should run. Note: For specific time/day
+          scheduling to work, your server's cron job system must be configured
+          to interpret these settings.
+        </p>
+
         <div className="atm-preset-buttons">
           {schedulePresets.map((preset, index) => (
             <button
               key={index}
               type="button"
-              className={`atm-preset-btn ${
-                campaignData.schedule_value === preset.value &&
-                campaignData.schedule_unit === preset.unit
-                  ? "active"
-                  : ""
-              }`}
+              className={`atm-preset-btn ${campaignData.schedule_value === preset.value && campaignData.schedule_unit === preset.unit ? "active" : ""}`}
               onClick={() => applySchedulePreset(preset)}
               disabled={isLoading}
             >
@@ -150,9 +225,7 @@ function AutomationSettingsForm({
           ))}
         </div>
 
-        <div
-          className={`atm-schedule-grid ${showTimeInput ? "show-time" : ""}`}
-        >
+        <div className="atm-schedule-grid">
           <TextControl
             label="Every"
             type="number"
@@ -174,6 +247,23 @@ function AutomationSettingsForm({
               setUnitLabel(option.label);
             }}
           />
+          {showDayInput && (
+            <CustomDropdown
+              label="On"
+              text={dayOfWeekLabel}
+              options={dayOfWeekOptions}
+              onChange={(option) => {
+                setCampaignData({
+                  ...campaignData,
+                  settings: {
+                    ...campaignData.settings,
+                    schedule_day: option.value,
+                  },
+                });
+                setDayOfWeekLabel(option.label);
+              }}
+            />
+          )}
           {showTimeInput && (
             <TextControl
               label="At Time"
@@ -185,7 +275,6 @@ function AutomationSettingsForm({
                   settings: { ...campaignData.settings, schedule_time: value },
                 })
               }
-              help="Specify exact time to run"
               disabled={isLoading}
             />
           )}
@@ -209,7 +298,7 @@ function AutomationSettingsForm({
 
       <div className="atm-form-section">
         <h3>Publishing Settings</h3>
-        <div className="atm-grid-2">
+        <div className="atm-publishing-grid">
           <CustomDropdown
             label="Content Mode"
             text={contentModeLabel}
@@ -230,6 +319,11 @@ function AutomationSettingsForm({
               });
               setAuthorLabel(option.label);
             }}
+          />
+          <CategorySelector
+            campaignData={campaignData}
+            setCampaignData={setCampaignData}
+            categories={categories}
           />
         </div>
       </div>

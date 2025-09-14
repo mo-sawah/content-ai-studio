@@ -723,3 +723,47 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Add these new styles to the end of src/automation.scss */
+
+/* Grid layout for the schedule inputs with alignment fix */
+.atm-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: end; /* This vertically aligns the form fields */
+
+  .components-base-control {
+    width: 100%;
+  }
+}
+
+/* Grid for publishing settings with 3 columns */
+.atm-publishing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+/* Styling for the multi-category selector popover */
+.atm-category-popover .components-popover__content {
+  padding: 8px;
+  min-width: 250px;
+}
+
+.atm-category-list {
+  max-height: 220px;
+  overflow-y: auto;
+
+  .components-base-control {
+    margin-bottom: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: #f8fafc;
+    }
+  }
+}
