@@ -769,3 +769,32 @@
     }
   }
 }
+
+#atm-automation-root .components-button {
+  margin: 8px 0 !important;
+}
+
+.atm-publishing-grid
+  body.wp-admin
+  .atm-content-body
+  .components-button.is-secondary,
+.atm-publishing-grid
+  body.wp-admin
+  body.wp-admin
+  .atm-studio-container
+  .components-button.is-secondary {
+  width: 100% !important;
+}
+
+.atm-form-section p.description {
+  margin-bottom: 15px !important;
+}
+
+/* Force correct alignment for dropdown buttons */
+.atm-custom-dropdown .components-button {
+  display: flex;
+  justify-content: space-between; /* Pushes text left and icon right */
+  align-items: center;
+  width: 100%; /* Ensures the button fills the container */
+  text-align: left;
+}
