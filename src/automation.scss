@@ -798,3 +798,19 @@
   width: 100%; /* Ensures the button fills the container */
   text-align: left !important;
 }
+
+.atm-publishing-grid
+  body.wp-admin
+  .atm-content-body
+  .components-button.is-secondary,
+.atm-publishing-grid
+  body.wp-admin
+  .atm-studio-container
+  .components-button.is-secondary {
+  padding: 9px 15px !important;
+}
+
+/* set a fixed width */
+:root {
+  --atm-dropdown-width: 320px !important;
+}
