@@ -1,4 +1,4 @@
-/* Clean Automation Dashboard CSS - Matching Manual Dashboard */
+@import "./studio.scss";
 
 :root {
   --atm-primary: #3b82f6;
@@ -146,70 +146,6 @@
   }
 }
 
-/* Settings sections with collapsible design */
-.atm-settings-section {
-  background: white;
-  border: 1px solid var(--atm-gray-200);
-  border-radius: var(--atm-border-radius);
-  margin-bottom: 16px;
-  overflow: hidden;
-
-  .atm-section-header {
-    padding: 16px 20px;
-    background: var(--atm-gray-50);
-    border-bottom: 1px solid var(--atm-gray-200);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    transition: background-color 0.2s ease;
-
-    &:hover {
-      background: var(--atm-gray-100);
-    }
-
-    .atm-section-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      h3 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--atm-gray-900);
-      }
-    }
-
-    .atm-collapse-btn {
-      background: none;
-      border: none;
-      color: var(--atm-gray-600);
-      cursor: pointer;
-      transition: transform 0.2s ease;
-      padding: 4px;
-      border-radius: 4px;
-
-      &:hover {
-        background: var(--atm-gray-200);
-      }
-
-      &.expanded {
-        transform: rotate(180deg);
-      }
-
-      svg {
-        width: 16px;
-        height: 16px;
-      }
-    }
-  }
-
-  .atm-section-content {
-    padding: 20px;
-  }
-}
-
 /* Schedule presets - clean button design */
 .atm-preset-buttons {
   display: grid;
@@ -238,45 +174,6 @@
     background: var(--atm-primary);
     border-color: var(--atm-primary);
     color: white;
-  }
-}
-
-/* Schedule preview stats */
-.atm-schedule-preview {
-  padding: 16px;
-  background: linear-gradient(
-    135deg,
-    var(--atm-primary-light) 0%,
-    #f3e8ff 100%
-  );
-  border-radius: 8px;
-  border: 1px solid var(--atm-gray-200);
-  margin-top: 16px;
-
-  .atm-preview-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    text-align: center;
-  }
-
-  .atm-stat {
-    .atm-stat-number {
-      display: block;
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--atm-primary);
-      line-height: 1;
-    }
-
-    .atm-stat-label {
-      display: block;
-      font-size: 12px;
-      color: var(--atm-gray-600);
-      margin-top: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
   }
 }
 
@@ -392,5 +289,71 @@
 
   .components-toggle-control .components-form-toggle.is-checked {
     background: var(--atm-primary);
+  }
+}
+
+// --- New styles for the unified automation form ---
+
+// Style for the new section dividers and headings
+.atm-form-section {
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0; // From studio.scss
+
+  &:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b; // From studio.scss
+    margin: 0 0 20px 0;
+  }
+}
+
+// Simple text-based schedule summary
+.atm-schedule-summary {
+  font-size: 14px;
+  color: #475569; // From studio.scss
+  background-color: #f8fafc; // From studio.scss
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 16px 0;
+  border: 1px solid #e2e8f0; // From studio.scss
+}
+
+// Preset buttons
+.atm-preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.atm-preset-btn {
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #8b5cf6;
+    background: #f5f3ff;
+    color: #7c3aed;
+  }
+
+  &.active {
+    background: #8b5cf6;
+    border-color: #8b5cf6;
+    color: white;
+    font-weight: 600;
   }
 }
