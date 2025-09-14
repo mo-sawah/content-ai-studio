@@ -1,117 +1,52 @@
-// src/components/ListicleForm.js
-import { useState, useRef, useEffect } from "@wordpress/element";
-import { useDispatch, useSelect } from "@wordpress/data";
+// src/components/automation/AutoListicleForm.js (SIMPLIFIED FOR AUTOMATION)
+import { useState, useEffect } from "@wordpress/element";
 import {
-  Button,
   TextControl,
   TextareaControl,
   CheckboxControl,
   RangeControl,
-  Spinner,
   DropdownMenu,
 } from "@wordpress/components";
 import { chevronDown } from "@wordpress/icons";
 
-const callAjax = (action, data) =>
-  jQuery.ajax({
-    url: atm_studio_data.ajax_url,
-    type: "POST",
-    data: { action, nonce: atm_studio_data.nonce, ...data },
-  });
-
-const updateEditorContent = (title, markdownContent, subtitle) => {
-  if (window.ATM_BlockUtils) {
-    window.ATM_BlockUtils.updateEditorContent(title, markdownContent, subtitle);
-  } else {
-    console.error("ATM: Block utilities not loaded");
-    // Fallback to basic HTML insertion
-    const htmlContent = window.marked
-      ? window.marked.parse(markdownContent)
-      : markdownContent;
-    if (window.wp && window.wp.data) {
-      wp.data.dispatch("core/editor").editPost({ title, content: htmlContent });
-    }
-  }
-};
-
-function ListicleForm() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
-  const [topic, setTopic] = useState("");
-  const [title, setTitle] = useState("");
-  const [itemCount, setItemCount] = useState(10);
-  const [category, setCategory] = useState("");
-  const [categoryLabel, setCategoryLabel] = useState("Technology");
-  const [includePricing, setIncludePricing] = useState(false);
-  const [includeRatings, setIncludeRatings] = useState(true);
-  const [articleModel, setArticleModel] = useState("");
+function AutoListicleForm({
+  campaignData,
+  setCampaignData,
+  isAutomation = true,
+}) {
+  // Local state for dropdown labels
   const [articleModelLabel, setArticleModelLabel] =
     useState("Use Default Model");
-  const [customPrompt, setCustomPrompt] = useState("");
-  const [generateImage, setGenerateImage] = useState(false);
+  const [categoryLabel, setCategoryLabel] = useState("Technology");
 
-  const { savePost } = useDispatch("core/editor");
-  const isSaving = useSelect((select) => select("core/editor").isSavingPost());
+  // Custom dropdown component matching manual dashboard
+  const CustomDropdown = ({ label, text, options, onChange, helpText }) => (
+    <div className="atm-dropdown-field">
+      <label className="atm-dropdown-label">{label}</label>
+      <DropdownMenu
+        className="atm-custom-dropdown"
+        icon={chevronDown}
+        text={text}
+        controls={options.map((option) => ({
+          title: option.label,
+          onClick: () => onChange(option),
+        }))}
+        popoverProps={{
+          className: "atm-popover",
+        }}
+      />
+      {helpText && <p className="atm-dropdown-help">{helpText}</p>}
+    </div>
+  );
 
-  // Custom dropdown component
-  const CustomDropdown = ({
-    label,
-    text,
-    options,
-    onChange,
-    disabled,
-    helpText,
-  }) => {
-    const dropdownRef = useRef(null);
-
-    useEffect(() => {
-      if (dropdownRef.current) {
-        const width = dropdownRef.current.offsetWidth;
-        document.documentElement.style.setProperty(
-          "--atm-dropdown-width",
-          width + "px"
-        );
-      }
-    }, [text]);
-
-    return (
-      <div className="atm-dropdown-field" ref={dropdownRef}>
-        <label className="atm-dropdown-label">{label}</label>
-        <DropdownMenu
-          className="atm-custom-dropdown"
-          icon={chevronDown}
-          text={text}
-          controls={options.map((option) => ({
-            title: option.label,
-            onClick: () => {
-              onChange(option);
-            },
-          }))}
-          disabled={disabled}
-          popoverProps={{
-            className: "atm-popover",
-            onMount: () => {
-              if (dropdownRef.current) {
-                const width = dropdownRef.current.offsetWidth;
-                document.documentElement.style.setProperty(
-                  "--atm-dropdown-width",
-                  width + "px"
-                );
-              }
-            },
-          }}
-        />
-        {helpText && <p className="atm-dropdown-help">{helpText}</p>}
-      </div>
-    );
-  };
-
+  // Options for dropdowns
   const modelOptions = [
     { label: "Use Default Model", value: "" },
-    ...Object.entries(atm_studio_data.article_models).map(([value, label]) => ({
-      label,
-      value,
-    })),
+    ...(atm_studio_data?.article_models
+      ? Object.entries(atm_studio_data.article_models).map(
+          ([value, label]) => ({ label, value })
+        )
+      : []),
   ];
 
   const categoryOptions = [
@@ -129,238 +64,132 @@ function ListicleForm() {
     { label: "Sports", value: "sports" },
   ];
 
-  const handleGenerate = async () => {
-    setIsLoading(true);
-    setStatusMessage("");
-
-    const postId = document
-      .getElementById("atm-studio-root")
-      .getAttribute("data-post-id");
-
-    const mainTopic = title || topic;
-
-    if (!mainTopic) {
-      alert("Please provide a topic or article title.");
-      setIsLoading(false);
-      return;
+  // Initialize labels on mount
+  useEffect(() => {
+    // Set AI Model label
+    const currentModel = modelOptions.find(
+      (option) => option.value === (campaignData.settings?.ai_model || "")
+    );
+    if (currentModel) {
+      setArticleModelLabel(currentModel.label);
     }
 
-    try {
-      let finalTitle = title;
-
-      if (!finalTitle && topic) {
-        setStatusMessage("Generating compelling listicle title...");
-        const titleResponse = await callAjax("generate_listicle_title", {
-          topic,
-          item_count: itemCount,
-          category,
-          model: articleModel,
-        });
-
-        if (!titleResponse.success) {
-          throw new Error(titleResponse.data);
-        }
-
-        finalTitle = titleResponse.data.article_title;
-      }
-
-      setStatusMessage("Creating listicle content...");
-      const contentResponse = await callAjax("generate_listicle_content", {
-        post_id: postId,
-        article_title: finalTitle,
-        topic: mainTopic,
-        item_count: itemCount,
-        category,
-        include_pricing: includePricing,
-        include_ratings: includeRatings,
-        model: articleModel,
-        custom_prompt: customPrompt,
-      });
-
-      if (!contentResponse.success) {
-        throw new Error(contentResponse.data);
-      }
-
-      updateEditorContent(
-        finalTitle,
-        contentResponse.data.article_content,
-        contentResponse.data.subtitle || ""
-      );
-      setStatusMessage("✅ Listicle article created successfully!");
-
-      if (contentResponse.data.subtitle) {
-        setStatusMessage(
-          "✅ Article inserted! Saving post to apply subtitle..."
-        );
-        await savePost();
-        setStatusMessage("✅ Listicle article and subtitle saved!");
-      }
-
-      if (generateImage) {
-        setStatusMessage("Saving post...");
-        await savePost();
-
-        setStatusMessage("Generating featured image...");
-        const imageResponse = await callAjax("generate_featured_image", {
-          post_id: postId,
-          prompt: `A modern, clean illustration representing: ${finalTitle}`,
-        });
-
-        if (!imageResponse.success) {
-          alert(
-            "Article was generated and saved, but the image failed: " +
-              imageResponse.data
-          );
-          setStatusMessage("✅ Listicle generated! (Image generation failed)");
-        } else {
-          setStatusMessage("✅ All done! Featured image generated.");
-        }
-      }
-    } catch (error) {
-      console.error("Generation error:", error);
-      alert("Error: " + error.message);
-      setStatusMessage("⚠ Generation failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+    // Set Category label
+    const currentCategory = categoryOptions.find(
+      (option) =>
+        option.value ===
+        (campaignData.settings?.listicle_category || "technology")
+    );
+    if (currentCategory) {
+      setCategoryLabel(currentCategory.label);
     }
+  }, [campaignData.settings, modelOptions]);
+
+  // Update campaign data helpers
+  const updateSetting = (key, value) => {
+    setCampaignData((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        [key]: value,
+      },
+    }));
+  };
+
+  const updateBasicSetting = (key, value) => {
+    setCampaignData((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
   return (
     <div className="atm-form-container">
-      <TextControl
-        label="Topic or Theme"
-        placeholder="e.g., best productivity apps, top marketing tools"
-        value={topic}
-        onChange={setTopic}
-        disabled={isLoading || isSaving}
-        help="The main topic for your listicle (what you want to list)"
-      />
+      {/* Content Configuration Section */}
+      <div className="atm-form-section">
+        <h3>Listicle Configuration</h3>
 
-      <TextControl
-        label="Custom Title (Optional)"
-        placeholder="Leave empty to auto-generate"
-        value={title}
-        onChange={setTitle}
-        disabled={isLoading || isSaving}
-        help="Provide a specific title or let AI generate one from your topic"
-      />
+        <TextControl
+          label="Topic or Theme"
+          placeholder="e.g., best productivity apps, top marketing tools"
+          value={campaignData.keyword || ""}
+          onChange={(value) => updateBasicSetting("keyword", value)}
+          help="The main topic for your automated listicles (what you want to list)"
+        />
 
-      <div className="atm-grid-2">
-        <div>
-          <RangeControl
-            label={`Number of Items: ${itemCount}`}
-            value={itemCount}
-            onChange={setItemCount}
-            min={5}
-            max={25}
-            disabled={isLoading || isSaving}
-            help="How many items to include in your list"
+        <TextControl
+          label="Custom Title (Optional)"
+          placeholder="Leave empty to auto-generate titles"
+          value={campaignData.article_title || ""}
+          onChange={(value) => updateBasicSetting("article_title", value)}
+          help="Provide a specific title template or let AI generate unique ones"
+        />
+
+        {/* Listicle Structure */}
+        <div className="atm-grid-2">
+          <div>
+            <RangeControl
+              label={`Number of Items: ${campaignData.settings?.item_count || 10}`}
+              value={campaignData.settings?.item_count || 10}
+              onChange={(value) => updateSetting("item_count", value)}
+              min={5}
+              max={25}
+              help="How many items to include in your listicles"
+            />
+          </div>
+
+          <CustomDropdown
+            label="Category"
+            text={categoryLabel}
+            options={categoryOptions}
+            onChange={(option) => {
+              updateSetting("listicle_category", option.value);
+              setCategoryLabel(option.label);
+            }}
+            helpText="Category helps generate more relevant content"
           />
         </div>
 
+        {/* AI Model Selection */}
         <CustomDropdown
-          label="Category"
-          text={categoryLabel}
-          options={categoryOptions}
+          label="AI Model"
+          text={articleModelLabel}
+          options={modelOptions}
           onChange={(option) => {
-            setCategory(option.value);
-            setCategoryLabel(option.label);
+            updateSetting("ai_model", option.value);
+            setArticleModelLabel(option.label);
           }}
-          disabled={isLoading || isSaving}
-          helpText="Category helps generate more relevant content"
+        />
+
+        {/* Content Options */}
+        <div className="atm-grid-2">
+          <CheckboxControl
+            label="Include pricing information"
+            checked={campaignData.settings?.include_pricing || false}
+            onChange={(value) => updateSetting("include_pricing", value)}
+            help="Add price details when relevant"
+          />
+
+          <CheckboxControl
+            label="Include ratings/scores"
+            checked={campaignData.settings?.include_ratings !== false} // Default true
+            onChange={(value) => updateSetting("include_ratings", value)}
+            help="Add star ratings or numerical scores"
+          />
+        </div>
+
+        {/* Custom Instructions */}
+        <TextareaControl
+          label="Custom Instructions (Optional)"
+          placeholder="Add specific requirements, tone, or focus areas..."
+          value={campaignData.settings?.custom_prompt || ""}
+          onChange={(value) => updateSetting("custom_prompt", value)}
+          rows={4}
+          help="Additional instructions to customize the listicle content"
         />
       </div>
-
-      <CustomDropdown
-        label="AI Model"
-        text={articleModelLabel}
-        options={modelOptions}
-        onChange={(option) => {
-          setArticleModel(option.value);
-          setArticleModelLabel(option.label);
-        }}
-        disabled={isLoading || isSaving}
-      />
-
-      <div className="atm-grid-2">
-        <CheckboxControl
-          label="Include pricing information"
-          checked={includePricing}
-          onChange={setIncludePricing}
-          disabled={isLoading || isSaving}
-          help="Add price details when relevant"
-        />
-
-        <CheckboxControl
-          label="Include ratings/scores"
-          checked={includeRatings}
-          onChange={setIncludeRatings}
-          disabled={isLoading || isSaving}
-          help="Add star ratings or numerical scores"
-        />
-      </div>
-
-      <TextareaControl
-        label="Custom Instructions (Optional)"
-        placeholder="Add specific requirements, tone, or focus areas..."
-        value={customPrompt}
-        onChange={setCustomPrompt}
-        rows={4}
-        disabled={isLoading || isSaving}
-        help="Additional instructions to customize the listicle content"
-      />
-
-      <CheckboxControl
-        label="Also generate a featured image"
-        checked={generateImage}
-        onChange={setGenerateImage}
-        disabled={isLoading || isSaving}
-      />
-
-      <Button
-        isPrimary
-        onClick={handleGenerate}
-        disabled={isLoading || isSaving || (!topic && !title)}
-      >
-        {isLoading || isSaving ? (
-          <>
-            <Spinner />
-            Generating...
-          </>
-        ) : (
-          <>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 7h.01M9 12h.01m0 4h.01m3-6h4m-4 4h4m2-5h.01M21 12h.01"
-                fill="currentColor"
-              />
-            </svg>
-            Generate Listicle Article
-          </>
-        )}
-      </Button>
-
-      {statusMessage && (
-        <p
-          className={`atm-status-message ${
-            statusMessage.includes("✅")
-              ? "success"
-              : statusMessage.includes("⚠")
-                ? "error"
-                : "info"
-          }`}
-        >
-          {statusMessage}
-        </p>
-      )}
     </div>
   );
 }
 
-export default ListicleForm;
+export default AutoListicleForm;
