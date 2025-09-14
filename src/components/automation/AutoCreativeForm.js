@@ -1,4 +1,5 @@
 // src/components/automation/AutoCreativeForm.js
+
 import { useState, useEffect } from "@wordpress/element";
 import {
   TextControl,
@@ -209,27 +210,23 @@ function AutoCreativeForm({
         {/* Advanced Options with Toggle Controls */}
         <div className="atm-form-section">
           <h4>Content Options</h4>
-
-          <ToggleControl
-            label="Generate Featured Images"
-            checked={campaignData.settings?.generate_image || false}
-            onChange={(value) => updateSetting("generate_image", value)}
-            help="Automatically create AI-generated featured images for each post"
-          />
-
-          <ToggleControl
-            label="Enable Web Search"
-            checked={campaignData.settings?.enable_web_search !== false}
-            onChange={(value) => updateSetting("enable_web_search", value)}
-            help="Use real-time data for accuracy"
-          />
-
-          <ToggleControl
-            label="Include Subheadlines"
-            checked={campaignData.settings?.include_subheadlines !== false}
-            onChange={(value) => updateSetting("include_subheadlines", value)}
-            help="Add H2/H3 tags for structure"
-          />
+          <div className="atm-inline-toggles">
+            <ToggleControl
+              label="Generate Featured Images"
+              checked={campaignData.settings?.generate_image || false}
+              onChange={(value) => updateSetting("generate_image", value)}
+            />
+            <ToggleControl
+              label="Enable Web Search"
+              checked={campaignData.settings?.enable_web_search !== false}
+              onChange={(value) => updateSetting("enable_web_search", value)}
+            />
+            <ToggleControl
+              label="Include Subheadlines"
+              checked={campaignData.settings?.include_subheadlines !== false}
+              onChange={(value) => updateSetting("include_subheadlines", value)}
+            />
+          </div>
         </div>
 
         {/* Custom Prompt */}

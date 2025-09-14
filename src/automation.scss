@@ -638,3 +638,38 @@
     }
   }
 }
+
+// Add this at the end of src/automation.scss
+
+/* Styling for inline toggle controls */
+.atm-inline-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: center;
+  margin-top: 16px;
+  padding-bottom: 12px;
+
+  /* Override default boxed style for toggles within this container */
+  .components-toggle-control {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    gap: 8px;
+
+    /* Place the label before the switch for a more standard UI */
+    .components-base-control__field {
+      flex-direction: row-reverse;
+    }
+
+    .components-toggle-control__label {
+      margin-bottom: 0;
+    }
+
+    /* Hide the help text to keep the layout clean */
+    .components-base-control__help {
+      display: none;
+    }
+  }
+}
