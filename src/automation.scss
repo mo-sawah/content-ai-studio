@@ -1018,14 +1018,111 @@
   margin-left: 25px;
 }
 
-// Quick CSS-only fix to force popover width
-.components-popover__content:has(.components-menu-group),
-.components-popover__content:has(.atm-category-list) {
-  width: 100% !important;
-  min-width: 300px !important; // Adjust this value as needed
+/* Updated CSS for proper popover width matching - Add this to your automation.scss */
+
+/* Target the specific popover class used in your CustomDropdown */
+.atm-popover {
+  .components-popover__content {
+    width: var(--atm-popover-width, auto) !important;
+    min-width: var(--atm-popover-width, 250px) !important;
+    max-width: none !important;
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  .components-menu-group__label {
+    display: none;
+  }
+
+  .components-menu-item__button {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #374151;
+    border-radius: 4px;
+    margin: 2px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover {
+      background: #f8fafc;
+      color: #8b5cf6;
+    }
+
+    &:focus {
+      background: #faf5ff;
+      color: #8b5cf6;
+      box-shadow: none;
+    }
+  }
 }
 
-// More specific targeting
-.atm-dropdown-field + .components-popover .components-popover__content {
-  width: 300px !important; // Match your typical dropdown width
+/* Also update the category popover styles */
+.atm-category-popover .components-popover__content {
+  width: var(--atm-popover-width, auto) !important;
+  min-width: var(--atm-popover-width, 280px) !important;
+}
+
+/* Ensure dropdown buttons take full width */
+.atm-custom-dropdown {
+  width: 100%;
+
+  .components-dropdown-menu__toggle,
+  .components-button {
+    width: 100% !important;
+    justify-content: space-between !important;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    text-align: left;
+    color: #374151;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #8b5cf6;
+      background: #faf5ff;
+    }
+
+    &:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 1px #8b5cf6;
+      outline: none;
+    }
+
+    .components-dropdown-menu__indicator {
+      margin-left: auto;
+    }
+  }
+}
+
+/* Force proper width inheritance for all popover instances */
+.components-popover[data-floating-ui-portal] {
+  &:has(.atm-popover),
+  &:has(.atm-category-popover) {
+    .components-popover__content {
+      width: var(--atm-popover-width, auto) !important;
+      min-width: var(--atm-popover-width, 250px) !important;
+    }
+  }
+}
+
+/* Additional fallback for stubborn cases */
+.atm-dropdown-field {
+  .components-popover__content {
+    width: var(
+      --current-dropdown-width,
+      var(--atm-popover-width, auto)
+    ) !important;
+    min-width: var(
+      --current-dropdown-width,
+      var(--atm-popover-width, 250px)
+    ) !important;
+  }
 }
