@@ -3,8 +3,8 @@
   "version": "1.6.482",
   "private": true,
   "scripts": {
-    "build": "wp-scripts build src/index.js src/studio.js src/automation.js",
-    "start": "wp-scripts start src/index.js src/studio.js src/automation.js",
+    "build": "wp-scripts build src/index.js src/studio.js src/automation.js src/campaigns.js",
+    "start": "wp-scripts start src/index.js src/studio.js src/automation.js src/campaigns.js",
     "zip": "wp-scripts plugin-zip",
     "postversion": "node version-sync.js"
   },
