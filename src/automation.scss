@@ -732,10 +732,12 @@
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
   margin-bottom: 20px;
-  align-items: end; /* This vertically aligns the form fields */
+  align-items: flex-end; /* Use flex-end for better vertical alignment */
 
-  .components-base-control {
-    width: 100%;
+  /* Normalize the wrapper divs to ensure they align */
+  > .components-base-control,
+  > .atm-dropdown-field {
+    margin-bottom: 0;
   }
 }
 
@@ -744,7 +746,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
-  align-items: end;
+  align-items: flex-end; /* This vertically aligns the form fields */
 }
 
 /* Styling for the multi-category selector popover */

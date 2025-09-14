@@ -89,10 +89,10 @@ class ATM_Automation_Admin {
             }
         }
         
-        // Localize script data with all required data
+        // --- REPLACE the existing $localized_data array with this one ---
         $localized_data = array(
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('atm_automation_nonce'),
+            'nonce' => wp_create_nonce('atm_automation_nonce'), // This is the corrected nonce name
             'plugin_url' => ATM_PLUGIN_URL,
             'categories' => $this->get_categories_for_js(),
             'authors' => $this->get_authors_for_js(),
@@ -100,12 +100,8 @@ class ATM_Automation_Admin {
             'schedule_options' => $this->get_schedule_options(),
             'content_modes' => $this->get_content_modes(),
             'tts_voices' => [
-                'alloy' => 'Alloy', 
-                'echo' => 'Echo', 
-                'fabel' => 'Fable', 
-                'onyx' => 'Onyx', 
-                'nova' => 'Nova', 
-                'shimmer' => 'Shimmer'
+                'alloy' => 'Alloy', 'echo' => 'Echo', 'fabel' => 'Fable', 
+                'onyx' => 'Onyx', 'nova' => 'Nova', 'shimmer' => 'Shimmer'
             ]
         );
         
