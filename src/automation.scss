@@ -673,3 +673,53 @@
     }
   }
 }
+
+/* Add these new styles to the end of src/automation.scss */
+
+/* Grid layout for the schedule inputs */
+.atm-schedule-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: end;
+
+  /* Adjust grid when the time input is visible */
+  &.show-time {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* Post frequency summary box */
+.atm-schedule-summary {
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+  padding: 20px;
+  margin-top: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f5f3ff, #eef2ff);
+  border: 1px solid #e0e7ff;
+
+  .atm-summary-stat {
+    .atm-stat-number {
+      display: block;
+      font-size: 24px;
+      font-weight: 700;
+      color: #4338ca;
+      line-height: 1.2;
+    }
+    .atm-stat-label {
+      font-size: 13px;
+      color: #64748b;
+    }
+  }
+}
+
+/* Responsive adjustments for the schedule grid */
+@media (max-width: 768px) {
+  .atm-schedule-grid,
+  .atm-schedule-grid.show-time {
+    grid-template-columns: 1fr;
+  }
+}

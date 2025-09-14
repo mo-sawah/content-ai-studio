@@ -1,4 +1,4 @@
-// src/components/automation/AutomationSettingsForm.js (UPDATED with style fixes)
+// src/components/automation/AutomationSettingsForm.js (UPDATED with time input and summary)
 import { useState, useEffect } from "@wordpress/element";
 import {
   DropdownMenu,
@@ -93,6 +93,40 @@ function AutomationSettingsForm({
     });
   };
 
+  const calculatePostsPerPeriod = () => {
+    const value = campaignData.schedule_value || 1;
+    const unit = campaignData.schedule_unit || "hour";
+    let postsPerDay = 0;
+
+    switch (unit) {
+      case "minute":
+        postsPerDay = (24 * 60) / value;
+        break;
+      case "hour":
+        postsPerDay = 24 / value;
+        break;
+      case "day":
+        postsPerDay = 1 / value;
+        break;
+      case "week":
+        postsPerDay = 1 / (value * 7);
+        break;
+      default:
+        postsPerDay = 0;
+    }
+
+    return {
+      day: Math.round(postsPerDay * 10) / 10,
+      week: Math.round(postsPerDay * 7 * 10) / 10,
+      month: Math.round(postsPerDay * 30.4 * 10) / 10,
+    };
+  };
+
+  const posts = calculatePostsPerPeriod();
+  const showTimeInput =
+    campaignData.schedule_unit === "day" ||
+    campaignData.schedule_unit === "week";
+
   return (
     <div className="atm-form-container">
       <div className="atm-form-section">
@@ -116,7 +150,9 @@ function AutomationSettingsForm({
           ))}
         </div>
 
-        <div className="atm-grid-2">
+        <div
+          className={`atm-schedule-grid ${showTimeInput ? "show-time" : ""}`}
+        >
           <TextControl
             label="Every"
             type="number"
@@ -138,6 +174,36 @@ function AutomationSettingsForm({
               setUnitLabel(option.label);
             }}
           />
+          {showTimeInput && (
+            <TextControl
+              label="At Time"
+              type="time"
+              value={campaignData.settings?.schedule_time || ""}
+              onChange={(value) =>
+                setCampaignData({
+                  ...campaignData,
+                  settings: { ...campaignData.settings, schedule_time: value },
+                })
+              }
+              help="Specify exact time to run"
+              disabled={isLoading}
+            />
+          )}
+        </div>
+
+        <div className="atm-schedule-summary">
+          <div className="atm-summary-stat">
+            <span className="atm-stat-number">{posts.day}</span>
+            <span className="atm-stat-label">Posts per day</span>
+          </div>
+          <div className="atm-summary-stat">
+            <span className="atm-stat-number">{posts.week}</span>
+            <span className="atm-stat-label">Posts per week</span>
+          </div>
+          <div className="atm-summary-stat">
+            <span className="atm-stat-number">{posts.month}</span>
+            <span className="atm-stat-label">Posts per month</span>
+          </div>
         </div>
       </div>
 

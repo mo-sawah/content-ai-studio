@@ -83,7 +83,7 @@ class ATM_Automation_Admin {
                 wp_enqueue_style(
                     'atm-automation-build-style',
                     ATM_PLUGIN_URL . 'build/automation.css',
-                    array('atm-automation-style'), // Make it depend on our main CSS
+                    array('wp-components', 'atm-automation-style'), // <-- MODIFIED LINE
                     $automation_asset['version']
                 );
             }
