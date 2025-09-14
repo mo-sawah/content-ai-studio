@@ -119,8 +119,8 @@ function CampaignSettingsForm({
 
             <div className="atm-custom-schedule">
               <label className="atm-label">Custom Schedule</label>
-              <Flex gap={3} align="end">
-                <FlexItem>
+              <div className="atm-schedule-inputs">
+                <div className="atm-schedule-input-group">
                   <TextControl
                     label="Every"
                     type="number"
@@ -134,8 +134,8 @@ function CampaignSettingsForm({
                     disabled={isLoading}
                     min="1"
                   />
-                </FlexItem>
-                <FlexItem>
+                </div>
+                <div className="atm-schedule-input-group">
                   <SelectControl
                     label="Unit"
                     value={campaignData.schedule_unit || "hour"}
@@ -153,8 +153,23 @@ function CampaignSettingsForm({
                     }
                     disabled={isLoading}
                   />
-                </FlexItem>
-              </Flex>
+                </div>
+                <div className="atm-schedule-time-group">
+                  <TextControl
+                    label="At time (optional)"
+                    type="time"
+                    value={campaignData.schedule_time || ""}
+                    onChange={(value) =>
+                      setCampaignData({
+                        ...campaignData,
+                        schedule_time: value,
+                      })
+                    }
+                    disabled={isLoading}
+                    help="Specify exact time for daily/weekly schedules"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="atm-schedule-preview">
@@ -190,7 +205,21 @@ function CampaignSettingsForm({
           onClick={() => toggleSection("publishing")}
         >
           <div className="atm-section-title">
-            <span className="atm-section-icon">📝</span>
+            <span className="atm-section-icon">
+              <svg
+                width="20"
+                height="20"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                <path
+                  fillRule="evenodd"
+                  d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 1a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 3a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </span>
             <h3>Publishing & Organization</h3>
           </div>
           <button
@@ -236,10 +265,14 @@ function CampaignSettingsForm({
                 <SelectControl
                   label="Author"
                   value={campaignData.author_id || 1}
-                  options={authors.map((author) => ({
-                    label: author.label,
-                    value: author.value,
-                  }))}
+                  options={
+                    authors.length > 0
+                      ? authors.map((author) => ({
+                          label: author.label,
+                          value: author.value,
+                        }))
+                      : [{ label: "Default Author", value: 1 }]
+                  }
                   onChange={(value) =>
                     setCampaignData({
                       ...campaignData,
@@ -253,34 +286,41 @@ function CampaignSettingsForm({
 
             <div className="atm-categories-section">
               <label className="atm-label">Categories</label>
-              <div className="atm-category-grid">
-                {categories.map((category) => (
-                  <div key={category.value} className="atm-category-item">
-                    <input
-                      type="checkbox"
-                      id={`cat-${category.value}`}
-                      checked={
-                        campaignData.category_ids?.includes(category.value) ||
-                        false
-                      }
-                      onChange={(e) => {
-                        const currentIds = campaignData.category_ids || [];
-                        const newIds = e.target.checked
-                          ? [...currentIds, category.value]
-                          : currentIds.filter((id) => id !== category.value);
-                        setCampaignData({
-                          ...campaignData,
-                          category_ids: newIds,
-                        });
-                      }}
-                      disabled={isLoading}
-                    />
-                    <label htmlFor={`cat-${category.value}`}>
-                      {category.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
+              {categories.length > 0 ? (
+                <div className="atm-category-grid">
+                  {categories.map((category) => (
+                    <div key={category.value} className="atm-category-item">
+                      <input
+                        type="checkbox"
+                        id={`cat-${category.value}`}
+                        checked={
+                          campaignData.category_ids?.includes(category.value) ||
+                          false
+                        }
+                        onChange={(e) => {
+                          const currentIds = campaignData.category_ids || [];
+                          const newIds = e.target.checked
+                            ? [...currentIds, category.value]
+                            : currentIds.filter((id) => id !== category.value);
+                          setCampaignData({
+                            ...campaignData,
+                            category_ids: newIds,
+                          });
+                        }}
+                        disabled={isLoading}
+                      />
+                      <label htmlFor={`cat-${category.value}`}>
+                        {category.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="atm-no-categories">
+                  No categories available. Categories will be loaded from
+                  WordPress.
+                </p>
+              )}
             </div>
           </CardBody>
         )}
@@ -290,7 +330,20 @@ function CampaignSettingsForm({
       <Card className="atm-settings-section">
         <div className="atm-section-header" onClick={() => toggleSection("ai")}>
           <div className="atm-section-title">
-            <span className="atm-section-icon">🤖</span>
+            <span className="atm-section-icon">
+              <svg
+                width="20"
+                height="20"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </span>
             <h3>AI & Content Settings</h3>
           </div>
           <button
@@ -400,7 +453,6 @@ function CampaignSettingsForm({
             <div className="atm-content-options">
               <ToggleControl
                 label="Generate Featured Images"
-                help="Automatically create AI-generated featured images for each post"
                 checked={campaignData.settings?.generate_image || false}
                 onChange={(value) =>
                   setCampaignData({
@@ -412,6 +464,7 @@ function CampaignSettingsForm({
                   })
                 }
                 disabled={isLoading}
+                help="Automatically create AI-generated featured images for each post"
               />
             </div>
           </CardBody>
@@ -425,7 +478,20 @@ function CampaignSettingsForm({
           onClick={() => toggleSection("advanced")}
         >
           <div className="atm-section-title">
-            <span className="atm-section-icon">⚙️</span>
+            <span className="atm-section-icon">
+              <svg
+                width="20"
+                height="20"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </span>
             <h3>Advanced Settings</h3>
           </div>
           <button
@@ -463,7 +529,6 @@ function CampaignSettingsForm({
             <div className="atm-advanced-options">
               <ToggleControl
                 label="Campaign Active"
-                help="Enable or disable this campaign"
                 checked={campaignData.is_active !== false}
                 onChange={(value) =>
                   setCampaignData({
@@ -472,11 +537,11 @@ function CampaignSettingsForm({
                   })
                 }
                 disabled={isLoading}
+                help="Enable or disable this campaign"
               />
 
               <ToggleControl
                 label="Skip Weekends"
-                help="Pause campaign execution on Saturdays and Sundays"
                 checked={campaignData.settings?.skip_weekends || false}
                 onChange={(value) =>
                   setCampaignData({
@@ -488,11 +553,11 @@ function CampaignSettingsForm({
                   })
                 }
                 disabled={isLoading}
+                help="Pause campaign execution on Saturdays and Sundays"
               />
 
               <ToggleControl
                 label="Quality Check Mode"
-                help="Add extra validation to ensure higher content quality (slower execution)"
                 checked={campaignData.settings?.quality_check || false}
                 onChange={(value) =>
                   setCampaignData({
@@ -504,6 +569,7 @@ function CampaignSettingsForm({
                   })
                 }
                 disabled={isLoading}
+                help="Add extra validation to ensure higher content quality (slower execution)"
               />
             </div>
           </CardBody>
