@@ -1,4 +1,3 @@
-// src/components/automation/AutoNewsGenerator.js
 import { useState, useEffect } from "@wordpress/element";
 import {
   Button,
@@ -6,9 +5,10 @@ import {
   TextareaControl,
   ToggleControl,
   Spinner,
-  BaseControl,
 } from "@wordpress/components";
 import CustomDropdown from "../common/CustomDropdown";
+// IMPORT a missing component that was causing the crash
+import AutomationSettingsForm from "./AutomationSettingsForm";
 
 // News Search Form (Google News/SerpAPI)
 const NewsSearchForm = ({ campaignData, setCampaignData, isLoading }) => {
@@ -443,12 +443,16 @@ const LiveNewsForm = ({ campaignData, setCampaignData, isLoading }) => {
   );
 };
 
-function AutoNewsGenerator({ setActiveView, editingCampaign }) {
+function AutoNewsGenerator({
+  setActiveView,
+  editingCampaign,
+  categories, // Receive categories prop
+  authors, // Receive authors prop
+}) {
   const [activeTab, setActiveTab] = useState("search");
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  // Campaign data state
   const [campaignData, setCampaignData] = useState({
     name: "",
     keyword: "",
@@ -461,12 +465,12 @@ function AutoNewsGenerator({ setActiveView, editingCampaign }) {
       word_count: "",
       custom_prompt: "",
       generate_image: false,
-      news_method: "google_news", // This maps to sub_type
+      news_method: "google_news",
+      category_ids: [],
     },
     schedule_value: 1,
     schedule_unit: "hour",
     content_mode: "publish",
-    category_ids: [],
     author_id: 1,
     is_active: true,
   });
@@ -660,7 +664,9 @@ function AutoNewsGenerator({ setActiveView, editingCampaign }) {
           {newsTypes.map((type) => (
             <div
               key={type.id}
-              className={`atm-type-card ${activeTab === type.id ? "active" : ""}`}
+              className={`atm-type-card ${
+                activeTab === type.id ? "active" : ""
+              }`}
               onClick={() => setActiveTab(type.id)}
             >
               <div
@@ -715,11 +721,13 @@ function AutoNewsGenerator({ setActiveView, editingCampaign }) {
           />
         )}
 
-        {/* Common settings section - reuse from your existing implementation */}
-        <CampaignSettingsForm
+        {/* Common settings section - UPDATE to pass props */}
+        <AutomationSettingsForm
           campaignData={campaignData}
           setCampaignData={setCampaignData}
           isLoading={isLoading}
+          categories={categories} // Pass categories down
+          authors={authors} // Pass authors down
         />
 
         {/* Form actions */}
