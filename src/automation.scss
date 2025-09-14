@@ -489,3 +489,152 @@
     margin: 0; // Remove margins that might interfere
   }
 }
+
+// Modern dropdown styling to match manual dashboard
+.atm-dropdown-field {
+  margin-bottom: 20px;
+
+  .atm-dropdown-label {
+    display: block;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+
+  .atm-dropdown-help {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    line-height: 1.4;
+    margin-bottom: 0;
+  }
+}
+
+.atm-custom-dropdown {
+  width: 100%;
+
+  .components-dropdown-menu__toggle {
+    width: 100%;
+    justify-content: space-between;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    text-align: left;
+    color: #374151;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #8b5cf6;
+      background: #faf5ff;
+    }
+
+    &:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 1px #8b5cf6;
+      outline: none;
+    }
+
+    .components-dropdown-menu__indicator {
+      margin-left: auto;
+    }
+  }
+}
+
+.atm-dropdown-popover {
+  .components-popover__content {
+    min-width: 280px;
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  .components-menu-group__label {
+    display: none;
+  }
+
+  .components-menu-item__button {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #374151;
+    border-radius: 4px;
+    margin: 2px;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: #f8fafc;
+      color: #8b5cf6;
+    }
+
+    &:focus {
+      background: #faf5ff;
+      color: #8b5cf6;
+      box-shadow: none;
+    }
+  }
+}
+
+// Toggle control styling improvements
+.atm-automation-root {
+  .components-toggle-control {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+
+    .components-base-control__field {
+      margin-bottom: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .components-form-toggle {
+      margin: 0;
+
+      &.is-checked {
+        background: #8b5cf6;
+        border-color: #8b5cf6;
+
+        .components-form-toggle__track {
+          background: #8b5cf6;
+        }
+
+        .components-form-toggle__thumb {
+          background: white;
+        }
+      }
+
+      &:not(.is-checked) {
+        background: #d1d5db;
+        border-color: #d1d5db;
+
+        .components-form-toggle__track {
+          background: #d1d5db;
+        }
+      }
+    }
+
+    .components-toggle-control__label {
+      font-weight: 500;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+
+    .components-base-control__help {
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.4;
+      margin: 0;
+    }
+  }
+}

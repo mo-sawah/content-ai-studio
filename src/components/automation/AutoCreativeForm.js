@@ -3,14 +3,25 @@ import { useState, useEffect } from "@wordpress/element";
 import {
   TextControl,
   TextareaControl,
-  SelectControl,
+  ToggleControl,
+  DropdownMenu,
 } from "@wordpress/components";
+import { chevronDown } from "@wordpress/icons";
 
 function AutoCreativeForm({
   campaignData,
   setCampaignData,
   isAutomation = true,
 }) {
+  // Local state for dropdown labels
+  const [articleModelLabel, setArticleModelLabel] =
+    useState("Use Default Model");
+  const [writingStyleLabel, setWritingStyleLabel] = useState(
+    "Standard / SEO-Optimized"
+  );
+  const [wordCountLabel, setWordCountLabel] = useState("Default");
+  const [creativityLabel, setCreativityLabel] = useState("Creative (Dynamic)");
+
   // Options for dropdowns with user-friendly labels
   const modelOptions = [
     { label: "Use Default Model", value: "" },
@@ -51,6 +62,61 @@ function AutoCreativeForm({
     { label: "Balanced", value: "medium" },
     { label: "Creative (Dynamic)", value: "high" },
   ];
+
+  // Initialize labels on mount
+  useEffect(() => {
+    const currentModel = modelOptions.find(
+      (option) => option.value === (campaignData.settings?.ai_model || "")
+    );
+    if (currentModel) {
+      setArticleModelLabel(currentModel.label);
+    }
+
+    const currentStyle = styleOptions.find(
+      (option) =>
+        option.value === (campaignData.settings?.writing_style || "default_seo")
+    );
+    if (currentStyle) {
+      setWritingStyleLabel(currentStyle.label);
+    }
+
+    const currentWordCount = wordCountOptions.find(
+      (option) =>
+        option.value === (campaignData.settings?.word_count?.toString() || "")
+    );
+    if (currentWordCount) {
+      setWordCountLabel(currentWordCount.label);
+    }
+
+    const currentCreativity = creativityOptions.find(
+      (option) =>
+        option.value === (campaignData.settings?.creativity_level || "high")
+    );
+    if (currentCreativity) {
+      setCreativityLabel(currentCreativity.label);
+    }
+  }, [campaignData.settings]);
+
+  // Custom dropdown component matching manual dashboard
+  const CustomDropdown = ({ label, text, options, onChange, helpText }) => (
+    <div className="atm-dropdown-field">
+      <label className="atm-dropdown-label">{label}</label>
+      <DropdownMenu
+        className="atm-custom-dropdown"
+        icon={chevronDown}
+        text={text}
+        controls={options.map((option) => ({
+          title: option.label,
+          onClick: () => onChange(option),
+        }))}
+        popoverProps={{
+          className: "atm-dropdown-popover",
+          position: "bottom left",
+        }}
+      />
+      {helpText && <p className="atm-dropdown-help">{helpText}</p>}
+    </div>
+  );
 
   // Update campaign data helpers
   const updateSetting = (key, value) => {
@@ -94,41 +160,77 @@ function AutoCreativeForm({
 
         {/* AI Settings Grid */}
         <div className="atm-grid-3">
-          <SelectControl
+          <CustomDropdown
             label="AI Model"
-            value={campaignData.settings?.ai_model || ""}
+            text={articleModelLabel}
             options={modelOptions}
-            onChange={(value) => updateSetting("ai_model", value)}
-            help="Choose the AI model for content generation"
-          />
-
-          <SelectControl
-            label="Writing Style"
-            value={campaignData.settings?.writing_style || "default_seo"}
-            options={styleOptions}
-            onChange={(value) => updateSetting("writing_style", value)}
-            help="Select the tone and style for your content"
-          />
-
-          <SelectControl
-            label="Word Count"
-            value={campaignData.settings?.word_count?.toString() || ""}
-            options={wordCountOptions}
-            onChange={(value) => {
-              updateSetting("word_count", value ? parseInt(value) : 0);
+            onChange={(option) => {
+              updateSetting("ai_model", option.value);
+              setArticleModelLabel(option.label);
             }}
-            help="Target article length"
+            helpText="Choose the AI model for content generation"
+          />
+
+          <CustomDropdown
+            label="Writing Style"
+            text={writingStyleLabel}
+            options={styleOptions}
+            onChange={(option) => {
+              updateSetting("writing_style", option.value);
+              setWritingStyleLabel(option.label);
+            }}
+            helpText="Select the tone and style for your content"
+          />
+
+          <CustomDropdown
+            label="Word Count"
+            text={wordCountLabel}
+            options={wordCountOptions}
+            onChange={(option) => {
+              updateSetting("word_count", parseInt(option.value) || 0);
+              setWordCountLabel(option.label);
+            }}
+            helpText="Target article length"
           />
         </div>
 
         {/* Creativity Level */}
-        <SelectControl
+        <CustomDropdown
           label="Creativity Level"
-          value={campaignData.settings?.creativity_level || "high"}
+          text={creativityLabel}
           options={creativityOptions}
-          onChange={(value) => updateSetting("creativity_level", value)}
-          help="Control how creative vs factual the content should be"
+          onChange={(option) => {
+            updateSetting("creativity_level", option.value);
+            setCreativityLabel(option.label);
+          }}
+          helpText="Control how creative vs factual the content should be"
         />
+
+        {/* Advanced Options with Toggle Controls */}
+        <div className="atm-form-section">
+          <h4>Content Options</h4>
+
+          <ToggleControl
+            label="Generate Featured Images"
+            checked={campaignData.settings?.generate_image || false}
+            onChange={(value) => updateSetting("generate_image", value)}
+            help="Automatically create AI-generated featured images for each post"
+          />
+
+          <ToggleControl
+            label="Enable Web Search"
+            checked={campaignData.settings?.enable_web_search !== false}
+            onChange={(value) => updateSetting("enable_web_search", value)}
+            help="Use real-time data for accuracy"
+          />
+
+          <ToggleControl
+            label="Include Subheadlines"
+            checked={campaignData.settings?.include_subheadlines !== false}
+            onChange={(value) => updateSetting("include_subheadlines", value)}
+            help="Add H2/H3 tags for structure"
+          />
+        </div>
 
         {/* Custom Prompt */}
         <TextareaControl
