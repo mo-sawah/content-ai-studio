@@ -3,10 +3,10 @@ import { useState, useEffect } from "@wordpress/element";
 import { Button, TextControl, Spinner } from "@wordpress/components";
 
 // Import the manual form components - these already have the correct styling
-import CreativeForm from "../CreativeForm";
-import TrendingForm from "../TrendingForm";
-import ListicleForm from "../ListicleForm";
-import MultipageArticlesForm from "../MultipageArticlesForm";
+import AutoCreativeForm from "./AutoCreativeForm";
+import AutoTrendingForm from "./AutoTrendingForm";
+import AutoListicleForm from "./AutoListicleForm";
+import AutoMultipageArticlesForm from "./AutoMultipageArticlesForm";
 
 // Import automation settings component
 import AutomationSettingsForm from "./AutomationSettingsForm";
@@ -170,15 +170,15 @@ function AutoArticleGenerator({ setActiveView, editingCampaign }) {
 
     switch (activeTab) {
       case "creative":
-        return <CreativeForm {...props} />;
+        return <AutoCreativeForm {...props} />;
       case "trending":
-        return <TrendingForm {...props} />;
+        return <AutoTrendingForm {...props} />;
       case "listicle":
-        return <ListicleForm {...props} />;
+        return <AutoListicleForm {...props} />;
       case "multipage":
-        return <MultipageArticlesForm {...props} />;
+        return <AutoMultipageArticlesForm {...props} />;
       default:
-        return <CreativeForm {...props} />;
+        return <AutoCreativeForm {...props} />;
     }
   };
 
