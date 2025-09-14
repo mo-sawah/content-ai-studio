@@ -100,7 +100,7 @@ class ATM_Automation_Ajax {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied.');
         }
-        check_ajax_referer('atm_nonce', 'nonce');
+        check_ajax_referer('atm_automation_nonce', 'nonce');
         
         try {
             $campaign_id = intval($_POST['campaign_id']);
@@ -135,7 +135,7 @@ class ATM_Automation_Ajax {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied.');
         }
-        check_ajax_referer('atm_nonce', 'nonce');
+        check_ajax_referer('atm_automation_nonce', 'nonce');
         
         try {
             global $wpdb;
@@ -180,7 +180,7 @@ class ATM_Automation_Ajax {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied.');
         }
-        check_ajax_referer('atm_nonce', 'nonce');
+        check_ajax_referer('atm_automation_nonce', 'nonce');
         
         try {
             $campaign_id = intval($_POST['campaign_id']);
@@ -212,7 +212,7 @@ class ATM_Automation_Ajax {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied.');
         }
-        check_ajax_referer('atm_nonce', 'nonce');
+        check_ajax_referer('atm_automation_nonce', 'nonce');
         
         try {
             $campaign_id = intval($_POST['campaign_id']);
@@ -252,7 +252,7 @@ class ATM_Automation_Ajax {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied.');
         }
-        check_ajax_referer('atm_nonce', 'nonce');
+        check_ajax_referer('atm_automation_nonce', 'nonce');
         
         try {
             $campaign_id = intval($_POST['campaign_id']);
@@ -285,7 +285,7 @@ class ATM_Automation_Ajax {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied.');
         }
-        check_ajax_referer('atm_nonce', 'nonce');
+        check_ajax_referer('atm_automation_nonce', 'nonce');
         
         try {
             $campaign_id = isset($_POST['campaign_id']) ? intval($_POST['campaign_id']) : 0;
@@ -331,7 +331,7 @@ class ATM_Automation_Ajax {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied.');
         }
-        check_ajax_referer('atm_nonce', 'nonce');
+        check_ajax_referer('atm_automation_nonce', 'nonce');
         
         try {
             $campaign_id = isset($_POST['campaign_id']) ? intval($_POST['campaign_id']) : 0;

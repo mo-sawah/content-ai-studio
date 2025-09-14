@@ -92,7 +92,7 @@ class ATM_Automation_Admin {
         // Localize script data with all required data
         $localized_data = array(
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('atm_nonce'),
+            'nonce' => wp_create_nonce('atm_automation_nonce'),
             'plugin_url' => ATM_PLUGIN_URL,
             'categories' => $this->get_categories_for_js(),
             'authors' => $this->get_authors_for_js(),
