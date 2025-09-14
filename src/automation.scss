@@ -1017,3 +1017,15 @@
 .atm-schedule-summary .atm-summary-header .atm-summary-badge {
   margin-left: 25px;
 }
+
+// Quick CSS-only fix to force popover width
+.components-popover__content:has(.components-menu-group),
+.components-popover__content:has(.atm-category-list) {
+  width: 100% !important;
+  min-width: 300px !important; // Adjust this value as needed
+}
+
+// More specific targeting
+.atm-dropdown-field + .components-popover .components-popover__content {
+  width: 300px !important; // Match your typical dropdown width
+}
