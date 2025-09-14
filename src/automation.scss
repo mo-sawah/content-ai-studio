@@ -12,6 +12,12 @@
   --atm-border-radius: 12px;
   --atm-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
   --atm-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  // Icon colors matching manual dashboard
+  --atm-purple: #8b5cf6;
+  --atm-red: #ef4444;
+  --atm-green: #10b981;
+  --atm-orange: #f59e0b;
 }
 
 /* Main automation container */
@@ -45,146 +51,218 @@
   }
 }
 
-/* Content cards - matching manual dashboard style */
-.atm-content-card {
-  background: white;
-  border-radius: var(--atm-border-radius);
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: var(--atm-shadow-sm);
-  border: 1px solid var(--atm-gray-200);
+/* EXACT STYLING TO MATCH MANUAL DASHBOARD */
 
-  h3 {
-    margin: 0 0 16px 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--atm-gray-900);
-  }
-
-  p.description {
-    margin: 0 0 20px 0;
-    color: var(--atm-gray-600);
-    font-size: 14px;
-    line-height: 1.5;
-  }
+/* Type selector cards - matching manual dashboard exactly */
+.atm-type-selector {
+  margin-bottom: 32px;
 }
 
-/* Type selector cards - matching manual dashboard */
 .atm-type-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
+  margin-bottom: 24px;
 }
 
 .atm-type-card {
-  padding: 20px;
-  border: 2px solid var(--atm-gray-200);
-  border-radius: var(--atm-border-radius);
+  padding: 24px;
+  border: 2px solid #e2e8f0; // Light gray border
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   background: white;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
 
   &:hover {
-    border-color: var(--atm-primary);
-    box-shadow: var(--atm-shadow-md);
+    border-color: #8b5cf6; // Purple hover
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transform: translateY(-1px);
   }
 
   &.active {
-    border-color: var(--atm-primary);
-    background: var(--atm-primary-light);
+    border-color: #8b5cf6; // Purple active border
+    background: #faf5ff; // Very light purple background
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+  }
+}
+
+.atm-type-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+
+  &.atm-icon-purple {
+    background: var(--atm-purple);
   }
 
-  .atm-type-icon {
-    width: 48px;
-    height: 48px;
-    background: var(--atm-primary);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 12px;
-    color: white;
-
-    svg {
-      width: 24px;
-      height: 24px;
-    }
+  &.atm-icon-red {
+    background: var(--atm-red);
   }
 
-  .atm-type-content h4 {
+  &.atm-icon-green {
+    background: var(--atm-green);
+  }
+
+  &.atm-icon-orange {
+    background: var(--atm-orange);
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.atm-type-content {
+  flex: 1;
+
+  h3 {
     margin: 0 0 8px 0;
     font-size: 16px;
     font-weight: 600;
-    color: var(--atm-gray-900);
+    color: #1e293b; // Dark text
+    line-height: 1.4;
   }
 
-  .atm-type-content p {
+  p {
     margin: 0;
     font-size: 14px;
-    color: var(--atm-gray-600);
+    color: #64748b; // Gray text
+    line-height: 1.5;
+  }
+}
+
+/* Form sections - matching manual dashboard */
+.atm-form-section {
+  padding-bottom: 32px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid #e2e8f0;
+
+  &:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 20px 0;
     line-height: 1.4;
   }
 }
 
-/* Form layout - matching manual dashboard */
-.atm-form-row {
+/* Grid layouts - exactly matching manual dashboard */
+.atm-grid-2 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 20px;
 }
 
-.atm-form-section {
-  margin-bottom: 24px;
-
-  h4 {
-    margin: 0 0 12px 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--atm-gray-900);
-  }
+.atm-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-/* Schedule presets - clean button design */
+/* Preset buttons - matching manual dashboard style */
 .atm-preset-buttons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 8px;
+  margin-bottom: 20px;
 }
 
 .atm-preset-btn {
-  padding: 8px 12px;
+  padding: 10px 16px;
   background: white;
-  border: 1px solid var(--atm-gray-300);
-  border-radius: 6px;
-  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--atm-gray-600);
+  color: #374151;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
+  white-space: nowrap;
 
   &:hover {
-    border-color: var(--atm-primary);
-    background: var(--atm-primary-light);
+    border-color: #8b5cf6;
+    background: #faf5ff;
+    color: #7c3aed;
   }
 
   &.active {
-    background: var(--atm-primary);
-    border-color: var(--atm-primary);
+    background: #8b5cf6;
+    border-color: #8b5cf6;
     color: white;
+    font-weight: 600;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
-/* Form actions */
+/* Schedule summary - clean info box */
+.atm-schedule-summary {
+  font-size: 14px;
+  color: #475569;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 16px 0 20px 0;
+  border: 1px solid #e2e8f0;
+  line-height: 1.5;
+}
+
+/* Form actions - matching manual dashboard */
 .atm-form-actions {
   display: flex;
   gap: 12px;
   align-items: center;
-  padding-top: 20px;
-  border-top: 1px solid var(--atm-gray-200);
-  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 32px;
+}
+
+/* Status messages */
+.atm-status-message {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 500;
+
+  &.success {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+
+  &.error {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+
+  &.info {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+  }
 }
 
 /* Campaign dashboard styling */
@@ -203,6 +281,136 @@
   &:hover {
     box-shadow: var(--atm-shadow-md);
     border-color: var(--atm-gray-300);
+  }
+}
+
+/* WordPress Components Integration - Matching manual dashboard */
+.atm-automation-root {
+  .components-base-control__label {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+
+  .components-base-control__help {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  .components-text-control__input,
+  .components-textarea-control__input,
+  .components-select-control__input {
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    padding: 8px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+
+    &:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 1px #8b5cf6;
+      outline: none;
+    }
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+  }
+
+  .components-textarea-control__input {
+    padding: 12px;
+    line-height: 1.5;
+  }
+
+  .components-button.is-primary {
+    background: #8b5cf6;
+    border-color: #8b5cf6;
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 8px 20px;
+    height: auto;
+    line-height: 1.5;
+
+    &:hover:not(:disabled) {
+      background: #7c3aed;
+      border-color: #7c3aed;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+
+  .components-button.is-secondary {
+    border: 1px solid #d1d5db;
+    color: #374151;
+    background: white;
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 8px 20px;
+    height: auto;
+
+    &:hover:not(:disabled) {
+      border-color: #8b5cf6;
+      color: #7c3aed;
+      background: #faf5ff;
+    }
+  }
+
+  .components-toggle-control {
+    .components-form-toggle {
+      &.is-checked {
+        background: #8b5cf6;
+        border-color: #8b5cf6;
+
+        .components-form-toggle__track {
+          background: #8b5cf6;
+        }
+      }
+    }
+
+    .components-toggle-control__label {
+      font-weight: 500;
+      color: #1e293b;
+    }
+  }
+
+  .components-range-control {
+    .components-range-control__label {
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .components-range-control__slider {
+      color: #8b5cf6;
+    }
+  }
+}
+
+/* Content card styling - matching manual dashboard */
+.atm-content-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+
+  h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  p.description {
+    margin: 0 0 20px 0;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.5;
   }
 }
 
@@ -226,13 +434,13 @@
     grid-template-columns: 1fr;
   }
 
-  .atm-form-row {
+  .atm-grid-2,
+  .atm-grid-3 {
     grid-template-columns: 1fr;
   }
 
-  .atm-preview-stats {
-    grid-template-columns: 1fr;
-    gap: 12px;
+  .atm-preset-buttons {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -247,113 +455,37 @@
 
     .components-button {
       width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .atm-type-card {
+    padding: 20px;
+
+    .atm-type-icon {
+      width: 40px;
+      height: 40px;
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .atm-type-content h3 {
+      font-size: 15px;
+    }
+
+    .atm-type-content p {
+      font-size: 13px;
     }
   }
 }
 
-/* Clean component integration - no forced overrides */
-.atm-automation-root {
-  .components-base-control__label {
-    font-weight: 500;
-    color: var(--atm-gray-900);
-    margin-bottom: 6px;
-  }
-
-  .components-base-control__help {
-    color: var(--atm-gray-600);
-    font-size: 13px;
-    margin-top: 4px;
-  }
-
-  .components-text-control__input,
-  .components-textarea-control__input,
-  .components-select-control__input {
-    border-radius: 6px;
-    border-color: var(--atm-gray-300);
-
-    &:focus {
-      border-color: var(--atm-primary);
-      box-shadow: 0 0 0 1px var(--atm-primary);
-    }
-  }
-
-  .components-button.is-primary {
-    background: var(--atm-primary);
-    border-color: var(--atm-primary);
-
-    &:hover:not(:disabled) {
-      background: #2563eb;
-      border-color: #2563eb;
-    }
-  }
-
-  .components-toggle-control .components-form-toggle.is-checked {
-    background: var(--atm-primary);
-  }
-}
-
-// --- New styles for the unified automation form ---
-
-// Style for the new section dividers and headings
-.atm-form-section {
-  padding-bottom: 24px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid #e2e8f0; // From studio.scss
-
-  &:last-of-type {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-  }
-
-  h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1e293b; // From studio.scss
-    margin: 0 0 20px 0;
-  }
-}
-
-// Simple text-based schedule summary
-.atm-schedule-summary {
-  font-size: 14px;
-  color: #475569; // From studio.scss
-  background-color: #f8fafc; // From studio.scss
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin: 16px 0;
-  border: 1px solid #e2e8f0; // From studio.scss
-}
-
-// Preset buttons
-.atm-preset-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.atm-preset-btn {
-  padding: 8px 16px;
-  background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #475569;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: #8b5cf6;
-    background: #f5f3ff;
-    color: #7c3aed;
-  }
-
-  &.active {
-    background: #8b5cf6;
-    border-color: #8b5cf6;
-    color: white;
-    font-weight: 600;
+/* Clean integration with existing studio styles */
+.atm-generator-view {
+  .atm-form-container {
+    max-width: none; // Remove any width restrictions
+    margin: 0; // Remove margins that might interfere
   }
 }

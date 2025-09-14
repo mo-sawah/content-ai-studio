@@ -1,406 +1,250 @@
-// src/components/automation/AutoArticleGenerator.js (REVISED AND UNIFIED)
+// src/components/automation/AutoArticleGenerator.js (UPDATED TO MATCH MANUAL STYLING)
 import { useState, useEffect } from "@wordpress/element";
-import {
-  Button,
-  TextControl,
-  TextareaControl,
-  ToggleControl,
-  SelectControl,
-  Spinner,
-} from "@wordpress/components";
+import { Button, TextControl, Spinner } from "@wordpress/components";
 
-// Helper function to calculate post frequency
-const calculatePostFrequency = (value, unit) => {
-  if (!value || !unit) return { day: 0, week: 0, month: 0 };
-  const minutes =
-    value *
-    (unit === "minute"
-      ? 1
-      : unit === "hour"
-        ? 60
-        : unit === "day"
-          ? 1440
-          : 10080);
-  const perDay = minutes > 0 ? Math.round((24 * 60) / minutes) : 0;
-  return {
-    day: perDay,
-    week: perDay * 7,
-    month: Math.round(perDay * 30.4),
-  };
-};
+// Import the manual form components - these already have the correct styling
+import CreativeForm from "../CreativeForm";
+import TrendingForm from "../TrendingForm";
+import ListicleForm from "../ListicleForm";
+import MultipageArticlesForm from "../MultipageArticlesForm";
 
-// Article type configurations (from your original file)
-const articleTypes = [
-  {
-    id: "standard",
-    title: "Standard Articles",
-    description: "High-quality SEO content with intelligent angle diversity",
-  },
-  {
-    id: "trending",
-    title: "Trending Articles",
-    description: "Current hot topics and trending searches",
-  },
-  {
-    id: "listicle",
-    title: "Listicle Articles",
-    description: "Numbered lists and top 10 style content",
-  },
-  {
-    id: "multipage",
-    title: "Multipage Articles",
-    description: "Multi-part comprehensive guides and series",
-  },
-];
+// Import automation settings component
+import AutomationSettingsForm from "./AutomationSettingsForm";
 
-function AutoArticleGenerator({
-  setActiveView,
-  editingCampaign,
-  categories = [],
-  authors = [],
-}) {
-  const [activeTab, setActiveTab] = useState("standard");
+function AutoArticleGenerator({ setActiveView, editingCampaign }) {
+  const [activeTab, setActiveTab] = useState("creative");
   const [isLoading, setIsLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
+  const [statusMessage, setStatusMessage] = useState({
+    text: "",
+    type: "info",
+  });
 
+  // Central state for the entire campaign
   const [campaignData, setCampaignData] = useState({
     name: "",
-    keyword: "",
     type: "articles",
-    sub_type: "standard",
+    sub_type: "creative",
+    // Content settings will be populated by the child forms
+    keyword: "",
+    article_title: "",
+    writing_style: "default_seo",
+    creativity_level: "high",
+    word_count: "",
+    custom_prompt: "",
+    generate_image: true,
+    // Automation-specific settings
+    schedule_value: 1,
+    schedule_unit: "hour",
+    content_mode: "draft",
+    author_id: 1,
+    is_active: true,
     settings: {
-      ai_model: "",
-      writing_style: "default_seo",
-      creativity_level: "high",
-      word_count: "",
-      custom_prompt: "",
-      generate_image: true,
       skip_weekends: false,
       quality_check: false,
     },
-    schedule_value: 1,
-    schedule_unit: "hour",
-    schedule_time: "",
-    content_mode: "draft",
-    category_ids: [],
-    author_id: 1,
-    is_active: true,
   });
 
+  // Load editing campaign data
   useEffect(() => {
     if (editingCampaign) {
       setCampaignData({ ...campaignData, ...editingCampaign });
-      setActiveTab(editingCampaign.sub_type || "standard");
+      setActiveTab(editingCampaign.sub_type || "creative");
     }
   }, [editingCampaign]);
 
+  // Update sub_type when tab changes
   useEffect(() => {
     setCampaignData((prev) => ({ ...prev, sub_type: activeTab }));
   }, [activeTab]);
 
   const handleSaveCampaign = async () => {
-    if (!campaignData.name.trim() || !campaignData.keyword.trim()) {
-      setStatusMessage("Error: Campaign Name and Keyword/Topic are required.");
+    // Validation
+    if (!campaignData.name.trim()) {
+      setStatusMessage({ text: "Campaign name is required.", type: "error" });
       return;
     }
+
+    if (!campaignData.keyword.trim()) {
+      setStatusMessage({ text: "Keyword is required.", type: "error" });
+      return;
+    }
+
     setIsLoading(true);
-    setStatusMessage("");
+    setStatusMessage({ text: "Saving campaign...", type: "info" });
 
     try {
-      // Note: Your original AJAX call in AutoArticleGenerator.js was correct.
-      // The bug was in the PHP backend, which is fixed in Step 3.
       const response = await jQuery.ajax({
         url: atm_automation_data.ajax_url,
         type: "POST",
         data: {
-          action: "atm_save_automation_campaign",
+          action: editingCampaign
+            ? "update_automation_campaign"
+            : "create_automation_campaign",
           nonce: atm_automation_data.nonce,
           campaign_data: JSON.stringify(campaignData),
-          campaign_id: editingCampaign?.id || 0,
+          campaign_id: editingCampaign?.id || "",
         },
       });
+
       if (response.success) {
-        setStatusMessage(
-          editingCampaign
+        setStatusMessage({
+          text: editingCampaign
             ? "Campaign updated successfully!"
-            : "Campaign created successfully!"
-        );
-        setTimeout(() => setActiveView("campaigns"), 1500);
+            : "Campaign created successfully!",
+          type: "success",
+        });
+        setTimeout(() => setActiveView("campaigns"), 2000);
       } else {
         throw new Error(response.data || "Failed to save campaign");
       }
     } catch (error) {
-      setStatusMessage("Error: " + error.message);
+      setStatusMessage({ text: "Error: " + error.message, type: "error" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const schedulePresets = [
-    { label: "Every 15 mins", value: 15, unit: "minute" },
-    { label: "Every 30 mins", value: 30, unit: "minute" },
-    { label: "Every hour", value: 1, unit: "hour" },
-    { label: "Every 2 hours", value: 2, unit: "hour" },
-    { label: "Daily", value: 1, unit: "day" },
-    { label: "Weekly", value: 1, unit: "week" },
+  const articleTypes = [
+    {
+      id: "creative",
+      title: "Standard Articles",
+      description: "Create high-quality SEO content with AI",
+      icon: (
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.828-2.828z" />
+        </svg>
+      ),
+    },
+    {
+      id: "trending",
+      title: "Trending Articles",
+      description: "Generate content on current hot topics",
+      icon: (
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z"
+            clipRule="evenodd"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "listicle",
+      title: "Listicle Articles",
+      description: "Create numbered lists and top 10 style content",
+      icon: (
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+          <path
+            fillRule="evenodd"
+            d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 1a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 3a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+            clipRule="evenodd"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "multipage",
+      title: "Multipage Articles",
+      description: "Create comprehensive, multi-part guides",
+      icon: (
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
+          <path
+            fillRule="evenodd"
+            d="M3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+            clipRule="evenodd"
+          />
+        </svg>
+      ),
+    },
   ];
 
-  const applySchedulePreset = (preset) => {
-    setCampaignData({
-      ...campaignData,
-      schedule_value: preset.value,
-      schedule_unit: preset.unit,
-    });
-  };
+  const renderActiveForm = () => {
+    const props = {
+      isAutomation: true,
+      campaignData: campaignData,
+      setCampaignData: setCampaignData,
+    };
 
-  const frequency = calculatePostFrequency(
-    campaignData.schedule_value,
-    campaignData.schedule_unit
-  );
+    switch (activeTab) {
+      case "creative":
+        return <CreativeForm {...props} />;
+      case "trending":
+        return <TrendingForm {...props} />;
+      case "listicle":
+        return <ListicleForm {...props} />;
+      case "multipage":
+        return <MultipageArticlesForm {...props} />;
+      default:
+        return <CreativeForm {...props} />;
+    }
+  };
 
   return (
     <div className="atm-generator-view">
-      {/* Article Type Selector - This part is already well-designed */}
-      <div className="atm-type-selector">
-        {articleTypes.map((type) => (
-          <div
-            key={type.id}
-            className={`atm-type-card ${activeTab === type.id ? "active" : ""}`}
-            onClick={() => setActiveTab(type.id)}
-          >
-            <div className="atm-type-content">
-              <h3>{type.title}</h3>
-              <p>{type.description}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* --- UNIFIED FORM STARTS HERE --- */}
+      {/* Campaign Name - First field for automation */}
       <div className="atm-form-container">
-        {/* SECTION 1: CAMPAIGN & CONTENT */}
         <div className="atm-form-section">
-          <h3>
-            {articleTypes.find((t) => t.id === activeTab)?.title} Configuration
-          </h3>
-          <div className="atm-form-row">
-            <TextControl
-              label="Campaign Name"
-              value={campaignData.name || ""}
-              onChange={(value) =>
-                setCampaignData({ ...campaignData, name: value })
-              }
-              disabled={isLoading}
-            />
-            <TextControl
-              label="Keyword/Topic"
-              value={campaignData.keyword || ""}
-              onChange={(value) =>
-                setCampaignData({ ...campaignData, keyword: value })
-              }
-              disabled={isLoading}
-            />
-          </div>
+          <TextControl
+            label="Campaign Name"
+            placeholder="e.g., Daily SEO Blog Posts"
+            value={campaignData.name}
+            onChange={(value) =>
+              setCampaignData({ ...campaignData, name: value })
+            }
+            help="Give your automation campaign a unique name."
+            disabled={isLoading}
+          />
         </div>
 
-        {/* SECTION 2: AI & CONTENT SETTINGS */}
-        <div className="atm-form-section">
-          <h3>AI & Content Settings</h3>
-          <div
-            className="atm-form-row"
-            style={{ gridTemplateColumns: "1fr 1fr 1fr" }}
-          >
-            <SelectControl
-              label="AI Model"
-              value={campaignData.settings.ai_model}
-              onChange={(v) =>
-                setCampaignData({
-                  ...campaignData,
-                  settings: { ...campaignData.settings, ai_model: v },
-                })
-              }
-              options={
-                [{ label: "Default", value: "" }] /* Add other options */
-              }
-            />
-            <SelectControl
-              label="Writing Style"
-              value={campaignData.settings.writing_style}
-              onChange={(v) =>
-                setCampaignData({
-                  ...campaignData,
-                  settings: { ...campaignData.settings, writing_style: v },
-                })
-              }
-              options={
-                [
-                  { label: "Standard SEO", value: "default_seo" },
-                ] /* Add other options */
-              }
-            />
-            <SelectControl
-              label="Creativity Level"
-              value={campaignData.settings.creativity_level}
-              onChange={(v) =>
-                setCampaignData({
-                  ...campaignData,
-                  settings: { ...campaignData.settings, creativity_level: v },
-                })
-              }
-              options={
-                [
-                  { label: "Creative (Dynamic)", value: "high" },
-                ] /* Add other options */
-              }
-            />
-          </div>
-          <div className="atm-form-row">
-            <TextControl
-              label="Target Word Count"
-              type="number"
-              value={campaignData.settings.word_count}
-              onChange={(v) =>
-                setCampaignData({
-                  ...campaignData,
-                  settings: { ...campaignData.settings, word_count: v },
-                })
-              }
-              help="Leave empty for automatic sizing."
-            />
-            <TextareaControl
-              label="Custom Prompt (Optional)"
-              value={campaignData.settings.custom_prompt}
-              onChange={(v) =>
-                setCampaignData({
-                  ...campaignData,
-                  settings: { ...campaignData.settings, custom_prompt: v },
-                })
-              }
-              help="Overrides the selected writing style."
-            />
-          </div>
-        </div>
-
-        {/* SECTION 3: SCHEDULE & PUBLISHING */}
-        <div className="atm-form-section">
-          <h3>Schedule & Publishing</h3>
-          <label className="components-base-control__label">
-            Quick Presets
-          </label>
-          <div className="atm-preset-buttons">
-            {schedulePresets.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                className={`atm-preset-btn ${campaignData.schedule_value == preset.value && campaignData.schedule_unit === preset.unit ? "active" : ""}`}
-                onClick={() => applySchedulePreset(preset)}
-                disabled={isLoading}
+        {/* Article Type Selector - Matching manual dashboard style exactly */}
+        <div className="atm-type-selector">
+          <div className="atm-type-cards">
+            {articleTypes.map((type) => (
+              <div
+                key={type.id}
+                className={`atm-type-card ${activeTab === type.id ? "active" : ""}`}
+                onClick={() => setActiveTab(type.id)}
               >
-                {preset.label}
-              </button>
+                <div className={`atm-type-icon ${getIconColorClass(type.id)}`}>
+                  {type.icon}
+                </div>
+                <div className="atm-type-content">
+                  <h3>{type.title}</h3>
+                  <p>{type.description}</p>
+                </div>
+              </div>
             ))}
           </div>
-          <p className="atm-schedule-summary">
-            This schedule will generate approximately{" "}
-            <strong>{frequency.day}</strong> posts per day.
-          </p>
-          <div className="atm-form-row">
-            <TextControl
-              label="Every"
-              type="number"
-              value={campaignData.schedule_value || 1}
-              onChange={(v) =>
-                setCampaignData({
-                  ...campaignData,
-                  schedule_value: Math.max(1, parseInt(v) || 1),
-                })
-              }
-              min="1"
-            />
-            <SelectControl
-              label="Unit"
-              value={campaignData.schedule_unit || "hour"}
-              onChange={(v) =>
-                setCampaignData({ ...campaignData, schedule_unit: v })
-              }
-              options={[
-                { label: "Minutes", value: "minute" },
-                { label: "Hours", value: "hour" },
-                { label: "Days", value: "day" },
-              ]}
-            />
-            <SelectControl
-              label="Content Mode"
-              value={campaignData.content_mode || "draft"}
-              onChange={(v) =>
-                setCampaignData({ ...campaignData, content_mode: v })
-              }
-              options={[
-                { label: "Save as Draft", value: "draft" },
-                { label: "Publish Immediately", value: "publish" },
-              ]}
-            />
-            <SelectControl
-              label="Author"
-              value={campaignData.author_id || 1}
-              onChange={(v) =>
-                setCampaignData({ ...campaignData, author_id: parseInt(v) })
-              }
-              options={
-                authors.length > 0
-                  ? authors
-                  : [{ label: "Default Author", value: 1 }]
-              }
-            />
-          </div>
         </div>
 
-        {/* SECTION 4: CAMPAIGN CONTROLS */}
-        <div className="atm-form-section">
-          <h3>Campaign Controls</h3>
-          <div
-            className="atm-form-row"
-            style={{ gridTemplateColumns: "1fr 1fr 1fr" }}
-          >
-            <ToggleControl
-              label="Campaign Active"
-              checked={!!campaignData.is_active}
-              onChange={(v) =>
-                setCampaignData({ ...campaignData, is_active: v })
-              }
-              help="Enable or disable this campaign."
-            />
-            <ToggleControl
-              label="Generate Featured Image"
-              checked={!!campaignData.settings.generate_image}
-              onChange={(v) =>
-                setCampaignData({
-                  ...campaignData,
-                  settings: { ...campaignData.settings, generate_image: v },
-                })
-              }
-              help="Create an AI image for each post."
-            />
-            <ToggleControl
-              label="Skip Weekends"
-              checked={!!campaignData.settings.skip_weekends}
-              onChange={(v) =>
-                setCampaignData({
-                  ...campaignData,
-                  settings: { ...campaignData.settings, skip_weekends: v },
-                })
-              }
-              help="Pause execution on Saturday & Sunday."
-            />
-          </div>
-        </div>
+        {/* RENDER THE SELECTED MANUAL FORM - This will show the exact same layout as manual */}
+        {renderActiveForm()}
+
+        {/* RENDER THE AUTOMATION SETTINGS - Campaign-specific settings */}
+        <AutomationSettingsForm
+          campaignData={campaignData}
+          setCampaignData={setCampaignData}
+          isLoading={isLoading}
+        />
 
         {/* FINAL ACTIONS */}
         <div className="atm-form-actions">
-          <Button isPrimary onClick={handleSaveCampaign} disabled={isLoading}>
+          <Button
+            isPrimary
+            onClick={handleSaveCampaign}
+            disabled={
+              isLoading ||
+              !campaignData.name.trim() ||
+              !campaignData.keyword.trim()
+            }
+          >
             {isLoading ? (
               <>
-                <Spinner /> Saving...
+                <Spinner />
+                Saving...
               </>
             ) : editingCampaign ? (
               "Update Campaign"
@@ -408,24 +252,36 @@ function AutoArticleGenerator({
               "Create Campaign"
             )}
           </Button>
+
           <Button
             isSecondary
-            onClick={() => setActiveView("hub")}
+            onClick={() => setActiveView("campaigns")}
             disabled={isLoading}
           >
             Cancel
           </Button>
         </div>
-        {statusMessage && (
-          <div
-            className={`atm-status-message ${statusMessage.includes("Error") ? "error" : "success"}`}
-          >
-            {statusMessage}
-          </div>
+
+        {/* Status Message */}
+        {statusMessage.text && (
+          <p className={`atm-status-message ${statusMessage.type}`}>
+            {statusMessage.text}
+          </p>
         )}
       </div>
     </div>
   );
+}
+
+// Helper function to get icon colors matching manual dashboard
+function getIconColorClass(typeId) {
+  const colorMap = {
+    creative: "atm-icon-purple", // Purple like Standard Articles
+    trending: "atm-icon-red", // Red like Trending Articles
+    listicle: "atm-icon-green", // Green like Listicle Articles
+    multipage: "atm-icon-orange", // Orange like Multipage Articles
+  };
+  return colorMap[typeId] || "atm-icon-purple";
 }
 
 export default AutoArticleGenerator;
