@@ -33,10 +33,10 @@ const CampaignCard = ({
         textColor: "text-green-700",
       },
       paused: {
-        color: "border-yellow-200 bg-yellow-50",
-        dot: "bg-yellow-500",
+        color: "border-gray-200 bg-gray-50",
+        dot: "bg-gray-500",
         text: "Paused",
-        textColor: "text-yellow-700",
+        textColor: "text-gray-700",
       },
       failed: {
         color: "border-red-200 bg-red-50",
@@ -52,34 +52,66 @@ const CampaignCard = ({
     const configs = {
       articles: {
         standard: {
-          icon: "📝",
+          icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+            </svg>
+          ),
           color: "bg-blue-100 text-blue-700",
           label: "Articles",
         },
         trending: {
-          icon: "📈",
+          icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z" />
+            </svg>
+          ),
           color: "bg-purple-100 text-purple-700",
           label: "Trending",
         },
         listicle: {
-          icon: "📋",
+          icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7,5H21V7H7V5M7,13V11H21V13H7M4,4.5A1.5,1.5 0 0,1 5.5,6A1.5,1.5 0 0,1 4,7.5A1.5,1.5 0 0,1 2.5,6A1.5,1.5 0 0,1 4,4.5M4,10.5A1.5,1.5 0 0,1 5.5,12A1.5,1.5 0 0,1 4,13.5A1.5,1.5 0 0,1 2.5,12A1.5,1.5 0 0,1 4,10.5M7,19V17H21V19H7M4,16.5A1.5,1.5 0 0,1 5.5,18A1.5,1.5 0 0,1 4,19.5A1.5,1.5 0 0,1 2.5,18A1.5,1.5 0 0,1 4,16.5Z" />
+            </svg>
+          ),
           color: "bg-green-100 text-green-700",
           label: "Listicles",
         },
         multipage: {
-          icon: "📄",
+          icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13,9V3.5L18.5,9M6,2C4.89,2 4,2.9 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6Z" />
+            </svg>
+          ),
           color: "bg-amber-100 text-amber-700",
           label: "Multipage",
         },
       },
       news: {
-        icon: "📰",
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20,11H4V8H20M20,15H13V13H20M20,19H13V17H20M11,19H4V13H11M20.33,4.67L18.67,3L17,4.67L15.33,3L13.67,4.67L12,3L10.33,4.67L8.67,3L7,4.67L5.33,3L3.67,4.67L2,3V19A2,2 0 0,0 4,21H20A2,2 0 0,0 22,19V3L20.33,4.67Z" />
+          </svg>
+        ),
         color: "bg-emerald-100 text-emerald-700",
         label: "News",
       },
-      videos: { icon: "🎥", color: "bg-red-100 text-red-700", label: "Videos" },
+      videos: {
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z" />
+          </svg>
+        ),
+        color: "bg-red-100 text-red-700",
+        label: "Videos",
+      },
       podcasts: {
-        icon: "🎙️",
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
+          </svg>
+        ),
         color: "bg-orange-100 text-orange-700",
         label: "Podcasts",
       },
@@ -90,7 +122,11 @@ const CampaignCard = ({
     }
     return (
       configs[type] || {
-        icon: "⚙️",
+        icon: (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
+          </svg>
+        ),
         color: "bg-gray-100 text-gray-700",
         label: "Campaign",
       }
@@ -142,27 +178,51 @@ const CampaignCard = ({
     {
       title: "Run Now",
       onClick: handleRunNow,
-      icon: isRunning ? "⟳" : "▶️",
+      icon: isRunning ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
+        </svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+        </svg>
+      ),
     },
     {
       title: "Edit Campaign",
       onClick: () => onEdit(campaign),
-      icon: "✏️",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" />
+        </svg>
+      ),
     },
     {
       title: "Duplicate",
       onClick: () => onDuplicate(campaign),
-      icon: "📋",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" />
+        </svg>
+      ),
     },
     {
       title: "View Logs",
       onClick: () => onViewLogs(campaign.id),
-      icon: "📊",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9,5V9H21V5M9,19H21V15H9M9,14H21V10H9M4,9H8L6,7M4,19H8L6,17M4,14H8L6,12" />
+        </svg>
+      ),
     },
     {
       title: "Delete",
       onClick: () => setShowDeleteModal(true),
-      icon: "🗑️",
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+        </svg>
+      ),
       className: "text-red-600",
     },
   ];
@@ -229,7 +289,7 @@ const CampaignCard = ({
               viewBox="0 0 24 24"
               fill="currentColor"
             >
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+              <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" />
             </svg>
             <span>Next run: {formatNextRun(campaign.next_run)}</span>
           </div>
@@ -420,7 +480,7 @@ function CampaignDashboard({
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
-                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4C7.58,4 4.01,7.58 4.01,12C4.01,16.42 7.58,20 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18C8.69,18 6,15.31 6,12C6,8.69 8.69,6 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
               </svg>
               Refresh
             </Button>
@@ -432,7 +492,7 @@ function CampaignDashboard({
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
               </svg>
               New Campaign
             </Button>
@@ -443,7 +503,14 @@ function CampaignDashboard({
         <div className="atm-stats-overview">
           <div className="atm-overview-card">
             <div className="atm-overview-icon bg-blue-100 text-blue-600">
-              📊
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M9,17H7V10H9V17M13,17H11V7H13V17M17,17H15V13H17V17M19.5,19.1H4.5V5H19.5V19.1Z" />
+              </svg>
             </div>
             <div className="atm-overview-content">
               <span className="atm-overview-number">{stats.total}</span>
@@ -453,7 +520,14 @@ function CampaignDashboard({
 
           <div className="atm-overview-card">
             <div className="atm-overview-icon bg-green-100 text-green-600">
-              ✅
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
+              </svg>
             </div>
             <div className="atm-overview-content">
               <span className="atm-overview-number">{stats.active}</span>
@@ -463,7 +537,14 @@ function CampaignDashboard({
 
           <div className="atm-overview-card">
             <div className="atm-overview-icon bg-yellow-100 text-yellow-600">
-              ⏸️
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M14,19H18V5H14M6,19H10V5H6V19Z" />
+              </svg>
             </div>
             <div className="atm-overview-content">
               <span className="atm-overview-number">{stats.paused}</span>
@@ -473,7 +554,14 @@ function CampaignDashboard({
 
           <div className="atm-overview-card">
             <div className="atm-overview-icon bg-purple-100 text-purple-600">
-              📝
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+              </svg>
             </div>
             <div className="atm-overview-content">
               <span className="atm-overview-number">{stats.totalPosts}</span>
@@ -493,7 +581,7 @@ function CampaignDashboard({
             viewBox="0 0 24 24"
             fill="currentColor"
           >
-            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+            <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
           </svg>
           <input
             type="text"
@@ -541,7 +629,7 @@ function CampaignDashboard({
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
-                <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
+                <path d="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3" />
               </svg>
             </button>
             <button
@@ -554,7 +642,7 @@ function CampaignDashboard({
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
-                <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+                <path d="M3,5H21V7H3V5M3,13V11H21V13H3M3,19V17H21V19H3Z" />
               </svg>
             </button>
           </div>
@@ -573,8 +661,26 @@ function CampaignDashboard({
           }`}
         >
           <div className="atm-status-content">
-            {statusMessage.includes("successfully") && <span>✅</span>}
-            {statusMessage.includes("Error") && <span>❌</span>}
+            {statusMessage.includes("successfully") && (
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
+              </svg>
+            )}
+            {statusMessage.includes("Error") && (
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
+              </svg>
+            )}
             <span>{statusMessage}</span>
           </div>
           <button
@@ -583,7 +689,9 @@ function CampaignDashboard({
             }}
             className="atm-status-close"
           >
-            ×
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+            </svg>
           </button>
         </div>
       )}
@@ -592,7 +700,16 @@ function CampaignDashboard({
       {filteredCampaigns.length === 0 ? (
         <div className="atm-empty-state-modern">
           <div className="atm-empty-content">
-            <div className="atm-empty-icon">🤖</div>
+            <div className="atm-empty-icon">
+              <svg
+                width="64"
+                height="64"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7A1,1 0 0,0 14,8H20A2,2 0 0,1 22,10V20A2,2 0 0,1 20,22H4A2,2 0 0,1 2,20V10C2,8.89 2.9,8 4,8H10A1,1 0 0,0 11,7V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2M4,10V20H20V10H4M6,12H18V14H6V12M6,16H14V18H6V16Z" />
+              </svg>
+            </div>
             <h3>No campaigns found</h3>
             <p>
               {campaigns.length === 0

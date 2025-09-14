@@ -64,6 +64,17 @@ class ATM_Automation_Admin {
             ATM_VERSION
         );
         
+        // Enqueue campaigns CSS for campaign dashboard
+        $campaigns_css_path = ATM_PLUGIN_PATH . 'build/campaigns.css';
+        if (file_exists($campaigns_css_path)) {
+            wp_enqueue_style(
+                'atm-campaigns-style',
+                ATM_PLUGIN_URL . 'build/campaigns.css',
+                array('atm-automation-style'),
+                ATM_VERSION
+            );
+        }
+        
         // Then enqueue the React app
         $automation_asset_path = ATM_PLUGIN_PATH . 'build/automation.asset.php';
         if (file_exists($automation_asset_path)) {
@@ -83,7 +94,7 @@ class ATM_Automation_Admin {
                 wp_enqueue_style(
                     'atm-automation-build-style',
                     ATM_PLUGIN_URL . 'build/automation.css',
-                    array('wp-components', 'atm-automation-style'), // <-- MODIFIED LINE
+                    array('wp-components', 'atm-automation-style'), 
                     $automation_asset['version']
                 );
             }
