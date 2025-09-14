@@ -770,6 +770,17 @@
   }
 }
 
+.atm-publishing-grid
+  body.wp-admin
+  .atm-content-body
+  .components-button.is-secondary,
+.atm-publishing-grid
+  body.wp-admin
+  .atm-studio-container
+  .components-button.is-secondary {
+  padding: 8px 15px !important;
+}
+
 .atm-form-container .components-button {
   margin: 8px 0 !important;
   padding: 10px 15px !important;
