@@ -445,10 +445,6 @@
     padding: 10px 5px !important;
   }
 
-  #atm-automation-root .components-button {
-    padding: 10px 5px !important;
-  }
-
   .atm-card-actions .components-button {
     padding: 10px 5px !important;
   }
@@ -1236,8 +1232,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
-  border-radius: 12px;
+  padding: 4px 15px;
+  border-radius: 50px;
   border: 1px solid;
   font-size: 12px;
   font-weight: 600;
