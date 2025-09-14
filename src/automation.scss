@@ -1,1434 +1,396 @@
-/* Forced Automation Dashboard CSS - Override WordPress Admin Styles */
+/* Clean Automation Dashboard CSS - Matching Manual Dashboard */
 
 :root {
-  --atm-primary-50: #eff6ff;
-  --atm-primary-100: #dbeafe;
-  --atm-primary-200: #bfdbfe;
-  --atm-primary-500: #3b82f6;
-  --atm-primary-600: #2563eb;
-  --atm-primary-700: #1d4ed8;
-
-  --atm-success-50: #f0fdf4;
-  --atm-success-100: #dcfce7;
-  --atm-success-500: #22c55e;
-  --atm-success-600: #16a34a;
-
-  --atm-warning-50: #fffbeb;
-  --atm-warning-100: #fef3c7;
-  --atm-warning-500: #f59e0b;
-  --atm-warning-600: #d97706;
-
-  --atm-danger-50: #fef2f2;
-  --atm-danger-100: #fee2e2;
-  --atm-danger-500: #ef4444;
-  --atm-danger-600: #dc2626;
-
+  --atm-primary: #3b82f6;
+  --atm-primary-light: #eff6ff;
   --atm-gray-50: #f9fafb;
   --atm-gray-100: #f3f4f6;
   --atm-gray-200: #e5e7eb;
   --atm-gray-300: #d1d5db;
-  --atm-gray-400: #9ca3af;
-  --atm-gray-500: #6b7280;
   --atm-gray-600: #4b5563;
-  --atm-gray-700: #374151;
-  --atm-gray-800: #1f2937;
   --atm-gray-900: #111827;
-
-  --atm-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --atm-shadow-md:
-    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --atm-shadow-lg:
-    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --atm-shadow-xl:
-    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-
-  --atm-radius-sm: 0.375rem;
-  --atm-radius-md: 0.5rem;
-  --atm-radius-lg: 0.75rem;
-  --atm-radius-xl: 1rem;
+  --atm-border-radius: 12px;
+  --atm-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --atm-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Force box-sizing for automation components only */
-#atm-automation-root *,
-#atm-automation-root *::before,
-#atm-automation-root *::after {
-  box-sizing: border-box !important;
-}
-
-/* Main automation wrapper */
-#atm-automation-root .atm-studio-wrapper {
-  display: flex !important;
-  min-height: 100vh !important;
-  background: var(--atm-gray-50) !important;
+/* Main automation container */
+.atm-automation-root {
   font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif !important;
-  line-height: 1.5 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* Sidebar with forced styling */
-#atm-automation-root .atm-sidebar {
-  width: 280px !important;
-  background: white !important;
-  border-right: 1px solid var(--atm-gray-200) !important;
-  box-shadow: var(--atm-shadow-sm) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  position: relative !important;
-}
-
-#atm-automation-root .atm-sidebar-header {
-  padding: 2rem 1.5rem !important;
-  border-bottom: 1px solid var(--atm-gray-200) !important;
-  background: linear-gradient(
-    135deg,
-    var(--atm-primary-600) 0%,
-    #8b5cf6 100%
-  ) !important;
-  color: white !important;
-  margin: 0 !important;
-}
-
-#atm-automation-root .atm-sidebar-header h2 {
-  margin: 0 0 0.5rem 0 !important;
-  font-size: 1.5rem !important;
-  font-weight: 700 !important;
-  color: white !important;
-  line-height: 1.2 !important;
-}
-
-#atm-automation-root .atm-sidebar-header p {
-  margin: 0 !important;
-  font-size: 0.875rem !important;
-  opacity: 0.9 !important;
-  color: white !important;
-}
-
-#atm-automation-root .atm-nav-section {
-  margin-bottom: 2rem !important;
-}
-
-#atm-automation-root .atm-nav-section-title {
-  padding: 1rem 1.5rem 0.5rem !important;
-  font-size: 0.6875rem !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  color: var(--atm-gray-500) !important;
-  margin: 0 !important;
-}
-
-#atm-automation-root .atm-nav-item {
-  display: flex !important;
-  align-items: center !important;
-  width: 100% !important;
-  padding: 0.75rem 1.5rem !important;
-  background: none !important;
-  border: none !important;
-  color: var(--atm-gray-700) !important;
-  text-align: left !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  gap: 0.75rem !important;
-  position: relative !important;
-  border-radius: 0 !important;
-  text-decoration: none !important;
-  margin: 0 !important;
-}
-
-#atm-automation-root .atm-nav-item:hover {
-  background: var(--atm-gray-50) !important;
-  color: var(--atm-gray-900) !important;
-}
-
-#atm-automation-root .atm-nav-item.active {
-  background: var(--atm-primary-50) !important;
-  color: var(--atm-primary-700) !important;
-  font-weight: 600 !important;
-}
-
-#atm-automation-root .atm-nav-item.active::before {
-  content: "" !important;
-  position: absolute !important;
-  left: 0 !important;
-  top: 0 !important;
-  bottom: 0 !important;
-  width: 3px !important;
-  background: var(--atm-primary-600) !important;
-}
-
-#atm-automation-root .atm-nav-icon {
-  width: 1.25rem !important;
-  height: 1.25rem !important;
-  flex-shrink: 0 !important;
-}
-
-/* Main content */
-#atm-automation-root .atm-main-content {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  min-width: 0 !important;
-}
-
-#atm-automation-root .atm-content-header {
-  background: white !important;
-  border-bottom: 1px solid var(--atm-gray-200) !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-#atm-automation-root .atm-content-header-inner {
-  display: flex !important;
-  align-items: center !important;
-  padding: 1.5rem 2rem !important;
-  gap: 1rem !important;
-}
-
-#atm-automation-root .atm-header-back-btn {
-  background: var(--atm-gray-100) !important;
-  border: 1px solid var(--atm-gray-300) !important;
-  border-radius: var(--atm-radius-md) !important;
-  padding: 0.75rem !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  color: var(--atm-gray-600) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-#atm-automation-root .atm-header-back-btn:hover {
-  background: var(--atm-gray-200) !important;
-  color: var(--atm-gray-800) !important;
-}
-
-#atm-automation-root .atm-content-header-text h1 {
-  margin: 0 !important;
-  font-size: 1.75rem !important;
-  font-weight: 700 !important;
-  color: var(--atm-gray-900) !important;
-}
-
-#atm-automation-root .atm-content-header-text p {
-  margin: 0.25rem 0 0 0 !important;
-  color: var(--atm-gray-600) !important;
-  font-size: 1rem !important;
-}
-
-#atm-automation-root .atm-content-body {
-  flex: 1 !important;
-  padding: 2rem !important;
-  overflow-y: auto !important;
-}
-
-/* Campaign Settings Form - Force All Styles */
-#atm-automation-root .atm-campaign-settings-form {
-  max-width: 100% !important;
-  margin: 0 auto !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 1.5rem !important;
-}
-
-#atm-automation-root .atm-settings-section {
-  background: white !important;
-  border: 1px solid var(--atm-gray-200) !important;
-  border-radius: var(--atm-radius-xl) !important;
-  box-shadow: var(--atm-shadow-sm) !important;
-  overflow: hidden !important;
-  margin: 0 0 1.5rem 0 !important;
-}
-
-#atm-automation-root .atm-section-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 1.5rem !important;
-  background: var(--atm-gray-50) !important;
-  border-bottom: 1px solid var(--atm-gray-200) !important;
-  cursor: pointer !important;
-  transition: background-color 0.15s ease !important;
-  margin: 0 !important;
-}
-
-#atm-automation-root .atm-section-header:hover {
-  background: var(--atm-gray-100) !important;
-}
-
-#atm-automation-root .atm-section-title {
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.75rem !important;
-}
-
-#atm-automation-root .atm-section-icon {
-  font-size: 1.25rem !important;
-  width: auto !important;
-  height: auto !important;
-}
-
-#atm-automation-root .atm-section-title h3 {
-  margin: 0 !important;
-  font-size: 1.125rem !important;
-  font-weight: 600 !important;
-  color: var(--atm-gray-900) !important;
-}
-
-#atm-automation-root .atm-collapse-btn {
-  background: none !important;
-  border: none !important;
-  color: var(--atm-gray-500) !important;
-  cursor: pointer !important;
-  transition: transform 0.2s ease !important;
-  padding: 0.25rem !important;
-  border-radius: var(--atm-radius-sm) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-#atm-automation-root .atm-collapse-btn:hover {
-  background: var(--atm-gray-200) !important;
-}
-
-#atm-automation-root .atm-collapse-btn.expanded {
-  transform: rotate(180deg) !important;
-}
-
-#atm-automation-root .components-card__body {
-  padding: 1.5rem !important;
-}
-
-/* Schedule Settings - Fix Layout and Styling */
-#atm-automation-root .atm-schedule-presets {
-  margin-bottom: 2rem !important;
-}
-
-#atm-automation-root .atm-label {
-  display: block !important;
-  font-size: 0.875rem !important;
-  font-weight: 600 !important;
-  color: var(--atm-gray-900) !important;
-  margin-bottom: 0.5rem !important;
-}
-
-#atm-automation-root .atm-preset-buttons {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
-  gap: 0.5rem !important;
-}
-
-#atm-automation-root .atm-preset-btn {
-  padding: 0.75rem 1rem !important;
-  background: white !important;
-  border: 1px solid var(--atm-gray-300) !important;
-  border-radius: var(--atm-radius-md) !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  color: var(--atm-gray-700) !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  text-align: center !important;
-}
-
-#atm-automation-root .atm-preset-btn:hover {
-  border-color: var(--atm-primary-300) !important;
-  background: var(--atm-primary-50) !important;
-}
-
-#atm-automation-root .atm-preset-btn.active {
-  background: var(--atm-primary-500) !important;
-  border-color: var(--atm-primary-500) !important;
-  color: white !important;
-}
-
-/* Custom Schedule - Fix Layout */
-#atm-automation-root .atm-custom-schedule {
-  margin-bottom: 2rem !important;
-}
-
-#atm-automation-root .atm-schedule-inputs {
-  display: flex !important;
-  align-items: end !important;
-  gap: 1rem !important;
-  margin-bottom: 1rem !important;
-}
-
-#atm-automation-root .atm-schedule-input-group {
-  flex: 1 !important;
-}
-
-#atm-automation-root .atm-schedule-time-group {
-  flex: 1 !important;
-}
-
-/* Force Form Control Styling */
-#atm-automation-root .components-text-control__input,
-#atm-automation-root .components-textarea-control__input,
-#atm-automation-root .components-select-control__input {
-  border: 1px solid var(--atm-gray-300) !important;
-  border-radius: var(--atm-radius-md) !important;
-  padding: 0.75rem 1rem !important;
-  font-size: 0.875rem !important;
-  transition: all 0.15s ease !important;
-  background: white !important;
-  width: 100% !important;
-  height: 44px !important;
-  line-height: 1.4 !important;
-  color: var(--atm-gray-900) !important;
-}
-
-#atm-automation-root .components-text-control__input:focus,
-#atm-automation-root .components-textarea-control__input:focus,
-#atm-automation-root .components-select-control__input:focus {
-  outline: none !important;
-  border-color: var(--atm-primary-500) !important;
-  box-shadow: 0 0 0 3px var(--atm-primary-100) !important;
-}
-
-#atm-automation-root .components-base-control__label {
-  font-weight: 600 !important;
-  color: var(--atm-gray-900) !important;
-  margin-bottom: 0.5rem !important;
-  font-size: 0.875rem !important;
-  display: block !important;
-}
-
-#atm-automation-root .components-base-control__help {
-  color: var(--atm-gray-500) !important;
-  font-size: 0.8125rem !important;
-  margin-top: 0.5rem !important;
-  line-height: 1.4 !important;
-}
-
-/* Select Control Improvements */
-#atm-automation-root .components-select-control__input {
-  appearance: none !important;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e") !important;
-  background-position: right 0.75rem center !important;
-  background-repeat: no-repeat !important;
-  background-size: 1rem !important;
-  padding-right: 2.5rem !important;
-}
-
-/* Schedule Preview */
-#atm-automation-root .atm-schedule-preview {
-  padding: 1.5rem !important;
-  background: linear-gradient(
-    135deg,
-    var(--atm-primary-50) 0%,
-    #ede9fe 100%
-  ) !important;
-  border-radius: var(--atm-radius-lg) !important;
-  border: 1px solid var(--atm-primary-200) !important;
-}
-
-#atm-automation-root .atm-preview-card {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 2rem !important;
-  text-align: center !important;
-}
-
-#atm-automation-root .atm-preview-stat {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-}
-
-#atm-automation-root .atm-stat-number {
-  font-size: 2rem !important;
-  font-weight: 800 !important;
-  color: var(--atm-primary-600) !important;
-  margin-bottom: 0.25rem !important;
-  line-height: 1 !important;
-}
-
-#atm-automation-root .atm-stat-label {
-  font-size: 0.875rem !important;
-  color: var(--atm-gray-600) !important;
-  font-weight: 500 !important;
-  margin: 0 !important;
-}
-
-/* Publishing Settings - Fix Layout */
-#atm-automation-root .atm-publishing-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
-  gap: 1.5rem !important;
-  margin-bottom: 2rem !important;
-}
-
-#atm-automation-root .atm-form-group {
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-/* Categories Section - Fix Multi-Select */
-#atm-automation-root .atm-categories-section {
-  margin-top: 1.5rem !important;
-}
-
-#atm-automation-root .atm-category-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
-  gap: 0.75rem !important;
-  margin-top: 0.5rem !important;
-  max-height: 200px !important;
-  overflow-y: auto !important;
-  padding: 1rem !important;
-  border: 1px solid var(--atm-gray-200) !important;
-  border-radius: var(--atm-radius-md) !important;
-  background: var(--atm-gray-50) !important;
-}
-
-#atm-automation-root .atm-category-item {
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.5rem !important;
-  padding: 0.5rem !important;
-  background: white !important;
-  border-radius: var(--atm-radius-sm) !important;
-  border: 1px solid var(--atm-gray-200) !important;
-}
-
-#atm-automation-root .atm-category-item input[type="checkbox"] {
-  margin: 0 !important;
-  width: 16px !important;
-  height: 16px !important;
-  accent-color: var(--atm-primary-500) !important;
-}
-
-#atm-automation-root .atm-category-item label {
-  margin: 0 !important;
-  font-size: 0.875rem !important;
-  cursor: pointer !important;
-  flex: 1 !important;
-  color: var(--atm-gray-900) !important;
-}
-
-/* AI Settings - Fix Layout */
-#atm-automation-root .atm-ai-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
-  gap: 1.5rem !important;
-  margin-bottom: 2rem !important;
-}
-
-#atm-automation-root .atm-content-options {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 1rem !important;
-}
-
-/* Toggle Control - Fix Styling */
-#atm-automation-root .components-toggle-control {
-  display: flex !important;
-  align-items: flex-start !important;
-  gap: 1rem !important;
-  margin-bottom: 1.5rem !important;
-}
-
-#atm-automation-root .components-toggle-control .components-form-toggle {
-  margin: 0.125rem 0 0 0 !important;
-  flex-shrink: 0 !important;
-}
-
-#atm-automation-root
-  .components-toggle-control
-  .components-base-control__label {
-  margin: 0 !important;
-  font-weight: 500 !important;
-  flex: 1 !important;
-  color: var(--atm-gray-900) !important;
-}
-
-#atm-automation-root .components-toggle-control .components-base-control__help {
-  margin-top: 0.25rem !important;
-  color: var(--atm-gray-500) !important;
-  font-size: 0.8125rem !important;
-  line-height: 1.4 !important;
-}
-
-#atm-automation-root .components-form-toggle {
-  width: 36px !important;
-  height: 20px !important;
-  border-radius: 20px !important;
-  background: var(--atm-gray-300) !important;
-  position: relative !important;
-  cursor: pointer !important;
-  transition: background-color 0.2s ease !important;
-  border: none !important;
-  outline: none !important;
-}
-
-#atm-automation-root .components-form-toggle.is-checked {
-  background: var(--atm-primary-500) !important;
-}
-
-#atm-automation-root .components-form-toggle::before {
-  content: "" !important;
-  position: absolute !important;
-  top: 2px !important;
-  left: 2px !important;
-  width: 16px !important;
-  height: 16px !important;
-  background: white !important;
-  border-radius: 50% !important;
-  transition: transform 0.2s ease !important;
-  box-shadow: var(--atm-shadow-sm) !important;
-}
-
-#atm-automation-root .components-form-toggle.is-checked::before {
-  transform: translateX(16px) !important;
-}
-
-/* Advanced Settings - Add Content */
-#atm-automation-root .atm-advanced-options {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
-  gap: 1.5rem !important;
-}
-
-/* Campaign Manager - Fix All Issues */
-#atm-automation-root .atm-campaign-manager {
-  max-width: 100% !important;
-}
-
-#atm-automation-root .atm-loading-state {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 4rem !important;
-  color: var(--atm-gray-500) !important;
-}
-
-#atm-automation-root .atm-loading-state p {
-  margin-top: 1rem !important;
-  font-size: 1rem !important;
-}
-
-#atm-automation-root .atm-manager-header {
-  background: white !important;
-  border-radius: var(--atm-radius-xl) !important;
-  box-shadow: var(--atm-shadow-sm) !important;
-  border: 1px solid var(--atm-gray-200) !important;
-  margin-bottom: 2rem !important;
-  overflow: hidden !important;
-}
-
-#atm-automation-root .atm-header-content {
-  padding: 2rem !important;
-}
-
-#atm-automation-root .atm-header-main {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: flex-start !important;
-  margin-bottom: 2rem !important;
-}
-
-#atm-automation-root .atm-header-main h1 {
-  margin: 0 !important;
-  font-size: 2rem !important;
-  font-weight: 700 !important;
-  color: var(--atm-gray-900) !important;
-}
-
-#atm-automation-root .atm-header-main p {
-  margin: 0.5rem 0 0 0 !important;
-  color: var(--atm-gray-600) !important;
-  font-size: 1.125rem !important;
-}
-
-#atm-automation-root .atm-header-actions {
-  display: flex !important;
-  gap: 1rem !important;
-  align-items: center !important;
-}
-
-#atm-automation-root .atm-create-btn {
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.5rem !important;
-  background: linear-gradient(
-    135deg,
-    var(--atm-primary-600) 0%,
-    #8b5cf6 100%
-  ) !important;
-  border: none !important;
-  color: white !important;
-  padding: 0.75rem 1.5rem !important;
-  border-radius: var(--atm-radius-md) !important;
-  font-weight: 600 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-}
-
-#atm-automation-root .atm-create-btn:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: var(--atm-shadow-lg) !important;
-}
-
-/* Filters Bar - Fix Layout and Padding */
-#atm-automation-root .atm-filters-bar {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 1.5rem !important;
-  padding: 2rem 0 0 0 !important;
-  border-top: 1px solid var(--atm-gray-200) !important;
-  margin: 0 !important;
-}
-
-#atm-automation-root .atm-search-section {
-  flex: 1 !important;
-  max-width: 400px !important;
-}
-
-#atm-automation-root .atm-search-input-wrapper {
-  position: relative !important;
-}
-
-#atm-automation-root .atm-search-icon {
-  position: absolute !important;
-  left: 1rem !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  width: 1.25rem !important;
-  height: 1.25rem !important;
-  color: var(--atm-gray-400) !important;
-  pointer-events: none !important;
-}
-
-#atm-automation-root .atm-search-input {
-  width: 100% !important;
-  padding: 0.75rem 1rem 0.75rem 3rem !important;
-  border: 1px solid var(--atm-gray-300) !important;
-  border-radius: var(--atm-radius-lg) !important;
-  font-size: 0.875rem !important;
-  background: white !important;
-  transition: all 0.15s ease !important;
-}
-
-#atm-automation-root .atm-search-input:focus {
-  outline: none !important;
-  border-color: var(--atm-primary-500) !important;
-  box-shadow: 0 0 0 3px var(--atm-primary-100) !important;
-}
-
-#atm-automation-root .atm-filter-tabs {
-  display: flex !important;
-  gap: 0.25rem !important;
-  padding: 0.25rem !important;
-  background: var(--atm-gray-100) !important;
-  border-radius: var(--atm-radius-lg) !important;
-}
-
-#atm-automation-root .atm-filter-tab {
-  padding: 0.5rem 1rem !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: var(--atm-radius-md) !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  color: var(--atm-gray-600) !important;
-}
-
-#atm-automation-root .atm-filter-tab:hover {
-  background: var(--atm-gray-200) !important;
-  color: var(--atm-gray-800) !important;
-}
-
-#atm-automation-root .atm-filter-tab.active {
-  background: white !important;
-  color: var(--atm-primary-600) !important;
-  box-shadow: var(--atm-shadow-sm) !important;
-}
-
-#atm-automation-root .atm-status-filter select {
-  padding: 0.5rem 1rem !important;
-  border: 1px solid var(--atm-gray-300) !important;
-  border-radius: var(--atm-radius-md) !important;
-  background: white !important;
-  font-size: 0.875rem !important;
-  cursor: pointer !important;
-}
-
-/* Campaign Row - Fix Complete Layout */
-#atm-automation-root .atm-campaigns-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 1rem !important;
-}
-
-#atm-automation-root .atm-campaign-row {
-  background: white !important;
-  border: 1px solid var(--atm-gray-200) !important;
-  border-radius: var(--atm-radius-xl) !important;
-  padding: 1.5rem !important;
-  transition: all 0.15s ease !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 2rem !important;
-  margin: 0 !important;
-}
-
-#atm-automation-root .atm-campaign-row:hover {
-  box-shadow: var(--atm-shadow-md) !important;
-  border-color: var(--atm-gray-300) !important;
-}
-
-#atm-automation-root .atm-campaign-main {
-  flex: 1 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 2rem !important;
-  min-width: 0 !important;
-}
-
-#atm-automation-root .atm-campaign-info {
-  min-width: 0 !important;
-  flex: 1 !important;
-}
-
-#atm-automation-root .atm-campaign-type-badge {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 0.5rem !important;
-  padding: 0.25rem 0.75rem !important;
-  background: var(--atm-primary-50) !important;
-  color: var(--atm-primary-700) !important;
-  border-radius: var(--atm-radius-md) !important;
-  font-size: 0.75rem !important;
-  font-weight: 500 !important;
-  margin-bottom: 0.5rem !important;
-}
-
-#atm-automation-root .atm-type-text {
-  white-space: nowrap !important;
-}
-
-#atm-automation-root .atm-campaign-name {
-  margin: 0 0 0.25rem 0 !important;
-  font-size: 1.125rem !important;
-  font-weight: 600 !important;
-  color: var(--atm-gray-900) !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-#atm-automation-root .atm-campaign-keyword {
-  margin: 0 !important;
-  font-size: 0.875rem !important;
-  color: var(--atm-gray-500) !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-#atm-automation-root .atm-campaign-status {
-  flex-shrink: 0 !important;
-}
-
-#atm-automation-root .atm-status-indicator {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 0.5rem !important;
-  padding: 0.375rem 0.75rem !important;
-  border-radius: var(--atm-radius-md) !important;
-  font-size: 0.75rem !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.025em !important;
-  border: 1px solid !important;
-}
-
-#atm-automation-root .atm-status-indicator.text-blue-600 {
-  color: var(--atm-primary-700) !important;
-  background: var(--atm-primary-50) !important;
-  border-color: var(--atm-primary-200) !important;
-}
-
-#atm-automation-root .atm-status-indicator.text-green-600 {
-  color: var(--atm-success-700) !important;
-  background: var(--atm-success-50) !important;
-  border-color: var(--atm-success-200) !important;
-}
-
-#atm-automation-root .atm-status-indicator.text-yellow-600 {
-  color: var(--atm-warning-700) !important;
-  background: var(--atm-warning-50) !important;
-  border-color: var(--atm-warning-200) !important;
-}
-
-#atm-automation-root .atm-status-indicator.text-red-600 {
-  color: var(--atm-danger-700) !important;
-  background: var(--atm-danger-50) !important;
-  border-color: var(--atm-danger-200) !important;
-}
-
-#atm-automation-root .atm-status-dot {
-  width: 0.5rem !important;
-  height: 0.5rem !important;
-  border-radius: 50% !important;
-  flex-shrink: 0 !important;
-}
-
-#atm-automation-root .atm-status-dot.bg-blue-500 {
-  background: var(--atm-primary-500) !important;
-}
-#atm-automation-root .atm-status-dot.bg-green-500 {
-  background: var(--atm-success-500) !important;
-}
-#atm-automation-root .atm-status-dot.bg-yellow-500 {
-  background: var(--atm-warning-500) !important;
-}
-#atm-automation-root .atm-status-dot.bg-red-500 {
-  background: var(--atm-danger-500) !important;
-}
-
-#atm-automation-root .atm-status-dot.animate-pulse {
-  animation: pulse 2s infinite !important;
-}
-
-#atm-automation-root .atm-campaign-schedule {
-  flex-shrink: 0 !important;
-  text-align: center !important;
-  min-width: 120px !important;
-}
-
-#atm-automation-root .atm-schedule-info {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 0.25rem !important;
-}
-
-#atm-automation-root .atm-schedule-frequency {
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  color: var(--atm-gray-900) !important;
-}
-
-#atm-automation-root .atm-next-run {
-  font-size: 0.75rem !important;
-  color: var(--atm-gray-500) !important;
-}
-
-#atm-automation-root .atm-campaign-stats {
-  display: flex !important;
-  gap: 1.5rem !important;
-  flex-shrink: 0 !important;
-}
-
-#atm-automation-root .atm-stat {
-  text-align: center !important;
-}
-
-#atm-automation-root .atm-stat-number {
-  display: block !important;
-  font-size: 1.25rem !important;
-  font-weight: 700 !important;
-  color: var(--atm-gray-900) !important;
-  line-height: 1 !important;
-}
-
-#atm-automation-root .atm-stat-label {
-  display: block !important;
-  font-size: 0.75rem !important;
-  color: var(--atm-gray-500) !important;
-  margin-top: 0.25rem !important;
-}
-
-#atm-automation-root .atm-campaign-actions {
-  display: flex !important;
-  align-items: center !important;
-  gap: 1.5rem !important;
-  flex-shrink: 0 !important;
-}
-
-#atm-automation-root .atm-toggle-section {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 0.5rem !important;
-}
-
-#atm-automation-root .atm-toggle-switch {
-  position: relative !important;
-  display: inline-block !important;
-  width: 44px !important;
-  height: 24px !important;
-}
-
-#atm-automation-root .atm-toggle-switch input {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-#atm-automation-root .atm-toggle-slider {
-  position: absolute !important;
-  cursor: pointer !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  background: var(--atm-gray-300) !important;
-  transition: 0.2s !important;
-  border-radius: 24px !important;
-}
-
-#atm-automation-root .atm-toggle-slider:before {
-  position: absolute !important;
-  content: "" !important;
-  height: 18px !important;
-  width: 18px !important;
-  left: 3px !important;
-  bottom: 3px !important;
-  background: white !important;
-  transition: 0.2s !important;
-  border-radius: 50% !important;
-  box-shadow: var(--atm-shadow-sm) !important;
-}
-
-#atm-automation-root input:checked + .atm-toggle-slider {
-  background: var(--atm-primary-500) !important;
-}
-
-#atm-automation-root input:checked + .atm-toggle-slider:before {
-  transform: translateX(20px) !important;
-}
-
-#atm-automation-root .atm-toggle-label {
-  font-size: 0.75rem !important;
-  color: var(--atm-gray-600) !important;
-  font-weight: 500 !important;
-  text-align: center !important;
-}
-
-#atm-automation-root .atm-action-buttons {
-  display: flex !important;
-  gap: 0.5rem !important;
-}
-
-#atm-automation-root .atm-action-buttons .components-button {
-  border-radius: var(--atm-radius-md) !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  padding: 0.5rem 1rem !important;
-  transition: all 0.15s ease !important;
-  border: 1px solid !important;
-  height: auto !important;
-  line-height: 1.4 !important;
-}
-
-#atm-automation-root .atm-action-buttons .components-button.is-small {
-  height: auto !important;
-}
-
-#atm-automation-root .atm-action-buttons .components-button:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: var(--atm-shadow-sm) !important;
-}
-
-#atm-automation-root .atm-action-buttons .components-button.is-destructive {
-  color: var(--atm-danger-600) !important;
-  border-color: var(--atm-danger-300) !important;
-  background: var(--atm-danger-50) !important;
-}
-
-#atm-automation-root
-  .atm-action-buttons
-  .components-button.is-destructive:hover {
-  background: var(--atm-danger-100) !important;
-  border-color: var(--atm-danger-400) !important;
-}
-
-/* Empty State */
-#atm-automation-root .atm-empty-campaigns {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  min-height: 400px !important;
-}
-
-#atm-automation-root .atm-empty-content {
-  text-align: center !important;
-  max-width: 400px !important;
-}
-
-#atm-automation-root .atm-empty-icon {
-  width: 4rem !important;
-  height: 4rem !important;
-  margin: 0 auto 1.5rem !important;
-  color: var(--atm-gray-300) !important;
-}
-
-#atm-automation-root .atm-empty-content h3 {
-  margin: 0 0 1rem 0 !important;
-  font-size: 1.5rem !important;
-  font-weight: 600 !important;
-  color: var(--atm-gray-900) !important;
-}
-
-#atm-automation-root .atm-empty-content p {
-  margin: 0 0 2rem 0 !important;
-  color: var(--atm-gray-600) !important;
-  line-height: 1.6 !important;
-}
-
-/* Form Container */
-#atm-automation-root .atm-form-container {
-  background: white !important;
-  border-radius: var(--atm-radius-xl) !important;
-  padding: 2rem !important;
-  box-shadow: var(--atm-shadow-sm) !important;
-  border: 1px solid var(--atm-gray-200) !important;
-}
-
-#atm-automation-root .atm-form-section {
-  margin-bottom: 2rem !important;
-}
-
-#atm-automation-root .atm-form-section h4 {
-  margin: 0 0 0.5rem 0 !important;
-  font-size: 1.25rem !important;
-  font-weight: 600 !important;
-  color: var(--atm-gray-900) !important;
-}
-
-#atm-automation-root .atm-grid-2 {
-  display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
-  gap: 1.5rem !important;
-  margin-bottom: 1.5rem !important;
-}
-
-#atm-automation-root .atm-grid-3 {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 1.5rem !important;
-  margin-bottom: 1.5rem !important;
-}
-
-/* Form Actions */
-#atm-automation-root .atm-form-actions {
-  display: flex !important;
-  gap: 1rem !important;
-  align-items: center !important;
-  padding-top: 2rem !important;
-  border-top: 1px solid var(--atm-gray-200) !important;
-  margin-top: 2rem !important;
-}
-
-#atm-automation-root .atm-form-actions .components-button {
-  padding: 0.75rem 2rem !important;
-  height: auto !important;
-  line-height: 1.4 !important;
-}
-
-/* Button Styles - Force All */
-#atm-automation-root .components-button {
-  border-radius: var(--atm-radius-md) !important;
-  font-weight: 500 !important;
-  transition: all 0.15s ease !important;
-  border: 1px solid transparent !important;
-  cursor: pointer !important;
-  text-decoration: none !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-#atm-automation-root .components-button.is-primary {
-  background: var(--atm-primary-600) !important;
-  color: white !important;
-  border-color: var(--atm-primary-600) !important;
-}
-
-#atm-automation-root .components-button.is-primary:hover:not(:disabled) {
-  background: var(--atm-primary-700) !important;
-  border-color: var(--atm-primary-700) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: var(--atm-shadow-md) !important;
-}
-
-#atm-automation-root .components-button.is-secondary {
-  background: white !important;
-  color: var(--atm-gray-700) !important;
-  border-color: var(--atm-gray-300) !important;
-}
-
-#atm-automation-root .components-button.is-secondary:hover:not(:disabled) {
-  background: var(--atm-gray-50) !important;
-  border-color: var(--atm-gray-400) !important;
-}
-
-#atm-automation-root .components-button:disabled {
-  opacity: 0.6 !important;
-  cursor: not-allowed !important;
-}
-
-/* Type Selector Cards */
-#atm-automation-root .atm-type-selector {
-  margin-bottom: 2rem !important;
-}
-
-#atm-automation-root .atm-type-cards {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
-  gap: 1rem !important;
-}
-
-#atm-automation-root .atm-type-card {
-  background: white !important;
-  border: 1px solid var(--atm-gray-200) !important;
-  border-radius: var(--atm-radius-xl) !important;
-  padding: 1.5rem !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  position: relative !important;
-  overflow: hidden !important;
-}
-
-#atm-automation-root .atm-type-card::before {
-  content: "" !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  height: 3px !important;
-  background: linear-gradient(
-    90deg,
-    var(--atm-primary-500),
-    #8b5cf6
-  ) !important;
-  transform: scaleX(0) !important;
-  transition: transform 0.3s ease !important;
-}
-
-#atm-automation-root .atm-type-card:hover {
-  border-color: var(--atm-primary-300) !important;
-  box-shadow: var(--atm-shadow-md) !important;
-  transform: translateY(-2px) !important;
-}
-
-#atm-automation-root .atm-type-card:hover::before {
-  transform: scaleX(1) !important;
-}
-
-#atm-automation-root .atm-type-card.active {
-  border-color: var(--atm-primary-500) !important;
-  background: var(--atm-primary-50) !important;
-  box-shadow: var(--atm-shadow-lg) !important;
-}
-
-#atm-automation-root .atm-type-card.active::before {
-  transform: scaleX(1) !important;
-}
-
-#atm-automation-root .atm-type-icon {
-  width: 3rem !important;
-  height: 3rem !important;
-  border-radius: var(--atm-radius-lg) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin-bottom: 1rem !important;
-  color: white !important;
-  background: var(--atm-primary-500) !important;
-}
-
-#atm-automation-root .atm-type-content h3 {
-  margin: 0 0 0.5rem 0 !important;
-  font-size: 1.125rem !important;
-  font-weight: 600 !important;
-  color: var(--atm-gray-900) !important;
-}
-
-#atm-automation-root .atm-type-content p {
-  margin: 0 !important;
-  font-size: 0.875rem !important;
-  color: var(--atm-gray-600) !important;
-  line-height: 1.4 !important;
-}
-
-/* Animation */
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1 !important;
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--atm-gray-50);
+  min-height: 100vh;
+
+  /* Layout structure matching manual dashboard */
+  .atm-studio-wrapper {
+    display: flex;
+    min-height: 100vh;
   }
-  50% {
-    opacity: 0.5 !important;
+
+  .atm-sidebar {
+    width: 280px;
+    background: white;
+    border-right: 1px solid var(--atm-gray-200);
+    box-shadow: var(--atm-shadow-sm);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .atm-main-content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
   }
 }
 
-/* Utility Classes */
-#atm-automation-root .w-4 {
-  width: 1rem !important;
-}
-#atm-automation-root .w-5 {
-  width: 1.25rem !important;
-}
-#atm-automation-root .h-4 {
-  height: 1rem !important;
-}
-#atm-automation-root .h-5 {
-  height: 1.25rem !important;
-}
-#atm-automation-root .mr-2 {
-  margin-right: 0.5rem !important;
+/* Content cards - matching manual dashboard style */
+.atm-content-card {
+  background: white;
+  border-radius: var(--atm-border-radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--atm-shadow-sm);
+  border: 1px solid var(--atm-gray-200);
+
+  h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--atm-gray-900);
+  }
+
+  p.description {
+    margin: 0 0 20px 0;
+    color: var(--atm-gray-600);
+    font-size: 14px;
+    line-height: 1.5;
+  }
 }
 
-/* Responsive Design */
+/* Type selector cards - matching manual dashboard */
+.atm-type-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.atm-type-card {
+  padding: 20px;
+  border: 2px solid var(--atm-gray-200);
+  border-radius: var(--atm-border-radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+
+  &:hover {
+    border-color: var(--atm-primary);
+    box-shadow: var(--atm-shadow-md);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    border-color: var(--atm-primary);
+    background: var(--atm-primary-light);
+  }
+
+  .atm-type-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--atm-primary);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    color: white;
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  .atm-type-content h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--atm-gray-900);
+  }
+
+  .atm-type-content p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--atm-gray-600);
+    line-height: 1.4;
+  }
+}
+
+/* Form layout - matching manual dashboard */
+.atm-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.atm-form-section {
+  margin-bottom: 24px;
+
+  h4 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--atm-gray-900);
+  }
+}
+
+/* Settings sections with collapsible design */
+.atm-settings-section {
+  background: white;
+  border: 1px solid var(--atm-gray-200);
+  border-radius: var(--atm-border-radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+
+  .atm-section-header {
+    padding: 16px 20px;
+    background: var(--atm-gray-50);
+    border-bottom: 1px solid var(--atm-gray-200);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background: var(--atm-gray-100);
+    }
+
+    .atm-section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--atm-gray-900);
+      }
+    }
+
+    .atm-collapse-btn {
+      background: none;
+      border: none;
+      color: var(--atm-gray-600);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      padding: 4px;
+      border-radius: 4px;
+
+      &:hover {
+        background: var(--atm-gray-200);
+      }
+
+      &.expanded {
+        transform: rotate(180deg);
+      }
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  .atm-section-content {
+    padding: 20px;
+  }
+}
+
+/* Schedule presets - clean button design */
+.atm-preset-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.atm-preset-btn {
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid var(--atm-gray-300);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--atm-gray-600);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+
+  &:hover {
+    border-color: var(--atm-primary);
+    background: var(--atm-primary-light);
+  }
+
+  &.active {
+    background: var(--atm-primary);
+    border-color: var(--atm-primary);
+    color: white;
+  }
+}
+
+/* Schedule preview stats */
+.atm-schedule-preview {
+  padding: 16px;
+  background: linear-gradient(
+    135deg,
+    var(--atm-primary-light) 0%,
+    #f3e8ff 100%
+  );
+  border-radius: 8px;
+  border: 1px solid var(--atm-gray-200);
+  margin-top: 16px;
+
+  .atm-preview-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    text-align: center;
+  }
+
+  .atm-stat {
+    .atm-stat-number {
+      display: block;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--atm-primary);
+      line-height: 1;
+    }
+
+    .atm-stat-label {
+      display: block;
+      font-size: 12px;
+      color: var(--atm-gray-600);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  }
+}
+
+/* Form actions */
+.atm-form-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid var(--atm-gray-200);
+  margin-top: 24px;
+}
+
+/* Campaign dashboard styling */
+.atm-campaigns-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.atm-campaign-card {
+  background: white;
+  border: 1px solid var(--atm-gray-200);
+  border-radius: var(--atm-border-radius);
+  padding: 20px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: var(--atm-shadow-md);
+    border-color: var(--atm-gray-300);
+  }
+}
+
+/* Responsive design */
 @media (max-width: 1024px) {
-  #atm-automation-root .atm-campaign-main {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 1rem !important;
+  .atm-studio-wrapper {
+    flex-direction: column;
   }
 
-  #atm-automation-root .atm-campaign-row {
-    flex-direction: column !important;
-    align-items: stretch !important;
+  .atm-sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
   }
 
-  #atm-automation-root .atm-campaign-actions {
-    justify-content: space-between !important;
-    border-top: 1px solid var(--atm-gray-200) !important;
-    padding-top: 1rem !important;
-    margin-top: 1rem !important;
+  .atm-main-content {
+    padding: 16px;
+  }
+
+  .atm-type-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .atm-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .atm-preview-stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 
 @media (max-width: 768px) {
-  #atm-automation-root .atm-studio-wrapper {
-    flex-direction: column !important;
+  .atm-preset-buttons {
+    grid-template-columns: 1fr;
   }
 
-  #atm-automation-root .atm-sidebar {
-    width: 100% !important;
-    order: 2 !important;
-  }
+  .atm-form-actions {
+    flex-direction: column;
+    align-items: stretch;
 
-  #atm-automation-root .atm-main-content {
-    order: 1 !important;
-  }
-
-  #atm-automation-root .atm-content-body {
-    padding: 1rem !important;
-  }
-
-  #atm-automation-root .atm-type-cards {
-    grid-template-columns: 1fr !important;
-  }
-
-  #atm-automation-root .atm-grid-2,
-  #atm-automation-root .atm-grid-3 {
-    grid-template-columns: 1fr !important;
-  }
-
-  #atm-automation-root .atm-preset-buttons {
-    grid-template-columns: 1fr !important;
-  }
-
-  #atm-automation-root .atm-preview-card {
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
-  }
-
-  #atm-automation-root .atm-filters-bar {
-    flex-direction: column !important;
-    gap: 1rem !important;
-    align-items: stretch !important;
-  }
-
-  #atm-automation-root .atm-filter-tabs {
-    order: -1 !important;
-    justify-content: center !important;
-  }
-
-  #atm-automation-root .atm-campaign-stats {
-    justify-content: space-around !important;
-  }
-
-  #atm-automation-root .atm-action-buttons {
-    flex-wrap: wrap !important;
-    justify-content: center !important;
-  }
-
-  #atm-automation-root .atm-form-actions {
-    flex-direction: column !important;
-  }
-
-  #atm-automation-root .atm-form-actions .components-button {
-    width: 100% !important;
+    .components-button {
+      width: 100%;
+    }
   }
 }
 
-@media (max-width: 480px) {
-  #atm-automation-root .atm-header-main {
-    flex-direction: column !important;
-    gap: 1rem !important;
-    align-items: flex-start !important;
+/* Clean component integration - no forced overrides */
+.atm-automation-root {
+  .components-base-control__label {
+    font-weight: 500;
+    color: var(--atm-gray-900);
+    margin-bottom: 6px;
   }
 
-  #atm-automation-root .atm-header-actions {
-    width: 100% !important;
-    justify-content: center !important;
+  .components-base-control__help {
+    color: var(--atm-gray-600);
+    font-size: 13px;
+    margin-top: 4px;
   }
 
-  #atm-automation-root .atm-campaign-row {
-    padding: 1rem !important;
+  .components-text-control__input,
+  .components-textarea-control__input,
+  .components-select-control__input {
+    border-radius: 6px;
+    border-color: var(--atm-gray-300);
+
+    &:focus {
+      border-color: var(--atm-primary);
+      box-shadow: 0 0 0 1px var(--atm-primary);
+    }
   }
 
-  #atm-automation-root .atm-campaign-actions {
-    flex-direction: column !important;
-    gap: 1rem !important;
+  .components-button.is-primary {
+    background: var(--atm-primary);
+    border-color: var(--atm-primary);
+
+    &:hover:not(:disabled) {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
   }
 
-  #atm-automation-root .atm-toggle-section {
-    flex-direction: row !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    width: 100% !important;
+  .components-toggle-control .components-form-toggle.is-checked {
+    background: var(--atm-primary);
   }
-}
-
-/* Loading states */
-#atm-automation-root .components-spinner {
-  color: var(--atm-primary-500) !important;
-}
-
-/* Flexbox utilities for WordPress components */
-#atm-automation-root .components-flex {
-  gap: 1rem !important;
-}
-
-#atm-automation-root .components-flex-item {
-  min-width: 0 !important;
-}
-
-/* Card improvements */
-#atm-automation-root .components-card {
-  box-shadow: var(--atm-shadow-sm) !important;
-  border: 1px solid var(--atm-gray-200) !important;
-  border-radius: var(--atm-radius-xl) !important;
-}
-
-#atm-automation-root .components-card__header {
-  border-bottom: 1px solid var(--atm-gray-200) !important;
-  padding: 1.5rem !important;
 }
