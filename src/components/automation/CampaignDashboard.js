@@ -1,5 +1,6 @@
 import { useState, useEffect } from "@wordpress/element";
-import { Button, ToggleControl, Modal, Spinner } from "@wordpress/components";
+import { Button, Modal, Spinner, DropdownMenu } from "@wordpress/components";
+import { chevronDown, moreVertical } from "@wordpress/icons";
 
 const CampaignCard = ({
   campaign,
@@ -7,215 +8,99 @@ const CampaignCard = ({
   onToggle,
   onDelete,
   onRunNow,
-  onViewStats,
+  onDuplicate,
+  onViewLogs,
 }) => {
-  const [isRunning, setIsRunning] = useState(campaign.status === "running");
+  const [isRunning, setIsRunning] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const getStatusConfig = (status) => {
-    const configs = {
-      idle: {
-        color: "bg-gray-100 text-gray-700",
-        dot: "bg-gray-400",
-        text: "Idle",
-      },
-      running: {
-        color: "bg-green-100 text-green-700",
-        dot: "bg-green-500 animate-pulse",
+  const getStatusConfig = (campaign) => {
+    if (isRunning) {
+      return {
+        color: "border-blue-200 bg-blue-50",
+        dot: "bg-blue-500 animate-pulse",
         text: "Running",
+        textColor: "text-blue-700",
+      };
+    }
+
+    const status = campaign.is_active == 1 ? "active" : "paused";
+    const configs = {
+      active: {
+        color: "border-green-200 bg-green-50",
+        dot: "bg-green-500",
+        text: "Active",
+        textColor: "text-green-700",
       },
       paused: {
-        color: "bg-yellow-100 text-yellow-700",
+        color: "border-yellow-200 bg-yellow-50",
         dot: "bg-yellow-500",
         text: "Paused",
+        textColor: "text-yellow-700",
       },
       failed: {
-        color: "bg-red-100 text-red-700",
+        color: "border-red-200 bg-red-50",
         dot: "bg-red-500",
         text: "Failed",
+        textColor: "text-red-700",
       },
     };
-    return configs[status] || configs.idle;
+    return configs[status] || configs.paused;
   };
 
   const getTypeConfig = (type, subType) => {
     const configs = {
       articles: {
         standard: {
-          color: "blue",
-          icon: (
-            <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.828-2.828z" />
-            </svg>
-          ),
-          label: "Standard Articles",
+          icon: "📝",
+          color: "bg-blue-100 text-blue-700",
+          label: "Articles",
         },
         trending: {
-          color: "red",
-          icon: (
-            <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-              <path
-                fillRule="evenodd"
-                d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z"
-                clipRule="evenodd"
-              />
-            </svg>
-          ),
-          label: "Trending Articles",
+          icon: "📈",
+          color: "bg-purple-100 text-purple-700",
+          label: "Trending",
         },
         listicle: {
-          color: "green",
-          icon: (
-            <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-              <path
-                fillRule="evenodd"
-                d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 1a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 3a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
-                clipRule="evenodd"
-              />
-            </svg>
-          ),
-          label: "Listicle Articles",
+          icon: "📋",
+          color: "bg-green-100 text-green-700",
+          label: "Listicles",
         },
         multipage: {
-          color: "amber",
-          icon: (
-            <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-              <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
-              <path
-                fillRule="evenodd"
-                d="M3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-          ),
-          label: "Multipage Articles",
+          icon: "📄",
+          color: "bg-amber-100 text-amber-700",
+          label: "Multipage",
         },
       },
       news: {
-        search: {
-          color: "indigo",
-          icon: (
-            <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-              <path
-                fillRule="evenodd"
-                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                clipRule="evenodd"
-              />
-            </svg>
-          ),
-          label: "News Search",
-        },
-        twitter: {
-          color: "slate",
-          icon: (
-            <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-              <path d="M18.258 3.266c-.926.414-1.925.694-2.973.82a5.18 5.18 0 002.269-2.855 10.36 10.36 0 01-3.287 1.256 5.173 5.173 0 00-8.806 4.717A14.68 14.68 0 011.392 2.25a5.168 5.168 0 001.601 6.896 5.142 5.142 0 01-2.341-.647v.065a5.177 5.177 0 004.148 5.073 5.19 5.19 0 01-2.336.089 5.179 5.179 0 004.832 3.596 10.368 10.368 0 01-6.421 2.213c-.417 0-.828-.024-1.233-.072a14.623 14.623 0 007.919 2.321c9.502 0 14.697-7.869 14.697-14.697 0-.224-.005-.447-.014-.67A10.498 10.498 0 0020 3.616a10.33 10.33 0 01-1.742.65z" />
-            </svg>
-          ),
-          label: "Twitter/X News",
-        },
-        rss: {
-          color: "orange",
-          icon: (
-            <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-              <path d="M3.429 2.776c7.913 0 14.324 6.411 14.324 14.324h-2.861c0-6.323-5.14-11.463-11.463-11.463V2.776zM3.429 8.649c3.036 0 5.502 2.466 5.502 5.502H6.069c0-1.457-1.184-2.641-2.641-2.641V8.649zM5.714 15.429c.79 0 1.429.639 1.429 1.429s-.639 1.429-1.429 1.429-1.429-.639-1.429-1.429.639-1.429 1.429-1.429z" />
-            </svg>
-          ),
-          label: "RSS Feeds",
-        },
-        apis: {
-          color: "emerald",
-          icon: (
-            <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-              <path
-                fillRule="evenodd"
-                d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-          ),
-          label: "APIs News",
-        },
-        live: {
-          color: "purple",
-          icon: (
-            <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-              <path
-                fillRule="evenodd"
-                d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
-                clipRule="evenodd"
-              />
-            </svg>
-          ),
-          label: "Live News",
-        },
+        icon: "📰",
+        color: "bg-emerald-100 text-emerald-700",
+        label: "News",
       },
-      videos: {
-        color: "rose",
-        icon: (
-          <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-            <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-          </svg>
-        ),
-        label: "Video Content",
-      },
+      videos: { icon: "🎥", color: "bg-red-100 text-red-700", label: "Videos" },
       podcasts: {
-        color: "cyan",
-        icon: (
-          <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-            <path
-              fillRule="evenodd"
-              d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
-              clipRule="evenodd"
-            />
-          </svg>
-        ),
-        label: "Podcast Episodes",
+        icon: "🎙️",
+        color: "bg-orange-100 text-orange-700",
+        label: "Podcasts",
       },
     };
 
-    const typeConfigs = configs[type];
-    if (typeConfigs && typeof typeConfigs === "object" && subType) {
-      return (
-        typeConfigs[subType] || {
-          color: "gray",
-          icon: (
-            <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-              <path
-                fillRule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
-                clipRule="evenodd"
-              />
-            </svg>
-          ),
-          label: type,
-        }
-      );
+    if (type === "articles" && subType && configs.articles[subType]) {
+      return configs.articles[subType];
     }
     return (
-      typeConfigs || {
-        color: "gray",
-        icon: (
-          <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-            <path
-              fillRule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
-              clipRule="evenodd"
-            />
-          </svg>
-        ),
-        label: type,
+      configs[type] || {
+        icon: "⚙️",
+        color: "bg-gray-100 text-gray-700",
+        label: "Campaign",
       }
     );
   };
 
-  const statusConfig = getStatusConfig(campaign.status || "idle");
-  const typeConfig = getTypeConfig(campaign.type, campaign.sub_type);
-
   const formatNextRun = (dateString) => {
     if (!dateString || dateString === "0000-00-00 00:00:00")
       return "Not scheduled";
+
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = date - now;
@@ -226,7 +111,8 @@ const CampaignCard = ({
     const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
     if (diffHours > 24) {
-      return `${Math.floor(diffHours / 24)}d ${diffHours % 24}h`;
+      const days = Math.floor(diffHours / 24);
+      return `${days}d ${diffHours % 24}h`;
     } else if (diffHours > 0) {
       return `${diffHours}h ${diffMins}m`;
     } else {
@@ -234,135 +120,178 @@ const CampaignCard = ({
     }
   };
 
+  const handleRunNow = async () => {
+    setIsRunning(true);
+    try {
+      await onRunNow(campaign.id);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const statusConfig = getStatusConfig(campaign);
+  const typeConfig = getTypeConfig(campaign.type, campaign.sub_type);
+  const successRate =
+    campaign.total_executions > 0
+      ? Math.round(
+          (campaign.successful_executions / campaign.total_executions) * 100
+        )
+      : 0;
+
+  const menuControls = [
+    {
+      title: "Run Now",
+      onClick: handleRunNow,
+      icon: isRunning ? "⟳" : "▶️",
+    },
+    {
+      title: "Edit Campaign",
+      onClick: () => onEdit(campaign),
+      icon: "✏️",
+    },
+    {
+      title: "Duplicate",
+      onClick: () => onDuplicate(campaign),
+      icon: "📋",
+    },
+    {
+      title: "View Logs",
+      onClick: () => onViewLogs(campaign.id),
+      icon: "📊",
+    },
+    {
+      title: "Delete",
+      onClick: () => setShowDeleteModal(true),
+      icon: "🗑️",
+      className: "text-red-600",
+    },
+  ];
+
   return (
     <>
-      <div className="atm-campaign-card">
-        <div className="atm-campaign-header">
-          <div className="atm-campaign-type">
+      <div className="atm-modern-campaign-card">
+        {/* Header with Type and Status */}
+        <div className="atm-card-header">
+          <div className={`atm-type-badge ${typeConfig.color}`}>
             <span className="atm-type-icon">{typeConfig.icon}</span>
-            <span className="atm-type-label">{typeConfig.label}</span>
+            <span className="atm-type-text">{typeConfig.label}</span>
           </div>
 
-          <div className={`atm-status-badge ${statusConfig.color}`}>
-            <span className={`atm-status-dot ${statusConfig.dot}`}></span>
-            {statusConfig.text}
+          <div className="atm-card-actions">
+            <div className={`atm-status-indicator ${statusConfig.color}`}>
+              <span className={`atm-status-dot ${statusConfig.dot}`}></span>
+              <span className={`atm-status-text ${statusConfig.textColor}`}>
+                {statusConfig.text}
+              </span>
+            </div>
+
+            <DropdownMenu
+              icon={moreVertical}
+              controls={menuControls}
+              popoverProps={{ position: "bottom left" }}
+              className="atm-card-menu"
+            />
           </div>
         </div>
 
-        <div className="atm-campaign-info">
-          <h3 className="atm-campaign-name">{campaign.name}</h3>
+        {/* Campaign Info */}
+        <div className="atm-card-content">
+          <h3 className="atm-campaign-title">{campaign.name}</h3>
           <p className="atm-campaign-keyword">{campaign.keyword}</p>
+
+          {/* Quick Stats Grid */}
+          <div className="atm-stats-grid">
+            <div className="atm-stat-item">
+              <span className="atm-stat-value">
+                {campaign.successful_executions || 0}
+              </span>
+              <span className="atm-stat-label">Posts</span>
+            </div>
+            <div className="atm-stat-item">
+              <span className="atm-stat-value">{successRate}%</span>
+              <span className="atm-stat-label">Success</span>
+            </div>
+            <div className="atm-stat-item">
+              <span className="atm-stat-value">
+                {campaign.schedule_value}
+                {campaign.schedule_unit.charAt(0)}
+              </span>
+              <span className="atm-stat-label">Frequency</span>
+            </div>
+          </div>
+
+          {/* Next Run Info */}
+          <div className="atm-next-run">
+            <svg
+              className="atm-clock-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+            </svg>
+            <span>Next run: {formatNextRun(campaign.next_run)}</span>
+          </div>
         </div>
 
-        <div className="atm-campaign-stats">
-          <div className="atm-stat-item">
-            <span className="atm-stat-label">Schedule</span>
-            <span className="atm-stat-value">
-              Every {campaign.schedule_value} {campaign.schedule_unit}
-              {campaign.schedule_value > 1 ? "s" : ""}
-            </span>
-          </div>
-
-          <div className="atm-stat-item">
-            <span className="atm-stat-label">Next Run</span>
-            <span className="atm-stat-value">
-              {formatNextRun(campaign.next_run)}
-            </span>
-          </div>
-
-          <div className="atm-stat-item">
-            <span className="atm-stat-label">Success Rate</span>
-            <span className="atm-stat-value">
-              {campaign.total_executions > 0
-                ? `${Math.round((campaign.successful_executions / campaign.total_executions) * 100)}%`
-                : "—"}
-            </span>
-          </div>
-
-          <div className="atm-stat-item">
-            <span className="atm-stat-label">Total Posts</span>
-            <span className="atm-stat-value">
-              {campaign.successful_executions || 0}
-            </span>
-          </div>
-        </div>
-
-        <div className="atm-campaign-controls">
-          <div className="atm-campaign-toggle">
-            <ToggleControl
+        {/* Toggle Switch */}
+        <div className="atm-card-toggle">
+          <label className="atm-toggle-modern">
+            <input
+              type="checkbox"
               checked={campaign.is_active == 1}
               onChange={() => onToggle(campaign.id, campaign.is_active == 1)}
-              __nextHasNoMarginBottom
             />
-            <span className="atm-toggle-label">
-              {campaign.is_active == 1 ? "Active" : "Paused"}
-            </span>
-          </div>
-
-          <div className="atm-campaign-actions">
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={() => onRunNow(campaign.id)}
-              disabled={isRunning}
-              icon={isRunning ? <Spinner /> : null}
-            >
-              {isRunning ? "Running..." : "Run Now"}
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={() => onViewStats(campaign.id)}
-            >
-              Stats
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={() => onEdit(campaign)}
-            >
-              Edit
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={() => setShowDeleteModal(true)}
-              className="atm-delete-button"
-            >
-              Delete
-            </Button>
-          </div>
+            <span className="atm-toggle-slider-modern"></span>
+          </label>
         </div>
       </div>
 
+      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <Modal
           title="Delete Campaign"
           onRequestClose={() => setShowDeleteModal(false)}
-          className="atm-delete-modal"
+          className="atm-delete-modal-modern"
         >
-          <p>Are you sure you want to delete the campaign "{campaign.name}"?</p>
-          <p className="atm-warning-text">
-            This action cannot be undone and will delete all execution history.
-          </p>
+          <div className="atm-modal-content">
+            <div className="atm-modal-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="#ef4444"
+                  strokeWidth="2"
+                />
+                <path d="M15 9l-6 6m0-6l6 6" stroke="#ef4444" strokeWidth="2" />
+              </svg>
+            </div>
+            <h3>Delete "{campaign.name}"?</h3>
+            <p>
+              This will permanently delete the campaign and all its execution
+              history. This action cannot be undone.
+            </p>
 
-          <div className="atm-modal-actions">
-            <Button variant="primary" onClick={() => setShowDeleteModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                onDelete(campaign.id, campaign.name);
-                setShowDeleteModal(false);
-              }}
-              className="atm-delete-confirm"
-            >
-              Delete Campaign
-            </Button>
+            <div className="atm-modal-actions">
+              <Button
+                variant="tertiary"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="atm-delete-button"
+                onClick={() => {
+                  onDelete(campaign.id, campaign.name);
+                  setShowDeleteModal(false);
+                }}
+              >
+                Delete Campaign
+              </Button>
+            </div>
           </div>
         </Modal>
       )}
@@ -378,11 +307,13 @@ function CampaignDashboard({
   onToggleCampaign,
   onRunCampaign,
   refreshCampaigns,
+  statusMessage,
 }) {
   const [filteredCampaigns, setFilteredCampaigns] = useState(campaigns);
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("grid"); // grid or list
 
   useEffect(() => {
     let filtered = campaigns;
@@ -410,106 +341,289 @@ function CampaignDashboard({
     setFilteredCampaigns(filtered);
   }, [campaigns, filterType, filterStatus, searchTerm]);
 
-  const handleViewStats = (campaignId) => {
-    console.log("View stats for campaign:", campaignId);
+  const handleDuplicate = (campaign) => {
+    console.log("Duplicate campaign:", campaign);
+    // TODO: Implement duplicate functionality
   };
+
+  const handleViewLogs = (campaignId) => {
+    console.log("View logs for:", campaignId);
+    // TODO: Implement logs view
+  };
+
+  // Calculate dashboard stats
+  const stats = {
+    total: campaigns.length,
+    active: campaigns.filter((c) => c.is_active == 1).length,
+    paused: campaigns.filter((c) => c.is_active == 0).length,
+    totalPosts: campaigns.reduce(
+      (sum, c) => sum + (c.successful_executions || 0),
+      0
+    ),
+  };
+
+  const filterOptions = [
+    { id: "all", label: "All Types", count: campaigns.length },
+    {
+      id: "articles",
+      label: "Articles",
+      count: campaigns.filter((c) => c.type === "articles").length,
+    },
+    {
+      id: "news",
+      label: "News",
+      count: campaigns.filter((c) => c.type === "news").length,
+    },
+    {
+      id: "videos",
+      label: "Videos",
+      count: campaigns.filter((c) => c.type === "videos").length,
+    },
+    {
+      id: "podcasts",
+      label: "Podcasts",
+      count: campaigns.filter((c) => c.type === "podcasts").length,
+    },
+  ];
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: "center", padding: "40px" }}>
-        <Spinner />
-        <p>Loading campaigns...</p>
-      </div>
-    );
-  }
-
-  if (!campaigns || !campaigns.length) {
-    return (
-      <div className="atm-empty-state">
-        <div className="atm-empty-icon">🤖</div>
-        <h3>No campaigns yet</h3>
-        <p>
-          Create your first automation campaign to start generating content
-          automatically.
-        </p>
+      <div className="atm-loading-modern">
+        <div className="atm-loading-content">
+          <Spinner />
+          <h3>Loading campaigns...</h3>
+          <p>Fetching your automation campaigns</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="atm-campaign-dashboard">
-      <div className="atm-dashboard-filters">
-        <div className="atm-search-box">
+    <div className="atm-dashboard-modern">
+      {/* Dashboard Header */}
+      <div className="atm-dashboard-header">
+        <div className="atm-header-main">
+          <div className="atm-header-text">
+            <h1>Campaign Manager</h1>
+            <p>Monitor and manage your automation campaigns</p>
+          </div>
+
+          <div className="atm-header-actions">
+            <Button
+              variant="tertiary"
+              onClick={refreshCampaigns}
+              className="atm-refresh-btn"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+              </svg>
+              Refresh
+            </Button>
+
+            <Button variant="primary" className="atm-create-btn">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+              </svg>
+              New Campaign
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Overview */}
+        <div className="atm-stats-overview">
+          <div className="atm-overview-card">
+            <div className="atm-overview-icon bg-blue-100 text-blue-600">
+              📊
+            </div>
+            <div className="atm-overview-content">
+              <span className="atm-overview-number">{stats.total}</span>
+              <span className="atm-overview-label">Total Campaigns</span>
+            </div>
+          </div>
+
+          <div className="atm-overview-card">
+            <div className="atm-overview-icon bg-green-100 text-green-600">
+              ✅
+            </div>
+            <div className="atm-overview-content">
+              <span className="atm-overview-number">{stats.active}</span>
+              <span className="atm-overview-label">Active</span>
+            </div>
+          </div>
+
+          <div className="atm-overview-card">
+            <div className="atm-overview-icon bg-yellow-100 text-yellow-600">
+              ⏸️
+            </div>
+            <div className="atm-overview-content">
+              <span className="atm-overview-number">{stats.paused}</span>
+              <span className="atm-overview-label">Paused</span>
+            </div>
+          </div>
+
+          <div className="atm-overview-card">
+            <div className="atm-overview-icon bg-purple-100 text-purple-600">
+              📝
+            </div>
+            <div className="atm-overview-content">
+              <span className="atm-overview-number">{stats.totalPosts}</span>
+              <span className="atm-overview-label">Posts Created</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="atm-filters-modern">
+        <div className="atm-search-modern">
+          <svg
+            className="atm-search-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          </svg>
           <input
             type="text"
             placeholder="Search campaigns..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="atm-search-input"
+            className="atm-search-input-modern"
           />
         </div>
 
-        <div className="atm-filter-tabs">
-          <button
-            className={`atm-filter-tab ${filterType === "all" ? "active" : ""}`}
-            onClick={() => setFilterType("all")}
-          >
-            All Types
-          </button>
-          <button
-            className={`atm-filter-tab ${filterType === "articles" ? "active" : ""}`}
-            onClick={() => setFilterType("articles")}
-          >
-            Articles
-          </button>
-          <button
-            className={`atm-filter-tab ${filterType === "news" ? "active" : ""}`}
-            onClick={() => setFilterType("news")}
-          >
-            News
-          </button>
-          <button
-            className={`atm-filter-tab ${filterType === "videos" ? "active" : ""}`}
-            onClick={() => setFilterType("videos")}
-          >
-            Videos
-          </button>
-          <button
-            className={`atm-filter-tab ${filterType === "podcasts" ? "active" : ""}`}
-            onClick={() => setFilterType("podcasts")}
-          >
-            Podcasts
-          </button>
+        <div className="atm-filter-chips">
+          {filterOptions.map((filter) => (
+            <button
+              key={filter.id}
+              className={`atm-filter-chip ${filterType === filter.id ? "active" : ""}`}
+              onClick={() => setFilterType(filter.id)}
+            >
+              {filter.label}
+              <span className="atm-chip-count">{filter.count}</span>
+            </button>
+          ))}
         </div>
 
-        <div className="atm-status-filter">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="atm-status-select"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="paused">Paused</option>
-            <option value="running">Running</option>
-            <option value="failed">Failed</option>
-          </select>
+        <div className="atm-view-controls">
+          <div className="atm-status-filter">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="atm-status-select-modern"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="paused">Paused Only</option>
+            </select>
+          </div>
+
+          <div className="atm-view-toggle">
+            <button
+              className={`atm-view-btn ${viewMode === "grid" ? "active" : ""}`}
+              onClick={() => setViewMode("grid")}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
+              </svg>
+            </button>
+            <button
+              className={`atm-view-btn ${viewMode === "list" ? "active" : ""}`}
+              onClick={() => setViewMode("list")}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="atm-campaigns-grid">
-        {filteredCampaigns.map((campaign) => (
-          <CampaignCard
-            key={campaign.id}
-            campaign={campaign}
-            onEdit={onEditCampaign}
-            onToggle={onToggleCampaign}
-            onDelete={onDeleteCampaign}
-            onRunNow={onRunCampaign}
-            onViewStats={handleViewStats}
-          />
-        ))}
-      </div>
+      {/* Status Message */}
+      {statusMessage && (
+        <div
+          className={`atm-status-message-modern ${
+            statusMessage.includes("successfully")
+              ? "success"
+              : statusMessage.includes("Error")
+                ? "error"
+                : "info"
+          }`}
+        >
+          <div className="atm-status-content">
+            {statusMessage.includes("successfully") && <span>✅</span>}
+            {statusMessage.includes("Error") && <span>❌</span>}
+            <span>{statusMessage}</span>
+          </div>
+          <button
+            onClick={() => {
+              /* clear message */
+            }}
+            className="atm-status-close"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Campaigns Grid */}
+      {filteredCampaigns.length === 0 ? (
+        <div className="atm-empty-state-modern">
+          <div className="atm-empty-content">
+            <div className="atm-empty-icon">🤖</div>
+            <h3>No campaigns found</h3>
+            <p>
+              {campaigns.length === 0
+                ? "Create your first automation campaign to start generating content automatically."
+                : "No campaigns match your current filters. Try adjusting your search criteria."}
+            </p>
+            {campaigns.length === 0 && (
+              <Button variant="primary" className="atm-cta-button">
+                Create First Campaign
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div
+          className={`atm-campaigns-container ${viewMode === "list" ? "list-view" : "grid-view"}`}
+        >
+          {filteredCampaigns.map((campaign) => (
+            <CampaignCard
+              key={campaign.id}
+              campaign={campaign}
+              onEdit={onEditCampaign}
+              onToggle={onToggleCampaign}
+              onDelete={onDeleteCampaign}
+              onRunNow={onRunCampaign}
+              onDuplicate={handleDuplicate}
+              onViewLogs={handleViewLogs}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
