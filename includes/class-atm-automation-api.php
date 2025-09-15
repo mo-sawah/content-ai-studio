@@ -211,8 +211,7 @@ class ATM_Automation_API {
 - 8-15 words long
 - Professional and engaging{$avoid_titles}
 
-**OUTPUT FORMAT:**
-Return your response as a JSON object with the following structure:
+**IMPORTANT: Return your response as a JSON object with this exact structure:**
 {
     \"topic_category\": \"Type of trending topic (news, celebrity, fashion, technology, etc.)\",
     \"trending_reason\": \"Why this topic is trending right now\",
@@ -222,7 +221,7 @@ Return your response as a JSON object with the following structure:
     \"content_angle\": \"Best angle for the article content\"
 }
 
-Research thoroughly using web search to understand the trending context.";
+Research thoroughly using web search to understand the trending context and return the results in JSON format.";
 
             $research_response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $selected_topic['title']],
@@ -269,45 +268,45 @@ Research thoroughly using web search to understand the trending context.";
             
             $content_prompt = "You are a professional content writer specializing in {$topic_category} content. Write a comprehensive article based on the research provided.
 
-    **ARTICLE REQUIREMENTS:**
-    - **Exact Title:** {$researched_title}
-    - **Topic Category:** {$topic_category}
-    - **Why It's Trending:** {$trending_reason}
-    - **Writing Style:** {$style_description}
-    - **Length:** {$word_count_text} words
+**ARTICLE REQUIREMENTS:**
+- **Exact Title:** {$researched_title}
+- **Topic Category:** {$topic_category}
+- **Why It's Trending:** {$trending_reason}
+- **Writing Style:** {$style_description}
+- **Length:** {$word_count_text} words
 
-    **CONTENT RESEARCH:**
-    Use web search extensively to gather current information about:
-    - {$key_developments}
-    - Current status and updates
-    - Relevant quotes, statistics, and facts
-    - Impact and implications
+**CONTENT RESEARCH:**
+Use web search extensively to gather current information about:
+- {$key_developments}
+- Current status and updates
+- Relevant quotes, statistics, and facts
+- Impact and implications
 
-    **STYLE GUIDELINES:**
-    - Write in {$style_description} tone
-    - Match the {$topic_category} content style
-    - Use current, accurate information from web search
-    - Include relevant details that explain why this is trending
-    - Make it engaging for the target audience: {$target_audience}
+**STYLE GUIDELINES:**
+- Write in {$style_description} tone
+- Match the {$topic_category} content style
+- Use current, accurate information from web search
+- Include relevant details that explain why this is trending
+- Make it engaging for the target audience: {$target_audience}
 
-    **STRUCTURE REQUIREMENTS:**
-    - Content field must NOT start with title or H1 headings
-    - Use H2 (##) for main sections only
-    - No conclusion headings - end naturally
-    - Start with engaging intro paragraph";
+**STRUCTURE REQUIREMENTS:**
+- Content field must NOT start with title or H1 headings
+- Use H2 (##) for main sections only
+- No conclusion headings - end naturally
+- Start with engaging intro paragraph";
 
-            if (!empty($custom_prompt)) {
-                $content_prompt .= "\n\n**ADDITIONAL CUSTOM INSTRUCTIONS:**\n{$custom_prompt}";
-            }
+if (!empty($custom_prompt)) {
+    $content_prompt .= "\n\n**ADDITIONAL CUSTOM INSTRUCTIONS:**\n{$custom_prompt}";
+}
 
-            $content_prompt .= "\n\n**OUTPUT FORMAT:**
-    {
-        \"title\": \"{$researched_title}\",
-        \"subheadline\": \"Engaging subtitle that complements the title\",
-        \"content\": \"Full article in markdown format\"
-    }
+$content_prompt .= "\n\n**IMPORTANT: Return your response as a JSON object with this structure:**
+{
+    \"title\": \"{$researched_title}\",
+    \"subheadline\": \"Engaging subtitle that complements the title\",
+    \"content\": \"Full article text, formatted using Markdown\"
+}
 
-    Use web search to ensure all information is current and accurate.";
+Use web search to ensure all information is current and accurate, then return the results in JSON format.";
 
             $content_response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $researched_title],
