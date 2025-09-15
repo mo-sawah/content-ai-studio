@@ -9,6 +9,71 @@ import {
 import { chevronDown } from "@wordpress/icons";
 import CustomDropdown from "../common/CustomDropdown";
 
+/**
+ * Enhanced Schedule Summary Component with Cost Calculator
+ * Add this to AutomationSettingsForm.js to replace the existing schedule summary
+ */
+
+// Add this function at the top of AutomationSettingsForm.js
+const calculateAutomationCost = (campaignType, settings) => {
+  // Base web search costs based on settings
+  const webSearchSetting = window.atm_studio_data?.web_search_max_results || 5;
+
+  // Cost mapping based on web search results
+  const webSearchCosts = {
+    1: 0.009,
+    2: 0.013,
+    3: 0.017,
+    4: 0.021,
+    5: 0.025, // 0.02 + 0.005 base
+    6: 0.029,
+    7: 0.033,
+    8: 0.037,
+    9: 0.041,
+    10: 0.045,
+  };
+
+  const webSearchCost = webSearchCosts[webSearchSetting] || 0.02;
+
+  // Campaign type multipliers
+  const campaignCosts = {
+    articles: {
+      standard: webSearchCost * 1, // 1 web search call
+      trending: webSearchCost * 2, // 2 web search calls (research + content)
+      listicle: webSearchCost * 1.5, // 1.5x for research
+      multipage: webSearchCost * 2.5, // Multiple pages
+    },
+    news: {
+      search: webSearchCost * 1.5, // Google News + content
+      twitter: webSearchCost * 1.2, // Twitter + content
+      rss: webSearchCost * 0.8, // Minimal web search
+      apis: webSearchCost * 1.3, // API + content
+      live: webSearchCost * 1.8, // Live news + content
+    },
+    videos: webSearchCost * 0.7, // YouTube search + description
+    podcasts: webSearchCost * 1.5, // Content + script generation
+  };
+
+  const subType = settings?.sub_type || "standard";
+  let baseCost = 0;
+
+  if (campaignType === "articles") {
+    baseCost =
+      campaignCosts.articles[subType] || campaignCosts.articles.standard;
+  } else if (campaignType === "news") {
+    baseCost = campaignCosts.news[subType] || campaignCosts.news.search;
+  } else {
+    baseCost = campaignCosts[campaignType] || webSearchCost;
+  }
+
+  // Add image generation cost if enabled
+  if (settings?.generate_image) {
+    baseCost += 0.04; // Approximate image generation cost
+  }
+
+  return baseCost;
+};
+
 // Category Selector Component
 const CategorySelector = ({ campaignData, setCampaignData, categories }) => {
   const selectedCategoryIds = campaignData.settings?.category_ids || [];
@@ -278,7 +343,7 @@ function AutomationSettingsForm({
         <div className="atm-schedule-summary">
           <div className="atm-summary-content">
             <div className="atm-summary-header">
-              <h4>Publishing Frequency</h4>
+              <h4>Publishing Frequency & Cost Analysis</h4>
               <span className="atm-summary-badge">Active Schedule</span>
             </div>
             <div className="atm-summary-stats">
@@ -296,6 +361,64 @@ function AutomationSettingsForm({
                 <span className="atm-stat-number">{posts.month}</span>
                 <span className="atm-stat-label">per month</span>
               </div>
+              <div className="atm-summary-divider"></div>
+              <div className="atm-summary-stat">
+                <span className="atm-stat-number">
+                  $
+                  {calculateAutomationCost(
+                    campaignData.type,
+                    campaignData.sub_type,
+                    campaignData.settings
+                  ).toFixed(3)}
+                </span>
+                <span className="atm-stat-label">per article</span>
+              </div>
+            </div>
+
+            <div className="atm-cost-breakdown">
+              <div className="atm-cost-row">
+                <span className="atm-cost-label">Daily Cost:</span>
+                <span className="atm-cost-value">
+                  $
+                  {(
+                    posts.day *
+                    calculateAutomationCost(
+                      campaignData.type,
+                      campaignData.sub_type,
+                      campaignData.settings
+                    )
+                  ).toFixed(2)}
+                </span>
+              </div>
+              <div className="atm-cost-row">
+                <span className="atm-cost-label">Monthly Cost:</span>
+                <span className="atm-cost-value">
+                  $
+                  {(
+                    posts.month *
+                    calculateAutomationCost(
+                      campaignData.type,
+                      campaignData.sub_type,
+                      campaignData.settings
+                    )
+                  ).toFixed(2)}
+                </span>
+              </div>
+              {campaignData.settings?.generate_image && (
+                <div className="atm-cost-note">
+                  * Includes image generation (~$0.040 per article)
+                </div>
+              )}
+              <div className="atm-cost-note">
+                * Based on {window.atm_studio_data?.web_search_max_results || 5}{" "}
+                web search results
+              </div>
+              {campaignData.type === "articles" &&
+                campaignData.sub_type === "trending" && (
+                  <div className="atm-cost-note">
+                    * Trending articles use 2 API calls for research + content
+                  </div>
+                )}
             </div>
           </div>
         </div>

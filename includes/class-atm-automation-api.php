@@ -155,121 +155,190 @@ class ATM_Automation_API {
     }
 
     /**
-     * Enhanced execute_trending_automation method for class-atm-automation-api.php
-     * Replace the existing execute_trending_automation method with this one
+     * Enhanced 2-API Call Trending System with Topic Understanding
+     * Replace the execute_trending_automation method in class-atm-automation-api.php
      */
     private static function execute_trending_automation($campaign, $settings) {
         try {
             $base_keyword = $campaign->keyword;
-            
-            // Use the settings from the campaign - with defaults
             $region = $settings['trending_region'] ?? 'US';
             $language = $settings['trending_language'] ?? 'en';
-            $angle_refresh_days = $settings['angle_refresh_days'] ?? 7;
-            $min_trend_score = $settings['min_trend_score'] ?? 0;
-            
-            // AI and content settings
-            $ai_model = $settings['ai_model'] ?? 'openai/gpt-4o'; // Default to GPT-4o
-            $enable_web_search = $settings['enable_web_search'] ?? true; // Default enabled
+            $ai_model = $settings['ai_model'] ?? 'openai/gpt-4o';
+            $writing_style = $settings['writing_style'] ?? 'news';
             $word_count = $settings['word_count'] ?? 0;
             $creativity_level = $settings['creativity_level'] ?? 'high';
-            $writing_style = $settings['writing_style'] ?? 'news';
+            $custom_prompt = $settings['custom_prompt'] ?? '';
             
-            // Intelligence settings
-            $smart_angles = $settings['smart_angles'] ?? true;
-            $real_time_trends = $settings['real_time_trends'] ?? true;
-            $include_breaking_news = $settings['include_breaking_news'] ?? false;
+            error_log("ATM Trending: Starting 2-API approach for keyword: {$base_keyword}");
             
-            // Map language codes to full names
-            $language_map = [
-                'en' => 'English',
-                'es' => 'Spanish', 
-                'fr' => 'French',
-                'de' => 'German',
-                'pt' => 'Portuguese',
-                'it' => 'Italian',
-                'ja' => 'Japanese',
-                'ko' => 'Korean',
-                'zh' => 'Chinese'
-            ];
-
-            error_log("ATM Trending: Using AI model: {$ai_model}, Web search: " . ($enable_web_search ? 'enabled' : 'disabled'));
-            error_log("ATM Trending: Settings - Region: {$region}, Language: {$language}, Breaking News: " . ($include_breaking_news ? 'enabled' : 'disabled'));
-            
-            // 1. Fetch trending topics with settings
-            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'fetch_trending_topics')) {
-                throw new Exception('ATM_API trending topics method not available');
-            }
-            
-            // Use real-time trends setting and breaking news priority
-            $time_range = $include_breaking_news ? 'now 1-d' : 'now 7-d'; // Use SerpApi compatible formats
-            error_log("ATM Trending: Using time range: {$time_range} for trending topics");
-            
-            $trending_result = ATM_API::fetch_trending_topics($base_keyword, $region, $language, $time_range, $real_time_trends);
+            // Get trending topics
+            $trending_result = ATM_API::fetch_trending_topics($base_keyword, $region, $language, 'now 1-d', true);
             
             if (empty($trending_result['trends'])) {
-                error_log("ATM Trending: No trending topics found for keyword: {$base_keyword} in region: {$region}");
                 throw new Exception('No trending topics found for keyword: ' . $base_keyword);
             }
             
-            error_log("ATM Trending: Found " . count($trending_result['trends']) . " trending topics");
+            // Select most relevant trending topic
+            $relevant_trends = self::filter_trending_topics_by_relevance($trending_result['trends'], $base_keyword);
+            $selected_topic = !empty($relevant_trends) ? $relevant_trends[0] : $trending_result['trends'][0];
             
-            // 2. Smart selection with AI angle detection (if enabled)
-            $selected_topic = self::smart_select_trending_topic(
-                $campaign->id, 
-                $base_keyword, 
-                $trending_result['trends'],
-                $angle_refresh_days,
-                $min_trend_score,
-                $smart_angles,
-                $include_breaking_news
+            error_log("ATM Trending: Selected topic: " . $selected_topic['title']);
+            
+            // Get recent titles to avoid duplication
+            $recent_titles = self::get_recent_trending_titles($campaign->id, 7);
+            $avoid_titles = !empty($recent_titles) ? "\n\nRECENT TITLES TO AVOID:\n- " . implode("\n- ", $recent_titles) : "";
+            
+            // ========== API CALL 1: RESEARCH & TITLE GENERATION ==========
+            $research_prompt = "You are a trending topic research expert. Your task is to deeply understand why a topic is trending and create the perfect title.
+
+    **RESEARCH TARGET:**
+    - Base Keyword: \"{$base_keyword}\"
+    - Trending Topic: \"{$selected_topic['title']}\"
+    - Context: {$selected_topic['snippet']}
+
+    **RESEARCH PHASE:**
+    1. Use extensive web search to understand WHY this topic is trending right now
+    2. Identify the specific events, developments, or news that made it trend
+    3. Understand the topic category (news, entertainment, fashion, celebrity, technology, etc.)
+    4. Find the most current and newsworthy angle
+    5. Determine what makes this topic compelling to audiences
+
+    **TITLE CREATION REQUIREMENTS:**
+    - Must include the exact keyword: \"{$base_keyword}\"
+    - Should reflect WHY the topic is trending
+    - Must be compelling and clickable
+    - Should match the topic category (news, celebrity, fashion, etc.)
+    - 8-15 words long
+    - Professional and engaging{$avoid_titles}
+
+    **OUTPUT FORMAT:**
+    {
+        \"topic_category\": \"Type of trending topic (news, celebrity, fashion, technology, etc.)\",
+        \"trending_reason\": \"Why this topic is trending right now\",
+        \"key_developments\": \"Main events or developments driving the trend\",
+        \"target_audience\": \"Who would be interested in this topic\",
+        \"recommended_title\": \"Perfect title that includes '{$base_keyword}'\",
+        \"content_angle\": \"Best angle for the article content\"
+    }
+
+    Research thoroughly using web search to understand the trending context.";
+
+            $research_response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $selected_topic['title']],
+                $research_prompt,
+                $ai_model,
+                true,  // JSON mode
+                true,  // Web search enabled
+                'high' // High creativity for research
             );
             
-            if (!$selected_topic) {
-                throw new Exception('No suitable trending topics available for unique content generation');
+            $research_result = json_decode($research_response, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($research_result['recommended_title'])) {
+                throw new Exception('Failed to research topic and generate title');
             }
             
-            error_log("ATM Trending: Selected topic: " . $selected_topic['topic']['title']);
+            $researched_title = $research_result['recommended_title'];
+            $topic_category = $research_result['topic_category'] ?? 'general';
+            $trending_reason = $research_result['trending_reason'] ?? '';
             
-            // 3. Generate article with all settings applied
-            $article_result = self::generate_article_from_trend_automation(
-                $selected_topic['topic'], 
-                array_merge($settings, [
-                    'ai_model' => $ai_model,
-                    'enable_web_search' => $enable_web_search,
-                    'word_count' => $word_count,
-                    'creativity_level' => $creativity_level,
-                    'writing_style' => $writing_style,
-                    'custom_prompt' => $settings['custom_prompt'] ?? ''
-                ]), 
-                $language_map[$language] ?? 'English'
+            error_log("ATM Trending: Generated title: {$researched_title}");
+            error_log("ATM Trending: Topic category: {$topic_category}");
+            
+            // Validate keyword inclusion
+            if (stripos($researched_title, $base_keyword) === false) {
+                throw new Exception("Generated title doesn't include the keyword '{$base_keyword}'");
+            }
+            
+            // ========== API CALL 2: CONTENT GENERATION ==========
+            
+            // Get writing style description
+            $style_descriptions = [
+                'default_seo' => 'SEO-optimized and informative',
+                'professional' => 'professional business tone',
+                'conversational' => 'conversational and friendly',
+                'technical' => 'technical and expert-level',
+                'news' => 'professional journalistic',
+                'educational' => 'educational and tutorial-style'
+            ];
+            
+            $style_description = $style_descriptions[$writing_style] ?? 'professional and engaging';
+            $word_count_text = $word_count > 0 ? "approximately {$word_count}" : '800-1200';
+            $key_developments = $research_result['key_developments'] ?? 'Latest developments';
+            $target_audience  = $research_result['target_audience'] ?? 'general readers';
+            
+            $content_prompt = "You are a professional content writer specializing in {$topic_category} content. Write a comprehensive article based on the research provided.
+
+    **ARTICLE REQUIREMENTS:**
+    - **Exact Title:** {$researched_title}
+    - **Topic Category:** {$topic_category}
+    - **Why It's Trending:** {$trending_reason}
+    - **Writing Style:** {$style_description}
+    - **Length:** {$word_count_text} words
+
+    **CONTENT RESEARCH:**
+    Use web search extensively to gather current information about:
+    - {$key_developments}
+    - Current status and updates
+    - Relevant quotes, statistics, and facts
+    - Impact and implications
+
+    **STYLE GUIDELINES:**
+    - Write in {$style_description} tone
+    - Match the {$topic_category} content style
+    - Use current, accurate information from web search
+    - Include relevant details that explain why this is trending
+    - Make it engaging for the target audience: {$target_audience}
+
+    **STRUCTURE REQUIREMENTS:**
+    - Content field must NOT start with title or H1 headings
+    - Use H2 (##) for main sections only
+    - No conclusion headings - end naturally
+    - Start with engaging intro paragraph";
+
+            if (!empty($custom_prompt)) {
+                $content_prompt .= "\n\n**ADDITIONAL CUSTOM INSTRUCTIONS:**\n{$custom_prompt}";
+            }
+
+            $content_prompt .= "\n\n**OUTPUT FORMAT:**
+    {
+        \"title\": \"{$researched_title}\",
+        \"subheadline\": \"Engaging subtitle that complements the title\",
+        \"content\": \"Full article in markdown format\"
+    }
+
+    Use web search to ensure all information is current and accurate.";
+
+            $content_response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $researched_title],
+                $content_prompt,
+                $ai_model,
+                true,  // JSON mode
+                true,  // Web search enabled
+                $creativity_level
             );
             
-            if (empty($article_result['title']) || empty($article_result['content'])) {
-                throw new Exception('Generated article is missing title or content');
+            $content_result = json_decode($content_response, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($content_result['content'])) {
+                throw new Exception('Failed to generate article content');
             }
             
-            error_log("ATM Trending: Generated article: " . $article_result['title']);
-            
-            // 4. Create WordPress post
+            // Create the post
             $post_status = $campaign->content_mode === 'publish' ? 'publish' : 'draft';
             
-            // Convert markdown to HTML if needed
             if (class_exists('Parsedown')) {
                 $Parsedown = new Parsedown();
-                $html_content = $Parsedown->text($article_result['content']);
+                $html_content = $Parsedown->text($content_result['content']);
             } else {
-                $html_content = $article_result['content'];
+                $html_content = $content_result['content'];
             }
             
-            // Use category_ids from settings properly
             $category_ids = [];
             if (!empty($settings['category_ids']) && is_array($settings['category_ids'])) {
                 $category_ids = array_map('intval', $settings['category_ids']);
             }
             
             $post_data = [
-                'post_title' => wp_strip_all_tags($article_result['title']),
+                'post_title' => wp_strip_all_tags($researched_title),
                 'post_content' => wp_kses_post($html_content),
                 'post_status' => $post_status,
                 'post_author' => $campaign->author_id,
@@ -281,59 +350,60 @@ class ATM_Automation_API {
                 throw new Exception('Failed to create post: ' . $post_id->get_error_message());
             }
             
-            error_log("ATM Trending: Created post ID: " . $post_id);
-            
-            // 5. Save subtitle if provided
-            if (!empty($article_result['subheadline'])) {
-                update_post_meta($post_id, '_bunyad_sub_title', $article_result['subheadline']);
-                update_post_meta($post_id, '_atm_subtitle', $article_result['subheadline']);
+            // Save metadata
+            if (!empty($content_result['subheadline'])) {
+                update_post_meta($post_id, '_bunyad_sub_title', $content_result['subheadline']);
+                update_post_meta($post_id, '_atm_subtitle', $content_result['subheadline']);
             }
             
-            // 6. Save automation metadata
             update_post_meta($post_id, '_atm_automation_generated', true);
             update_post_meta($post_id, '_atm_campaign_id', $campaign->id);
-            update_post_meta($post_id, '_atm_generation_date', current_time('mysql'));
-            update_post_meta($post_id, '_atm_trending_keyword', $selected_topic['topic']['title']);
-            update_post_meta($post_id, '_atm_content_angle', $selected_topic['angle']);
-            update_post_meta($post_id, '_atm_ai_model_used', $ai_model);
-            update_post_meta($post_id, '_atm_web_search_enabled', $enable_web_search);
+            update_post_meta($post_id, '_atm_trending_keyword', $base_keyword);
+            update_post_meta($post_id, '_atm_trending_category', $topic_category);
+            update_post_meta($post_id, '_atm_trending_reason', $trending_reason);
+            update_post_meta($post_id, '_atm_ai_calls_used', 2); // Track API usage
             
-            // 7. Generate featured image if requested
+            // Generate featured image if requested
             if ($settings['generate_image'] ?? false) {
-                ATM_Content_Generation_Service::generate_featured_image($post_id, $article_result['title']);
+                ATM_Content_Generation_Service::generate_featured_image($post_id, $researched_title);
             }
             
-            // 8. Store the used angle
-            self::store_used_trending_angle(
-                $campaign->id,
-                $base_keyword,
-                $selected_topic['topic']['title'],
-                $article_result['title'],
-                $selected_topic['angle']
-            );
+            error_log("ATM Trending: Created {$topic_category} article '{$researched_title}' (ID: {$post_id})");
             
             return [
                 'success' => true,
                 'post_id' => $post_id,
                 'post_url' => get_permalink($post_id),
-                'article_title' => $article_result['title'],
-                'trending_keyword' => $selected_topic['topic']['title'],
-                'content_angle' => $selected_topic['angle'],
-                'ai_model_used' => $ai_model,
-                'settings_applied' => [
-                    'region' => $region,
-                    'language' => $language,
-                    'breaking_news' => $include_breaking_news,
-                    'web_search' => $enable_web_search,
-                    'word_count' => $word_count,
-                    'categories' => count($category_ids)
-                ]
+                'article_title' => $researched_title,
+                'topic_category' => $topic_category,
+                'trending_reason' => $trending_reason,
+                'api_calls_used' => 2
             ];
             
         } catch (Exception $e) {
             error_log('ATM Trending Automation Error: ' . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Get recent titles for duplication prevention
+     */
+    private static function get_recent_trending_titles($campaign_id, $days = 7) {
+        global $wpdb;
+        
+        $posts = $wpdb->get_results($wpdb->prepare(
+            "SELECT post_title FROM {$wpdb->posts} p 
+            INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id 
+            WHERE pm.meta_key = '_atm_campaign_id' 
+            AND pm.meta_value = %d 
+            AND p.post_date > DATE_SUB(NOW(), INTERVAL %d DAY)
+            ORDER BY p.post_date DESC 
+            LIMIT 10",
+            $campaign_id, $days
+        ));
+        
+        return array_column($posts, 'post_title');
     }
 
     /**

@@ -1148,3 +1148,98 @@
   width: var(--atm-popover-width, auto) !important;
   min-width: var(--atm-popover-width, 280px) !important;
 }
+
+/* Enhanced cost calculator styles for automation.scss */
+
+.atm-cost-breakdown {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.atm-cost-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+}
+
+.atm-cost-label {
+  font-weight: 500;
+}
+
+.atm-cost-value {
+  font-weight: 700;
+  color: #fbbf24; /* Gold color for cost values */
+}
+
+.atm-cost-note {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* Update the summary stats to handle 4 columns nicely */
+.atm-summary-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.atm-summary-stat {
+  flex: 1;
+  text-align: center;
+  min-width: 60px;
+}
+
+.atm-summary-stat:last-child .atm-stat-number {
+  color: #fbbf24; /* Highlight cost in gold */
+  font-weight: 800;
+}
+
+.atm-summary-divider {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments for cost calculator */
+@media (max-width: 768px) {
+  .atm-summary-stats {
+    gap: 8px;
+  }
+
+  .atm-summary-stat {
+    min-width: calc(50% - 4px);
+  }
+
+  .atm-summary-divider {
+    height: 32px;
+    margin: 0 4px;
+  }
+
+  .atm-cost-row {
+    font-size: 13px;
+  }
+
+  .atm-cost-note {
+    font-size: 10px;
+  }
+
+  .atm-cost-breakdown {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+}
