@@ -216,7 +216,10 @@ class ATM_Automation_Ajax {
         
         try {
             $campaign_id = intval($_POST['campaign_id']);
-            $is_active = isset($_POST['is_active']) && ($_POST['is_active'] === 'true' || $_POST['is_active'] === true || $_POST['is_active'] === 1) ? 1 : 0;
+            
+            // Fix: Properly handle the boolean conversion
+            $is_active_raw = $_POST['is_active'] ?? false;
+            $is_active = ($is_active_raw === 'true' || $is_active_raw === true || $is_active_raw === 1 || $is_active_raw === '1') ? 1 : 0;
             
             if (!$campaign_id) {
                 throw new Exception('Invalid campaign ID.');
@@ -239,7 +242,8 @@ class ATM_Automation_Ajax {
             
             wp_send_json_success([
                 'message' => $is_active ? 'Campaign activated!' : 'Campaign paused!',
-                'is_active' => $is_active
+                'is_active' => $is_active,
+                'campaign_id' => $campaign_id
             ]);
             
         } catch (Exception $e) {

@@ -69,7 +69,8 @@ function AutomationApp() {
     }
   };
 
-  const handleToggleCampaign = async (campaignId, currentStatus) => {
+  // Fixed version:
+  const handleToggleCampaign = async (campaignId, newState) => {
     try {
       const response = await jQuery.ajax({
         url: atm_automation_data.ajax_url,
@@ -78,18 +79,26 @@ function AutomationApp() {
           action: "atm_toggle_automation_campaign",
           nonce: atm_automation_data.nonce,
           campaign_id: campaignId,
-          is_active: !currentStatus,
+          is_active: newState, // Use the new state directly
         },
       });
 
       if (response.success) {
+        // Update the campaigns state to reflect the change
+        setCampaigns((prevCampaigns) =>
+          prevCampaigns.map((campaign) =>
+            campaign.id === campaignId
+              ? { ...campaign, is_active: newState ? 1 : 0 }
+              : campaign
+          )
+        );
         setStatusMessage(response.data.message);
-        loadCampaigns();
       } else {
-        throw new Error(response.data);
+        throw new Error(response.data || "Failed to toggle campaign");
       }
     } catch (error) {
-      setStatusMessage(`Error: ${error.message}`);
+      console.error("Toggle campaign error:", error);
+      setStatusMessage("Error: " + error.message);
     }
   };
 

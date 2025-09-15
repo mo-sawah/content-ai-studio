@@ -338,6 +338,7 @@ const CampaignCard = ({
               type="checkbox"
               checked={campaign.is_active == 1}
               onChange={(e) => {
+                e.preventDefault(); // Add this to prevent form submission
                 console.log(
                   "Toggle clicked:",
                   campaign.id,
