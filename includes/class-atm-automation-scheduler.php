@@ -84,6 +84,7 @@ class ATM_Automation_Scheduler {
      * Check for due campaigns and execute them
      */
     public function check_due_campaigns() {
+        error_log('=== ATM CRON EXECUTION START: ' . current_time('mysql') . ' ===');
         // Prevent overlapping executions
         $lock_key = 'atm_automation_running';
         if (get_transient($lock_key)) {
@@ -93,6 +94,7 @@ class ATM_Automation_Scheduler {
         
         // Set lock for 5 minutes
         set_transient($lock_key, true, 5 * MINUTE_IN_SECONDS);
+        error_log('ATM Automation: Lock set, proceeding with execution');
         
         try {
             global $wpdb;

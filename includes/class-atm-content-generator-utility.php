@@ -169,29 +169,30 @@ class ATM_Content_Generator_Utility {
         
         $classification_prompt = "Analyze the keyword '$keyword' and create a unique article angle.
 
-**ANALYSIS REQUIRED:**
-1. Classify the keyword type (person, business, technology, health, entertainment, location, event, product, concept)
-2. Determine the most appropriate content approach
-3. Create a specific, unique angle that hasn't been used before
+        **ANALYSIS REQUIRED:**
+        1. Classify the keyword type (person, business, technology, health, entertainment, location, event, product, concept)
+        2. Determine the most appropriate content approach
+        3. Create a specific, unique angle that hasn't been used before
 
-{$previous_angles_text}
+        {$previous_angles_text}
 
-**OUTPUT FORMAT (JSON):**
-{
-\"keyword_type\": \"category of the keyword\",
-\"content_approach\": \"best format for this topic\",
-\"target_audience\": \"who would be interested in this\",
-\"angle_description\": \"Specific unique angle in one detailed sentence\",
-\"title_guidance\": \"Specific instructions for creating an engaging title\"
-}
+        **OUTPUT FORMAT:**
+        Please return your response as a JSON object with this exact structure:
+        {
+        \"keyword_type\": \"category of the keyword\",
+        \"content_approach\": \"best format for this topic\",
+        \"target_audience\": \"who would be interested in this\",
+        \"angle_description\": \"Specific unique angle in one detailed sentence\",
+        \"title_guidance\": \"Specific instructions for creating an engaging title\"
+        }
 
-**REQUIREMENTS:**
-- The angle must be factually grounded and respectful
-- Must be completely different from previous angles
-- Should be interesting and clickable
-- Must be appropriate for the keyword type
+        **REQUIREMENTS:**
+        - The angle must be factually grounded and respectful
+        - Must be completely different from previous angles
+        - Should be interesting and clickable
+        - Must be appropriate for the keyword type
 
-Return only the JSON object.";
+        Return only the JSON object.";
 
         // Use ATM_API if available, otherwise fall back to simple angle generation
         if (class_exists('ATM_API') && method_exists('ATM_API', 'enhance_content_with_openrouter')) {

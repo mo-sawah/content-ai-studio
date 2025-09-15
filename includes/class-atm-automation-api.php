@@ -191,37 +191,38 @@ class ATM_Automation_API {
             // ========== API CALL 1: RESEARCH & TITLE GENERATION ==========
             $research_prompt = "You are a trending topic research expert. Your task is to deeply understand why a topic is trending and create the perfect title.
 
-    **RESEARCH TARGET:**
-    - Base Keyword: \"{$base_keyword}\"
-    - Trending Topic: \"{$selected_topic['title']}\"
-    - Context: {$selected_topic['snippet']}
+**RESEARCH TARGET:**
+- Base Keyword: \"{$base_keyword}\"
+- Trending Topic: \"{$selected_topic['title']}\"
+- Context: {$selected_topic['snippet']}
 
-    **RESEARCH PHASE:**
-    1. Use extensive web search to understand WHY this topic is trending right now
-    2. Identify the specific events, developments, or news that made it trend
-    3. Understand the topic category (news, entertainment, fashion, celebrity, technology, etc.)
-    4. Find the most current and newsworthy angle
-    5. Determine what makes this topic compelling to audiences
+**RESEARCH PHASE:**
+1. Use extensive web search to understand WHY this topic is trending right now
+2. Identify the specific events, developments, or news that made it trend
+3. Understand the topic category (news, entertainment, fashion, celebrity, technology, etc.)
+4. Find the most current and newsworthy angle
+5. Determine what makes this topic compelling to audiences
 
-    **TITLE CREATION REQUIREMENTS:**
-    - Must include the exact keyword: \"{$base_keyword}\"
-    - Should reflect WHY the topic is trending
-    - Must be compelling and clickable
-    - Should match the topic category (news, celebrity, fashion, etc.)
-    - 8-15 words long
-    - Professional and engaging{$avoid_titles}
+**TITLE CREATION REQUIREMENTS:**
+- Must include the exact keyword: \"{$base_keyword}\"
+- Should reflect WHY the topic is trending
+- Must be compelling and clickable
+- Should match the topic category (news, celebrity, fashion, etc.)
+- 8-15 words long
+- Professional and engaging{$avoid_titles}
 
-    **OUTPUT FORMAT:**
-    {
-        \"topic_category\": \"Type of trending topic (news, celebrity, fashion, technology, etc.)\",
-        \"trending_reason\": \"Why this topic is trending right now\",
-        \"key_developments\": \"Main events or developments driving the trend\",
-        \"target_audience\": \"Who would be interested in this topic\",
-        \"recommended_title\": \"Perfect title that includes '{$base_keyword}'\",
-        \"content_angle\": \"Best angle for the article content\"
-    }
+**OUTPUT FORMAT:**
+Return your response as a JSON object with the following structure:
+{
+    \"topic_category\": \"Type of trending topic (news, celebrity, fashion, technology, etc.)\",
+    \"trending_reason\": \"Why this topic is trending right now\",
+    \"key_developments\": \"Main events or developments driving the trend\",
+    \"target_audience\": \"Who would be interested in this topic\",
+    \"recommended_title\": \"Perfect title that includes '{$base_keyword}'\",
+    \"content_angle\": \"Best angle for the article content\"
+}
 
-    Research thoroughly using web search to understand the trending context.";
+Research thoroughly using web search to understand the trending context.";
 
             $research_response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $selected_topic['title']],

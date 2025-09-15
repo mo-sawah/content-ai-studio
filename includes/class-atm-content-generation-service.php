@@ -413,7 +413,9 @@ Your entire output MUST be a single, valid JSON object with three keys:
 - Use natural transitions between sections
 - Include current, factual information from web search
 - Focus on providing genuine value to the target audience
-- Maintain the specific perspective throughout the entire article";
+- Maintain the specific perspective throughout the entire article
+
+Please return your response as a properly formatted JSON object.";
     }
     
     /**
