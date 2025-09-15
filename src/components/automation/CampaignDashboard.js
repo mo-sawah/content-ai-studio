@@ -11,6 +11,14 @@ const CampaignCard = ({
   onDuplicate,
   onViewLogs,
 }) => {
+  // Add this debug logging
+  console.log("Campaign debug:", {
+    id: campaign.id,
+    name: campaign.name,
+    total_executions: campaign.total_executions,
+    successful_executions: campaign.successful_executions,
+    raw_campaign: campaign,
+  });
   const [isRunning, setIsRunning] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -210,6 +218,14 @@ const CampaignCard = ({
         )
       : 0;
 
+  // Also ensure the values are properly converted to numbers
+  const totalExecutions = parseInt(campaign.total_executions) || 0;
+  const successfulExecutions = parseInt(campaign.successful_executions) || 0;
+  const calculatedSuccessRate =
+    totalExecutions > 0
+      ? Math.round((successfulExecutions / totalExecutions) * 100)
+      : 0;
+
   const menuControls = [
     {
       title: "Run Now",
@@ -299,12 +315,21 @@ const CampaignCard = ({
           <div className="atm-stats-grid">
             <div className="atm-stat-item">
               <span className="atm-stat-value">
-                {campaign.successful_executions || 0}
+                {parseInt(campaign.successful_executions) || 0}
               </span>
               <span className="atm-stat-label">Posts</span>
             </div>
             <div className="atm-stat-item">
-              <span className="atm-stat-value">{successRate}%</span>
+              <span className="atm-stat-value">
+                {campaign.total_executions > 0
+                  ? Math.round(
+                      (campaign.successful_executions /
+                        campaign.total_executions) *
+                        100
+                    )
+                  : 0}
+                %
+              </span>
               <span className="atm-stat-label">Success</span>
             </div>
             <div className="atm-stat-item">
