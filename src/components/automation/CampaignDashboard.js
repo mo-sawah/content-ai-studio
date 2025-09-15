@@ -14,6 +14,9 @@ const CampaignCard = ({
   const [isRunning, setIsRunning] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  console.log("Campaign data:", campaign);
+  console.log("Toggle function:", onToggle);
+
   const getStatusConfig = (campaign) => {
     if (isRunning) {
       return {
@@ -24,7 +27,13 @@ const CampaignCard = ({
       };
     }
 
-    const status = campaign.is_active == 1 ? "active" : "paused";
+    // Fixed status check - handle both string and number values
+    const isActive =
+      campaign.is_active == 1 ||
+      campaign.is_active === true ||
+      campaign.is_active === "1";
+    const status = isActive ? "active" : "paused";
+
     const configs = {
       active: {
         color: "border-green-200 bg-green-50",
@@ -51,10 +60,10 @@ const CampaignCard = ({
   const getTypeConfig = (type, subType) => {
     const configs = {
       articles: {
-        standard: {
+        creative: {
           icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.828-2.828z" />
             </svg>
           ),
           color: "bg-blue-100 text-blue-700",
@@ -63,7 +72,11 @@ const CampaignCard = ({
         trending: {
           icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z" />
+              <path
+                fillRule="evenodd"
+                d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z"
+                clipRule="evenodd"
+              />
             </svg>
           ),
           color: "bg-purple-100 text-purple-700",
@@ -72,7 +85,12 @@ const CampaignCard = ({
         listicle: {
           icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M7,5H21V7H7V5M7,13V11H21V13H7M4,4.5A1.5,1.5 0 0,1 5.5,6A1.5,1.5 0 0,1 4,7.5A1.5,1.5 0 0,1 2.5,6A1.5,1.5 0 0,1 4,4.5M4,10.5A1.5,1.5 0 0,1 5.5,12A1.5,1.5 0 0,1 4,13.5A1.5,1.5 0 0,1 2.5,12A1.5,1.5 0 0,1 4,10.5M7,19V17H21V19H7M4,16.5A1.5,1.5 0 0,1 5.5,18A1.5,1.5 0 0,1 4,19.5A1.5,1.5 0 0,1 2.5,18A1.5,1.5 0 0,1 4,16.5Z" />
+              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+              <path
+                fillRule="evenodd"
+                d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 1a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 3a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                clipRule="evenodd"
+              />
             </svg>
           ),
           color: "bg-green-100 text-green-700",
@@ -81,11 +99,25 @@ const CampaignCard = ({
         multipage: {
           icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M13,9V3.5L18.5,9M6,2C4.89,2 4,2.9 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6Z" />
+              <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
+              <path
+                fillRule="evenodd"
+                d="M3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                clipRule="evenodd"
+              />
             </svg>
           ),
           color: "bg-amber-100 text-amber-700",
           label: "Multipage",
+        },
+        standard: {
+          icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+            </svg>
+          ),
+          color: "bg-blue-100 text-blue-700",
+          label: "Articles",
         },
       },
       news: {
@@ -117,9 +149,13 @@ const CampaignCard = ({
       },
     };
 
-    if (type === "articles" && subType && configs.articles[subType]) {
-      return configs.articles[subType];
+    // Better handling of article sub-types
+    if (type === "articles") {
+      const subTypeConfig =
+        configs.articles[subType] || configs.articles.standard;
+      return subTypeConfig;
     }
+
     return (
       configs[type] || {
         icon: (
@@ -128,7 +164,7 @@ const CampaignCard = ({
           </svg>
         ),
         color: "bg-gray-100 text-gray-700",
-        label: "Campaign",
+        label: type ? type.charAt(0).toUpperCase() + type.slice(1) : "Campaign",
       }
     );
   };
@@ -295,13 +331,21 @@ const CampaignCard = ({
           </div>
         </div>
 
-        {/* Toggle Switch */}
+        {/* Toggle Switch - Fixed */}
         <div className="atm-card-toggle">
           <label className="atm-toggle-modern">
             <input
               type="checkbox"
               checked={campaign.is_active == 1}
-              onChange={() => onToggle(campaign.id, campaign.is_active == 1)}
+              onChange={(e) => {
+                console.log(
+                  "Toggle clicked:",
+                  campaign.id,
+                  "new state:",
+                  e.target.checked
+                );
+                onToggle(campaign.id, e.target.checked);
+              }}
             />
             <span className="atm-toggle-slider-modern"></span>
           </label>
@@ -368,6 +412,7 @@ function CampaignDashboard({
   onRunCampaign,
   refreshCampaigns,
   statusMessage,
+  setActiveView, // Make sure this prop is passed
 }) {
   const [filteredCampaigns, setFilteredCampaigns] = useState(campaigns);
   const [filterType, setFilterType] = useState("all");
@@ -485,7 +530,11 @@ function CampaignDashboard({
               Refresh
             </Button>
 
-            <Button variant="primary" className="atm-create-btn">
+            <Button
+              variant="primary"
+              className="atm-create-btn"
+              onClick={() => setActiveView && setActiveView("generator")}
+            >
               <svg
                 width="16"
                 height="16"
@@ -717,7 +766,11 @@ function CampaignDashboard({
                 : "No campaigns match your current filters. Try adjusting your search criteria."}
             </p>
             {campaigns.length === 0 && (
-              <Button variant="primary" className="atm-cta-button">
+              <Button
+                variant="primary"
+                className="atm-cta-button"
+                onClick={() => setActiveView && setActiveView("generator")}
+              >
                 Create First Campaign
               </Button>
             )}

@@ -216,7 +216,7 @@ class ATM_Automation_Ajax {
         
         try {
             $campaign_id = intval($_POST['campaign_id']);
-            $is_active = isset($_POST['is_active']) ? 1 : 0;
+            $is_active = isset($_POST['is_active']) && ($_POST['is_active'] === 'true' || $_POST['is_active'] === true || $_POST['is_active'] === 1) ? 1 : 0;
             
             if (!$campaign_id) {
                 throw new Exception('Invalid campaign ID.');
@@ -228,7 +228,9 @@ class ATM_Automation_Ajax {
             $result = $wpdb->update(
                 $table_name,
                 ['is_active' => $is_active, 'updated_at' => current_time('mysql')],
-                ['id' => $campaign_id]
+                ['id' => $campaign_id],
+                ['%d', '%s'],
+                ['%d']
             );
             
             if ($result === false) {

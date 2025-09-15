@@ -304,6 +304,7 @@ function AutomationApp() {
             onToggleCampaign={handleToggleCampaign}
             onRunCampaign={handleRunCampaign}
             refreshCampaigns={loadCampaigns}
+            setActiveView={setActiveView} // Add this line
           />
         );
       default:
