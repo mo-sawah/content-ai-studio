@@ -1664,8 +1664,8 @@ Use web search to ensure all information is current and accurate, then return th
                 case 'gnews':
                 case 'newsdata':
                 default:
-                    // Your existing API news automation
-                    return self::execute_existing_api_news_automation($campaign, $settings);
+                    // Your existing API news methods
+                    throw new Exception('API source not yet implemented: ' . $news_source);
             }
             
         } catch (Exception $e) {
@@ -1674,22 +1674,55 @@ Use web search to ensure all information is current and accurate, then return th
         }
     }
 
+    /**
+     * Execute MediaStack automation
+     */
     private static function execute_mediastack_automation($campaign, $settings) {
         try {
-            $params = [
-                'topic' => $campaign->keyword,
-                'language' => self::get_mediastack_language_code($settings['article_language'] ?? 'English'),
-                'country' => self::get_mediastack_country_code($settings['countries'][0] ?? 'United States'),
-                'article_language' => $settings['article_language'] ?? 'English',
-                'post_id' => 0,
-                'is_automation' => true
-            ];
+            $keyword = $campaign->keyword;
+            $article_language = $settings['article_language'] ?? 'English';
             
-            $content_result = ATM_News_Generation_Service::generate_from_mediastack($params);
+            // Get MediaStack language and country codes
+            $language_code = self::get_mediastack_language_code($article_language);
+            $country_code = 'us'; // Default or from settings
             
-            if (!$content_result['success']) {
-                throw new Exception($content_result['message']);
+            error_log("ATM MediaStack Automation: Fetching news for: {$keyword}");
+            
+            // Fetch news from MediaStack API
+            $articles = ATM_API::fetch_mediastack_news($keyword, $language_code, $country_code, 25);
+            
+            if (empty($articles)) {
+                throw new Exception('No articles found from MediaStack for: ' . $keyword);
             }
+            
+            // Filter out already used articles
+            $unused_articles = array_filter($articles, function($article) use ($campaign) {
+                return !self::is_article_used_by_campaign($article['url'], $campaign->id);
+            });
+            
+            if (empty($unused_articles)) {
+                throw new Exception('All MediaStack articles have already been used');
+            }
+            
+            // Select first unused article
+            $selected_article = reset($unused_articles);
+            
+            error_log("ATM MediaStack: Selected article: " . $selected_article['title']);
+            
+            // Generate content from MediaStack article
+            $content_result = ATM_API::generate_article_from_mediastack(
+                $selected_article, 
+                $keyword, 
+                $article_language
+            );
+            
+            // Convert to expected format
+            $formatted_result = [
+                'success' => true,
+                'article_title' => $content_result['title'],
+                'article_content' => $content_result['content'],
+                'subtitle' => $content_result['subtitle'] ?? ''
+            ];
             
             // Create post
             $post_params = [
@@ -1700,10 +1733,18 @@ Use web search to ensure all information is current and accurate, then return th
                 'generate_image' => $settings['generate_image'] ?? false
             ];
             
-            $post_result = ATM_News_Generation_Service::create_post_from_news($content_result, $post_params);
+            $post_result = ATM_News_Generation_Service::create_post_from_news($formatted_result, $post_params);
             
             if ($post_result['success']) {
-                error_log("ATM Automation: Successfully created MediaStack post ID {$post_result['post_id']}");
+                // Mark article as used
+                self::mark_news_article_as_used_for_campaign(
+                    $selected_article['url'], 
+                    $selected_article['title'], 
+                    $campaign->id, 
+                    $post_result['post_id']
+                );
+                
+                error_log("ATM MediaStack Automation: Successfully created post ID {$post_result['post_id']}");
                 return $post_result;
             } else {
                 throw new Exception($post_result['message']);
@@ -1715,7 +1756,9 @@ Use web search to ensure all information is current and accurate, then return th
         }
     }
 
-    // Helper methods for MediaStack country/language codes
+    /**
+     * Convert language names to MediaStack language codes
+     */
     private static function get_mediastack_language_code($language) {
         $language_map = [
             'English' => 'en',
