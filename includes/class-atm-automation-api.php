@@ -37,12 +37,30 @@ class ATM_Automation_API {
             $angle_refresh_days = $settings['angle_refresh_days'] ?? 7;
             $min_trend_score = $settings['min_trend_score'] ?? 0;
             
+            // Map language codes to full names
+            $language_map = [
+                'en' => 'English',
+                'es' => 'Spanish', 
+                'fr' => 'French',
+                'de' => 'German',
+                'pt' => 'Portuguese',
+                'it' => 'Italian'
+            ];
+            
+            error_log("ATM Trending: Starting execution for campaign {$campaign->id}, keyword: {$base_keyword}");
+            
             // 1. Fetch trending topics
+            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'fetch_trending_topics')) {
+                throw new Exception('ATM_API trending topics method not available');
+            }
+            
             $trending_result = ATM_API::fetch_trending_topics($base_keyword, $region, $language, 'now 1-d', true);
             
             if (empty($trending_result['trends'])) {
                 throw new Exception('No trending topics found for keyword: ' . $base_keyword);
             }
+            
+            error_log("ATM Trending: Found " . count($trending_result['trends']) . " trending topics");
             
             // 2. Smart selection with AI angle detection
             $selected_topic = self::smart_select_trending_topic(
@@ -57,14 +75,70 @@ class ATM_Automation_API {
                 throw new Exception('No suitable trending topics available for unique content generation');
             }
             
+            error_log("ATM Trending: Selected topic: " . $selected_topic['topic']['title']);
+            
             // 3. Generate article with unique angle
+            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'generate_article_from_trend')) {
+                throw new Exception('ATM_API trend article generation not available');
+            }
+            
             $article_result = ATM_API::generate_article_from_trend(
                 $selected_topic['topic'], 
                 $settings, 
                 $language_map[$language] ?? 'English'
             );
             
-            // 4. Store the used angle
+            if (empty($article_result['title']) || empty($article_result['content'])) {
+                throw new Exception('Generated article is missing title or content');
+            }
+            
+            error_log("ATM Trending: Generated article: " . $article_result['title']);
+            
+            // 4. Create WordPress post
+            $post_status = $campaign->content_mode === 'publish' ? 'publish' : 'draft';
+            
+            // Convert markdown to HTML if needed
+            if (class_exists('Parsedown')) {
+                $Parsedown = new Parsedown();
+                $html_content = $Parsedown->text($article_result['content']);
+            } else {
+                $html_content = $article_result['content'];
+            }
+            
+            $post_data = [
+                'post_title' => wp_strip_all_tags($article_result['title']),
+                'post_content' => wp_kses_post($html_content),
+                'post_status' => $post_status,
+                'post_author' => $campaign->author_id,
+                'post_category' => []
+            ];
+            
+            $post_id = wp_insert_post($post_data, true);
+            if (is_wp_error($post_id)) {
+                throw new Exception('Failed to create post: ' . $post_id->get_error_message());
+            }
+            
+            error_log("ATM Trending: Created post ID: " . $post_id);
+            
+            // 5. Save subtitle if provided
+            if (!empty($article_result['subheadline'])) {
+                update_post_meta($post_id, '_bunyad_sub_title', $article_result['subheadline']);
+                update_post_meta($post_id, '_atm_subtitle', $article_result['subheadline']);
+            }
+            
+            // 6. Save automation metadata
+            update_post_meta($post_id, '_atm_automation_generated', true);
+            update_post_meta($post_id, '_atm_campaign_id', $campaign->id);
+            update_post_meta($post_id, '_atm_generation_date', current_time('mysql'));
+            update_post_meta($post_id, '_atm_trending_keyword', $selected_topic['topic']['title']);
+            update_post_meta($post_id, '_atm_content_angle', $selected_topic['angle']);
+            
+            // 7. Generate featured image if requested
+            if ($settings['generate_image'] ?? false) {
+                ATM_Content_Generation_Service::generate_featured_image($post_id, $article_result['title']);
+            }
+            
+            // 8. Store the used angle
             self::store_used_trending_angle(
                 $campaign->id,
                 $base_keyword,
@@ -75,14 +149,15 @@ class ATM_Automation_API {
             
             return [
                 'success' => true,
+                'post_id' => $post_id,
+                'post_url' => get_permalink($post_id),
                 'article_title' => $article_result['title'],
-                'article_content' => $article_result['content'],
-                'subtitle' => $article_result['subheadline'] ?? '',
                 'trending_keyword' => $selected_topic['topic']['title'],
                 'content_angle' => $selected_topic['angle']
             ];
             
         } catch (Exception $e) {
+            error_log('ATM Trending Automation Error: ' . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
