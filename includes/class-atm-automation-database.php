@@ -14,6 +14,26 @@ if (!defined('ABSPATH')) {
 class ATM_Automation_Database {
 
     /**
+     * Update used news articles table to support campaign-specific tracking
+     */
+    public static function update_used_news_articles_table() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_used_news_articles';
+        
+        // Check if campaign_id column exists
+        $column_exists = $wpdb->get_results($wpdb->prepare(
+            "SHOW COLUMNS FROM $table_name LIKE %s",
+            'campaign_id'
+        ));
+        
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN campaign_id mediumint(9) DEFAULT NULL AFTER post_id");
+            $wpdb->query("ALTER TABLE $table_name ADD INDEX campaign_id (campaign_id)");
+            error_log('ATM Automation: Added campaign_id column to used news articles table');
+        }
+    }
+
+    /**
      * Add status column to campaigns table
      */
     public static function add_status_column() {

@@ -29,6 +29,367 @@ if (!defined('ABSPATH')) {
 
 class ATM_Automation_API {
 
+    /**
+     * Execute Google News automation with AI-powered article selection
+     */
+    private static function execute_google_news_automation($campaign, $settings) {
+        try {
+            $keyword = $campaign->keyword;
+            $article_language = $settings['article_language'] ?? 'English';
+            $source_languages = $settings['source_languages'] ?? [];
+            $countries = $settings['countries'] ?? ['United States'];
+            
+            error_log("ATM News Automation: Starting AI-powered selection for: {$keyword}");
+            
+            // Step 1: Search for news articles
+            $search_params = [
+                'query' => $keyword,
+                'page' => 1,
+                'per_page' => 25, // Get more articles for AI to choose from
+                'source_languages' => $source_languages,
+                'countries' => $countries
+            ];
+            
+            $search_result = ATM_News_Generation_Service::search_google_news($search_params);
+            
+            if (!$search_result['success'] || empty($search_result['articles'])) {
+                throw new Exception('No recent news articles found for keyword: ' . $keyword);
+            }
+            
+            error_log("ATM News Automation: Found " . count($search_result['articles']) . " articles");
+            
+            // Step 2: Remove articles already used by this campaign
+            $unused_articles = array_filter($search_result['articles'], function($article) use ($campaign) {
+                return !self::is_article_used_by_campaign($article['link'], $campaign->id);
+            });
+            
+            if (empty($unused_articles)) {
+                throw new Exception('All found articles have already been used by this campaign');
+            }
+            
+            error_log("ATM News Automation: " . count($unused_articles) . " unused articles available");
+            
+            // Step 3: Let AI filter and select the best article
+            $selected_article = self::ai_filter_and_select_news_article(
+                array_values($unused_articles), 
+                $keyword, 
+                $campaign->id
+            );
+            
+            if (!$selected_article) {
+                throw new Exception('AI could not find a suitable article');
+            }
+            
+            error_log("ATM News Automation: AI selected: " . $selected_article['title']);
+            
+            // Step 4: Generate article content with web search
+            $content_result = self::generate_news_content_with_web_search(
+                $selected_article, 
+                $keyword, 
+                $article_language
+            );
+            
+            if (!$content_result['success']) {
+                throw new Exception($content_result['message']);
+            }
+            
+            // Step 5: Create post
+            $post_params = [
+                'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
+                'post_author' => $campaign->author_id,
+                'post_category' => self::get_campaign_category_ids($campaign),
+                'campaign_id' => $campaign->id,
+                'generate_image' => $settings['generate_image'] ?? false
+            ];
+            
+            $post_result = ATM_News_Generation_Service::create_post_from_news($content_result, $post_params);
+            
+            if ($post_result['success']) {
+                // Mark this article as used by this campaign
+                self::mark_news_article_as_used_for_campaign(
+                    $selected_article['link'], 
+                    $selected_article['title'], 
+                    $campaign->id, 
+                    $post_result['post_id']
+                );
+                
+                error_log("ATM News Automation: Successfully created post ID {$post_result['post_id']}");
+                return $post_result;
+            } else {
+                throw new Exception($post_result['message']);
+            }
+            
+        } catch (Exception $e) {
+            error_log('ATM News Automation Error: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * AI-powered article filtering and selection
+     */
+    private static function ai_filter_and_select_news_article($articles, $keyword, $campaign_id) {
+        // Get recent topics to avoid duplicates
+        $recent_topics = self::get_recent_campaign_topics($campaign_id, 7);
+        
+        // Prepare articles for AI evaluation
+        $articles_for_evaluation = [];
+        foreach ($articles as $index => $article) {
+            $articles_for_evaluation[] = [
+                'index' => $index,
+                'title' => $article['title'],
+                'url' => $article['link'],
+                'snippet' => substr($article['snippet'], 0, 250),
+                'source' => $article['source'],
+                'date' => $article['date']
+            ];
+        }
+        
+        $recent_topics_text = !empty($recent_topics) ? 
+            "\n\nRECENT TOPICS ALREADY COVERED (avoid similar):\n- " . implode("\n- ", array_slice($recent_topics, 0, 8)) : 
+            "";
+        
+        $filtering_prompt = "You are a news editor selecting articles for automated content generation.
+
+    **KEYWORD:** \"{$keyword}\"
+
+    **ARTICLES TO EVALUATE:**
+    " . json_encode($articles_for_evaluation, JSON_PRETTY_PRINT) . "
+
+    {$recent_topics_text}
+
+    **FILTERING CRITERIA:**
+    1. **FILTER OUT** these types:
+    - Section/category pages (\"Technology News\", \"Sports\", \"Business Section\")
+    - Homepage or navigation pages
+    - Archive pages or search results
+    - Generic \"breaking news\" without specifics
+    - Live blogs without clear focus
+    - Press releases without story substance
+    - Topics too similar to recent ones
+
+    2. **KEEP** articles that are:
+    - Specific news stories with clear focus
+    - Directly relevant to \"{$keyword}\"
+    - Have substantial content in snippet
+    - Recent and newsworthy
+    - From credible sources
+
+    3. **SELECT** the best article from suitable ones
+
+    **IMPORTANT:** Return JSON response:
+    {
+        \"selected_index\": number,
+        \"reasoning\": \"Why this article was chosen\",
+        \"filtered_out_count\": number,
+        \"relevance_score\": number (1-10)
+    }
+
+    If no suitable article found, return selected_index: -1";
+
+        try {
+            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'enhance_content_with_openrouter')) {
+                throw new Exception('ATM_API not available');
+            }
+            
+            $ai_response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $keyword],
+                $filtering_prompt,
+                'anthropic/claude-3-haiku', // Fast, cost-effective model
+                true, // JSON mode
+                false // No web search needed for selection
+            );
+            
+            $result = json_decode($ai_response, true);
+            if (!$result || !isset($result['selected_index'])) {
+                error_log('ATM News: Invalid AI selection response: ' . $ai_response);
+                return null;
+            }
+            
+            $selected_index = $result['selected_index'];
+            if ($selected_index === -1 || !isset($articles[$selected_index])) {
+                error_log('ATM News: AI found no suitable articles. Filtered out: ' . ($result['filtered_out_count'] ?? 'unknown'));
+                return null;
+            }
+            
+            error_log("ATM News: AI selected article {$selected_index} - {$result['reasoning']}");
+            error_log("ATM News: Relevance score: " . ($result['relevance_score'] ?? 'N/A') . "/10");
+            
+            return $articles[$selected_index];
+            
+        } catch (Exception $e) {
+            error_log('ATM News: AI selection failed: ' . $e->getMessage());
+            // Fallback: return first article if AI fails
+            return $articles[0] ?? null;
+        }
+    }
+
+    /**
+     * Generate comprehensive article content with web search
+     */
+    private static function generate_news_content_with_web_search($selected_article, $keyword, $article_language) {
+        try {
+            $system_prompt = "You are a professional news reporter creating a comprehensive news article.
+
+    **SELECTED NEWS SOURCE:**
+    - Title: {$selected_article['title']}
+    - Source: {$selected_article['source']}
+    - URL: {$selected_article['link']}
+    - Snippet: {$selected_article['snippet']}
+    - Date: {$selected_article['date']}
+
+    **RESEARCH INSTRUCTIONS:**
+    1. **Use web search extensively** to:
+    - Verify all facts from the source
+    - Find additional current context and background
+    - Get latest developments and updates
+    - Include relevant quotes, statistics, and data
+    - Add expert opinions or analysis if available
+
+    2. **Writing Requirements:**
+    - Write entirely in {$article_language}
+    - Professional journalistic tone
+    - Objective and factual reporting
+    - 800-1200 words
+    - Focus on \"{$keyword}\" relevance
+
+    3. **Structure Requirements:**
+    - Start with engaging lead paragraph (no title/heading)
+    - Use H2 (##) for main sections only
+    - Never use H1 headings in content
+    - End naturally without \"Conclusion\" heading
+    - Include proper context and background
+
+    4. **Quality Standards:**
+    - Verify information through web search
+    - Use current, accurate data
+    - Include specific details and examples
+    - Maintain journalistic integrity
+
+    **CRITICAL: Return JSON with:**
+    {
+        \"title\": \"Compelling, specific news headline in {$article_language}\",
+        \"subheadline\": \"Brief subtitle that expands on the headline\",
+        \"content\": \"Complete article in markdown format\"
+    }
+
+    Use web search to ensure all information is current, verified, and comprehensive.";
+
+            $content_response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $selected_article['title']],
+                $system_prompt,
+                get_option('atm_article_model', 'openai/gpt-4o'), // Use better model for content
+                true, // JSON mode
+                true, // Enable web search for comprehensive research
+                'high' // High creativity for engaging content
+            );
+            
+            $result = json_decode($content_response, true);
+            if (!$result || !isset($result['content'])) {
+                error_log('ATM News: Invalid content generation response: ' . $content_response);
+                throw new Exception('AI returned invalid content structure');
+            }
+            
+            if (empty($result['title']) || empty($result['content'])) {
+                throw new Exception('Generated title or content is empty');
+            }
+            
+            return [
+                'success' => true,
+                'article_title' => $result['title'],
+                'article_content' => $result['content'],
+                'subtitle' => $result['subheadline'] ?? $result['subtitle'] ?? ''
+            ];
+            
+        } catch (Exception $e) {
+            error_log('ATM News: Content generation failed: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Check if article already used by specific campaign
+     */
+    private static function is_article_used_by_campaign($url, $campaign_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_used_news_articles';
+        
+        $count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table_name 
+            WHERE article_url = %s AND campaign_id = %d",
+            $url, $campaign_id
+        ));
+        
+        return $count > 0;
+    }
+
+    /**
+     * Mark article as used by specific campaign
+     */
+    private static function mark_news_article_as_used_for_campaign($url, $title, $campaign_id, $post_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_used_news_articles';
+        
+        $result = $wpdb->replace($table_name, [
+            'article_url' => $url,
+            'article_title' => $title,
+            'campaign_id' => $campaign_id,
+            'used_at' => current_time('mysql'),
+            'post_id' => $post_id
+        ]);
+        
+        if ($result === false) {
+            error_log('ATM News: Failed to mark article as used - ' . $wpdb->last_error);
+        } else {
+            error_log("ATM News: Marked article as used - Campaign: {$campaign_id}, Post: {$post_id}");
+        }
+    }
+
+    /**
+     * Get recent topics covered by campaign to avoid duplicates
+     */
+    private static function get_recent_campaign_topics($campaign_id, $days = 7) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_used_news_articles';
+        
+        $topics = $wpdb->get_results($wpdb->prepare(
+            "SELECT article_title FROM $table_name 
+            WHERE campaign_id = %d 
+            AND used_at > DATE_SUB(NOW(), INTERVAL %d DAY)
+            ORDER BY used_at DESC
+            LIMIT 15",
+            $campaign_id, $days
+        ));
+        
+        return array_column($topics, 'article_title');
+    }
+
+    /**
+     * Get campaign category IDs from settings
+     */
+    private static function get_campaign_category_ids($campaign) {
+        // Try settings first (new format)
+        if (!empty($campaign->settings)) {
+            $settings = json_decode($campaign->settings, true);
+            if (!empty($settings['category_ids']) && is_array($settings['category_ids'])) {
+                return array_map('intval', $settings['category_ids']);
+            }
+        }
+        
+        // Fallback to old category_ids field
+        if (!empty($campaign->category_ids)) {
+            $category_ids = json_decode($campaign->category_ids, true);
+            if (is_array($category_ids)) {
+                return array_map('intval', $category_ids);
+            }
+        }
+        
+        return [];
+    }
+
     public static function generate_article_from_trend_automation($topic, $settings, $language = 'English') {
         // Extract all settings with proper defaults
         $writing_style = esc_html($settings['writing_style'] ?? 'news');
@@ -854,82 +1215,6 @@ Use web search to ensure all information is current and accurate, then return th
             
         } catch (Exception $e) {
             error_log('ATM Automation News Generation Error: ' . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Execute Google News automation
-     */
-    private static function execute_google_news_automation($campaign, $settings) {
-        try {
-            // Search for news articles using the unified service
-            $search_params = [
-                'query' => $campaign->keyword,
-                'page' => 1,
-                'per_page' => 5,
-                'source_languages' => $settings['source_languages'] ?? [],
-                'countries' => $settings['countries'] ?? ['United States']
-            ];
-            
-            $search_result = ATM_News_Generation_Service::search_google_news($search_params);
-            
-            if (!$search_result['success'] || empty($search_result['articles'])) {
-                throw new Exception('No recent news articles found for keyword: ' . $campaign->keyword);
-            }
-            
-            // Select best article (first unused one)
-            $selected_article = null;
-            foreach ($search_result['articles'] as $article) {
-                if (!ATM_News_Generation_Service::is_news_article_used($article['link'])) {
-                    $selected_article = $article;
-                    break;
-                }
-            }
-            
-            if (!$selected_article) {
-                throw new Exception('All recent news articles have already been used.');
-            }
-            
-            // Generate article from news source using unified service
-            $generation_params = [
-                'source_url' => $selected_article['link'],
-                'source_title' => $selected_article['title'],
-                'source_snippet' => $selected_article['snippet'] ?? '',
-                'source_date' => $selected_article['date'] ?? '',
-                'source_domain' => $selected_article['source'] ?? '',
-                'article_language' => $settings['article_language'] ?? 'English',
-                'post_id' => 0, // No existing post for automation
-                'generate_image' => $settings['generate_image'] ?? false,
-                'is_automation' => true
-            ];
-            
-            $content_result = ATM_News_Generation_Service::generate_from_news_source($generation_params);
-            
-            if (!$content_result['success']) {
-                throw new Exception($content_result['message']);
-            }
-            
-            // Create post using unified service
-            $post_params = [
-                'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
-                'post_author' => $campaign->author_id,
-                'post_category' => $campaign->category_id ? [$campaign->category_id] : [],
-                'campaign_id' => $campaign->id,
-                'generate_image' => $settings['generate_image'] ?? false
-            ];
-            
-            $post_result = ATM_News_Generation_Service::create_post_from_news($content_result, $post_params);
-            
-            if ($post_result['success']) {
-                error_log("ATM Automation: Successfully created Google News post ID {$post_result['post_id']} for campaign '{$campaign->name}'");
-                return $post_result;
-            } else {
-                throw new Exception($post_result['message']);
-            }
-            
-        } catch (Exception $e) {
-            error_log('ATM Automation Google News Error: ' . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }

@@ -68,6 +68,8 @@ class ATM_Automation {
         if (class_exists('ATM_Automation_Admin')) {
             new ATM_Automation_Admin();
         }
+
+        add_action('init', array('ATM_Automation_Database', 'update_used_news_articles_table'));
         
         // Plugin activation/deactivation hooks
         add_action('atm_activation', array($this, 'on_activation'));

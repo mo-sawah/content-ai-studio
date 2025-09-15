@@ -628,9 +628,7 @@ function AutoNewsGenerator({
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
-          action: editingCampaign
-            ? "update_automation_campaign"
-            : "create_automation_campaign",
+          action: "atm_save_automation_campaign", // Make sure this matches your AJAX action
           nonce: atm_automation_data.nonce,
           campaign_data: JSON.stringify(campaignData),
           campaign_id: editingCampaign?.id || "",
