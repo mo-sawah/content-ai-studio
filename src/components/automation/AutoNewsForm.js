@@ -33,7 +33,9 @@ const AutoNewsForm = ({ campaignData, setCampaignData, isLoading }) => {
         />
       </div>
 
-      <div className="atm-grid-2">
+      <div className="atm-grid-3">
+        {" "}
+        {/* Changed from atm-grid-2 to atm-grid-3 */}
         <CustomDropdown
           label="News Source"
           text={campaignData.settings?.news_source || "MediaStack"}
@@ -51,7 +53,6 @@ const AutoNewsForm = ({ campaignData, setCampaignData, isLoading }) => {
           }
           disabled={isLoading}
         />
-
         <CustomDropdown
           label="Word Count"
           text={campaignData.settings?.word_count || "800-1000 words"}
@@ -67,6 +68,34 @@ const AutoNewsForm = ({ campaignData, setCampaignData, isLoading }) => {
             setCampaignData({
               ...campaignData,
               settings: { ...campaignData.settings, word_count: option.value },
+            })
+          }
+          disabled={isLoading}
+        />
+        <CustomDropdown
+          label="Country"
+          text={campaignData.settings?.country || "United Kingdom"}
+          options={[
+            { label: "United Kingdom", value: "gb" },
+            { label: "United States", value: "us" },
+            { label: "Canada", value: "ca" },
+            { label: "Australia", value: "au" },
+            { label: "Germany", value: "de" },
+            { label: "France", value: "fr" },
+            { label: "Italy", value: "it" },
+            { label: "Spain", value: "es" },
+            { label: "Netherlands", value: "nl" },
+            { label: "Japan", value: "jp" },
+            { label: "South Korea", value: "kr" },
+            { label: "India", value: "in" },
+            { label: "Brazil", value: "br" },
+            { label: "Mexico", value: "mx" },
+            { label: "Argentina", value: "ar" },
+          ]}
+          onChange={(option) =>
+            setCampaignData({
+              ...campaignData,
+              settings: { ...campaignData.settings, country: option.value },
             })
           }
           disabled={isLoading}

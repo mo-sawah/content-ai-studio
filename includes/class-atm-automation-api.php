@@ -1759,17 +1759,18 @@ Use web search to ensure all information is current and accurate, then return th
             $post_result = ATM_News_Generation_Service::create_post_from_news($formatted_result, $post_params);
             
             if ($post_result['success']) {
-
+                // Generate image AFTER post creation if requested
                 if ($settings['generate_image'] ?? false) {
                     try {
-                        $image_result = ATM_API::generate_featured_image($post_result['post_id'], '');
-                        if (!$image_result['success']) {
-                            error_log("ATM MediaStack: Image generation failed: " . $image_result['message']);
-                        }
+                        // Use the Content Generation Service method (like trending articles)
+                        ATM_Content_Generation_Service::generate_featured_image($post_result['post_id'], $selected_article['title']);
+                        error_log("ATM MediaStack: Featured image generated successfully");
                     } catch (Exception $e) {
                         error_log("ATM MediaStack: Image generation error: " . $e->getMessage());
+                        // Don't fail the whole automation if image fails
                     }
                 }
+                
                 // Mark article as used
                 self::mark_news_article_as_used_for_campaign(
                     $selected_article['url'], 
