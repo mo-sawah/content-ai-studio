@@ -30,7 +30,7 @@ if (!defined('ABSPATH')) {
 class ATM_Automation_API {
 
     /**
-     * Execute Google News automation with AI-powered article selection
+     * Execute Google News automation with improved filtering
      */
     private static function execute_google_news_automation($campaign, $settings) {
         try {
@@ -39,13 +39,13 @@ class ATM_Automation_API {
             $source_languages = $settings['source_languages'] ?? [];
             $countries = $settings['countries'] ?? ['United States'];
             
-            error_log("ATM News Automation: Starting AI-powered selection for: {$keyword}");
+            error_log("ATM News Automation: Starting enhanced filtering for: {$keyword}");
             
-            // Step 1: Search for news articles
+            // Step 1: Search for MORE articles to account for filtering
             $search_params = [
                 'query' => $keyword,
                 'page' => 1,
-                'per_page' => 25, // Get more articles for AI to choose from
+                'per_page' => 50, // Increased to get more options after filtering
                 'source_languages' => $source_languages,
                 'countries' => $countries
             ];
@@ -56,33 +56,37 @@ class ATM_Automation_API {
                 throw new Exception('No recent news articles found for keyword: ' . $keyword);
             }
             
-            error_log("ATM News Automation: Found " . count($search_result['articles']) . " articles");
+            error_log("ATM News Automation: Found " . count($search_result['articles']) . " total articles");
             
-            // Step 2: Remove articles already used by this campaign
-            $unused_articles = array_filter($search_result['articles'], function($article) use ($campaign) {
+            // Step 2: Pre-filter with strict URL/title patterns
+            $pre_filtered = self::pre_filter_generic_pages($search_result['articles']);
+            error_log("ATM News Automation: After pre-filtering: " . count($pre_filtered) . " articles remain");
+            
+            // Step 3: Remove articles already used by this campaign
+            $unused_articles = array_filter($pre_filtered, function($article) use ($campaign) {
                 return !self::is_article_used_by_campaign($article['link'], $campaign->id);
             });
             
             if (empty($unused_articles)) {
-                throw new Exception('All found articles have already been used by this campaign');
+                throw new Exception('No suitable unused articles found after filtering');
             }
             
-            error_log("ATM News Automation: " . count($unused_articles) . " unused articles available");
+            error_log("ATM News Automation: " . count($unused_articles) . " unused articles available for AI selection");
             
-            // Step 3: Let AI filter and select the best article
-            $selected_article = self::ai_filter_and_select_news_article(
+            // Step 4: AI selects from pre-filtered, high-quality articles
+            $selected_article = self::ai_select_best_article_from_filtered(
                 array_values($unused_articles), 
                 $keyword, 
                 $campaign->id
             );
             
             if (!$selected_article) {
-                throw new Exception('AI could not find a suitable article');
+                throw new Exception('AI could not select a suitable article from filtered results');
             }
             
             error_log("ATM News Automation: AI selected: " . $selected_article['title']);
             
-            // Step 4: Generate article content with web search
+            // Step 5: Generate content (rest remains the same)
             $content_result = self::generate_news_content_with_web_search(
                 $selected_article, 
                 $keyword, 
@@ -93,7 +97,7 @@ class ATM_Automation_API {
                 throw new Exception($content_result['message']);
             }
             
-            // Step 5: Create post
+            // Step 6: Create post
             $post_params = [
                 'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
                 'post_author' => $campaign->author_id,
@@ -105,7 +109,6 @@ class ATM_Automation_API {
             $post_result = ATM_News_Generation_Service::create_post_from_news($content_result, $post_params);
             
             if ($post_result['success']) {
-                // Mark this article as used by this campaign
                 self::mark_news_article_as_used_for_campaign(
                     $selected_article['link'], 
                     $selected_article['title'], 
@@ -122,6 +125,205 @@ class ATM_Automation_API {
         } catch (Exception $e) {
             error_log('ATM News Automation Error: ' . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Aggressive pre-filtering to remove obvious generic pages
+     */
+    private static function pre_filter_generic_pages($articles) {
+        $filtered = [];
+        
+        foreach ($articles as $article) {
+            $url = $article['link'];
+            $title = $article['title'];
+            $snippet = $article['snippet'] ?? '';
+            
+            // Skip if obviously generic based on patterns
+            if (self::is_definitely_generic_page($url, $title, $snippet)) {
+                continue;
+            }
+            
+            // Skip if title is too short (likely section page)
+            if (strlen(trim($title)) < 25) {
+                continue;
+            }
+            
+            // Skip if no meaningful snippet
+            if (strlen(trim($snippet)) < 30) {
+                continue;
+            }
+            
+            // Skip if title matches generic patterns exactly
+            if (self::matches_generic_title_patterns($title)) {
+                continue;
+            }
+            
+            $filtered[] = $article;
+        }
+        
+        return $filtered;
+    }
+
+    /**
+     * Check for definitely generic pages with strict patterns
+     */
+    private static function is_definitely_generic_page($url, $title, $snippet) {
+        // Generic URL patterns - more specific
+        $generic_url_patterns = [
+            // Exact section endpoints
+            '/\/(news|sport|business|entertainment|technology|health|politics|weather|local)\/?\?/',
+            '/\/(news|sport|business|entertainment|technology|health|politics|weather|local)\/?$/',
+            '/\/(category|section|archive|tag|search)\//',
+            '/\/live\/?$/',
+            '/\/live\/?\?/',
+            '/\/latest\/?$/',
+            '/\/breaking\/?$/',
+            '/\/headlines\/?$/',
+            '/\/updates\/?$/',
+            
+            // Calendar and event pages
+            '/\/calendar\//',
+            '/\/events\//',
+            '/\/activities\//',
+            
+            // Very short URLs (likely homepage/section)
+            '/^https?:\/\/[^\/]+\/[^\/]{1,15}\/?$/',
+        ];
+        
+        foreach ($generic_url_patterns as $pattern) {
+            if (preg_match($pattern, $url)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Check for generic title patterns
+     */
+    private static function matches_generic_title_patterns($title) {
+        $generic_title_patterns = [
+            // Exact matches for section pages
+            '/^(News|Sport|Business|Entertainment|Technology|Health|Politics|Weather|Local News)( - .+)?$/i',
+            '/^Latest (News|Headlines|Updates)( - .+)?$/i',
+            '/^Breaking News( - .+)?$/i',
+            '/^Live Updates?( - .+)?$/i',
+            '/^(Today\'s|This Week\'s) (News|Headlines)( - .+)?$/i',
+            
+            // Calendar/Event titles
+            '/^.+ Calendar( for \d{4})?$/i',
+            '/^Events and Activities( Calendar)?$/i',
+            '/^.+ Events and Activities Calendar for \d{4}$/i',
+            
+            // Roundup/generic compilation titles
+            '/^.+ News Roundup:? Latest Headlines and (Developments|Updates)$/i',
+            '/^.+ (Evening )?News:? .+ Weather and Top Stories$/i',
+            '/^Look East (Evening )?News:? .+$/i',
+            '/^.+ Reports on .+ News:? .+$/i',
+            
+            // BBC/news org specific patterns
+            '/^BBC .+ News:? Latest Headlines and Updates$/i',
+            '/^.+ See[ss] Rise in .+, Local Businesses Thrive$/i', // Generic business roundup
+            
+            // Very generic patterns
+            '/^.+ Headlines and (Developments|Updates)$/i',
+            '/Latest Headlines$/i',
+            '/Breaking News$/i',
+        ];
+        
+        foreach ($generic_title_patterns as $pattern) {
+            if (preg_match($pattern, $title)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Simplified AI selection from pre-filtered articles
+     */
+    private static function ai_select_best_article_from_filtered($filtered_articles, $keyword, $campaign_id) {
+        // Get recent topics
+        $recent_topics = self::get_recent_campaign_topics($campaign_id, 7);
+        
+        // Take only the best candidates for AI evaluation
+        $top_candidates = array_slice($filtered_articles, 0, 15); // Limit to top 15 for faster AI processing
+        
+        $articles_for_evaluation = [];
+        foreach ($top_candidates as $index => $article) {
+            $articles_for_evaluation[] = [
+                'index' => $index,
+                'title' => $article['title'],
+                'snippet' => substr($article['snippet'], 0, 200),
+                'source' => $article['source'],
+                'date' => $article['date']
+            ];
+        }
+        
+        $recent_topics_text = !empty($recent_topics) ? 
+            "\n\nRECENT TOPICS TO AVOID:\n- " . implode("\n- ", array_slice($recent_topics, 0, 8)) : 
+            "";
+        
+        $selection_prompt = "Select the BEST news article for \"{$keyword}\" from these PRE-FILTERED options.
+
+    **KEYWORD:** \"{$keyword}\"
+
+    **PRE-FILTERED ARTICLES (generic pages already removed):**
+    " . json_encode($articles_for_evaluation, JSON_PRETTY_PRINT) . "
+
+    {$recent_topics_text}
+
+    **SELECTION CRITERIA:**
+    1. Most relevant to \"{$keyword}\"
+    2. Specific news story (not roundup/compilation)
+    3. Has substantial, detailed content
+    4. Recent and newsworthy
+    5. Different from recent topics
+
+    **AVOID:**
+    - Articles similar to recent topics
+    - Generic compilations or roundups
+    - Weather/traffic updates only
+
+    Return JSON:
+    {
+        \"selected_index\": number,
+        \"reasoning\": \"Brief reason\",
+        \"confidence\": number (1-10)
+    }
+
+    If no article is suitable, return selected_index: -1";
+
+        try {
+            $ai_response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $keyword],
+                $selection_prompt,
+                'anthropic/claude-3-haiku',
+                true, // JSON mode
+                false // No web search
+            );
+            
+            $result = json_decode($ai_response, true);
+            if (!$result || !isset($result['selected_index'])) {
+                error_log('ATM News: Invalid AI response');
+                return null;
+            }
+            
+            $selected_index = $result['selected_index'];
+            if ($selected_index === -1 || !isset($top_candidates[$selected_index])) {
+                error_log('ATM News: AI found no suitable articles');
+                return null;
+            }
+            
+            error_log("ATM News: AI selected with confidence {$result['confidence']}/10 - {$result['reasoning']}");
+            return $top_candidates[$selected_index];
+            
+        } catch (Exception $e) {
+            error_log('ATM News: AI selection failed: ' . $e->getMessage());
+            return null;
         }
     }
 
