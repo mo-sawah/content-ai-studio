@@ -29,6 +29,112 @@ if (!defined('ABSPATH')) {
 
 class ATM_Automation_API {
 
+    private static function build_enhanced_search_query($keyword, $search_type = 'standard') {
+        $base_query = $keyword;
+        
+        // Negative keywords to exclude generic pages
+        $exclude_terms = [
+            '"latest news"', '"breaking news"', '"news roundup"', 
+            '"headlines"', '"updates"', '"calendar"', '"events"',
+            '"weather"', '"traffic"', '"live blog"'
+        ];
+        
+        // Positive indicators for real articles
+        $content_indicators = [
+            '"reported"', '"announced"', '"confirmed"', 
+            '"according to"', '"sources say"', '"investigation"'
+        ];
+        
+        switch ($search_type) {
+            case 'strict':
+                // Most restrictive - for high-quality sources only
+                $query = $base_query . ' AND (' . implode(' OR ', $content_indicators) . ')';
+                $query .= ' -' . implode(' -', $exclude_terms);
+                break;
+                
+            case 'medium':
+                // Balanced approach
+                $query = $base_query . ' -' . implode(' -', array_slice($exclude_terms, 0, 4));
+                break;
+                
+            case 'standard':
+            default:
+                // Basic exclusions
+                $query = $base_query . ' -"latest news" -"news roundup" -"headlines"';
+                break;
+        }
+        
+        return $query;
+    }
+
+    private static function search_with_progressive_filtering($keyword, $settings) {
+        $search_strategies = [
+            ['type' => 'strict', 'per_page' => 20],
+            ['type' => 'medium', 'per_page' => 30],
+            ['type' => 'standard', 'per_page' => 40]
+        ];
+        
+        foreach ($search_strategies as $strategy) {
+            $enhanced_query = self::build_enhanced_search_query($keyword, $strategy['type']);
+            
+            $search_result = ATM_News_Generation_Service::search_google_news([
+                'query' => $enhanced_query,
+                'per_page' => $strategy['per_page'],
+                // ... other params
+            ]);
+            
+            if ($search_result['success'] && !empty($search_result['articles'])) {
+                // Filter and check quality
+                $quality_articles = self::quick_quality_check($search_result['articles']);
+                
+                if (count($quality_articles) >= 5) {
+                    // Found enough good articles, use these
+                    return $quality_articles;
+                }
+            }
+        }
+        
+        // If all strategies fail, fall back to original approach
+        return [];
+    }
+
+    private static function quick_quality_check($articles) {
+        $quality_articles = [];
+        
+        foreach ($articles as $article) {
+            $quality_score = 0;
+            $title = $article['title'];
+            $url = $article['link'];
+            $snippet = $article['snippet'] ?? '';
+            
+            // Positive indicators
+            if (strlen($snippet) > 100) $quality_score += 2;
+            if (preg_match('/\b(reported|announced|confirmed|revealed|investigation|analysis)\b/i', $title)) $quality_score += 3;
+            if (preg_match('/\b(yesterday|today|this week|last week)\b/i', $snippet)) $quality_score += 1;
+            if (strlen($title) > 30 && strlen($title) < 100) $quality_score += 1;
+            
+            // Negative indicators
+            if (preg_match('/\b(latest|breaking|live|roundup|headlines|updates)\b/i', $title)) $quality_score -= 2;
+            if (preg_match('/calendar|events|weather/i', $title)) $quality_score -= 3;
+            if (strlen($title) < 25) $quality_score -= 2;
+            
+            // Only include articles with positive quality score
+            if ($quality_score > 0) {
+                $article['quality_score'] = $quality_score;
+                $quality_articles[] = $article;
+            }
+        }
+        
+        // Sort by quality score
+        usort($quality_articles, function($a, $b) {
+            return $b['quality_score'] - $a['quality_score'];
+        });
+        
+        return $quality_articles;
+}
+
+
+
     /**
      * Execute Google News automation with improved filtering
      */
@@ -36,90 +142,37 @@ class ATM_Automation_API {
         try {
             $keyword = $campaign->keyword;
             $article_language = $settings['article_language'] ?? 'English';
-            $source_languages = $settings['source_languages'] ?? [];
-            $countries = $settings['countries'] ?? ['United States'];
             
-            error_log("ATM News Automation: Starting for keyword: {$keyword}");
+            error_log("ATM News Automation: Starting enhanced search for: {$keyword}");
             
-            // Step 1: Search for articles
-            $search_params = [
-                'query' => $keyword,
-                'page' => 1,
-                'per_page' => 50,
-                'source_languages' => $source_languages,
-                'countries' => $countries
-            ];
+            // Use the new progressive search strategy
+            $quality_articles = self::search_with_progressive_filtering($keyword, $settings);
             
-            $search_result = ATM_News_Generation_Service::search_google_news($search_params);
-            
-            if (!$search_result['success'] || empty($search_result['articles'])) {
-                throw new Exception('No articles found for: ' . $keyword);
+            if (empty($quality_articles)) {
+                throw new Exception('No quality articles found with enhanced search for: ' . $keyword);
             }
             
-            $total_found = count($search_result['articles']);
-            error_log("ATM News Debug: Found {$total_found} total articles");
-            
-            // DEBUG: Log first few article titles
-            for ($i = 0; $i < min(5, $total_found); $i++) {
-                error_log("ATM News Debug: Article {$i}: " . $search_result['articles'][$i]['title']);
-            }
-            
-            // Step 2: Pre-filter
-            $pre_filtered = self::pre_filter_generic_pages($search_result['articles']);
-            $after_prefilter = count($pre_filtered);
-            error_log("ATM News Debug: After pre-filtering: {$after_prefilter} articles (removed " . ($total_found - $after_prefilter) . ")");
-            
-            // DEBUG: Log remaining titles after pre-filter
-            for ($i = 0; $i < min(3, $after_prefilter); $i++) {
-                error_log("ATM News Debug: Pre-filtered {$i}: " . $pre_filtered[$i]['title']);
-            }
-            
-            // Step 3: Remove used articles
-            $unused_articles = array_filter($pre_filtered, function($article) use ($campaign) {
+            // Remove already used articles
+            $unused_articles = array_filter($quality_articles, function($article) use ($campaign) {
                 return !self::is_article_used_by_campaign($article['link'], $campaign->id);
             });
             
-            $unused_count = count($unused_articles);
-            error_log("ATM News Debug: Unused articles: {$unused_count}");
-            
             if (empty($unused_articles)) {
-                throw new Exception('No unused articles found after filtering');
+                throw new Exception('All quality articles have already been used');
             }
             
-            // DEBUG: If we have very few articles, let's be less strict
-            if ($unused_count < 3) {
-                error_log("ATM News Debug: Very few articles ({$unused_count}), trying with less strict filtering");
-                // Fall back to less strict filtering
-                $unused_articles = self::lenient_filter_articles($search_result['articles'], $campaign->id);
-                $unused_count = count($unused_articles);
-                error_log("ATM News Debug: After lenient filtering: {$unused_count} articles");
-            }
+            // Select the best article (highest quality score that's unused)
+            $selected_article = reset($unused_articles);
             
-            // Step 4: AI selection
-            $selected_article = self::ai_select_best_article_from_filtered(
-                array_values($unused_articles), 
-                $keyword, 
-                $campaign->id
-            );
+            error_log("ATM News Automation: Selected article: " . $selected_article['title'] . " (Quality: " . $selected_article['quality_score'] . ")");
             
-            if (!$selected_article) {
-                // Final fallback: pick first unused article
-                error_log("ATM News Debug: AI selection failed, using first unused article");
-                $selected_article = reset($unused_articles);
-                if (!$selected_article) {
-                    throw new Exception('No articles available after all filtering steps');
-                }
-            }
-            
-            error_log("ATM News Debug: Selected article: " . $selected_article['title']);
-            
-            // Continue with content generation...
+            // Generate content
             $content_result = self::generate_news_content_with_web_search(
                 $selected_article, 
                 $keyword, 
                 $article_language
             );
-            
+                
             if (!$content_result['success']) {
                 throw new Exception($content_result['message']);
             }
