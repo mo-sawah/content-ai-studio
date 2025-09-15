@@ -63,8 +63,9 @@ class ATM_Automation_Ajax {
                 'content_mode'   => sanitize_text_field($campaign_data['content_mode']),
                 'author_id'      => intval($campaign_data['author_id']),
                 'is_active'      => !empty($campaign_data['is_active']) ? 1 : 0,
-                // category_ids need special handling if you implement it
-                'category_ids'   => isset($campaign_data['category_ids']) ? wp_json_encode(array_map('intval', $campaign_data['category_ids'])) : '[]',
+                // Fix: Handle category_ids from settings
+                'category_ids'   => isset($campaign_data['settings']['category_ids']) ? 
+                    wp_json_encode(array_map('intval', (array)$campaign_data['settings']['category_ids'])) : '[]',
             ];
             
             // Use the Database class for cleaner operations
@@ -421,41 +422,37 @@ class ATM_Automation_Ajax {
         if (isset($settings['custom_prompt'])) {
             $sanitized['custom_prompt'] = wp_kses_post($settings['custom_prompt']);
         }
-        
-        // News-specific settings
-        if (isset($settings['article_language'])) {
-            $sanitized['article_language'] = sanitize_text_field($settings['article_language']);
+        if (isset($settings['enable_web_search'])) {
+            $sanitized['enable_web_search'] = (bool)$settings['enable_web_search'];
         }
-        if (isset($settings['source_languages'])) {
-            $sanitized['source_languages'] = array_map('sanitize_text_field', (array)$settings['source_languages']);
-        }
-        if (isset($settings['countries'])) {
-            $sanitized['countries'] = array_map('sanitize_text_field', (array)$settings['countries']);
+        if (isset($settings['include_subheadlines'])) {
+            $sanitized['include_subheadlines'] = (bool)$settings['include_subheadlines'];
         }
         
-        // Video-specific settings
-        if (isset($settings['video_duration'])) {
-            $sanitized['video_duration'] = sanitize_text_field($settings['video_duration']);
+        // Trending-specific settings
+        if (isset($settings['trending_region'])) {
+            $sanitized['trending_region'] = sanitize_text_field($settings['trending_region']);
         }
-        if (isset($settings['video_order'])) {
-            $sanitized['video_order'] = sanitize_text_field($settings['video_order']);
+        if (isset($settings['trending_language'])) {
+            $sanitized['trending_language'] = sanitize_text_field($settings['trending_language']);
         }
-        
-        // Podcast-specific settings
-        if (isset($settings['podcast_language'])) {
-            $sanitized['podcast_language'] = sanitize_text_field($settings['podcast_language']);
+        if (isset($settings['smart_angles'])) {
+            $sanitized['smart_angles'] = (bool)$settings['smart_angles'];
         }
-        if (isset($settings['podcast_duration'])) {
-            $sanitized['podcast_duration'] = sanitize_text_field($settings['podcast_duration']);
+        if (isset($settings['real_time_trends'])) {
+            $sanitized['real_time_trends'] = (bool)$settings['real_time_trends'];
         }
-        if (isset($settings['host_a_voice'])) {
-            $sanitized['host_a_voice'] = sanitize_text_field($settings['host_a_voice']);
+        if (isset($settings['include_breaking_news'])) {
+            $sanitized['include_breaking_news'] = (bool)$settings['include_breaking_news'];
         }
-        if (isset($settings['host_b_voice'])) {
-            $sanitized['host_b_voice'] = sanitize_text_field($settings['host_b_voice']);
+        if (isset($settings['angle_refresh_days'])) {
+            $sanitized['angle_refresh_days'] = intval($settings['angle_refresh_days']);
         }
-        if (isset($settings['audio_provider'])) {
-            $sanitized['audio_provider'] = sanitize_text_field($settings['audio_provider']);
+        if (isset($settings['min_trend_score'])) {
+            $sanitized['min_trend_score'] = intval($settings['min_trend_score']);
+        }
+        if (isset($settings['category_ids'])) {
+            $sanitized['category_ids'] = array_map('intval', (array)$settings['category_ids']);
         }
         
         return $sanitized;

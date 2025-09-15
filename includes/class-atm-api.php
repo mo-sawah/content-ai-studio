@@ -339,6 +339,60 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    // Add this new method to your ATM_API class:
+    public static function generate_article_from_trend_automation($topic, $settings, $language = 'English') {
+        $writing_style = esc_html($settings['writing_style'] ?? 'professional journalistic');
+        $word_count = $settings['word_count'] ?? 0;
+        $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
+        $enable_web_search = $settings['enable_web_search'] ?? true;
+        $creativity_level = $settings['creativity_level'] ?? 'high';
+        
+        // Convert word count to range
+        $word_count_text = $word_count > 0 ? "approximately {$word_count}" : '800-1200';
+        
+        $system_prompt = "You are an expert news reporter and editor. Your task is to write a clear, engaging, and well-structured news article in {$language} based on the provided trending topic information. Use your web search ability to verify all information and add any missing context.
+
+        **TRENDING TOPIC:** {$topic['title']}
+        **INITIAL CONTEXT:** {$topic['snippet']}
+
+        Follow these strict guidelines:
+        - **Language**: Write the entire article in {$language}. This is mandatory.
+        - **Style**: Adopt a {$writing_style} tone. Be objective, fact-based, and write like a human.
+        - **Originality**: Do not copy verbatim from any source. You must rewrite, summarize, and humanize the content.
+        - **Length**: Aim for {$word_count_text} words.
+        - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+        - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
+        - **CRITICAL**: Do NOT include any final heading such as \"Conclusion\", \"Summary\", \"Final Thoughts\", \"In Summary\", \"To Conclude\", \"Wrapping Up\", \"Looking Ahead\", \"What's Next\", \"The Bottom Line\", \"Key Takeaways\", or any similar conclusory heading. The article should end naturally with the concluding paragraph itself, without any heading above it.
+
+        **Link Formatting Rules:**
+        - When including external links, NEVER use the website URL as the anchor text.
+        - Always link to the specific article URL, NOT the homepage.
+        - Use ONLY 1-3 descriptive words as anchor text.
+        - Keep anchor text extremely concise (maximum 2 words).
+        - Make links feel natural within the sentence flow.
+
+        **Final Output Format:**
+        Your entire output MUST be a single, valid JSON object with three keys:
+        1. \"title\": A clear and compelling news headline in {$language}, written in the style of a professional news outlet. It must be concise, factual, and highlight the most newsworthy element of the story.
+        2. \"subheadline\": A brief, one-sentence subheadline that expands on the main headline, written in {$language}.
+        3. \"content\": A complete news article in {$language}, formatted using Markdown. The article must follow professional journalistic style: clear, objective, and factual. Structure it with an engaging lead paragraph, followed by supporting details, quotes, and context. Use H2 (##) for section headings, avoid H1. REMEMBER: NO conclusion headings whatsoever - end with a natural concluding paragraph that has no heading above it.";
+
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $topic['title']],
+            $system_prompt,
+            $ai_model, // Use automation-specified model
+            true, 
+            $enable_web_search, // Use automation web search setting
+            $creativity_level // Use automation creativity setting
+        );
+
+        $result = json_decode($raw_response, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+            throw new Exception('The AI returned an invalid response structure.');
+        }
+        return $result;
+    }
+
     public static function get_automation_writing_styles() {
         return [
             'default_seo' => [

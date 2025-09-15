@@ -29,6 +29,59 @@ if (!defined('ABSPATH')) {
 
 class ATM_Automation_API {
 
+    public static function generate_article_from_trend_automation($topic, $settings, $language = 'English') {
+        $writing_style = esc_html($settings['writing_style'] ?? 'professional journalistic');
+        $word_count = $settings['word_count'] ?? 0;
+        $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
+        $enable_web_search = $settings['enable_web_search'] ?? true;
+        $creativity_level = $settings['creativity_level'] ?? 'high';
+        
+        // Convert word count to range
+        $word_count_text = $word_count > 0 ? "approximately {$word_count}" : '800-1200';
+        
+        $system_prompt = "You are an expert news reporter and editor. Your task is to write a clear, engaging, and well-structured news article in {$language} based on the provided trending topic information. Use your web search ability to verify all information and add any missing context.
+
+        **TRENDING TOPIC:** {$topic['title']}
+        **INITIAL CONTEXT:** {$topic['snippet']}
+
+        Follow these strict guidelines:
+        - **Language**: Write the entire article in {$language}. This is mandatory.
+        - **Style**: Adopt a {$writing_style} tone. Be objective, fact-based, and write like a human.
+        - **Originality**: Do not copy verbatim from any source. You must rewrite, summarize, and humanize the content.
+        - **Length**: Aim for {$word_count_text} words.
+        - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+        - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
+        - **CRITICAL**: Do NOT include any final heading such as \"Conclusion\", \"Summary\", \"Final Thoughts\", \"In Summary\", \"To Conclude\", \"Wrapping Up\", \"Looking Ahead\", \"What's Next\", \"The Bottom Line\", \"Key Takeaways\", or any similar conclusory heading. The article should end naturally with the concluding paragraph itself, without any heading above it.
+
+        **Link Formatting Rules:**
+        - When including external links, NEVER use the website URL as the anchor text.
+        - Always link to the specific article URL, NOT the homepage.
+        - Use ONLY 1-3 descriptive words as anchor text.
+        - Keep anchor text extremely concise (maximum 2 words).
+        - Make links feel natural within the sentence flow.
+
+        **Final Output Format:**
+        Your entire output MUST be a single, valid JSON object with three keys:
+        1. \"title\": A clear and compelling news headline in {$language}, written in the style of a professional news outlet. It must be concise, factual, and highlight the most newsworthy element of the story.
+        2. \"subheadline\": A brief, one-sentence subheadline that expands on the main headline, written in {$language}.
+        3. \"content\": A complete news article in {$language}, formatted using Markdown. The article must follow professional journalistic style: clear, objective, and factual. Structure it with an engaging lead paragraph, followed by supporting details, quotes, and context. Use H2 (##) for section headings, avoid H1. REMEMBER: NO conclusion headings whatsoever - end with a natural concluding paragraph that has no heading above it.";
+
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $topic['title']],
+            $system_prompt,
+            $ai_model, // Use automation-specified model
+            true, 
+            $enable_web_search, // Use automation web search setting
+            $creativity_level // Use automation creativity setting
+        );
+
+        $result = json_decode($raw_response, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+            throw new Exception('The AI returned an invalid response structure.');
+        }
+        return $result;
+    }
+
     private static function execute_trending_automation($campaign, $settings) {
         try {
             $base_keyword = $campaign->keyword;
@@ -46,9 +99,15 @@ class ATM_Automation_API {
                 'pt' => 'Portuguese',
                 'it' => 'Italian'
             ];
+
+            $ai_model = $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
+            $enable_web_search = $settings['enable_web_search'] ?? true;
+            $word_count = $settings['word_count'] ?? 0;
+            $creativity_level = $settings['creativity_level'] ?? 'high';
+
+            error_log("ATM Trending: Using AI model: {$ai_model}, Web search: " . ($enable_web_search ? 'enabled' : 'disabled'));
             
-            error_log("ATM Trending: Starting execution for campaign {$campaign->id}, keyword: {$base_keyword}");
-            
+           
             // 1. Fetch trending topics
             if (!class_exists('ATM_API') || !method_exists('ATM_API', 'fetch_trending_topics')) {
                 throw new Exception('ATM_API trending topics method not available');
@@ -82,9 +141,14 @@ class ATM_Automation_API {
                 throw new Exception('ATM_API trend article generation not available');
             }
             
-            $article_result = ATM_API::generate_article_from_trend(
+            $article_result = ATM_API::generate_article_from_trend_automation(
                 $selected_topic['topic'], 
-                $settings, 
+                array_merge($settings, [
+                    'ai_model' => $ai_model,
+                    'enable_web_search' => $enable_web_search,
+                    'word_count' => $word_count,
+                    'creativity_level' => $creativity_level
+                ]), 
                 $language_map[$language] ?? 'English'
             );
             
@@ -110,7 +174,7 @@ class ATM_Automation_API {
                 'post_content' => wp_kses_post($html_content),
                 'post_status' => $post_status,
                 'post_author' => $campaign->author_id,
-                'post_category' => []
+                'post_category' => !empty($settings['category_ids']) ? array_map('intval', $settings['category_ids']) : []
             ];
             
             $post_id = wp_insert_post($post_data, true);
@@ -172,28 +236,50 @@ class ATM_Automation_API {
             $filtered_trends = array_slice($trends, 0, 5); // Fallback to top 5
         }
         
+        // Filter for relevance to base keyword
+        $relevant_trends = self::filter_trending_topics_by_relevance($filtered_trends, $base_keyword);
+        
+        if (empty($relevant_trends)) {
+            // If no relevant trends, create a trending angle for the base keyword itself
+            error_log("ATM Trending: No relevant trends found, using base keyword with trending angle");
+            return [
+                'topic' => [
+                    'title' => $base_keyword,
+                    'snippet' => "Latest developments and trending discussions about {$base_keyword}",
+                    'traffic' => 'High Interest',
+                    'url' => ''
+                ],
+                'angle' => 'Latest trending developments and current analysis',
+                'focus' => 'Current events and recent updates'
+            ];
+        }
+        
         // Get recently used angles for this campaign
         $used_angles = self::get_recent_trending_angles($campaign_id, $base_keyword, $angle_refresh_days);
         
         // Use AI to select best topic with unique angle
-        $selection_prompt = "Analyze these trending topics and select the best one for creating a unique article. 
-        
-        Base keyword: {$base_keyword}
+        $selection_prompt = "You are analyzing trending topics related to '{$base_keyword}'. Select the MOST RELEVANT trending topic and create a unique angle.
+
+        IMPORTANT: Only select topics that are directly related to '{$base_keyword}'. Ignore unrelated topics.
         
         Available trending topics:
-        " . json_encode(array_slice($filtered_trends, 0, 10), JSON_PRETTY_PRINT) . "
+        " . json_encode(array_slice($relevant_trends, 0, 8), JSON_PRETTY_PRINT) . "
         
         Recently used angles to AVOID:
-        " . implode("\n", $used_angles) . "
+        " . implode("\n- ", $used_angles) . "
         
-        Select the best trending topic and generate a completely unique angle that hasn't been used before.
+        Requirements:
+        1. Select the trending topic most relevant to '{$base_keyword}'
+        2. Create a completely unique angle that hasn't been used
+        3. Focus on current/trending aspects
+        4. Ensure the angle is newsworthy and engaging
         
         Return JSON with:
         {
             \"selected_index\": 0,
-            \"reasoning\": \"Why this topic is best\",
+            \"reasoning\": \"Why this topic is most relevant to {$base_keyword}\",
             \"unique_angle\": \"Specific unique angle for this topic\",
-            \"article_focus\": \"What the article should focus on\"
+            \"article_focus\": \"What the article should emphasize\"
         }";
         
         $ai_response = ATM_API::enhance_content_with_openrouter(
@@ -201,7 +287,7 @@ class ATM_Automation_API {
             $selection_prompt,
             'anthropic/claude-3-haiku',
             true,
-            false
+            true // Enable web search for better relevance detection
         );
         
         $selection = json_decode($ai_response, true);
@@ -214,13 +300,50 @@ class ATM_Automation_API {
             ];
         }
         
-        $selected_topic = $filtered_trends[$selection['selected_index']] ?? $filtered_trends[0];
+        $selected_index = min($selection['selected_index'], count($relevant_trends) - 1);
+        $selected_topic = $relevant_trends[$selected_index] ?? $relevant_trends[0];
+        
+        error_log("ATM Trending: AI selected topic: " . $selected_topic['title'] . " with angle: " . $selection['unique_angle']);
         
         return [
             'topic' => $selected_topic,
             'angle' => $selection['unique_angle'],
             'focus' => $selection['article_focus'] ?? ''
         ];
+    }
+
+    private static function filter_trending_topics_by_relevance($trends, $base_keyword) {
+        $relevant_trends = [];
+        
+        foreach ($trends as $trend) {
+            $title = strtolower($trend['title']);
+            $snippet = strtolower($trend['snippet'] ?? '');
+            $base_lower = strtolower($base_keyword);
+            
+            // Check for exact keyword match
+            if (strpos($title, $base_lower) !== false || strpos($snippet, $base_lower) !== false) {
+                $relevant_trends[] = $trend;
+                continue;
+            }
+            
+            // Check for partial matches for compound keywords
+            $keyword_parts = explode(' ', $base_lower);
+            $matches = 0;
+            foreach ($keyword_parts as $part) {
+                if (strlen($part) > 2 && (strpos($title, $part) !== false || strpos($snippet, $part) !== false)) {
+                    $matches++;
+                }
+            }
+            
+            // If most parts match, consider it relevant
+            if ($matches >= ceil(count($keyword_parts) * 0.6)) {
+                $relevant_trends[] = $trend;
+            }
+        }
+        
+        error_log("ATM Trending: Filtered from " . count($trends) . " to " . count($relevant_trends) . " relevant trends for '{$base_keyword}'");
+        
+        return $relevant_trends;
     }
 
     private static function store_used_trending_angle($campaign_id, $base_keyword, $trending_keyword, $article_title, $angle) {
