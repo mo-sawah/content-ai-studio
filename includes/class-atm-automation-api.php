@@ -39,13 +39,13 @@ class ATM_Automation_API {
             $source_languages = $settings['source_languages'] ?? [];
             $countries = $settings['countries'] ?? ['United States'];
             
-            error_log("ATM News Automation: Starting enhanced filtering for: {$keyword}");
+            error_log("ATM News Automation: Starting for keyword: {$keyword}");
             
-            // Step 1: Search for MORE articles to account for filtering
+            // Step 1: Search for articles
             $search_params = [
                 'query' => $keyword,
                 'page' => 1,
-                'per_page' => 50, // Increased to get more options after filtering
+                'per_page' => 50,
                 'source_languages' => $source_languages,
                 'countries' => $countries
             ];
@@ -53,27 +53,49 @@ class ATM_Automation_API {
             $search_result = ATM_News_Generation_Service::search_google_news($search_params);
             
             if (!$search_result['success'] || empty($search_result['articles'])) {
-                throw new Exception('No recent news articles found for keyword: ' . $keyword);
+                throw new Exception('No articles found for: ' . $keyword);
             }
             
-            error_log("ATM News Automation: Found " . count($search_result['articles']) . " total articles");
+            $total_found = count($search_result['articles']);
+            error_log("ATM News Debug: Found {$total_found} total articles");
             
-            // Step 2: Pre-filter with strict URL/title patterns
+            // DEBUG: Log first few article titles
+            for ($i = 0; $i < min(5, $total_found); $i++) {
+                error_log("ATM News Debug: Article {$i}: " . $search_result['articles'][$i]['title']);
+            }
+            
+            // Step 2: Pre-filter
             $pre_filtered = self::pre_filter_generic_pages($search_result['articles']);
-            error_log("ATM News Automation: After pre-filtering: " . count($pre_filtered) . " articles remain");
+            $after_prefilter = count($pre_filtered);
+            error_log("ATM News Debug: After pre-filtering: {$after_prefilter} articles (removed " . ($total_found - $after_prefilter) . ")");
             
-            // Step 3: Remove articles already used by this campaign
+            // DEBUG: Log remaining titles after pre-filter
+            for ($i = 0; $i < min(3, $after_prefilter); $i++) {
+                error_log("ATM News Debug: Pre-filtered {$i}: " . $pre_filtered[$i]['title']);
+            }
+            
+            // Step 3: Remove used articles
             $unused_articles = array_filter($pre_filtered, function($article) use ($campaign) {
                 return !self::is_article_used_by_campaign($article['link'], $campaign->id);
             });
             
+            $unused_count = count($unused_articles);
+            error_log("ATM News Debug: Unused articles: {$unused_count}");
+            
             if (empty($unused_articles)) {
-                throw new Exception('No suitable unused articles found after filtering');
+                throw new Exception('No unused articles found after filtering');
             }
             
-            error_log("ATM News Automation: " . count($unused_articles) . " unused articles available for AI selection");
+            // DEBUG: If we have very few articles, let's be less strict
+            if ($unused_count < 3) {
+                error_log("ATM News Debug: Very few articles ({$unused_count}), trying with less strict filtering");
+                // Fall back to less strict filtering
+                $unused_articles = self::lenient_filter_articles($search_result['articles'], $campaign->id);
+                $unused_count = count($unused_articles);
+                error_log("ATM News Debug: After lenient filtering: {$unused_count} articles");
+            }
             
-            // Step 4: AI selects from pre-filtered, high-quality articles
+            // Step 4: AI selection
             $selected_article = self::ai_select_best_article_from_filtered(
                 array_values($unused_articles), 
                 $keyword, 
@@ -81,12 +103,17 @@ class ATM_Automation_API {
             );
             
             if (!$selected_article) {
-                throw new Exception('AI could not select a suitable article from filtered results');
+                // Final fallback: pick first unused article
+                error_log("ATM News Debug: AI selection failed, using first unused article");
+                $selected_article = reset($unused_articles);
+                if (!$selected_article) {
+                    throw new Exception('No articles available after all filtering steps');
+                }
             }
             
-            error_log("ATM News Automation: AI selected: " . $selected_article['title']);
+            error_log("ATM News Debug: Selected article: " . $selected_article['title']);
             
-            // Step 5: Generate content (rest remains the same)
+            // Continue with content generation...
             $content_result = self::generate_news_content_with_web_search(
                 $selected_article, 
                 $keyword, 
@@ -97,7 +124,7 @@ class ATM_Automation_API {
                 throw new Exception($content_result['message']);
             }
             
-            // Step 6: Create post
+            // Create post
             $post_params = [
                 'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
                 'post_author' => $campaign->author_id,
@@ -198,6 +225,44 @@ class ATM_Automation_API {
         }
         
         return false;
+    }
+
+    /**
+     * Less strict filtering for when we have very few articles
+     */
+    private static function lenient_filter_articles($articles, $campaign_id) {
+        $filtered = [];
+        
+        foreach ($articles as $article) {
+            // Skip only if already used
+            if (self::is_article_used_by_campaign($article['link'], $campaign_id)) {
+                continue;
+            }
+            
+            $title = $article['title'];
+            
+            // Only filter the most obvious generic patterns
+            $very_generic_patterns = [
+                '/^(News|Latest News|Breaking News)$/i',
+                '/^.+ News Roundup$/i',
+                '/^Latest Headlines$/i',
+                '/Calendar for \d{4}$/i',
+            ];
+            
+            $is_very_generic = false;
+            foreach ($very_generic_patterns as $pattern) {
+                if (preg_match($pattern, $title)) {
+                    $is_very_generic = true;
+                    break;
+                }
+            }
+            
+            if (!$is_very_generic && strlen(trim($title)) > 15) {
+                $filtered[] = $article;
+            }
+        }
+        
+        return $filtered;
     }
 
     /**
