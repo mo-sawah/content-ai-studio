@@ -19,6 +19,7 @@ function AutoTrendingForm({
   );
   const [creativityLabel, setCreativityLabel] = useState("Creative (Dynamic)");
   const [wordCountLabel, setWordCountLabel] = useState("Default");
+  const [aiModelLabel, setAiModelLabel] = useState("GPT-4o");
 
   // Options for dropdowns
   const regionOptions = [
@@ -72,6 +73,19 @@ function AutoTrendingForm({
     { label: "Creative (Dynamic)", value: "high" },
   ];
 
+  // OpenRouter AI Models - Only these models for trending
+  const aiModelOptions = [
+    { label: "GPT-4o", value: "openai/gpt-4o" },
+    { label: "GPT-4o Mini", value: "openai/gpt-4o-mini" },
+    { label: "Claude 3.5 Sonnet", value: "anthropic/claude-3.5-sonnet" },
+    { label: "Claude 3.5 Haiku", value: "anthropic/claude-3.5-haiku" },
+    { label: "Gemini Pro 1.5", value: "google/gemini-pro-1.5" },
+    {
+      label: "Meta Llama 3.2 90B",
+      value: "meta-llama/llama-3.2-90b-vision-instruct",
+    },
+  ];
+
   // Initialize labels on mount
   useEffect(() => {
     const currentRegion = regionOptions.find(
@@ -112,6 +126,14 @@ function AutoTrendingForm({
     );
     if (currentCreativity) {
       setCreativityLabel(currentCreativity.label);
+    }
+
+    const currentAiModel = aiModelOptions.find(
+      (option) =>
+        option.value === (campaignData.settings?.ai_model || "openai/gpt-4o")
+    );
+    if (currentAiModel) {
+      setAiModelLabel(currentAiModel.label);
     }
   }, [campaignData.settings]);
 
@@ -155,6 +177,65 @@ function AutoTrendingForm({
           help="Optional title template. Leave empty to let AI generate titles from trending topics"
         />
 
+        {/* AI Model and Core Settings Grid */}
+        <div className="atm-grid-3">
+          <CustomDropdown
+            label="AI Model"
+            text={aiModelLabel}
+            options={aiModelOptions}
+            onChange={(option) => {
+              updateSetting("ai_model", option.value);
+              setAiModelLabel(option.label);
+            }}
+            helpText="Choose OpenRouter AI model for content generation"
+          />
+
+          <CustomDropdown
+            label="Writing Style"
+            text={writingStyleLabel}
+            options={styleOptions}
+            onChange={(option) => {
+              updateSetting("writing_style", option.value);
+              setWritingStyleLabel(option.label);
+            }}
+            helpText="Select the tone and style for trending articles"
+          />
+
+          <CustomDropdown
+            label="Creativity Level"
+            text={creativityLabel}
+            options={creativityOptions}
+            onChange={(option) => {
+              updateSetting("creativity_level", option.value);
+              setCreativityLabel(option.label);
+            }}
+            helpText="Control how creative vs factual the trending content should be"
+          />
+        </div>
+
+        {/* Word Count and Web Search */}
+        <div className="atm-grid-2">
+          <CustomDropdown
+            label="Word Count"
+            text={wordCountLabel}
+            options={wordCountOptions}
+            onChange={(option) => {
+              updateSetting("word_count", parseInt(option.value) || 0);
+              setWordCountLabel(option.label);
+            }}
+            helpText="Target article length for trending content"
+          />
+
+          <div className="atm-dropdown-field">
+            <label className="atm-dropdown-label">Web Search</label>
+            <ToggleControl
+              checked={campaignData.settings?.enable_web_search !== false}
+              onChange={(value) => updateSetting("enable_web_search", value)}
+              help="Enable web search for current and accurate information"
+            />
+          </div>
+        </div>
+
         {/* Trending Settings Grid */}
         <div className="atm-grid-3">
           <CustomDropdown
@@ -180,39 +261,24 @@ function AutoTrendingForm({
           />
 
           <CustomDropdown
-            label="Writing Style"
-            text={writingStyleLabel}
-            options={styleOptions}
+            label="Angle Refresh Period"
+            text={
+              campaignData.settings?.angle_refresh_days
+                ? `${campaignData.settings.angle_refresh_days} days`
+                : "7 days"
+            }
+            options={[
+              { label: "1 day", value: "1" },
+              { label: "3 days", value: "3" },
+              { label: "7 days", value: "7" },
+              { label: "14 days", value: "14" },
+              { label: "30 days", value: "30" },
+              { label: "No restrictions", value: "0" },
+            ]}
             onChange={(option) => {
-              updateSetting("writing_style", option.value);
-              setWritingStyleLabel(option.label);
+              updateSetting("angle_refresh_days", parseInt(option.value));
             }}
-            helpText="Select the tone and style for trending articles"
-          />
-        </div>
-
-        {/* Advanced AI Settings */}
-        <div className="atm-grid-2">
-          <CustomDropdown
-            label="Word Count"
-            text={wordCountLabel}
-            options={wordCountOptions}
-            onChange={(option) => {
-              updateSetting("word_count", parseInt(option.value) || 0);
-              setWordCountLabel(option.label);
-            }}
-            helpText="Target article length for trending content"
-          />
-
-          <CustomDropdown
-            label="Creativity Level"
-            text={creativityLabel}
-            options={creativityOptions}
-            onChange={(option) => {
-              updateSetting("creativity_level", option.value);
-              setCreativityLabel(option.label);
-            }}
-            helpText="Control how creative vs factual the trending content should be"
+            helpText="How often the same trending topic can be covered from different angles"
           />
         </div>
 
@@ -243,30 +309,9 @@ function AutoTrendingForm({
           </div>
         </div>
 
-        {/* Trend Uniqueness Settings */}
+        {/* Content Uniqueness Settings */}
         <div className="atm-form-section">
           <h4>Content Uniqueness Control</h4>
-
-          <CustomDropdown
-            label="Angle Refresh Period"
-            text={
-              campaignData.settings?.angle_refresh_days
-                ? `${campaignData.settings.angle_refresh_days} days`
-                : "7 days"
-            }
-            options={[
-              { label: "1 day", value: "1" },
-              { label: "3 days", value: "3" },
-              { label: "7 days", value: "7" },
-              { label: "14 days", value: "14" },
-              { label: "30 days", value: "30" },
-              { label: "No restrictions", value: "0" },
-            ]}
-            onChange={(option) => {
-              updateSetting("angle_refresh_days", parseInt(option.value));
-            }}
-            helpText="How often the same trending topic can be covered from different angles"
-          />
 
           <TextControl
             label="Minimum Trend Score"
