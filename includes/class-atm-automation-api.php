@@ -121,7 +121,7 @@ class ATM_Automation_API {
         error_log("ATM Trending Generation: Using model {$ai_model} with web search " . ($enable_web_search ? 'enabled' : 'disabled'));
         
         // Make the API call to OpenRouter with all settings
-        $raw_response = self::enhance_content_with_openrouter(
+        $raw_response = ATM_API::enhance_content_with_openrouter(
             ['content' => $topic['title']],
             $system_prompt,
             $ai_model, // Use the specified OpenRouter model
