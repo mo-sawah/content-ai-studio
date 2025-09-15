@@ -229,7 +229,28 @@ class ATM_Automation_API {
      */
     private static function generate_news_content_with_web_search($selected_article, $keyword, $article_language) {
         try {
-            $system_prompt = "You are a professional news reporter creating a comprehensive news article.
+            $system_prompt = "You are a professional news reporter and editor. Using the following source material, write a clear, engaging, and well-structured news article in {$article_language}. **Use your web search ability to verify the information and add any missing context.**
+
+    Follow these strict guidelines:
+    - **Language**: Write the entire article in {$article_language}. This is mandatory.
+    - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
+    - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
+    - **Length**: Aim for 800–1500 words.
+    - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+    - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
+    - **CRITICAL**: Do NOT include any final heading such as \"Conclusion\", \"Summary\", \"Final Thoughts\", \"In Summary\", \"To Conclude\", \"Wrapping Up\", \"Looking Ahead\", \"What's Next\", \"The Bottom Line\", \"Key Takeaways\", or any similar conclusory heading. The article should end naturally with the concluding paragraph itself, without any heading above it.
+    - End the article with a natural concluding paragraph that flows seamlessly from the body content, but do NOT put any heading before this final paragraph.
+
+    **Link Formatting Rules:**
+    - When including external links, NEVER use the website URL as the anchor text
+    - Always link to the specific article URL, NOT the homepage
+    - Use ONLY 1-3 descriptive words as anchor text
+    - Example: [Reuters](https://reuters.com/actual-article-url) reported that...
+    - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+    - Do NOT use generic phrases like \"click here\", \"read more\", or \"this article\" as anchor text
+    - Anchor text should be relevant keywords from the article topic
+    - Keep anchor text extremely concise (maximum 2 words)
+    - Make links feel natural within the sentence flow
 
     **SELECTED NEWS SOURCE:**
     - Title: {$selected_article['title']}
@@ -246,31 +267,17 @@ class ATM_Automation_API {
     - Include relevant quotes, statistics, and data
     - Add expert opinions or analysis if available
 
-    2. **Writing Requirements:**
-    - Write entirely in {$article_language}
-    - Professional journalistic tone
-    - Objective and factual reporting
-    - 800-1200 words
-    - Focus on \"{$keyword}\" relevance
-
-    3. **Structure Requirements:**
-    - Start with engaging lead paragraph (no title/heading)
-    - Use H2 (##) for main sections only
-    - Never use H1 headings in content
-    - End naturally without \"Conclusion\" heading
-    - Include proper context and background
-
-    4. **Quality Standards:**
+    2. **Quality Standards:**
     - Verify information through web search
     - Use current, accurate data
     - Include specific details and examples
     - Maintain journalistic integrity
 
-    **CRITICAL: Return JSON with:**
+    **CRITICAL: Return JSON response as:**
     {
-        \"title\": \"Compelling, specific news headline in {$article_language}\",
-        \"subheadline\": \"Brief subtitle that expands on the headline\",
-        \"content\": \"Complete article in markdown format\"
+        \"title\": \"Clear and compelling news headline in {$article_language}, written in the style of a professional news outlet. It must be concise, factual, and highlight the most newsworthy element of the story.\",
+        \"subheadline\": \"Brief, one-sentence subheadline that expands on the main headline, written in {$article_language}.\",
+        \"content\": \"Complete news article in {$article_language}, formatted using Markdown. The article must follow professional journalistic style: clear, objective, and factual. Structure it with an engaging lead paragraph, followed by supporting details, quotes, and context. Use H2 (##) for section headings, avoid H1. REMEMBER: NO conclusion headings whatsoever - end with a natural concluding paragraph that has no heading above it.\"
     }
 
     Use web search to ensure all information is current, verified, and comprehensive.";
@@ -294,10 +301,20 @@ class ATM_Automation_API {
                 throw new Exception('Generated title or content is empty');
             }
             
+            // Convert Markdown to HTML for WordPress
+            $html_content = $result['content'];
+            if (class_exists('Parsedown')) {
+                $Parsedown = new Parsedown();
+                $html_content = $Parsedown->text($result['content']);
+            } else {
+                // Fallback: Basic markdown conversion
+                $html_content = self::basic_markdown_to_html($result['content']);
+            }
+            
             return [
                 'success' => true,
                 'article_title' => $result['title'],
-                'article_content' => $result['content'],
+                'article_content' => $html_content, // Now properly formatted as HTML
                 'subtitle' => $result['subheadline'] ?? $result['subtitle'] ?? ''
             ];
             
@@ -308,6 +325,31 @@ class ATM_Automation_API {
                 'message' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Basic Markdown to HTML conversion (fallback if Parsedown not available)
+     */
+    private static function basic_markdown_to_html($markdown) {
+        $html = $markdown;
+        
+        // Convert headers
+        $html = preg_replace('/^## (.+)$/m', '<h2>$1</h2>', $html);
+        $html = preg_replace('/^### (.+)$/m', '<h3>$1</h3>', $html);
+        
+        // Convert bold
+        $html = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $html);
+        
+        // Convert italic
+        $html = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $html);
+        
+        // Convert links
+        $html = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2">$1</a>', $html);
+        
+        // Convert line breaks to paragraphs
+        $html = wpautop($html);
+        
+        return $html;
     }
 
     /**
