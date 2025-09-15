@@ -29,6 +29,121 @@ if (!defined('ABSPATH')) {
 
 class ATM_Automation_API {
 
+    /**
+     * Execute SerpApi Google News automation
+     */
+    private static function execute_serpapi_automation($campaign, $settings) {
+        try {
+            $keyword = $campaign->keyword;
+            $article_language = $settings['article_language'] ?? 'English';
+            $force_fresh = $settings['force_fresh'] ?? false;
+            
+            // Get country code
+            $country_code = $settings['country'] ?? 'gb';
+            $language_code = strtolower(substr($article_language, 0, 2)); // en, es, fr, etc.
+            
+            error_log("ATM SerpApi Automation: Fetching Google News for: {$keyword} in country: {$country_code}");
+            
+            // Check cache first unless force_fresh is enabled
+            $cache_key = "serpapi_news_" . md5($keyword . $language_code . $country_code);
+            $articles = [];
+            
+            if (!$force_fresh) {
+                $articles = get_transient($cache_key);
+            }
+            
+            if (empty($articles)) {
+                // Fetch fresh news from SerpApi
+                $articles = ATM_API::search_google_news_serpapi($keyword, $country_code, $language_code, 25);
+                
+                if (empty($articles)) {
+                    throw new Exception("No articles found from SerpApi Google News for: {$keyword} in {$country_code}");
+                }
+                
+                // Cache for 6 hours (21600 seconds)
+                set_transient($cache_key, $articles, 6 * HOUR_IN_SECONDS);
+                error_log("ATM SerpApi: Cached " . count($articles) . " articles for 6 hours");
+            } else {
+                error_log("ATM SerpApi: Using cached articles (" . count($articles) . " articles)");
+            }
+            
+            // Filter out already used articles
+            $unused_articles = array_filter($articles, function($article) use ($campaign) {
+                return !self::is_article_used_by_campaign($article['url'], $campaign->id);
+            });
+            
+            if (empty($unused_articles)) {
+                throw new Exception('All SerpApi articles have already been used');
+            }
+            
+            // Select first unused article
+            $selected_article = reset($unused_articles);
+            
+            error_log("ATM SerpApi: Selected article: " . $selected_article['title']);
+            
+            // Generate content from SerpApi article with options
+            $generation_options = [
+                'word_count' => $settings['word_count'] ?? '800-1000',
+                'enable_web_search' => $settings['enable_web_search'] ?? true
+            ];
+            
+            $content_result = ATM_API::generate_article_from_serpapi_news(
+                $selected_article, 
+                $keyword, 
+                $article_language,
+                $generation_options
+            );
+            
+            // Convert to expected format
+            $formatted_result = [
+                'success' => true,
+                'article_title' => $content_result['title'],
+                'article_content' => $content_result['content'],
+                'subtitle' => $content_result['subtitle'] ?? ''
+            ];
+            
+            // Create post
+            $post_params = [
+                'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
+                'post_author' => $campaign->author_id,
+                'post_category' => self::get_campaign_category_ids($campaign),
+                'campaign_id' => $campaign->id,
+                'generate_image' => $settings['generate_image'] ?? false
+            ];
+            
+            $post_result = ATM_News_Generation_Service::create_post_from_news($formatted_result, $post_params);
+            
+            if ($post_result['success']) {
+                // Generate image if requested
+                if ($settings['generate_image'] ?? false) {
+                    try {
+                        ATM_Content_Generation_Service::generate_featured_image($post_result['post_id'], $selected_article['title']);
+                        error_log("ATM SerpApi: Featured image generated successfully");
+                    } catch (Exception $e) {
+                        error_log("ATM SerpApi: Image generation error: " . $e->getMessage());
+                    }
+                }
+                
+                // Mark article as used
+                self::mark_news_article_as_used_for_campaign(
+                    $selected_article['url'], 
+                    $selected_article['title'], 
+                    $campaign->id, 
+                    $post_result['post_id']
+                );
+                
+                error_log("ATM SerpApi Automation: Successfully created post ID {$post_result['post_id']}");
+                return $post_result;
+            } else {
+                throw new Exception($post_result['message']);
+            }
+            
+        } catch (Exception $e) {
+            error_log('ATM SerpApi Automation Error: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
     private static function build_enhanced_search_query($keyword, $search_type = 'standard') {
         $base_query = $keyword;
         
@@ -1655,17 +1770,21 @@ Use web search to ensure all information is current and accurate, then return th
      */
     private static function execute_api_news_automation($campaign, $settings) {
         try {
-            $news_source = $settings['news_source'] ?? 'newsapi';
+            $news_source = $settings['news_source'] ?? 'serpapi';
             
             switch ($news_source) {
+                case 'serpapi':
+                    return self::execute_serpapi_automation($campaign, $settings);
                 case 'mediastack':
                     return self::execute_mediastack_automation($campaign, $settings);
                 case 'newsapi':
+                    return self::execute_newsapi_automation($campaign, $settings);
                 case 'gnews':
+                    return self::execute_gnews_automation($campaign, $settings);
                 case 'newsdata':
+                    return self::execute_newsdata_automation($campaign, $settings);
                 default:
-                    // Your existing API news methods
-                    throw new Exception('API source not yet implemented: ' . $news_source);
+                    throw new Exception('Unknown API source: ' . $news_source);
             }
             
         } catch (Exception $e) {
@@ -1685,9 +1804,9 @@ Use web search to ensure all information is current and accurate, then return th
             
             // Get MediaStack language and country codes
             $language_code = self::get_mediastack_language_code($article_language);
-            $country_code = 'us'; // Default or from settings
+            $country_code = $settings['country'] ?? 'gb'; // Default to UK now
             
-            error_log("ATM MediaStack Automation: Fetching news for: {$keyword}");
+            error_log("ATM MediaStack Automation: Fetching news for: {$keyword} in country: {$country_code}");
             
             // Check cache first unless force_fresh is enabled
             $cache_key = "mediastack_news_" . md5($keyword . $language_code . $country_code);
@@ -1702,7 +1821,7 @@ Use web search to ensure all information is current and accurate, then return th
                 $articles = ATM_API::fetch_mediastack_news($keyword, $language_code, $country_code, 25);
                 
                 if (empty($articles)) {
-                    throw new Exception('No articles found from MediaStack for: ' . $keyword);
+                    throw new Exception("No articles found from MediaStack for: {$keyword} in {$country_code}");
                 }
                 
                 // Cache for 6 hours (21600 seconds)

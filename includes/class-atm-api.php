@@ -340,6 +340,197 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     /**
+     * Search Google News using SerpApi
+     */
+    public static function search_google_news_serpapi($query, $country = 'gb', $language = 'en', $limit = 25) {
+        $api_key = get_option('atm_serpapi_key');
+        if (empty($api_key)) {
+            throw new Exception('SerpApi key not configured. Please add your SerpApi key in settings.');
+        }
+        
+        // Clean query
+        $clean_query = str_replace('+', ' ', $query);
+        $clean_query = trim($clean_query);
+        
+        error_log("ATM SerpApi: Searching Google News for: '{$clean_query}' in {$country}");
+        
+        $params = [
+            'engine' => 'google_news',
+            'q' => $clean_query,
+            'gl' => $country, // Country
+            'hl' => $language, // Language
+            'num' => min($limit, 100),
+            'api_key' => $api_key
+        ];
+        
+        $url = 'https://serpapi.com/search?' . http_build_query($params);
+        
+        $response = wp_remote_get($url, [
+            'timeout' => 30,
+            'user-agent' => 'WordPress/ATM-Plugin'
+        ]);
+        
+        if (is_wp_error($response)) {
+            throw new Exception('SerpApi request failed: ' . $response->get_error_message());
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        if (isset($data['error'])) {
+            throw new Exception('SerpApi error: ' . $data['error']);
+        }
+        
+        $articles = [];
+        if (isset($data['news_results']) && is_array($data['news_results'])) {
+            foreach ($data['news_results'] as $item) {
+                $articles[] = [
+                    'title' => $item['title'] ?? '',
+                    'description' => $item['snippet'] ?? '',
+                    'url' => $item['link'] ?? '',
+                    'source' => $item['source'] ?? '',
+                    'published_at' => $item['date'] ?? '',
+                    'thumbnail' => $item['thumbnail'] ?? '',
+                ];
+            }
+        }
+        
+        error_log("ATM SerpApi: Found " . count($articles) . " articles");
+        return $articles;
+    }
+
+    /**
+     * Generate article from SerpApi Google News data
+     */
+    public static function generate_article_from_serpapi_news($article_data, $topic, $language = 'English', $options = []) {
+        $title = $article_data['title'];
+        $description = $article_data['description'];
+        $source_url = $article_data['url'];
+        $source = $article_data['source'];
+        $published_at = $article_data['published_at'];
+        
+        // Parse options
+        $word_count = $options['word_count'] ?? '800-1000';
+        $enable_web_search = $options['enable_web_search'] ?? true;
+        
+        // Parse word count range
+        $word_range_text = "Aim for {$word_count} words";
+        if (strpos($word_count, '-') !== false) {
+            list($min_words, $max_words) = explode('-', $word_count);
+            $word_range_text = "Write between {$min_words} and {$max_words} words";
+        }
+        
+        // Web search instruction
+        $web_search_instruction = $enable_web_search ? 
+            "**Use your web search ability extensively to verify the information and add any missing context.**" :
+            "Use only the provided source material without web search.";
+        
+        // Try to fetch full content using free WordPress method
+        $full_content = '';
+        try {
+            error_log("ATM SerpApi: Attempting to scrape content from: " . $source_url);
+            $full_content = self::fetch_article_content_wp_builtin($source_url);
+            error_log("ATM SerpApi: Successfully scraped " . strlen($full_content) . " characters");
+        } catch (Exception $e) {
+            error_log('ATM SerpApi: Could not scrape content, using description: ' . $e->getMessage());
+            $full_content = $description;
+        }
+        
+        // Fallback to description if scraped content is too short
+        if (strlen($full_content) < 200) {
+            error_log('ATM SerpApi: Scraped content too short, using description');
+            $full_content = $description;
+        }
+        
+        $system_prompt = "You are a professional news reporter and editor. Using the following source material from Google News (via SerpApi), write a clear, engaging, and well-structured news article in {$language}. {$web_search_instruction}
+
+    Follow these strict guidelines:
+    - **Language**: Write the entire article in {$language}. This is mandatory.
+    - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
+    - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
+    - **Length**: {$word_range_text}.
+    - **Topic Focus**: Ensure the article is relevant to the topic: \"{$topic}\"
+    - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+    - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph.
+    - Do NOT include final headings like \"Conclusion\", \"Summary\", etc. End naturally with a concluding paragraph.
+
+    **Link Formatting Rules:**
+    - When including external links, NEVER use the website URL as the anchor text.
+    - Always link to the specific article URL, NOT the homepage.
+    - Use ONLY 1-3 descriptive words as anchor text.
+    - Example: [Reuters](https://reuters.com/actual-article-url) reported that...
+    - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+    - Do NOT use generic phrases like \"click here\", \"read more\", or \"this article\" as anchor text.
+    - Anchor text should be relevant keywords from the article topic.
+    - Keep anchor text extremely concise (maximum 2 words).
+    - Make links feel natural within the sentence flow.
+
+    **SOURCE INFORMATION:**
+    Original Title: {$title}
+    Source: {$source}
+    Published: {$published_at}
+    URL: {$source_url}
+
+    **SOURCE CONTENT:**
+    {$full_content}
+
+    **CRITICAL: Return JSON response:**
+    {
+        \"title\": \"Compelling news headline in {$language}\",
+        \"subheadline\": \"Brief subtitle that expands on the headline\",
+        \"content\": \"Complete article in markdown format\"
+    }";
+
+        $model = get_option('atm_article_model', 'openai/gpt-4o');
+        
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $full_content],
+            $system_prompt,
+            $model,
+            true, // JSON mode
+            $enable_web_search // Enable/disable web search based on setting
+        );
+        
+        // Parse JSON response
+        $json_string = trim($raw_response);
+        if (!str_starts_with($json_string, '{')) {
+            if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                $json_string = $matches[0];
+            } else {
+                throw new Exception('The AI returned a non-JSON response. Please try again.');
+            }
+        }
+
+        $result = json_decode($json_string, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+            error_log('ATM SerpApi - Invalid JSON from AI: ' . $json_string);
+            throw new Exception('The AI returned an invalid response structure. Please try again.');
+        }
+
+        $headline = $result['title'] ?? '';
+        $subtitle = $result['subheadline'] ?? $result['subtitle'] ?? '';
+        $content = trim($result['content']);
+
+        if (empty($headline) || empty($content)) {
+            throw new Exception('Generated title or content is empty.');
+        }
+
+        // Convert Markdown to HTML for WordPress
+        if (class_exists('Parsedown')) {
+            $Parsedown = new Parsedown();
+            $content = $Parsedown->text($content);
+        } else {
+            $content = self::basic_markdown_to_html($content);
+        }
+
+        return [
+            'title' => $headline,
+            'content' => $content,
+            'subtitle' => $subtitle
+        ];
+    }
+
+    /**
      * Fetch article content using WordPress built-in functions (free)
      * For automation system only
      */

@@ -38,8 +38,9 @@ const AutoNewsForm = ({ campaignData, setCampaignData, isLoading }) => {
         {/* Changed from atm-grid-2 to atm-grid-3 */}
         <CustomDropdown
           label="News Source"
-          text={campaignData.settings?.news_source || "MediaStack"}
+          text={campaignData.settings?.news_source || "SerpApi Google News"}
           options={[
+            { label: "SerpApi Google News", value: "serpapi" },
             { label: "MediaStack", value: "mediastack" },
             { label: "NewsAPI", value: "newsapi" },
             { label: "GNews", value: "gnews" },
