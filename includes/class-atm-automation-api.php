@@ -28,6 +28,161 @@ if (!defined('ABSPATH')) {
     }
 
 class ATM_Automation_API {
+
+    private static function execute_trending_automation($campaign, $settings) {
+        try {
+            $base_keyword = $campaign->keyword;
+            $region = $settings['trending_region'] ?? 'US';
+            $language = $settings['trending_language'] ?? 'en';
+            $angle_refresh_days = $settings['angle_refresh_days'] ?? 7;
+            $min_trend_score = $settings['min_trend_score'] ?? 0;
+            
+            // 1. Fetch trending topics
+            $trending_result = ATM_API::fetch_trending_topics($base_keyword, $region, $language, 'now 1-d', true);
+            
+            if (empty($trending_result['trends'])) {
+                throw new Exception('No trending topics found for keyword: ' . $base_keyword);
+            }
+            
+            // 2. Smart selection with AI angle detection
+            $selected_topic = self::smart_select_trending_topic(
+                $campaign->id, 
+                $base_keyword, 
+                $trending_result['trends'],
+                $angle_refresh_days,
+                $min_trend_score
+            );
+            
+            if (!$selected_topic) {
+                throw new Exception('No suitable trending topics available for unique content generation');
+            }
+            
+            // 3. Generate article with unique angle
+            $article_result = ATM_API::generate_article_from_trend(
+                $selected_topic['topic'], 
+                $settings, 
+                $language_map[$language] ?? 'English'
+            );
+            
+            // 4. Store the used angle
+            self::store_used_trending_angle(
+                $campaign->id,
+                $base_keyword,
+                $selected_topic['topic']['title'],
+                $article_result['title'],
+                $selected_topic['angle']
+            );
+            
+            return [
+                'success' => true,
+                'article_title' => $article_result['title'],
+                'article_content' => $article_result['content'],
+                'subtitle' => $article_result['subheadline'] ?? '',
+                'trending_keyword' => $selected_topic['topic']['title'],
+                'content_angle' => $selected_topic['angle']
+            ];
+            
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    private static function smart_select_trending_topic($campaign_id, $base_keyword, $trends, $angle_refresh_days, $min_trend_score) {
+        // Filter by minimum score
+        $filtered_trends = array_filter($trends, function($trend) use ($min_trend_score) {
+            return ($trend['traffic_numeric'] ?? 0) >= $min_trend_score;
+        });
+        
+        if (empty($filtered_trends)) {
+            $filtered_trends = array_slice($trends, 0, 5); // Fallback to top 5
+        }
+        
+        // Get recently used angles for this campaign
+        $used_angles = self::get_recent_trending_angles($campaign_id, $base_keyword, $angle_refresh_days);
+        
+        // Use AI to select best topic with unique angle
+        $selection_prompt = "Analyze these trending topics and select the best one for creating a unique article. 
+        
+        Base keyword: {$base_keyword}
+        
+        Available trending topics:
+        " . json_encode(array_slice($filtered_trends, 0, 10), JSON_PRETTY_PRINT) . "
+        
+        Recently used angles to AVOID:
+        " . implode("\n", $used_angles) . "
+        
+        Select the best trending topic and generate a completely unique angle that hasn't been used before.
+        
+        Return JSON with:
+        {
+            \"selected_index\": 0,
+            \"reasoning\": \"Why this topic is best\",
+            \"unique_angle\": \"Specific unique angle for this topic\",
+            \"article_focus\": \"What the article should focus on\"
+        }";
+        
+        $ai_response = ATM_API::enhance_content_with_openrouter(
+            ['content' => $base_keyword],
+            $selection_prompt,
+            'anthropic/claude-3-haiku',
+            true,
+            false
+        );
+        
+        $selection = json_decode($ai_response, true);
+        if (!$selection || !isset($selection['selected_index'])) {
+            // Fallback: select first available topic
+            $selection = [
+                'selected_index' => 0,
+                'unique_angle' => 'Comprehensive analysis of recent developments',
+                'article_focus' => 'Latest updates and implications'
+            ];
+        }
+        
+        $selected_topic = $filtered_trends[$selection['selected_index']] ?? $filtered_trends[0];
+        
+        return [
+            'topic' => $selected_topic,
+            'angle' => $selection['unique_angle'],
+            'focus' => $selection['article_focus'] ?? ''
+        ];
+    }
+
+    private static function store_used_trending_angle($campaign_id, $base_keyword, $trending_keyword, $article_title, $angle) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_used_trending_keywords';
+        
+        $keyword_hash = md5($campaign_id . $base_keyword . $trending_keyword . $angle);
+        
+        $wpdb->insert($table_name, [
+            'campaign_id' => $campaign_id,
+            'base_keyword' => $base_keyword,
+            'trending_keyword' => $trending_keyword,
+            'trending_title' => $article_title,
+            'keyword_hash' => $keyword_hash,
+            'article_angle' => $angle,
+            'used_at' => current_time('mysql')
+        ]);
+    }
+
+    private static function get_recent_trending_angles($campaign_id, $base_keyword, $days) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_used_trending_keywords';
+        
+        if ($days == 0) {
+            return []; // No restrictions
+        }
+        
+        $results = $wpdb->get_results($wpdb->prepare(
+            "SELECT article_angle FROM $table_name 
+            WHERE campaign_id = %d AND base_keyword = %s 
+            AND used_at > DATE_SUB(NOW(), INTERVAL %d DAY)
+            ORDER BY used_at DESC",
+            $campaign_id, $base_keyword, $days
+        ));
+        
+        return array_column($results, 'article_angle');
+    }
     
     /**
      * Execute automation campaign

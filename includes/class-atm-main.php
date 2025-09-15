@@ -9,6 +9,30 @@ class ATM_Main {
     private static $instance = null;
     private static $hooks_initialized = false;
 
+    public static function create_trending_keywords_table() {
+        global $wpdb;
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        $table_name = $wpdb->prefix . 'atm_used_trending_keywords';
+        $sql = "CREATE TABLE $table_name (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            campaign_id mediumint(9) NOT NULL,
+            base_keyword varchar(255) NOT NULL,
+            trending_keyword varchar(255) NOT NULL,
+            trending_title varchar(500) NOT NULL,
+            keyword_hash varchar(32) NOT NULL,
+            used_at datetime DEFAULT CURRENT_TIMESTAMP,
+            article_angle varchar(500) DEFAULT '',
+            PRIMARY KEY (id),
+            KEY campaign_keyword (campaign_id, base_keyword),
+            KEY keyword_hash (keyword_hash),
+            KEY used_at (used_at)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+    }
+    
     public static function verify_automation_tables() {
         global $wpdb;
         
@@ -849,6 +873,7 @@ class ATM_Main {
         self::create_used_articles_table();
         self::create_content_angles_table();
         self::verify_content_angles_table();
+        self::create_trending_keywords_table();
 
         // Create automation tables and schema updates
         if (class_exists('ATM_Automation_Database')) {

@@ -1,11 +1,10 @@
-// src/components/automation/AutoTrendingForm.js (SIMPLIFIED FOR AUTOMATION)
 import { useState, useEffect } from "@wordpress/element";
 import {
   TextControl,
   TextareaControl,
-  DropdownMenu,
+  ToggleControl,
 } from "@wordpress/components";
-import { chevronDown } from "@wordpress/icons";
+import CustomDropdown from "../common/CustomDropdown";
 
 function AutoTrendingForm({
   campaignData,
@@ -15,27 +14,11 @@ function AutoTrendingForm({
   // Local state for dropdown labels
   const [regionLabel, setRegionLabel] = useState("Global");
   const [languageLabel, setLanguageLabel] = useState("English");
-  const [writingStyleLabel, setWritingStyleLabel] = useState("Standard SEO");
-
-  // Custom dropdown component matching manual dashboard
-  const CustomDropdown = ({ label, text, options, onChange, helpText }) => (
-    <div className="atm-dropdown-field">
-      <label className="atm-dropdown-label">{label}</label>
-      <DropdownMenu
-        className="atm-custom-dropdown"
-        icon={chevronDown}
-        text={text}
-        controls={options.map((option) => ({
-          title: option.label,
-          onClick: () => onChange(option),
-        }))}
-        popoverProps={{
-          className: "atm-popover",
-        }}
-      />
-      {helpText && <p className="atm-dropdown-help">{helpText}</p>}
-    </div>
+  const [writingStyleLabel, setWritingStyleLabel] = useState(
+    "Standard / SEO-Optimized"
   );
+  const [creativityLabel, setCreativityLabel] = useState("Creative (Dynamic)");
+  const [wordCountLabel, setWordCountLabel] = useState("Default");
 
   // Options for dropdowns
   const regionOptions = [
@@ -49,6 +32,9 @@ function AutoTrendingForm({
     { label: "India", value: "IN" },
     { label: "Brazil", value: "BR" },
     { label: "Japan", value: "JP" },
+    { label: "South Korea", value: "KR" },
+    { label: "Italy", value: "IT" },
+    { label: "Spain", value: "ES" },
   ];
 
   const languageOptions = [
@@ -58,17 +44,36 @@ function AutoTrendingForm({
     { label: "German", value: "de" },
     { label: "Portuguese", value: "pt" },
     { label: "Italian", value: "it" },
+    { label: "Japanese", value: "ja" },
+    { label: "Korean", value: "ko" },
+    { label: "Chinese", value: "zh" },
   ];
 
-  const styleOptions = atm_studio_data?.writing_styles
-    ? Object.entries(atm_studio_data.writing_styles).map(
-        ([value, { label }]) => ({ label, value })
-      )
-    : [{ label: "Standard SEO", value: "default_seo" }];
+  const styleOptions = [
+    { label: "Standard / SEO-Optimized", value: "default_seo" },
+    { label: "Professional Business", value: "professional" },
+    { label: "Conversational & Friendly", value: "conversational" },
+    { label: "Technical / Expert", value: "technical" },
+    { label: "News / Journalistic", value: "news" },
+    { label: "Educational / Tutorial", value: "educational" },
+  ];
+
+  const wordCountOptions = [
+    { label: "Default", value: "" },
+    { label: "Short (~500 words)", value: "500" },
+    { label: "Medium (~800 words)", value: "800" },
+    { label: "Long (~1200 words)", value: "1200" },
+    { label: "Very Long (~2000 words)", value: "2000" },
+  ];
+
+  const creativityOptions = [
+    { label: "Conservative (Factual)", value: "low" },
+    { label: "Balanced", value: "medium" },
+    { label: "Creative (Dynamic)", value: "high" },
+  ];
 
   // Initialize labels on mount
   useEffect(() => {
-    // Set Region label
     const currentRegion = regionOptions.find(
       (option) =>
         option.value === (campaignData.settings?.trending_region || "")
@@ -77,7 +82,6 @@ function AutoTrendingForm({
       setRegionLabel(currentRegion.label);
     }
 
-    // Set Language label
     const currentLanguage = languageOptions.find(
       (option) =>
         option.value === (campaignData.settings?.trending_language || "en")
@@ -86,7 +90,6 @@ function AutoTrendingForm({
       setLanguageLabel(currentLanguage.label);
     }
 
-    // Set Writing Style label
     const currentStyle = styleOptions.find(
       (option) =>
         option.value === (campaignData.settings?.writing_style || "default_seo")
@@ -94,7 +97,23 @@ function AutoTrendingForm({
     if (currentStyle) {
       setWritingStyleLabel(currentStyle.label);
     }
-  }, [campaignData.settings, regionOptions, languageOptions, styleOptions]);
+
+    const currentWordCount = wordCountOptions.find(
+      (option) =>
+        option.value === (campaignData.settings?.word_count?.toString() || "")
+    );
+    if (currentWordCount) {
+      setWordCountLabel(currentWordCount.label);
+    }
+
+    const currentCreativity = creativityOptions.find(
+      (option) =>
+        option.value === (campaignData.settings?.creativity_level || "high")
+    );
+    if (currentCreativity) {
+      setCreativityLabel(currentCreativity.label);
+    }
+  }, [campaignData.settings]);
 
   // Update campaign data helpers
   const updateSetting = (key, value) => {
@@ -118,22 +137,22 @@ function AutoTrendingForm({
     <div className="atm-form-container">
       {/* Content Configuration Section */}
       <div className="atm-form-section">
-        <h3>Trending Articles Configuration</h3>
+        <h3>Trending Content Configuration</h3>
 
         <TextControl
-          label="Keyword"
-          placeholder="e.g., AI, renewable energy, crypto"
+          label="Base Keyword"
+          placeholder="e.g., artificial intelligence, renewable energy, cryptocurrency"
           value={campaignData.keyword || ""}
           onChange={(value) => updateBasicSetting("keyword", value)}
-          help="Search for trending topics related to this keyword"
+          help="The system will find trending topics related to this keyword and generate unique articles automatically"
         />
 
         <TextControl
           label="Custom Title Template (Optional)"
-          placeholder="Leave empty to use trending titles"
+          placeholder="Leave empty for AI-generated trending titles"
           value={campaignData.article_title || ""}
           onChange={(value) => updateBasicSetting("article_title", value)}
-          help="Optional title template, or let AI generate from trending topics"
+          help="Optional title template. Leave empty to let AI generate titles from trending topics"
         />
 
         {/* Trending Settings Grid */}
@@ -146,7 +165,7 @@ function AutoTrendingForm({
               updateSetting("trending_region", option.value);
               setRegionLabel(option.label);
             }}
-            helpText="Geographic region for trending topics"
+            helpText="Geographic region for trending topics discovery"
           />
 
           <CustomDropdown
@@ -168,17 +187,106 @@ function AutoTrendingForm({
               updateSetting("writing_style", option.value);
               setWritingStyleLabel(option.label);
             }}
+            helpText="Select the tone and style for trending articles"
+          />
+        </div>
+
+        {/* Advanced AI Settings */}
+        <div className="atm-grid-2">
+          <CustomDropdown
+            label="Word Count"
+            text={wordCountLabel}
+            options={wordCountOptions}
+            onChange={(option) => {
+              updateSetting("word_count", parseInt(option.value) || 0);
+              setWordCountLabel(option.label);
+            }}
+            helpText="Target article length for trending content"
+          />
+
+          <CustomDropdown
+            label="Creativity Level"
+            text={creativityLabel}
+            options={creativityOptions}
+            onChange={(option) => {
+              updateSetting("creativity_level", option.value);
+              setCreativityLabel(option.label);
+            }}
+            helpText="Control how creative vs factual the trending content should be"
+          />
+        </div>
+
+        {/* Trending-Specific Options */}
+        <div className="atm-form-section">
+          <h4>Trending Intelligence Settings</h4>
+          <div className="atm-inline-toggles">
+            <ToggleControl
+              label="Smart Angle Detection"
+              checked={campaignData.settings?.smart_angles !== false}
+              onChange={(value) => updateSetting("smart_angles", value)}
+              help="AI automatically finds unique angles for trending topics to avoid duplicate content"
+            />
+            <ToggleControl
+              label="Real-time Trend Monitoring"
+              checked={campaignData.settings?.real_time_trends !== false}
+              onChange={(value) => updateSetting("real_time_trends", value)}
+              help="Check for the latest trending topics at each campaign execution"
+            />
+            <ToggleControl
+              label="Include Breaking News"
+              checked={campaignData.settings?.include_breaking_news || false}
+              onChange={(value) =>
+                updateSetting("include_breaking_news", value)
+              }
+              help="Prioritize breaking news and urgent trending topics when available"
+            />
+          </div>
+        </div>
+
+        {/* Trend Uniqueness Settings */}
+        <div className="atm-form-section">
+          <h4>Content Uniqueness Control</h4>
+
+          <CustomDropdown
+            label="Angle Refresh Period"
+            text={
+              campaignData.settings?.angle_refresh_days
+                ? `${campaignData.settings.angle_refresh_days} days`
+                : "7 days"
+            }
+            options={[
+              { label: "3 days", value: "3" },
+              { label: "7 days", value: "7" },
+              { label: "14 days", value: "14" },
+              { label: "30 days", value: "30" },
+              { label: "No restrictions", value: "0" },
+            ]}
+            onChange={(option) => {
+              updateSetting("angle_refresh_days", parseInt(option.value));
+            }}
+            helpText="How often the same trending topic can be covered from different angles"
+          />
+
+          <TextControl
+            label="Minimum Trend Score"
+            type="number"
+            placeholder="1000"
+            value={campaignData.settings?.min_trend_score || ""}
+            onChange={(value) =>
+              updateSetting("min_trend_score", parseInt(value) || 0)
+            }
+            help="Minimum popularity score for trending topics (higher = more popular trends only)"
           />
         </div>
 
         {/* Custom Instructions */}
         <TextareaControl
-          label="Custom Instructions (Optional)"
-          placeholder="Add specific requirements for trending article generation..."
+          label="Custom Trending Instructions (Optional)"
+          placeholder="Add specific requirements for trending article automation..."
           value={campaignData.settings?.custom_prompt || ""}
           onChange={(value) => updateSetting("custom_prompt", value)}
-          rows={4}
-          help="Additional instructions for trending article automation"
+          rows={5}
+          help="Additional instructions for how to handle trending topics and generate unique content angles"
         />
       </div>
     </div>
