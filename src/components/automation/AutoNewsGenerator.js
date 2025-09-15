@@ -9,6 +9,7 @@ import {
 import CustomDropdown from "../common/CustomDropdown";
 // IMPORT a missing component that was causing the crash
 import AutomationSettingsForm from "./AutomationSettingsForm";
+import AutoNewsForm from "./AutoNewsForm";
 
 // News Search Form (Google News/SerpAPI)
 const NewsSearchForm = ({ campaignData, setCampaignData, isLoading }) => {
@@ -306,73 +307,6 @@ https://feeds.bbci.co.uk/news/rss.xml"
   );
 };
 
-// APIs News Form
-const ApisNewsForm = ({ campaignData, setCampaignData, isLoading }) => {
-  return (
-    <div className="atm-form-section">
-      <h4>News APIs Configuration</h4>
-      <p className="components-base-control__help">
-        Create articles from news API sources like NewsAPI, GNews, etc.
-      </p>
-
-      <div className="atm-grid-2">
-        <TextControl
-          label="Campaign Name"
-          placeholder="e.g., API News Articles"
-          value={campaignData.name}
-          onChange={(value) =>
-            setCampaignData({ ...campaignData, name: value })
-          }
-          disabled={isLoading}
-        />
-
-        <TextControl
-          label="News Topic"
-          placeholder="e.g., technology, business, health"
-          value={campaignData.keyword}
-          onChange={(value) =>
-            setCampaignData({ ...campaignData, keyword: value })
-          }
-          disabled={isLoading}
-        />
-      </div>
-
-      <div className="atm-grid-2">
-        <CustomDropdown
-          label="News Source"
-          text={campaignData.settings?.news_source || "NewsAPI"}
-          options={[
-            { label: "NewsAPI", value: "newsapi" },
-            { label: "GNews", value: "gnews" },
-            { label: "NewsData", value: "newsdata" },
-            { label: "MediaStack", value: "mediastack" },
-          ]}
-          onChange={(option) =>
-            setCampaignData({
-              ...campaignData,
-              settings: { ...campaignData.settings, news_source: option.value },
-            })
-          }
-          disabled={isLoading}
-        />
-
-        <ToggleControl
-          label="Force fresh news"
-          checked={campaignData.settings?.force_fresh || false}
-          onChange={(value) =>
-            setCampaignData({
-              ...campaignData,
-              settings: { ...campaignData.settings, force_fresh: value },
-            })
-          }
-          disabled={isLoading}
-          help="Always fetch latest news instead of using cached results"
-        />
-      </div>
-    </div>
-  );
-};
-
 // Live News Form
 const LiveNewsForm = ({ campaignData, setCampaignData, isLoading }) => {
   return (
@@ -490,6 +424,29 @@ function AutoNewsGenerator({
       news_method: "google_news",
     },
     {
+      id: "apis",
+      title: "Google News", // Changed from "APIs News"
+      description: "Create articles from news APIs",
+      icon: (
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14l2 2v12a2 2 0 01-2 2zM3 4h16M7 8h10M7 12h6"
+          />
+        </svg>
+      ),
+      gradient: "from-emerald-500 to-green-600",
+      news_method: "api_news",
+    },
+    {
       id: "twitter",
       title: "Twitter/X News",
       description: "Generate articles from Twitter sources",
@@ -523,29 +480,6 @@ function AutoNewsGenerator({
       ),
       gradient: "from-orange-500 to-red-600",
       news_method: "rss",
-    },
-    {
-      id: "apis",
-      title: "APIs News",
-      description: "Create articles from news APIs",
-      icon: (
-        <svg
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14l2 2v12a2 2 0 01-2 2zM3 4h16M7 8h10M7 12h6"
-          />
-        </svg>
-      ),
-      gradient: "from-emerald-500 to-green-600",
-      news_method: "api_news",
     },
     {
       id: "live",
@@ -705,7 +639,7 @@ function AutoNewsGenerator({
           />
         )}
         {activeTab === "apis" && (
-          <ApisNewsForm
+          <AutoNewsForm
             campaignData={campaignData}
             setCampaignData={setCampaignData}
             isLoading={isLoading}

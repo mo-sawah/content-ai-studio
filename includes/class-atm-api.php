@@ -340,6 +340,158 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     /**
+     * Fetch article content using WordPress built-in functions (free)
+     * For automation system only
+     */
+    public static function fetch_article_content_wp_builtin($url) {
+        try {
+            // Use WordPress HTTP API
+            $response = wp_remote_get($url, [
+                'timeout' => 30,
+                'user-agent' => 'Mozilla/5.0 (compatible; WordPress/ATM)',
+                'headers' => [
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language' => 'en-US,en;q=0.5',
+                    'Accept-Encoding' => 'gzip, deflate',
+                    'Connection' => 'keep-alive',
+                ]
+            ]);
+            
+            if (is_wp_error($response)) {
+                throw new Exception('HTTP request failed: ' . $response->get_error_message());
+            }
+            
+            $status_code = wp_remote_retrieve_response_code($response);
+            if ($status_code !== 200) {
+                throw new Exception('HTTP error: ' . $status_code);
+            }
+            
+            $html = wp_remote_retrieve_body($response);
+            if (empty($html)) {
+                throw new Exception('Empty response body');
+            }
+            
+            // Create DOM document
+            $dom = new DOMDocument();
+            $dom->preserveWhiteSpace = false;
+            
+            // Suppress warnings for malformed HTML
+            libxml_use_internal_errors(true);
+            $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+            libxml_clear_errors();
+            
+            // Remove unwanted elements
+            $unwanted_tags = ['script', 'style', 'nav', 'header', 'footer', 'aside', 'form', 'iframe', 'noscript'];
+            foreach ($unwanted_tags as $tag) {
+                $elements = $dom->getElementsByTagName($tag);
+                for ($i = $elements->length - 1; $i >= 0; $i--) {
+                    $node = $elements->item($i);
+                    if ($node && $node->parentNode) {
+                        $node->parentNode->removeChild($node);
+                    }
+                }
+            }
+            
+            // Try to find main content areas (in order of preference)
+            $content_selectors = [
+                '//article',
+                '//main',
+                '//*[@class="content" or @class="article-content" or @class="post-content" or @class="entry-content"]',
+                '//*[@id="content" or @id="main-content" or @id="article-content"]',
+                '//div[contains(@class, "content")]',
+                '//p' // Fallback to all paragraphs
+            ];
+            
+            $xpath = new DOMXPath($dom);
+            $content = '';
+            
+            foreach ($content_selectors as $selector) {
+                $nodes = $xpath->query($selector);
+                if ($nodes->length > 0) {
+                    foreach ($nodes as $node) {
+                        $text = self::extract_clean_text($node);
+                        if (strlen($text) > 100) { // Only substantial content
+                            $content .= $text . "\n\n";
+                        }
+                    }
+                    
+                    // If we found substantial content, break
+                    if (strlen($content) > 500) {
+                        break;
+                    }
+                }
+            }
+            
+            // Clean up the content
+            $content = trim($content);
+            $content = preg_replace('/\n{3,}/', "\n\n", $content); // Remove excessive line breaks
+            $content = preg_replace('/[ \t]+/', ' ', $content); // Normalize spaces
+            
+            if (strlen($content) < 100) {
+                throw new Exception('Insufficient content extracted');
+            }
+            
+            error_log("ATM Scraping: Successfully extracted " . strlen($content) . " characters from: " . $url);
+            return $content;
+            
+        } catch (Exception $e) {
+            error_log("ATM Scraping Error for $url: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Extract clean text from DOM node
+     */
+    private static function extract_clean_text($node) {
+        if (!$node) return '';
+        
+        $text = '';
+        
+        if ($node->nodeType === XML_TEXT_NODE) {
+            return trim($node->textContent);
+        }
+        
+        if ($node->nodeType === XML_ELEMENT_NODE) {
+            // Skip unwanted elements even if nested
+            $unwanted = ['script', 'style', 'nav', 'header', 'footer', 'aside', 'form', 'iframe', 'noscript'];
+            if (in_array(strtolower($node->nodeName), $unwanted)) {
+                return '';
+            }
+            
+            foreach ($node->childNodes as $child) {
+                $childText = self::extract_clean_text($child);
+                if (!empty($childText)) {
+                    $text .= $childText . ' ';
+                }
+            }
+        }
+        
+        return trim($text);
+    }
+
+    // Add to ATM_API class
+    private static function basic_markdown_to_html($markdown) {
+        $html = $markdown;
+        
+        // Convert headers
+        $html = preg_replace('/^## (.+)$/m', '<h2>$1</h2>', $html);
+        $html = preg_replace('/^### (.+)$/m', '<h3>$1</h3>', $html);
+        
+        // Convert bold and italic
+        $html = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $html);
+        $html = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $html);
+        
+        // Convert links
+        $html = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2">$1</a>', $html);
+        
+        // Convert to paragraphs
+        $html = wpautop($html);
+        
+        return $html;
+    }
+
+    /**
      * Fetch news from MediaStack API
      */
     public static function fetch_mediastack_news($query, $language = 'en', $country = 'us', $limit = 25) {
@@ -399,40 +551,66 @@ class ATM_API {
     }
 
     /**
-     * Generate article from MediaStack news data
+     * Generate article from MediaStack news data with free scraping
      */
-    public static function generate_article_from_mediastack($article_data, $topic, $language = 'English') {
+    public static function generate_article_from_mediastack($article_data, $topic, $language = 'English', $options = []) {
         $title = $article_data['title'];
         $description = $article_data['description'];
         $source_url = $article_data['url'];
         $source = $article_data['source'];
         $published_at = $article_data['published_at'];
         
-        // Try to fetch full content from URL
+        // Parse options
+        $word_count = $options['word_count'] ?? '800-1000';
+        $enable_web_search = $options['enable_web_search'] ?? true;
+        
+        // Parse word count range
+        $word_range_text = "Aim for {$word_count} words";
+        if (strpos($word_count, '-') !== false) {
+            list($min_words, $max_words) = explode('-', $word_count);
+            $word_range_text = "Write between {$min_words} and {$max_words} words";
+        }
+        
+        // Web search instruction
+        $web_search_instruction = $enable_web_search ? 
+            "**Use your web search ability extensively to verify the information and add any missing context.**" :
+            "Use only the provided source material without web search.";
+        
+        // Try to fetch full content using free WordPress method
         $full_content = '';
         try {
-            $full_content = self::fetch_full_article_content($source_url);
+            error_log("ATM MediaStack: Attempting to scrape content from: " . $source_url);
+            $full_content = self::fetch_article_content_wp_builtin($source_url);
+            error_log("ATM MediaStack: Successfully scraped " . strlen($full_content) . " characters");
         } catch (Exception $e) {
-            error_log('ATM MediaStack: Could not fetch full content, using description: ' . $e->getMessage());
+            error_log('ATM MediaStack: Could not scrape content, using description: ' . $e->getMessage());
             $full_content = $description;
         }
         
-        // Fallback to description if full content is too short
+        // Fallback to description if scraped content is too short
         if (strlen($full_content) < 200) {
+            error_log('ATM MediaStack: Scraped content too short, using description');
             $full_content = $description;
         }
         
-        $system_prompt = "You are a professional news reporter and editor. Using the following source material from MediaStack API, write a clear, engaging, and well-structured news article in {$language}. **Use your web search ability to verify the information and add any missing context.**
+        $system_prompt = "You are a professional news reporter and editor. Using the following source material from MediaStack API, write a clear, engaging, and well-structured news article in {$language}. {$web_search_instruction}
 
     Follow these strict guidelines:
     - **Language**: Write the entire article in {$language}. This is mandatory.
     - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
     - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
-    - **Length**: Aim for 800–1200 words.
+    - **Length**: {$word_range_text}.
     - **Topic Focus**: Ensure the article is relevant to the topic: \"{$topic}\"
     - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
     - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph.
     - Do NOT include final headings like \"Conclusion\", \"Summary\", etc. End naturally with a concluding paragraph.
+
+    **Link Formatting Rules:**
+    - When including external links, NEVER use the website URL as the anchor text
+    - Always link to the specific article URL, NOT the homepage
+    - Use ONLY 1-3 descriptive words as anchor text
+    - Keep anchor text extremely concise (maximum 2 words)
+    - Make links feel natural within the sentence flow
 
     **SOURCE INFORMATION:**
     Original Title: {$title}
@@ -443,20 +621,12 @@ class ATM_API {
     **SOURCE CONTENT:**
     {$full_content}
 
-    **RESEARCH INSTRUCTIONS:**
-    1. Use web search extensively to verify facts and add current context
-    2. Find additional relevant information and background
-    3. Include current statistics, quotes, and expert opinions where appropriate
-    4. Ensure all information is accurate and up-to-date
-
     **CRITICAL: Return JSON response:**
     {
         \"title\": \"Compelling news headline in {$language}\",
         \"subheadline\": \"Brief subtitle that expands on the headline\",
         \"content\": \"Complete article in markdown format\"
-    }
-
-    Use web search to ensure accuracy and comprehensive coverage.";
+    }";
 
         $model = get_option('atm_article_model', 'openai/gpt-4o');
         
@@ -465,7 +635,7 @@ class ATM_API {
             $system_prompt,
             $model,
             true, // JSON mode
-            true  // Enable web search
+            $enable_web_search // Enable/disable web search based on setting
         );
         
         // Parse JSON response
@@ -490,6 +660,14 @@ class ATM_API {
 
         if (empty($headline) || empty($content)) {
             throw new Exception('Generated title or content is empty.');
+        }
+
+        // Convert Markdown to HTML for WordPress
+        if (class_exists('Parsedown')) {
+            $Parsedown = new Parsedown();
+            $content = $Parsedown->text($content);
+        } else {
+            $content = self::basic_markdown_to_html($content);
         }
 
         return [

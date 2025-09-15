@@ -1681,6 +1681,7 @@ Use web search to ensure all information is current and accurate, then return th
         try {
             $keyword = $campaign->keyword;
             $article_language = $settings['article_language'] ?? 'English';
+            $force_fresh = $settings['force_fresh'] ?? false;
             
             // Get MediaStack language and country codes
             $language_code = self::get_mediastack_language_code($article_language);
@@ -1688,11 +1689,27 @@ Use web search to ensure all information is current and accurate, then return th
             
             error_log("ATM MediaStack Automation: Fetching news for: {$keyword}");
             
-            // Fetch news from MediaStack API
-            $articles = ATM_API::fetch_mediastack_news($keyword, $language_code, $country_code, 25);
+            // Check cache first unless force_fresh is enabled
+            $cache_key = "mediastack_news_" . md5($keyword . $language_code . $country_code);
+            $articles = [];
+            
+            if (!$force_fresh) {
+                $articles = get_transient($cache_key);
+            }
             
             if (empty($articles)) {
-                throw new Exception('No articles found from MediaStack for: ' . $keyword);
+                // Fetch fresh news from MediaStack API
+                $articles = ATM_API::fetch_mediastack_news($keyword, $language_code, $country_code, 25);
+                
+                if (empty($articles)) {
+                    throw new Exception('No articles found from MediaStack for: ' . $keyword);
+                }
+                
+                // Cache for 6 hours (21600 seconds)
+                set_transient($cache_key, $articles, 6 * HOUR_IN_SECONDS);
+                error_log("ATM MediaStack: Cached " . count($articles) . " articles for 6 hours");
+            } else {
+                error_log("ATM MediaStack: Using cached articles (" . count($articles) . " articles)");
             }
             
             // Filter out already used articles
@@ -1709,11 +1726,17 @@ Use web search to ensure all information is current and accurate, then return th
             
             error_log("ATM MediaStack: Selected article: " . $selected_article['title']);
             
-            // Generate content from MediaStack article
+            // Generate content from MediaStack article with options
+            $generation_options = [
+                'word_count' => $settings['word_count'] ?? '800-1000',
+                'enable_web_search' => $settings['enable_web_search'] ?? true
+            ];
+            
             $content_result = ATM_API::generate_article_from_mediastack(
                 $selected_article, 
                 $keyword, 
-                $article_language
+                $article_language,
+                $generation_options
             );
             
             // Convert to expected format
@@ -1736,6 +1759,17 @@ Use web search to ensure all information is current and accurate, then return th
             $post_result = ATM_News_Generation_Service::create_post_from_news($formatted_result, $post_params);
             
             if ($post_result['success']) {
+
+                if ($settings['generate_image'] ?? false) {
+                    try {
+                        $image_result = ATM_API::generate_featured_image($post_result['post_id'], '');
+                        if (!$image_result['success']) {
+                            error_log("ATM MediaStack: Image generation failed: " . $image_result['message']);
+                        }
+                    } catch (Exception $e) {
+                        error_log("ATM MediaStack: Image generation error: " . $e->getMessage());
+                    }
+                }
                 // Mark article as used
                 self::mark_news_article_as_used_for_campaign(
                     $selected_article['url'], 
