@@ -142,41 +142,46 @@ class ATM_Automation_Ajax {
             $campaigns_table = $wpdb->prefix . 'atm_automation_campaigns';
             $executions_table = $wpdb->prefix . 'atm_automation_executions';
             
-            // First get all campaigns
-            $campaigns = $wpdb->get_results("SELECT * FROM $campaigns_table ORDER BY created_at DESC");
+            // Get campaigns with execution stats
+            $campaigns = $wpdb->get_results("
+                SELECT 
+                    c.*,
+                    COALESCE(e.total_executions, 0) as total_executions,
+                    COALESCE(e.successful_executions, 0) as successful_executions,
+                    COALESCE(e.failed_executions, 0) as failed_executions,
+                    le.executed_at as last_execution,
+                    le.status as last_status,
+                    le.post_id as last_post_id
+                FROM {$campaigns_table} c
+                LEFT JOIN (
+                    SELECT 
+                        campaign_id,
+                        COUNT(*) as total_executions,
+                        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as successful_executions,
+                        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_executions
+                    FROM {$executions_table}
+                    GROUP BY campaign_id
+                ) e ON c.id = e.campaign_id
+                LEFT JOIN {$executions_table} le ON c.id = le.campaign_id 
+                    AND le.id = (
+                        SELECT MAX(id) 
+                        FROM {$executions_table} 
+                        WHERE campaign_id = c.id
+                    )
+                ORDER BY c.created_at DESC
+            ");
             
-            // Then get execution stats for each campaign
+            // Process each campaign and convert to proper types
             foreach ($campaigns as &$campaign) {
-                $campaign_id = $campaign->id;
+                // Convert strings to integers
+                $campaign->total_executions = intval($campaign->total_executions);
+                $campaign->successful_executions = intval($campaign->successful_executions);
+                $campaign->failed_executions = intval($campaign->failed_executions);
                 
-                // Get total executions for this campaign
-                $total_executions = $wpdb->get_var($wpdb->prepare(
-                    "SELECT COUNT(*) FROM $executions_table WHERE campaign_id = %d",
-                    $campaign_id
-                ));
-                
-                // Get successful executions for this campaign  
-                $successful_executions = $wpdb->get_var($wpdb->prepare(
-                    "SELECT COUNT(*) FROM $executions_table WHERE campaign_id = %d AND status = 'completed'",
-                    $campaign_id
-                ));
-                
-                // Get last execution
-                $last_execution = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM $executions_table WHERE campaign_id = %d ORDER BY executed_at DESC LIMIT 1",
-                    $campaign_id
-                ));
-                
-                // Add stats to campaign object
-                $campaign->total_executions = intval($total_executions);
-                $campaign->successful_executions = intval($successful_executions);
-                $campaign->failed_executions = intval($total_executions) - intval($successful_executions);
-                $campaign->last_execution = $last_execution ? $last_execution->executed_at : null;
-                $campaign->last_status = $last_execution ? $last_execution->status : null;
-                $campaign->last_post_id = $last_execution ? $last_execution->post_id : null;
-                
-                // Parse settings JSON and add metadata
+                // Parse settings JSON
                 $campaign->settings = json_decode($campaign->settings, true) ?: [];
+                
+                // Format dates
                 $campaign->next_run_formatted = $campaign->next_run ? 
                     wp_date('M j, Y g:i A', strtotime($campaign->next_run)) : 'Not scheduled';
                 $campaign->last_execution_formatted = $campaign->last_execution ?

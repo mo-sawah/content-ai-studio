@@ -315,19 +315,22 @@ const CampaignCard = ({
           <div className="atm-stats-grid">
             <div className="atm-stat-item">
               <span className="atm-stat-value">
-                {parseInt(campaign.successful_executions) || 0}
+                {parseInt(campaign.successful_executions) ||
+                  parseInt(campaign.total_executions) ||
+                  0}
               </span>
               <span className="atm-stat-label">Posts</span>
             </div>
             <div className="atm-stat-item">
               <span className="atm-stat-value">
-                {campaign.total_executions > 0
-                  ? Math.round(
-                      (campaign.successful_executions /
-                        campaign.total_executions) *
-                        100
-                    )
-                  : 0}
+                {(() => {
+                  const total = parseInt(campaign.total_executions) || 0;
+                  const successful =
+                    parseInt(campaign.successful_executions) ||
+                    parseInt(campaign.total_executions) ||
+                    0;
+                  return total > 0 ? Math.round((successful / total) * 100) : 0;
+                })()}
                 %
               </span>
               <span className="atm-stat-label">Success</span>
