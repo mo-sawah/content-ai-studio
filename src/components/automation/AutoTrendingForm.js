@@ -213,7 +213,7 @@ function AutoTrendingForm({
           />
         </div>
 
-        {/* Word Count and Web Search */}
+        {/* Word Count - Web Search Always Enabled */}
         <div className="atm-grid-2">
           <CustomDropdown
             label="Word Count"
@@ -225,15 +225,6 @@ function AutoTrendingForm({
             }}
             helpText="Target article length for trending content"
           />
-
-          <div className="atm-dropdown-field">
-            <label className="atm-dropdown-label">Web Search</label>
-            <ToggleControl
-              checked={campaignData.settings?.enable_web_search !== false}
-              onChange={(value) => updateSetting("enable_web_search", value)}
-              help="Enable web search for current and accurate information"
-            />
-          </div>
         </div>
 
         {/* Trending Settings Grid */}

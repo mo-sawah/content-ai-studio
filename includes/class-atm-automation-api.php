@@ -154,6 +154,10 @@ class ATM_Automation_API {
         ];
     }
 
+    /**
+     * Enhanced execute_trending_automation method for class-atm-automation-api.php
+     * Replace the existing execute_trending_automation method with this one
+     */
     private static function execute_trending_automation($campaign, $settings) {
         try {
             $base_keyword = $campaign->keyword;
@@ -198,7 +202,9 @@ class ATM_Automation_API {
             }
             
             // Use real-time trends setting and breaking news priority
-            $time_range = $include_breaking_news ? 'now 4-h' : 'now 1-d';
+            $time_range = $include_breaking_news ? 'now 1-d' : 'now 7-d'; // Use SerpApi compatible formats
+            error_log("ATM Trending: Using time range: {$time_range} for trending topics");
+            
             $trending_result = ATM_API::fetch_trending_topics($base_keyword, $region, $language, $time_range, $real_time_trends);
             
             if (empty($trending_result['trends'])) {
@@ -330,6 +336,9 @@ class ATM_Automation_API {
         }
     }
 
+    /**
+     * Enhanced smart_select_trending_topic method
+     */
     private static function smart_select_trending_topic($campaign_id, $base_keyword, $trends, $angle_refresh_days, $min_trend_score, $smart_angles = true, $include_breaking_news = false) {
         // Filter by minimum score
         $filtered_trends = array_filter($trends, function($trend) use ($min_trend_score) {
