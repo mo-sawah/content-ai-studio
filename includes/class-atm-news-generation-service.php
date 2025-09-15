@@ -12,6 +12,59 @@ if (!defined('ABSPATH')) {
 }
 
 class ATM_News_Generation_Service {
+
+    /**
+     * Generate article from MediaStack API
+     */
+    public static function generate_from_mediastack($params) {
+        try {
+            $topic = sanitize_text_field($params['topic'] ?? '');
+            $language = sanitize_text_field($params['language'] ?? 'en');
+            $country = sanitize_text_field($params['country'] ?? 'us');
+            $article_language = sanitize_text_field($params['article_language'] ?? 'English');
+            $post_id = intval($params['post_id'] ?? 0);
+            
+            if (empty($topic)) {
+                throw new Exception('Topic is required for MediaStack news generation.');
+            }
+            
+            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'fetch_mediastack_news')) {
+                throw new Exception('ATM_API MediaStack methods not available');
+            }
+            
+            // Fetch news from MediaStack
+            $articles = ATM_API::fetch_mediastack_news($topic, $language, $country, 25);
+            
+            if (empty($articles)) {
+                throw new Exception('No articles found from MediaStack for topic: ' . $topic);
+            }
+            
+            // Select first article (you could add selection logic here)
+            $selected_article = $articles[0];
+            
+            // Generate content
+            $result = ATM_API::generate_article_from_mediastack($selected_article, $topic, $article_language);
+            
+            // Save subtitle if post exists
+            if ($post_id > 0 && !empty($result['subtitle'])) {
+                update_post_meta($post_id, '_bunyad_sub_title', $result['subtitle']);
+                update_post_meta($post_id, '_atm_subtitle', $result['subtitle']);
+            }
+            
+            return [
+                'success' => true,
+                'article_title' => $result['title'],
+                'article_content' => $result['content'],
+                'subtitle' => $result['subtitle']
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
     
     /**
      * Generate article from Google News search

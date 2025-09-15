@@ -1655,27 +1655,47 @@ Use web search to ensure all information is current and accurate, then return th
      */
     private static function execute_api_news_automation($campaign, $settings) {
         try {
-            // Generate news article using unified service
-            $generation_params = [
+            $news_source = $settings['news_source'] ?? 'newsapi';
+            
+            switch ($news_source) {
+                case 'mediastack':
+                    return self::execute_mediastack_automation($campaign, $settings);
+                case 'newsapi':
+                case 'gnews':
+                case 'newsdata':
+                default:
+                    // Your existing API news automation
+                    return self::execute_existing_api_news_automation($campaign, $settings);
+            }
+            
+        } catch (Exception $e) {
+            error_log('ATM API News Automation Error: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    private static function execute_mediastack_automation($campaign, $settings) {
+        try {
+            $params = [
                 'topic' => $campaign->keyword,
-                'model' => $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o'),
-                'force_fresh' => true,
-                'news_source' => $settings['news_source'] ?? 'newsapi',
+                'language' => self::get_mediastack_language_code($settings['article_language'] ?? 'English'),
+                'country' => self::get_mediastack_country_code($settings['countries'][0] ?? 'United States'),
+                'article_language' => $settings['article_language'] ?? 'English',
                 'post_id' => 0,
                 'is_automation' => true
             ];
             
-            $content_result = ATM_News_Generation_Service::generate_news_article($generation_params);
+            $content_result = ATM_News_Generation_Service::generate_from_mediastack($params);
             
             if (!$content_result['success']) {
                 throw new Exception($content_result['message']);
             }
             
-            // Create post using unified service
+            // Create post
             $post_params = [
                 'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
                 'post_author' => $campaign->author_id,
-                'post_category' => $campaign->category_id ? [$campaign->category_id] : [],
+                'post_category' => self::get_campaign_category_ids($campaign),
                 'campaign_id' => $campaign->id,
                 'generate_image' => $settings['generate_image'] ?? false
             ];
@@ -1683,16 +1703,51 @@ Use web search to ensure all information is current and accurate, then return th
             $post_result = ATM_News_Generation_Service::create_post_from_news($content_result, $post_params);
             
             if ($post_result['success']) {
-                error_log("ATM Automation: Successfully created API News post ID {$post_result['post_id']} for campaign '{$campaign->name}'");
+                error_log("ATM Automation: Successfully created MediaStack post ID {$post_result['post_id']}");
                 return $post_result;
             } else {
                 throw new Exception($post_result['message']);
             }
             
         } catch (Exception $e) {
-            error_log('ATM Automation API News Error: ' . $e->getMessage());
+            error_log('ATM MediaStack Automation Error: ' . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    // Helper methods for MediaStack country/language codes
+    private static function get_mediastack_language_code($language) {
+        $language_map = [
+            'English' => 'en',
+            'Spanish' => 'es',
+            'French' => 'fr',
+            'German' => 'de',
+            'Italian' => 'it',
+            'Portuguese' => 'pt',
+            'Russian' => 'ru',
+            'Chinese' => 'zh',
+            'Japanese' => 'ja',
+            'Arabic' => 'ar'
+        ];
+        
+        return $language_map[$language] ?? 'en';
+    }
+
+    private static function get_mediastack_country_code($country) {
+        $country_map = [
+            'United States' => 'us',
+            'United Kingdom' => 'gb',
+            'Canada' => 'ca',
+            'Australia' => 'au',
+            'Germany' => 'de',
+            'France' => 'fr',
+            'Italy' => 'it',
+            'Spain' => 'es',
+            'Japan' => 'jp',
+            'China' => 'cn'
+        ];
+        
+        return $country_map[$country] ?? 'us';
     }
 
     /**

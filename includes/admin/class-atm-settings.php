@@ -7,6 +7,14 @@ if (!defined('ABSPATH')) {
 
 class ATM_Settings {
 
+    
+
+    public function mediastack_api_key_callback() {
+        $value = get_option('atm_mediastack_api_key', '');
+        echo '<input type="password" name="atm_mediastack_api_key" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo '<p class="description">Get your free API key from <a href="https://mediastack.com" target="_blank">MediaStack</a></p>';
+    }
+
     public function __construct() {
         add_action('admin_init', array($this, 'add_humanization_tab'));
     }
@@ -660,6 +668,7 @@ private function render_api_tab() {
                 <tr><th scope="row">Google Custom Search Engine ID</th><td><input type="text" name="atm_google_news_cse_id" value="<?php echo esc_attr($options['google_news_cse_id']); ?>" class="regular-text" /><p class="description">Create a Custom Search Engine at <a href="https://cse.google.com/" target="_blank">Google CSE</a> configured for news sites.</p></td></tr>
                 <tr><th scope="row">ScrapingAnt API Key</th><td><input type="password" name="atm_scrapingant_api_key" value="<?php echo esc_attr($options['scrapingant_key']); ?>" class="regular-text" /><p class="description">Required for RSS scraping. Get a free key from <a href="https://scrapingant.com/" target="_blank">ScrapingAnt.com</a>.</p></td></tr>
                 <tr><th scope="row">Mercury Reader API Key (Optional)</th><td><input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p></td></tr>
+                <tr><th scope="row">MediaStack API Key</th><td><input type="password" name="atm_mediastack_api_key" value="<?php echo esc_attr($options['mediastack_api_key']); ?>" class="regular-text" /><p class="description">Get your free API key from <a href="https://mediastack.com" target="_blank">MediaStack</a>. Free plan includes 1,000 requests/month.</p></td></tr>
                 <tr><th scope="row">TwitterAPI.io Key</th><td><input type="password" name="atm_twitterapi_key" value="<?php echo esc_attr($options['twitterapi_key']); ?>" class="regular-text" /><p class="description">Required for Twitter/X news search. Get a free key from <a href="https://twitterapi.io/" target="_blank">TwitterAPI.io</a>.</p></td></tr>
                 <tr>
                     <th scope="row">SerpApi Key</th>
@@ -842,6 +851,10 @@ private function render_advanced_tab() {
             update_option('atm_google_trending_cse_id', sanitize_text_field($_POST['atm_google_trending_cse_id']));
         }
 
+        if (isset($_POST['atm_mediastack_api_key'])) {
+            update_option('atm_mediastack_api_key', sanitize_text_field($_POST['atm_mediastack_api_key']));
+        }
+
         // Nano Banana backend selector
         if (isset($_POST['atm_nanobanana_backend'])) {
             $backend = $_POST['atm_nanobanana_backend'] === 'vertex' ? 'vertex' : 'gemini';
@@ -994,6 +1007,9 @@ private function render_advanced_tab() {
         if (isset($_POST['atm_comments_randomize_window_days'])) {
             update_option('atm_comments_randomize_window_days', max(1, min(30, intval($_POST['atm_comments_randomize_window_days']))));
         }
+        if (isset($_POST['atm_mediastack_api_key'])) {
+            update_option('atm_mediastack_api_key', sanitize_text_field($_POST['atm_mediastack_api_key']));
+        }
 
         echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
     }
@@ -1009,6 +1025,7 @@ private function render_advanced_tab() {
             'news_api_key'     => get_option('atm_news_api_key', ''),
             'gnews_api_key'    => get_option('atm_gnews_api_key', ''),
             'guardian_api_key' => get_option('atm_guardian_api_key', ''),
+            'mediastack_api_key' => get_option('atm_mediastack_api_key', ''),
             'scrapingant_key'  => get_option('atm_scrapingant_api_key', ''),
             'google_youtube_key' => get_option('atm_google_youtube_api_key', ''),
             'google_news_search_api_key' => get_option('atm_google_news_search_api_key', ''),

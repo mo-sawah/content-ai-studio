@@ -339,6 +339,166 @@ class ATM_RSS_Parser {
 
 class ATM_API {
 
+    /**
+     * Fetch news from MediaStack API
+     */
+    public static function fetch_mediastack_news($query, $language = 'en', $country = 'us', $limit = 25) {
+        $api_key = get_option('atm_mediastack_api_key');
+        
+        if (empty($api_key)) {
+            throw new Exception('MediaStack API key not configured. Please add your API key in settings.');
+        }
+        
+        $url = 'http://api.mediastack.com/v1/news';
+        
+        $params = [
+            'access_key' => $api_key,
+            'keywords' => $query,
+            'languages' => $language,
+            'countries' => $country,
+            'limit' => min($limit, 100), // MediaStack max is 100
+            'sort' => 'published_desc'
+        ];
+        
+        $request_url = add_query_arg($params, $url);
+        
+        $response = wp_remote_get($request_url, [
+            'timeout' => 30,
+            'user-agent' => 'WordPress/ATM-Plugin'
+        ]);
+        
+        if (is_wp_error($response)) {
+            throw new Exception('MediaStack API request failed: ' . $response->get_error_message());
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        if (isset($data['error'])) {
+            throw new Exception('MediaStack API error: ' . $data['error']['message']);
+        }
+        
+        $articles = [];
+        if (isset($data['data']) && is_array($data['data'])) {
+            foreach ($data['data'] as $item) {
+                $articles[] = [
+                    'title' => $item['title'] ?? '',
+                    'description' => $item['description'] ?? '',
+                    'url' => $item['url'] ?? '',
+                    'source' => $item['source'] ?? '',
+                    'published_at' => $item['published_at'] ?? '',
+                    'image' => $item['image'] ?? '',
+                    'category' => $item['category'] ?? 'general',
+                    'country' => $item['country'] ?? '',
+                    'language' => $item['language'] ?? ''
+                ];
+            }
+        }
+        
+        return $articles;
+    }
+
+    /**
+     * Generate article from MediaStack news data
+     */
+    public static function generate_article_from_mediastack($article_data, $topic, $language = 'English') {
+        $title = $article_data['title'];
+        $description = $article_data['description'];
+        $source_url = $article_data['url'];
+        $source = $article_data['source'];
+        $published_at = $article_data['published_at'];
+        
+        // Try to fetch full content from URL
+        $full_content = '';
+        try {
+            $full_content = self::fetch_full_article_content($source_url);
+        } catch (Exception $e) {
+            error_log('ATM MediaStack: Could not fetch full content, using description: ' . $e->getMessage());
+            $full_content = $description;
+        }
+        
+        // Fallback to description if full content is too short
+        if (strlen($full_content) < 200) {
+            $full_content = $description;
+        }
+        
+        $system_prompt = "You are a professional news reporter and editor. Using the following source material from MediaStack API, write a clear, engaging, and well-structured news article in {$language}. **Use your web search ability to verify the information and add any missing context.**
+
+    Follow these strict guidelines:
+    - **Language**: Write the entire article in {$language}. This is mandatory.
+    - **Style**: Adopt a professional journalistic tone. Be objective, fact-based, and write like a human.
+    - **Originality**: Do not copy verbatim from the source. You must rewrite, summarize, and humanize the content.
+    - **Length**: Aim for 800–1200 words.
+    - **Topic Focus**: Ensure the article is relevant to the topic: \"{$topic}\"
+    - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+    - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph.
+    - Do NOT include final headings like \"Conclusion\", \"Summary\", etc. End naturally with a concluding paragraph.
+
+    **SOURCE INFORMATION:**
+    Original Title: {$title}
+    Source: {$source}
+    Published: {$published_at}
+    URL: {$source_url}
+
+    **SOURCE CONTENT:**
+    {$full_content}
+
+    **RESEARCH INSTRUCTIONS:**
+    1. Use web search extensively to verify facts and add current context
+    2. Find additional relevant information and background
+    3. Include current statistics, quotes, and expert opinions where appropriate
+    4. Ensure all information is accurate and up-to-date
+
+    **CRITICAL: Return JSON response:**
+    {
+        \"title\": \"Compelling news headline in {$language}\",
+        \"subheadline\": \"Brief subtitle that expands on the headline\",
+        \"content\": \"Complete article in markdown format\"
+    }
+
+    Use web search to ensure accuracy and comprehensive coverage.";
+
+        $model = get_option('atm_article_model', 'openai/gpt-4o');
+        
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $full_content],
+            $system_prompt,
+            $model,
+            true, // JSON mode
+            true  // Enable web search
+        );
+        
+        // Parse JSON response
+        $json_string = trim($raw_response);
+        if (!str_starts_with($json_string, '{')) {
+            if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                $json_string = $matches[0];
+            } else {
+                throw new Exception('The AI returned a non-JSON response. Please try again.');
+            }
+        }
+
+        $result = json_decode($json_string, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+            error_log('ATM MediaStack - Invalid JSON from AI: ' . $json_string);
+            throw new Exception('The AI returned an invalid response structure. Please try again.');
+        }
+
+        $headline = $result['title'] ?? '';
+        $subtitle = $result['subheadline'] ?? $result['subtitle'] ?? '';
+        $content = trim($result['content']);
+
+        if (empty($headline) || empty($content)) {
+            throw new Exception('Generated title or content is empty.');
+        }
+
+        return [
+            'title' => $headline,
+            'content' => $content,
+            'subtitle' => $subtitle
+        ];
+    }
+
     // Add this new method to your ATM_API class:
     public static function generate_article_from_trend_automation($topic, $settings, $language = 'English') {
         $writing_style = esc_html($settings['writing_style'] ?? 'professional journalistic');
