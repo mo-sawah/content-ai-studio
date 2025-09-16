@@ -3796,29 +3796,28 @@ Generate ONLY the script dialogue, no stage directions.";
             throw new Exception('getimg.ai API key is not configured.');
         }
 
-        // Use the actual model identifier from your dashboard NAME column
-        // Let's try realvisxl-v40 for photorealistic images
-        $model = !empty($model_override) ? $model_override : 'realvisxl-v40';
+        // Use a valid default model (adjust to any supported model for your plan)
+        $model = !empty($model_override) ? $model_override : 'FLUX.1 [dev]';
         
-        // Fixed dimensions - always use 1024x1024 (1:1 square format)  
+        // Fixed dimensions - use 1024x1024 as safe default
         $width = 1024;
         $height = 1024;
 
         $endpoint = 'https://api.getimg.ai/v1/stable-diffusion/text-to-image';
-        
-        // Build the body array with fixed integer dimensions
+
+        // Build the request body
         $body = [
-            'model' => $model,
-            'prompt' => self::enhance_image_prompt($prompt),
+            'model'           => $model,
+            'prompt'          => self::enhance_image_prompt($prompt),
             'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
-            'width' => $width,
-            'height' => $height,
-            'steps' => 30,
-            'guidance' => 7.5,
-            'output_format' => 'jpeg'
+            'width'           => $width,
+            'height'          => $height,
+            'steps'           => 30,
+            'guidance'        => 7.5,
+            'output_format'   => 'jpeg'
         ];
 
-        // Debug log to verify the request
+        // Debug log for troubleshooting
         error_log('getimg.ai API request: width=' . $width . ', height=' . $height . ', model=' . $model);
 
         $response = wp_remote_post($endpoint, [
@@ -3836,24 +3835,21 @@ Generate ONLY the script dialogue, no stage directions.";
         }
 
         $response_code = wp_remote_retrieve_response_code($response);
-        $raw_body  = wp_remote_retrieve_body($response);
-        
+        $raw_body      = wp_remote_retrieve_body($response);
+
         if ($response_code !== 200) {
             $error_data = json_decode($raw_body, true);
-            $final_error_message = $raw_body; // Default to the full response body as a fallback.
+            $final_error_message = $raw_body; // fallback if nothing else available
 
-            // Check if the decoded JSON has an 'error' key.
             if (is_array($error_data) && isset($error_data['error'])) {
-                // Check if the 'error' value is an array with a 'message' key inside it.
                 if (is_array($error_data['error']) && isset($error_data['error']['message'])) {
                     $final_error_message = $error_data['error']['message'];
-                }
-                // Check if the 'error' value is just a simple string.
-                elseif (is_string($error_data['error'])) {
+                } elseif (is_string($error_data['error'])) {
                     $final_error_message = $error_data['error'];
                 }
             }
-            
+
+            error_log('getimg.ai API error response: ' . $raw_body);
             throw new Exception('getimg.ai API Error: ' . $final_error_message);
         }
 
@@ -3869,6 +3865,7 @@ Generate ONLY the script dialogue, no stage directions.";
 
         return $image_data;
     }
+
 
 public static function generate_chart_config_from_prompt($prompt) {
         $system_prompt = "You are an expert data visualization assistant specializing in Apache ECharts. Your task is to generate a valid ECharts JSON configuration object based on the user's request.
