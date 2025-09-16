@@ -480,6 +480,10 @@ function AutoNewsGenerator({
       generate_image: false,
       news_method: "google_news",
       category_ids: [],
+      rss_urls: "", // Add this explicitly
+      use_full_content: false, // Add this too
+      enable_web_search: true, // Add this too
+      skip_duplicates: true, // Add this too
     },
     schedule_value: 1,
     schedule_unit: "hour",

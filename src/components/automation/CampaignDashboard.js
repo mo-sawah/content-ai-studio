@@ -309,7 +309,13 @@ const CampaignCard = ({
         {/* Campaign Info */}
         <div className="atm-card-content">
           <h3 className="atm-campaign-title">{campaign.name}</h3>
-          <p className="atm-campaign-keyword">{campaign.keyword}</p>
+          <p
+            className={`atm-campaign-keyword ${!campaign.keyword || !campaign.keyword.trim() ? "atm-keyword-unset" : ""}`}
+          >
+            {campaign.keyword && campaign.keyword.trim()
+              ? campaign.keyword
+              : "unset"}
+          </p>
 
           {/* Quick Stats Grid */}
           <div className="atm-stats-grid">
