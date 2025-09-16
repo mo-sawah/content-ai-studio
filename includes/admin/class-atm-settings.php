@@ -1128,21 +1128,21 @@ private function render_advanced_tab() {
             ],
             'getimg_models' => [
                 // --- Photorealistic Models ---
-                'realistic-vision-v6.0' => 'Photo: Realistic Vision v6.0',
-                'realism-engine-sdxl' => 'Photo: Realism Engine SDXL',
-                'epic-realism-v5' => 'Photo: Epic Realism v5',
+                'realistic-vision-v6-0-b1' => 'Photo: Realistic Vision v6.0',
+                'realism-engine-sdxl-v1-0' => 'Photo: Realism Engine SDXL',
+                'epicrealism-v5' => 'Photo: Epic Realism v5',
 
                 // --- Artistic & Illustrative Models ---
-                'dreamshaper-xl-v2' => 'Art: Dreamshaper XL v2',
+                'dreamshaper-xl-v2-turbo' => 'Art: Dreamshaper XL v2',
                 'icbinp-seco' => 'Art: ICBINP (I Can\'t Believe It\'s Not Photography)',
                 'openjourney-v4' => 'Art: OpenJourney v4 (MidJourney Style)',
 
                 // --- Anime & Animation Models ---
-                'anything-v5' => 'Anime: Anything v5',
-                'counterfeit-v3.0' => 'Anime: Counterfeit v3.0',
+                'anything-v5-preat' => 'Anime: Anything v5',
+                'counterfeit-v3-0' => 'Anime: Counterfeit v3.0',
 
                 // --- General Purpose / All-Rounder ---
-                'stable-diffusion-xl-v1-0' => 'General: Stable Diffusion XL 1.0',
+                'stable-diffusion-xl-base-1-0' => 'General: Stable Diffusion XL 1.0',
             ],
             'article_models'   => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',

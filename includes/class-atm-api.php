@@ -3800,11 +3800,20 @@ Generate ONLY the script dialogue, no stage directions.";
         $size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1024x1024');
 
         // Parse width and height from the size string
-        list($width_str, $height_str) = explode('x', $size);
+        $size_parts = explode('x', $size);
 
-        // **Explicitly cast to integers to fix the API error**
-        $width = intval(trim($width_str));
-        $height = intval(trim($height_str));
+        if (count($size_parts) !== 2) {
+            throw new Exception('Invalid image size format. Expected format like "1024x1024".');
+        }
+
+        // Explicitly cast to integers to fix the API error
+        $width = intval(trim($size_parts[0]));
+        $height = intval(trim($size_parts[1]));
+
+        // Verify that casting was successful and dimensions are valid
+        if ($width <= 0 || $height <= 0) {
+            throw new Exception('Image width and height must be valid positive numbers.');
+        }
 
         // Ensure dimensions are multiples of 64
         if ($width % 64 !== 0 || $height % 64 !== 0) {
