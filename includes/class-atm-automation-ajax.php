@@ -574,6 +574,42 @@ class ATM_Automation_Ajax {
             $sanitized['audio_provider'] = sanitize_text_field($settings['audio_provider']);
         }
         
+        // 🔥 ADD HUMANIZATION SETTINGS HERE
+        if (isset($settings['humanization'])) {
+            $humanization = $settings['humanization'];
+            $sanitized_humanization = [];
+            
+            if (isset($humanization['enabled'])) {
+                $sanitized_humanization['enabled'] = (bool)$humanization['enabled'];
+            }
+            if (isset($humanization['provider'])) {
+                $sanitized_humanization['provider'] = sanitize_text_field($humanization['provider']);
+            }
+            if (isset($humanization['mode'])) {
+                $sanitized_humanization['mode'] = sanitize_text_field($humanization['mode']);
+            }
+            if (isset($humanization['tone'])) {
+                $sanitized_humanization['tone'] = sanitize_text_field($humanization['tone']);
+            }
+            if (isset($humanization['openrouter_model'])) {
+                $sanitized_humanization['openrouter_model'] = sanitize_text_field($humanization['openrouter_model']);
+            }
+            if (isset($humanization['business_mode'])) {
+                $sanitized_humanization['business_mode'] = (bool)$humanization['business_mode'];
+            }
+            if (isset($humanization['preserve_formatting'])) {
+                $sanitized_humanization['preserve_formatting'] = (bool)$humanization['preserve_formatting'];
+            }
+            if (isset($humanization['retry_on_detection'])) {
+                $sanitized_humanization['retry_on_detection'] = (bool)$humanization['retry_on_detection'];
+            }
+            if (isset($humanization['fallback_to_draft'])) {
+                $sanitized_humanization['fallback_to_draft'] = (bool)$humanization['fallback_to_draft'];
+            }
+            
+            $sanitized['humanization'] = $sanitized_humanization;
+        }
+        
         return $sanitized;
     }
     

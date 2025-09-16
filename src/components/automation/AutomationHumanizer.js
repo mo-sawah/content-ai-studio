@@ -84,7 +84,10 @@ const AutomationHumanizer = ({ campaignData, setCampaignData, isLoading }) => {
         },
         body: new URLSearchParams({
           action: "test_automation_humanization",
-          nonce: atm_automation_data.nonce,
+          nonce:
+            atm_studio_data?.nonce ||
+            atm_automation_data?.automation_nonce ||
+            window.atmNonce,
           content: testContent,
           provider: humanizationSettings.provider || "stealthgpt",
           tone: humanizationSettings.tone || "conversational",
