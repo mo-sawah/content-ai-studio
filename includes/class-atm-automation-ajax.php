@@ -16,7 +16,7 @@ class ATM_Automation_Ajax {
     public function __construct() {
         $this->init_hooks();
     }
-    
+
     function atm_handle_save_automation_campaign() {
         check_ajax_referer('atm_nonce', 'nonce');
         
@@ -94,7 +94,6 @@ class ATM_Automation_Ajax {
         add_action('wp_ajax_atm_get_automation_campaign', array($this, 'get_automation_campaign'));
         add_action('wp_ajax_atm_toggle_automation_campaign', array($this, 'toggle_automation_campaign'));
         add_action('wp_ajax_atm_run_automation_campaign_now', array($this, 'run_automation_campaign_now'));
-        add_action('wp_ajax_atm_save_automation_campaign', 'atm_handle_save_automation_campaign');
         
         // Campaign Execution Logs
         add_action('wp_ajax_atm_get_automation_logs', array($this, 'get_automation_logs'));
@@ -520,6 +519,17 @@ class ATM_Automation_Ajax {
         }
         if (isset($settings['category_ids'])) {
             $sanitized['category_ids'] = array_map('intval', (array)$settings['category_ids']);
+        }
+
+        // RSS-specific settings - ADD THESE!
+        if (isset($settings['rss_urls'])) {
+            $sanitized['rss_urls'] = wp_kses_post($settings['rss_urls']); // Allow URLs and newlines
+        }
+        if (isset($settings['use_full_content'])) {
+            $sanitized['use_full_content'] = (bool)$settings['use_full_content'];
+        }
+        if (isset($settings['skip_duplicates'])) {
+            $sanitized['skip_duplicates'] = (bool)$settings['skip_duplicates'];
         }
         
         // News-specific settings
