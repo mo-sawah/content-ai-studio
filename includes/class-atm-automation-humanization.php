@@ -92,49 +92,36 @@ class ATM_Automation_Humanization {
     }
     
     /**
-     * Process automation content through humanization
-     * DISABLE WEB SEARCH for humanization
+     * Update the main process method to use the new automation-specific method
      */
     public function process_automation_humanization($content_result, $campaign, $settings) {
-        // Check if humanization is enabled for this campaign
         $humanization_settings = $settings['humanization'] ?? [];
         
         if (empty($humanization_settings['enabled'])) {
-            return $content_result; // Return original content
+            return $content_result;
         }
         
         try {
             error_log("ATM Automation: Starting humanization for campaign: " . $campaign->name);
             
-            // Extract content to humanize
             $content_to_humanize = $content_result['article_content'] ?? $content_result['content'] ?? '';
             
             if (empty($content_to_humanize)) {
-                error_log("ATM Automation: No content to humanize");
                 return $content_result;
             }
             
-            // Prepare humanization options - DISABLE WEB SEARCH
             $humanization_options = [
                 'tone' => $humanization_settings['tone'] ?? 'conversational',
                 'mode' => $humanization_settings['mode'] ?? 'Medium',
                 'business_mode' => $humanization_settings['business_mode'] ?? true,
                 'preserve_formatting' => $humanization_settings['preserve_formatting'] ?? true,
-                'model' => $humanization_settings['openrouter_model'] ?? 'anthropic/claude-3.5-sonnet',
-                'disable_web_search' => true // DISABLE WEB SEARCH FOR HUMANIZATION
+                'model' => $humanization_settings['openrouter_model'] ?? 'anthropic/claude-3.5-sonnet'
             ];
             
-            $provider = $humanization_settings['provider'] ?? 'stealthgpt';
+            $provider = $humanization_settings['provider'] ?? 'openrouter';
             
-            // Initialize humanizer
-            if (!class_exists('ATM_Humanize')) {
-                throw new Exception('Humanization service not available');
-            }
-            
-            $humanizer = new ATM_Humanize();
-            
-            // Humanize the content
-            $humanization_result = $humanizer->humanize_content(
+            // Use our optimized automation method
+            $humanization_result = $this->humanize_automation_content(
                 $content_to_humanize, 
                 $provider, 
                 $humanization_options
@@ -143,61 +130,309 @@ class ATM_Automation_Humanization {
             $humanized_content = $humanization_result['humanized_content'];
             $credits_used = $humanization_result['credits_used'];
             
-            error_log("ATM Automation: Content humanized successfully. Credits used: " . $credits_used);
-            
-            // Optional: Check AI detection and retry if needed
-            if ($humanization_settings['retry_on_detection'] ?? false) {
-                try {
-                    $detection_score = $humanizer->check_ai_detection($humanized_content);
-                    
-                    if ($detection_score > 70) { // High AI detection
-                        error_log("ATM Automation: High AI detection ({$detection_score}%), retrying with aggressive mode");
-                        
-                        $retry_options = $humanization_options;
-                        $retry_options['mode'] = 'High';
-                        
-                        $retry_result = $humanizer->humanize_content(
-                            $content_to_humanize, 
-                            $provider, 
-                            $retry_options
-                        );
-                        
-                        $humanized_content = $retry_result['humanized_content'];
-                        $credits_used += $retry_result['credits_used'];
-                    }
-                } catch (Exception $e) {
-                    error_log("ATM Automation: AI detection check failed: " . $e->getMessage());
-                    // Continue without detection check
-                }
-            }
-            
-            // Update the content result
+            // Update content result
             if (isset($content_result['article_content'])) {
                 $content_result['article_content'] = $humanized_content;
             } else {
                 $content_result['content'] = $humanized_content;
             }
             
-            // Add humanization metadata
             $content_result['humanization_applied'] = true;
             $content_result['humanization_credits_used'] = $credits_used;
             $content_result['humanization_provider'] = $provider;
+            $content_result['humanization_method'] = $humanization_result['method'];
+            
+            error_log("ATM Automation: Humanization completed using {$provider}. Credits: {$credits_used}, Method: {$humanization_result['method']}");
             
             return $content_result;
             
         } catch (Exception $e) {
             error_log('ATM Automation Humanization Error: ' . $e->getMessage());
             
-            // Check fallback setting
             if ($humanization_settings['fallback_to_draft'] ?? true) {
-                // Modify the post status to draft if humanization fails
                 $content_result['force_draft'] = true;
                 $content_result['humanization_error'] = $e->getMessage();
             }
             
-            return $content_result; // Return original content on failure
+            return $content_result;
         }
     }
+
+    /**
+     * Optimized OpenRouter humanization specifically for automation
+     */
+    private function humanize_with_openrouter_automation($content, $options = []) {
+        $api_key = get_option('atm_openrouter_api_key', get_option('atm_openrouter_key'));
+        
+        if (empty($api_key)) {
+            throw new Exception('OpenRouter API key not configured.');
+        }
+        
+        $model = $options['model'] ?? 'anthropic/claude-3.5-sonnet';
+        $tone = $options['tone'] ?? 'conversational';
+        
+        // Use our optimized automation prompt
+        $system_prompt = $this->build_automation_humanization_prompt($tone);
+        
+        $payload = [
+            'model' => $model,
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => $system_prompt
+                ],
+                [
+                    'role' => 'user', 
+                    'content' => $content
+                ]
+            ],
+            'temperature' => 0.8, // Higher for more natural variation
+            'max_tokens' => min(4000, strlen($content) * 1.2),
+            'top_p' => 0.9,
+            'frequency_penalty' => 0.3, // Reduce repetition
+            'presence_penalty' => 0.1   // Encourage topic diversity
+        ];
+        
+        $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json',
+                'HTTP-Referer' => home_url(),
+                'X-Title' => 'Content AI Studio - Automation'
+            ],
+            'body' => json_encode($payload),
+            'timeout' => 90 // Slightly longer timeout for automation
+        ]);
+        
+        if (is_wp_error($response)) {
+            throw new Exception('OpenRouter API connection failed: ' . $response->get_error_message());
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
+        
+        if ($response_code !== 200) {
+            $this->handle_openrouter_error($response_code, $response_body);
+        }
+        
+        $data = json_decode($response_body, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE || empty($data['choices'][0]['message']['content'])) {
+            throw new Exception('Invalid response from OpenRouter API.');
+        }
+        
+        $humanized_content = trim($data['choices'][0]['message']['content']);
+        $credits_used = $this->calculate_automation_credits($content, $model);
+        
+        return [
+            'humanized_content' => $humanized_content,
+            'credits_used' => $credits_used
+        ];
+    }
+    
+    /**
+     * Optimized humanization prompt for automation - focused on practical results
+     */
+    private function build_automation_humanization_prompt($tone) {
+        $tone_styles = [
+            'conversational' => 'Write like you\'re explaining to a friend - natural, warm, using "you" and contractions',
+            'professional' => 'Business-appropriate but engaging - avoid corporate jargon, keep it readable',
+            'casual' => 'Relaxed and informal - like a blog post or social media',
+            'academic' => 'Scholarly but accessible - precise without being stuffy',
+            'journalistic' => 'News article style - clear, factual, engaging lead',
+            'creative' => 'Expressive and vivid - use metaphors, paint pictures with words',
+            'technical' => 'Expert-level but clear - explain complex topics simply',
+            'persuasive' => 'Convincing and compelling - use strong, confident language',
+            'storytelling' => 'Narrative flow - create scenes, use descriptive language'
+        ];
+        
+        $style_instruction = $tone_styles[$tone] ?? $tone_styles['conversational'];
+        
+        return "Rewrite the following AI-generated content so it reads like it was written by a human.
+
+TONE: {$style_instruction}
+
+RULES TO FOLLOW:
+1. Keep ALL facts and details (don’t add or remove information).
+2. Stay close to the same word count (within ~10%).
+3. Make the text flow naturally with varied sentence lengths (short, medium, and long).
+4. Use contractions naturally (don’t, can’t, we’re, it’s).
+5. Replace stiff or robotic wording with human-friendly alternatives.
+
+MAKE IT SOUND HUMAN:
+- Instead of 'Furthermore' → 'Plus' or 'Also'
+- Instead of 'In conclusion' → 'So' or 'Bottom line'
+- Instead of 'It is important to note' → 'Keep in mind' or 'Here’s the thing'
+- Instead of 'comprehensive' → 'complete' or 'thorough'
+- Instead of 'utilize' → 'use'
+- Instead of 'facilitate' → 'help' or 'make it easier'
+
+NATURAL FLOW:
+- Vary sentence openings so they don’t feel repetitive.
+- Use casual transitions where they make sense.
+- Add a touch of personality without changing meaning.
+- Allow for slight imperfections (humans aren’t perfect writers).
+
+OUTPUT:
+Return ONLY the rewritten, humanized content — no explanations, no notes, just the final text.";
+    }
+    
+    /**
+     * Enhanced automation humanization with fallbacks and optimization
+     */
+    public function humanize_automation_content($content, $provider, $options = []) {
+        $start_time = microtime(true);
+        
+        // Pre-processing: Quick checks
+        if (strlen(trim(wp_strip_all_tags($content))) < 100) {
+            // Too short to effectively humanize
+            return [
+                'humanized_content' => $content,
+                'credits_used' => 0,
+                'processing_time' => 0,
+                'method' => 'skipped_too_short'
+            ];
+        }
+        
+        // Content optimization before humanization
+        $processed_content = $this->optimize_content_for_humanization($content);
+        
+        try {
+            switch ($provider) {
+                case 'openrouter':
+                    $result = $this->humanize_with_openrouter_automation($processed_content, $options);
+                    break;
+                    
+                case 'stealthgpt':
+                    // Use the main class but with automation-optimized settings
+                    if (class_exists('ATM_Humanize')) {
+                        $humanizer = new ATM_Humanize();
+                        $automation_options = array_merge($options, [
+                            'business_mode' => false, // Faster for automation
+                            'mode' => $options['mode'] ?? 'Medium'
+                        ]);
+                        $result = $humanizer->humanize_content($processed_content, 'stealthgpt', $automation_options);
+                    } else {
+                        throw new Exception('StealthGPT humanizer not available');
+                    }
+                    break;
+                    
+                default:
+                    throw new Exception('Unsupported provider for automation: ' . $provider);
+            }
+            
+            // Post-processing: Quality check
+            $final_result = $this->post_process_humanized_content($result['humanized_content'], $content);
+            
+            $processing_time = round((microtime(true) - $start_time) * 1000);
+            
+            return [
+                'humanized_content' => $final_result,
+                'credits_used' => $result['credits_used'],
+                'processing_time' => $processing_time,
+                'method' => $provider
+            ];
+            
+        } catch (Exception $e) {
+            error_log('ATM Automation Humanization Error: ' . $e->getMessage());
+            
+            // Return original content on failure
+            return [
+                'humanized_content' => $content,
+                'credits_used' => 0,
+                'processing_time' => round((microtime(true) - $start_time) * 1000),
+                'method' => 'failed_fallback',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Optimize content before humanization
+     */
+    private function optimize_content_for_humanization($content) {
+        // Remove excessive spacing
+        $content = preg_replace('/\s+/', ' ', $content);
+        
+        // Fix common AI patterns before sending to humanizer
+        $ai_patterns = [
+            '/\b(Furthermore|Moreover|Additionally|However),?\s+/i' => '',
+            '/\b(It is important to note that|It should be noted that)\s+/i' => '',
+            '/\b(In conclusion|To summarize|In summary),?\s+/i' => 'So ',
+            '/\bunprecedented\b/i' => 'remarkable',
+            '/\brevolutionary\b/i' => 'game-changing',
+            '/\bseamlessly\b/i' => 'smoothly',
+            '/\butilize\b/i' => 'use',
+            '/\bfacilitate\b/i' => 'help',
+        ];
+        
+        foreach ($ai_patterns as $pattern => $replacement) {
+            $content = preg_replace($pattern, $replacement, $content);
+        }
+        
+        return trim($content);
+    }
+    
+    /**
+     * Post-process humanized content for quality
+     */
+    private function post_process_humanized_content($humanized, $original) {
+        // Ensure minimum length (shouldn't be drastically shorter)
+        $original_length = strlen(wp_strip_all_tags($original));
+        $humanized_length = strlen(wp_strip_all_tags($humanized));
+        
+        if ($humanized_length < ($original_length * 0.7)) {
+            error_log('ATM Humanization: Content too short after humanization, using original');
+            return $original;
+        }
+        
+        // Basic quality checks
+        $humanized = trim($humanized);
+        
+        // Ensure it doesn't start with quotes (common AI mistake)
+        $humanized = preg_replace('/^["\'"](.*)["\'"]$/s', '$1', $humanized);
+        
+        return $humanized;
+    }
+    
+    /**
+     * Calculate credits for automation (more conservative estimates)
+     */
+    private function calculate_automation_credits($content, $model) {
+        $word_count = str_word_count(wp_strip_all_tags($content));
+        $tokens_estimate = $word_count * 1.3;
+        
+        $cost_per_1k_tokens = [
+            'anthropic/claude-3.5-sonnet' => 3.0,
+            'openai/gpt-4o' => 2.5,
+            'anthropic/claude-3-opus' => 15.0,
+            'anthropic/claude-3-haiku' => 1.0,
+        ];
+        
+        $rate = $cost_per_1k_tokens[$model] ?? 3.0;
+        return ceil(($tokens_estimate / 1000) * $rate);
+    }
+    
+    /**
+     * Handle OpenRouter errors
+     */
+    private function handle_openrouter_error($response_code, $response_body) {
+        $error_data = json_decode($response_body, true);
+        $error_message = $error_data['error']['message'] ?? "HTTP {$response_code} error";
+        
+        switch ($response_code) {
+            case 401:
+                throw new Exception('Invalid OpenRouter API key for automation.');
+            case 429:
+                throw new Exception('OpenRouter rate limit exceeded for automation.');
+            case 402:
+                throw new Exception('Insufficient OpenRouter credits for automation.');
+            default:
+                throw new Exception("OpenRouter automation error: {$error_message}");
+        }
+    }
+    
+    
 }
 
 // Initialize the class
