@@ -26,7 +26,7 @@ class ATM_Automation_Humanization {
      * AJAX: Test humanization for automation
      */
     public function ajax_test_humanization() {
-        check_ajax_referer('atm_nonce', 'nonce');
+        check_ajax_referer('atm_automation_nonce', 'nonce');
         
         try {
             // Debug: Log the request

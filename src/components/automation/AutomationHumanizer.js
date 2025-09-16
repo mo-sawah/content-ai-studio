@@ -64,6 +64,11 @@ const AutomationHumanizer = ({ campaignData, setCampaignData, isLoading }) => {
   // Test humanization provider
   // Update the testProvider function in AutomationHumanizer.js
   const testProvider = async () => {
+    console.log("Available nonces:", {
+      atm_studio: window.atm_studio_data?.nonce,
+      atm_automation: window.atm_automation_data?.nonce,
+      automation_nonce: window.atm_automation_data?.automation_nonce,
+    });
     setIsTestingProvider(true);
     setTestResult(null);
 
@@ -84,7 +89,7 @@ const AutomationHumanizer = ({ campaignData, setCampaignData, isLoading }) => {
         },
         body: new URLSearchParams({
           action: "atm_test_automation_humanization",
-          nonce: atm_automation_data.nonce, // Use the correct nonce
+          nonce: atm_automation_data.automation_nonce, // Instead of .nonce
           content: testContent,
           provider: humanizationSettings.provider || "stealthgpt",
           tone: humanizationSettings.tone || "conversational",
