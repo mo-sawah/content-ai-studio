@@ -3796,8 +3796,9 @@ Generate ONLY the script dialogue, no stage directions.";
             throw new Exception('getimg.ai API key is not configured.');
         }
 
-        // Use a working model from your dashboard - the FAMILY column shows the actual API names
-        $model = !empty($model_override) ? $model_override : 'stable-diffusion-xl';
+        // Use the actual model identifier from your dashboard NAME column
+        // Let's try realvisxl-v40 for photorealistic images
+        $model = !empty($model_override) ? $model_override : 'realvisxl-v40';
         
         // Fixed dimensions - always use 1024x1024 (1:1 square format)  
         $width = 1024;
