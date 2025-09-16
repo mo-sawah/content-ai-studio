@@ -3800,7 +3800,11 @@ Generate ONLY the script dialogue, no stage directions.";
         $size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1024x1024');
 
         // Parse width and height from the size string
-        list($width, $height) = array_map('intval', explode('x', $size));
+        list($width_str, $height_str) = explode('x', $size);
+
+        // **Explicitly cast to integers to fix the API error**
+        $width = intval(trim($width_str));
+        $height = intval(trim($height_str));
 
         // Ensure dimensions are multiples of 64
         if ($width % 64 !== 0 || $height % 64 !== 0) {
