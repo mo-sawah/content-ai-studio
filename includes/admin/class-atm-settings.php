@@ -618,12 +618,14 @@ private function render_general_tab() {
                                 <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
                                 <option value="nanobanana" <?php selected($options['image_provider'], 'nanobanana'); ?>>Gemini 2.5 Flash Image</option>
                                 <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>Black Forest Labs (FLUX)</option>
+                                <option value="getimg" <?php selected($options['image_provider'], 'getimg'); ?>>getimg.ai (Stable Diffusion)</option> </select>
                             </select>
                         </td>
                     </tr>
                     <tr><th scope="row">Default FLUX Image Model</th><td><select name="atm_flux_model"><?php foreach ($options['flux_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['flux_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default FLUX model for realistic image generation.</p></td></tr>
                     <tr><th scope="row">Default Image Quality</th><td><select name="atm_image_quality"><option value="standard" <?php selected($options['image_quality'], 'standard'); ?>>Standard</option><option value="hd" <?php selected($options['image_quality'], 'hd'); ?>>HD</option></select><p class="description">"HD" is only for OpenAI/DALL-E 3.</p></td></tr>
                     <tr><th scope="row">Default Image Size</th><td><select name="atm_image_size"><option value="1792x1024" <?php selected($options['image_size'], '1792x1024'); ?>>16:9 Landscape</option><option value="1024x1024" <?php selected($options['image_size'], '1024x1024'); ?>>1:1 Square</option><option value="1024x1792" <?php selected($options['image_size'], '1024x1792'); ?>>9:16 Portrait</option></select></td></tr>
+                    <tr><th scope="row">Default getimg.ai Model</th><td><select name="atm_getimg_model"><?php foreach ($options['getimg_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['getimg_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default model for getimg.ai image generation.</p></td></tr>
                 </table>
             </div>
         </div>
@@ -659,6 +661,7 @@ private function render_api_tab() {
                 <tr><th scope="row">OpenAI API Key</th><td><input type="password" name="atm_openai_api_key" value="<?php echo esc_attr($options['openai_key']); ?>" class="regular-text" /><p class="description">Used for DALL-E 3 image generation and OpenAI TTS voices.</p></td></tr>
                 <tr><th scope="row">Google AI API Key</th><td><input type="password" name="atm_google_api_key" value="<?php echo esc_attr($options['google_key']); ?>" class="regular-text" /><p class="description">Used for Imagen 4 image generation. Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p></td></tr>
                 <tr><th scope="row">Black Forrest LabsAPI Key</th><td><input type="password" name="atm_blockflow_api_key" value="<?php echo esc_attr($options['blockflow_key']); ?>" class="regular-text" /><p class="description">Required for FLUX image generation. Get a key from <a href="https://dashboard.bfl.ai/" target="_blank">bfl.ai</a>.</p></td></tr>
+                <tr><th scope="row">getimg.ai API Key</th><td><input type="password" name="atm_getimg_api_key" value="<?php echo esc_attr($options['getimg_key']); ?>" class="regular-text" /><p class="description">Required for getimg.ai image generation. Get a key from the <a href="https://getimg.ai/dashboard" target="_blank">getimg.ai dashboard</a>.</p></td></tr>
                 <tr><th scope="row">ElevenLabs API Key</th><td><input type="password" name="atm_elevenlabs_api_key" value="<?php echo esc_attr($options['elevenlabs_key']); ?>" class="regular-text" /><p class="description">Get a key from <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a> for additional high-quality voices.</p></td></tr>
                 <tr><th scope="row">News API Key</th><td><input type="password" name="atm_news_api_key" value="<?php echo esc_attr($options['news_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://newsapi.org/" target="_blank">NewsAPI.org</a>.</p></td></tr>
                 <tr><th scope="row">GNews API Key</th><td><input type="password" name="atm_gnews_api_key" value="<?php echo esc_attr($options['gnews_api_key']); ?>" class="regular-text" /><p class="description">Get a free key from <a href="https://gnews.io/" target="_blank">GNews.io</a>.</p></td></tr>
@@ -854,6 +857,9 @@ private function render_advanced_tab() {
         if (isset($_POST['atm_mediastack_api_key'])) {
             update_option('atm_mediastack_api_key', sanitize_text_field($_POST['atm_mediastack_api_key']));
         }
+        if (isset($_POST['atm_getimg_api_key'])) {
+        update_option('atm_getimg_api_key', sanitize_text_field($_POST['atm_getimg_api_key']));
+        }
 
         // Nano Banana backend selector
         if (isset($_POST['atm_nanobanana_backend'])) {
@@ -893,6 +899,9 @@ private function render_advanced_tab() {
         if (isset($_POST['atm_flux_model'])) {
             update_option('atm_flux_model', sanitize_text_field($_POST['atm_flux_model']));
         }
+        if (isset($_POST['atm_getimg_model'])) {
+        update_option('atm_getimg_model', sanitize_text_field($_POST['atm_getimg_model']));
+     }
 
         // General Settings
         if (isset($_POST['atm_web_search_results'])) {
@@ -1034,6 +1043,10 @@ private function render_advanced_tab() {
             'nanobanana_model' => get_option('atm_nanobanana_model', 'gemini-2.5-flash-image'),
             'serpapi_key' => get_option('atm_serpapi_key', ''),
             'google_trending_cse_id' => get_option('atm_google_trending_cse_id', ''),
+           
+            // getimg API
+            'getimg_key'       => get_option('atm_getimg_api_key', ''),
+            'getimg_model'     => get_option('atm_getimg_model', 'realistic-vision-v5-1'),
             
             //Vertex AI Settings
             'vertex_project_id' => get_option('atm_vertex_project_id', ''),
@@ -1112,6 +1125,24 @@ private function render_advanced_tab() {
                 // Fast models
                 'flux-1-schnell' => 'FLUX 1 Schnell (Fastest)',
                 'flux-1-schnell-raw' => 'FLUX 1 Schnell Raw (Fast + Unfiltered)',
+            ],
+            'getimg_models' => [
+                // --- Photorealistic Models ---
+                'realistic-vision-v6.0' => 'Photo: Realistic Vision v6.0',
+                'realism-engine-sdxl' => 'Photo: Realism Engine SDXL',
+                'epic-realism-v5' => 'Photo: Epic Realism v5',
+
+                // --- Artistic & Illustrative Models ---
+                'dreamshaper-xl-v2' => 'Art: Dreamshaper XL v2',
+                'icbinp-seco' => 'Art: ICBINP (I Can\'t Believe It\'s Not Photography)',
+                'openjourney-v4' => 'Art: OpenJourney v4 (MidJourney Style)',
+
+                // --- Anime & Animation Models ---
+                'anything-v5' => 'Anime: Anything v5',
+                'counterfeit-v3.0' => 'Anime: Counterfeit v3.0',
+
+                // --- General Purpose / All-Rounder ---
+                'stable-diffusion-xl-v1-0' => 'General: Stable Diffusion XL 1.0',
             ],
             'article_models'   => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',

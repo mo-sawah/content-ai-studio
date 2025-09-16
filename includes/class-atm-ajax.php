@@ -2430,6 +2430,10 @@ public function translate_text() {
                     $image_data = ATM_API::generate_image_with_blockflow($final_prompt, '', $size_override);
                     $is_url = false;
                     break;
+                case 'getimg':
+                    $image_data = ATM_API::generate_image_with_getimg($final_prompt, '', $size_override);
+                    $is_url = false;
+                    break;
                 case 'openai':
                 default:
                     $image_data = ATM_API::generate_image_with_openai($final_prompt, $size_override, $quality_override);

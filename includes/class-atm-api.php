@@ -1672,6 +1672,11 @@ class ATM_API {
                     'data' => self::generate_image_with_gemini_nanobanana_vertex($prompt, $size_override),
                     'is_url' => false
                 ];
+            case 'getimg':
+                return [
+                    'data' => self::generate_image_with_getimg($prompt, '', $size_override),
+                    'is_url' => false
+                ];
             case 'openai':
             default:
                 return [
@@ -3784,6 +3789,72 @@ Generate ONLY the script dialogue, no stage directions.";
 
     return wp_remote_retrieve_body($image_response);
 }
+
+    public static function generate_image_with_getimg($prompt, $model_override = '', $size_override = '') {
+        $api_key = get_option('atm_getimg_api_key');
+        if (empty($api_key)) {
+            throw new Exception('getimg.ai API key is not configured.');
+        }
+
+        $model = !empty($model_override) ? $model_override : get_option('atm_getimg_model', 'realistic-vision-v5-1');
+        $size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1024x1024');
+
+        // Parse width and height from the size string
+        list($width, $height) = array_map('intval', explode('x', $size));
+
+        // Ensure dimensions are multiples of 64
+        if ($width % 64 !== 0 || $height % 64 !== 0) {
+            throw new Exception('getimg.ai requires image dimensions to be a multiple of 64.');
+        }
+
+        $endpoint = 'https://api.getimg.ai/v1/stable-diffusion/text-to-image';
+        
+        $body = [
+            'model' => $model,
+            'prompt' => self::enhance_image_prompt($prompt),
+            'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
+            'width' => $width,
+            'height' => $height,
+            'steps' => 30, // Sensible default
+            'guidance' => 7.5, // Sensible default
+            'output_format' => 'jpeg'
+        ];
+
+        $response = wp_remote_post($endpoint, [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json'
+            ],
+            'timeout' => 180,
+            'body'    => wp_json_encode($body),
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('getimg.ai API request failed: ' . $response->get_error_message());
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        $raw_body  = wp_remote_retrieve_body($response);
+        
+        if ($response_code !== 200) {
+            $error_data = json_decode($raw_body, true);
+            $error_message = $error_data['error'] ?? $raw_body;
+            throw new Exception('getimg.ai API Error: ' . $error_message);
+        }
+
+        $json = json_decode($raw_body, true);
+        if (!isset($json['image'])) {
+            throw new Exception('getimg.ai response did not include image data.');
+        }
+
+        $image_data = base64_decode($json['image']);
+        if ($image_data === false) {
+            throw new Exception('Failed to decode base64 image from getimg.ai.');
+        }
+
+        return $image_data;
+    }
 
 public static function generate_chart_config_from_prompt($prompt) {
         $system_prompt = "You are an expert data visualization assistant specializing in Apache ECharts. Your task is to generate a valid ECharts JSON configuration object based on the user's request.
