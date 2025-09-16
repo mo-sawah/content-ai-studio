@@ -168,10 +168,12 @@ class ATM_Automation_Humanization {
             throw new Exception('OpenRouter API key not configured.');
         }
         
-        $model = $options['model'] ?? 'anthropic/claude-3.5-sonnet';
+        // Pre-clean the content first
+        $cleaned_content = $this->pre_clean_ai_content($content);
+        
+        $model = $options['model'] ?? 'anthropic/claude-3-5-sonnet-20241022';
         $tone = $options['tone'] ?? 'conversational';
         
-        // Use our optimized automation prompt
         $system_prompt = $this->build_automation_humanization_prompt($tone);
         
         $payload = [
@@ -183,14 +185,14 @@ class ATM_Automation_Humanization {
                 ],
                 [
                     'role' => 'user', 
-                    'content' => $content
+                    'content' => "Please rewrite this content to sound more human and natural:\n\n" . $cleaned_content
                 ]
             ],
-            'temperature' => 0.8, // Higher for more natural variation
-            'max_tokens' => min(4000, strlen($content) * 1.2),
-            'top_p' => 0.9,
-            'frequency_penalty' => 0.3, // Reduce repetition
-            'presence_penalty' => 0.1   // Encourage topic diversity
+            'temperature' => 0.3,
+            'max_tokens' => min(8000, max(1000, strlen($content) * 1.5)),
+            'top_p' => 0.85,
+            'frequency_penalty' => 0.2,
+            'presence_penalty' => 0.1
         ];
         
         $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', [
@@ -229,17 +231,53 @@ class ATM_Automation_Humanization {
             'credits_used' => $credits_used
         ];
     }
+
+    private function pre_clean_ai_content($content) {
+        // Remove common AI markers before sending to humanizer
+        $ai_replacements = [
+            // Common AI phrases
+            '/\bIt is important to note that\b/i' => '',
+            '/\bIt should be noted that\b/i' => '',
+            '/\bFurthermore,?\s+/i' => 'Also, ',
+            '/\bMoreover,?\s+/i' => 'Plus, ',
+            '/\bAdditionally,?\s+/i' => 'Also, ',
+            '/\bIn conclusion,?\s+/i' => 'So, ',
+            '/\bTo summarize,?\s+/i' => 'In short, ',
+            
+            // Overly formal words
+            '/\butilize\b/i' => 'use',
+            '/\bfacilitate\b/i' => 'help',
+            '/\bcommence\b/i' => 'start',
+            '/\bsubsequent\b/i' => 'next',
+            '/\bnotwithstanding\b/i' => 'despite',
+            '/\bnevertheless\b/i' => 'still',
+            
+            // Redundant phrases
+            '/\bvery unique\b/i' => 'unique',
+            '/\bcompletely eliminate\b/i' => 'eliminate',
+            '/\bfuture plans\b/i' => 'plans',
+            
+            // Excessive spacing
+            '/\s+/' => ' ',
+        ];
+        
+        foreach ($ai_replacements as $pattern => $replacement) {
+            $content = preg_replace($pattern, $replacement, $content);
+        }
+        
+        return trim($content);
+    }
     
     /**
      * Optimized humanization prompt for automation - focused on practical results
      */
     private function build_automation_humanization_prompt($tone) {
         $tone_styles = [
-            'conversational' => 'Write like you\'re explaining to a friend - natural, warm, using "you" and contractions',
-            'professional' => 'Business-appropriate but engaging - avoid corporate jargon, keep it readable',
-            'casual' => 'Relaxed and informal - like a blog post or social media',
-            'academic' => 'Scholarly but accessible - precise without being stuffy',
-            'journalistic' => 'News article style - clear, factual, engaging lead',
+            'conversational' => 'friendly and natural, like explaining to a colleague',
+            'professional' => 'polished but approachable business writing',
+            'casual' => 'relaxed and informal',
+            'academic' => 'scholarly but clear',
+            'journalistic' => 'clear news writing style',
             'creative' => 'Expressive and vivid - use metaphors, paint pictures with words',
             'technical' => 'Expert-level but clear - explain complex topics simply',
             'persuasive' => 'Convincing and compelling - use strong, confident language',
@@ -248,47 +286,25 @@ class ATM_Automation_Humanization {
         
         $style_instruction = $tone_styles[$tone] ?? $tone_styles['conversational'];
         
-        return "Rewrite the following AI-generated content so it reads like it was written by a human.
+        return "You are an expert writer tasked with rewriting AI-generated content to sound naturally human-written while maintaining all original information.
 
-TONE: {$style_instruction}
+WRITING STYLE: Make it {$style}
 
-RULES TO FOLLOW:
-1. Keep ALL facts, dates, and historical references (don’t add or remove information).
-2. Preserve ALL links exactly as they appear (do not remove, rewrite, or ignore them).
-3. Stay close to the same word count (within ~10%).
-4. Make the text flow naturally with varied sentence lengths (short, medium, and long).
-5. Use contractions naturally (don’t, can’t, we’re, it’s).
-6. Replace stiff or robotic wording with human-friendly alternatives.
+ESSENTIAL RULES:
+1. Keep ALL facts, data, and links exactly as provided
+2. Maintain the same general length and structure
+3. Use natural language patterns that humans actually use
+4. Vary sentence lengths naturally (mix short and long sentences)
+5. Use contractions where appropriate (don't, can't, it's, we're)
 
-**Link Formatting Rules:**
-- When including external links, NEVER use the website URL as the anchor text.
-- Always link to the specific article URL, NOT the homepage.
-- Use ONLY 1-3 descriptive words as anchor text.
-- Example: [Reuters](https://reuters.com/actual-article-url) reported that...
-- Example: According to [BBC News](https://bbc.com/specific-article), the incident...
-- Do NOT use generic phrases like \"click here\", \"read more\", or \"this article\" as anchor text.
-- Anchor text should be relevant keywords from the article topic.
-- Keep anchor text extremely concise (maximum 2 words).
-- Make links feel natural within the sentence flow.
+HUMANIZATION TECHNIQUES:
+- Replace formal transitions: 'Furthermore' → 'Also', 'Moreover' → 'Plus'
+- Use active voice when possible
+- Add subtle personality without changing meaning
+- Include natural imperfections (humans aren't perfect writers)
+- Use simpler alternatives: 'utilize' → 'use', 'facilitate' → 'help'
 
-MAKE IT SOUND HUMAN:
-- Instead of 'Furthermore' → 'Plus' or 'Also'
-- Instead of 'In conclusion' → 'So' or 'Bottom line'
-- Instead of 'It is important to note' → 'Keep in mind' or 'Here’s the thing'
-- Instead of 'comprehensive' → 'complete' or 'thorough'
-- Instead of 'utilize' → 'use'
-- Instead of 'facilitate' → 'help' or 'make it easier'
-
-NATURAL FLOW:
-- Vary sentence openings so they don’t feel repetitive.
-- Use casual transitions where they make sense.
-- Add a touch of personality without changing meaning.
-- Allow for slight imperfections (humans aren’t perfect writers).
-
-IMPORTANT:
-- Do NOT remove or reformat hyperlinks (e.g., [text](url)).
-- If a sentence has a link, rewrite around it but keep the link in the same place.
-- Output ONLY the rewritten content — no explanations, no extra notes.";
+OUTPUT: Return ONLY the rewritten content with no explanations or notes.";
     }
     
     /**
