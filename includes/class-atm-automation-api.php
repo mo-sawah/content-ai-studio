@@ -39,12 +39,32 @@ class ATM_Automation_API {
                 throw new Exception('No RSS feed URLs configured for this campaign');
             }
             
-            error_log("ATM RSS Automation: Processing RSS feeds for campaign: " . $campaign->name);
+            $keyword = trim($campaign->keyword ?? ''); // Get keyword, might be empty
             
-            // Parse RSS feeds using automation-specific parser
+            error_log("ATM RSS Automation: Processing RSS feeds for campaign: " . $campaign->name . 
+                    ($keyword ? " with keyword: {$keyword}" : " (no keyword filter)"));
+            
+            // Parse RSS feeds
             $entries = self::parse_rss_feeds_for_automation($rss_urls);
             if (empty($entries)) {
                 throw new Exception('No RSS entries found from configured feeds');
+            }
+            
+            // Filter by keyword if provided
+            if (!empty($keyword)) {
+                $keyword_filtered = array_filter($entries, function($entry) use ($keyword) {
+                    return stripos($entry['title'], $keyword) !== false || 
+                        stripos($entry['description'], $keyword) !== false;
+                });
+                
+                if (empty($keyword_filtered)) {
+                    throw new Exception("No RSS entries found matching keyword: {$keyword}");
+                }
+                
+                $entries = $keyword_filtered;
+                error_log("ATM RSS: Filtered to " . count($entries) . " entries matching keyword: {$keyword}");
+            } else {
+                error_log("ATM RSS: Using all " . count($entries) . " entries (no keyword filter)");
             }
             
             // Filter out used entries if skip_duplicates is enabled

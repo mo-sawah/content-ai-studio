@@ -248,6 +248,19 @@ const RssFeedsForm = ({ campaignData, setCampaignData, isLoading }) => {
           disabled={isLoading}
         />
 
+        <TextControl
+          label="Keywords/Topic (Optional)"
+          placeholder="e.g., artificial intelligence, climate change (leave empty for all feed content)"
+          value={campaignData.keyword}
+          onChange={(value) =>
+            setCampaignData({ ...campaignData, keyword: value })
+          }
+          disabled={isLoading}
+          help="If specified, only RSS entries containing these keywords will be used. Leave empty to use all entries from feeds."
+        />
+      </div>
+
+      <div className="atm-grid-2">
         <CustomDropdown
           label="Content Extraction"
           text={
@@ -271,9 +284,7 @@ const RssFeedsForm = ({ campaignData, setCampaignData, isLoading }) => {
           disabled={isLoading}
           help="Full content provides more context but may be slower"
         />
-      </div>
 
-      <div className="atm-grid-3">
         <CustomDropdown
           label="AI Model"
           text={campaignData.settings?.ai_model || "GPT-4o"}
@@ -296,29 +307,6 @@ const RssFeedsForm = ({ campaignData, setCampaignData, isLoading }) => {
               settings: {
                 ...campaignData.settings,
                 ai_model: option.value,
-              },
-            })
-          }
-          disabled={isLoading}
-        />
-
-        <CustomDropdown
-          label="Word Count"
-          text={campaignData.settings?.word_count || "800-1000 words"}
-          options={[
-            { label: "400-600 words", value: "400-600" },
-            { label: "600-800 words", value: "600-800" },
-            { label: "800-1000 words", value: "800-1000" },
-            { label: "1000-1200 words", value: "1000-1200" },
-            { label: "1200-1500 words", value: "1200-1500" },
-            { label: "1500-2000 words", value: "1500-2000" },
-          ]}
-          onChange={(option) =>
-            setCampaignData({
-              ...campaignData,
-              settings: {
-                ...campaignData.settings,
-                word_count: option.value,
               },
             })
           }
@@ -635,6 +623,18 @@ function AutoNewsGenerator({
     // Validation
     if (!campaignData.name.trim()) {
       setStatusMessage("Campaign name is required.");
+      return;
+    }
+
+    // For RSS, keyword is optional
+    if (activeTab !== "rss" && !campaignData.keyword.trim()) {
+      setStatusMessage("Keywords/topic is required.");
+      return;
+    }
+
+    // For RSS, check if RSS URLs are provided
+    if (activeTab === "rss" && !campaignData.settings?.rss_urls?.trim()) {
+      setStatusMessage("RSS feed URLs are required.");
       return;
     }
 
