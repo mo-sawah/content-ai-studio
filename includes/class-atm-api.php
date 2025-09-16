@@ -3796,11 +3796,11 @@ Generate ONLY the script dialogue, no stage directions.";
             throw new Exception('getimg.ai API key is not configured.');
         }
 
-        // If override provided use it, else pick a safe default known to work for many plans.
-        // Ensure the default is one of the valid Essential / SD model names.
+        // Default model and endpoint
         $model = !empty($model_override) ? $model_override : 'FLUX.1 [schnell]';
+        $endpoint = 'https://api.getimg.ai/v1/stable-diffusion/text-to-image';
 
-        // width & height defaults, can override via $size_override if your UI needs it.
+        // Width & height defaults
         $width = 1024;
         $height = 1024;
         if (!empty($size_override) && is_array($size_override)) {
@@ -3812,42 +3812,38 @@ Generate ONLY the script dialogue, no stage directions.";
             }
         }
 
-        // Determine endpoint based on model
-        // Map known model names to endpoints
-        $endpoint = null;
-        // Normalize model string for comparison
+        // Decide endpoint based on model type
         $mod = strtolower($model);
-
-        if (strpos($mod, 'flux.1 [schnell]') !== false) {
-            $endpoint = 'https://api.getimg.ai/v1/flux-schnell/text-to-image';
-        }
-        elseif (strpos($mod, 'flux.1 [dev]') !== false) {
-            // I don't see a specific endpoint name for flux.dev in docs — if not available, fallback to stable-diffusion or error
-            // You might need to check the docs or account settings to confirm the correct endpoint.
-            $endpoint = 'https://api.getimg.ai/v1/essential-v2/text-to-image';
-        }
-        elseif (strpos($mod, 'stable diffusion xl') !== false || strpos($mod, 'sdxl') !== false) {
+        $is_flux = false;
+        if (strpos($mod, 'flux') !== false) {
+            $is_flux = true;
+            $endpoint = 'https://api.getimg.ai/v1/flux-schnell/text-to-image'; // adjust if using flux-dev etc.
+        } elseif (strpos($mod, 'xl') !== false) {
             $endpoint = 'https://api.getimg.ai/v1/stable-diffusion-xl/text-to-image';
         }
-        else {
-            // Fallback: use the stable-diffusion endpoint
-            $endpoint = 'https://api.getimg.ai/v1/stable-diffusion/text-to-image';
+
+        // Build body differently for FLUX vs SD
+        if ($is_flux) {
+            $body = [
+                'prompt'          => self::enhance_image_prompt($prompt),
+                'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
+                'size'            => $width . 'x' . $height,
+                'output_format'   => 'jpeg'
+            ];
+        } else {
+            $body = [
+                'model'           => $model,
+                'prompt'          => self::enhance_image_prompt($prompt),
+                'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
+                'width'           => $width,
+                'height'          => $height,
+                'steps'           => 30,
+                'guidance'        => 7.5,
+                'output_format'   => 'jpeg'
+            ];
         }
 
-        // Build body
-        $body = [
-            'model'           => $model,
-            'prompt'          => self::enhance_image_prompt($prompt),
-            'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
-            'width'           => $width,
-            'height'          => $height,
-            'steps'           => 30,
-            'guidance'        => 7.5,
-            'output_format'   => 'jpeg'
-        ];
-
-        // Debug logs
-        error_log("getimg.ai API request: endpoint={$endpoint}, model={$model}, width={$width}, height={$height}");
+        error_log("getimg.ai API request: endpoint={$endpoint}, model={$model}");
 
         $response = wp_remote_post($endpoint, [
             'headers' => [
@@ -3867,6 +3863,7 @@ Generate ONLY the script dialogue, no stage directions.";
         $raw_body      = wp_remote_retrieve_body($response);
 
         if ($response_code !== 200) {
+            error_log('getimg.ai API error response: ' . $raw_body);
             $error_data = json_decode($raw_body, true);
             $final_error_message = $raw_body;
             if (is_array($error_data) && isset($error_data['error'])) {
@@ -3876,7 +3873,6 @@ Generate ONLY the script dialogue, no stage directions.";
                     $final_error_message = $error_data['error'];
                 }
             }
-            error_log('getimg.ai API error response: ' . $raw_body);
             throw new Exception('getimg.ai API Error: ' . $final_error_message);
         }
 
@@ -3892,6 +3888,7 @@ Generate ONLY the script dialogue, no stage directions.";
 
         return $image_data;
     }
+
 
 
 
