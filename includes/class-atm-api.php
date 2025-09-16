@@ -340,6 +340,157 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     /**
+     * Generate article from RSS feed entry using OpenRouter
+     */
+    public static function generate_article_from_rss_entry($rss_entry, $options = []) {
+        $title = $rss_entry['title'] ?? '';
+        $description = $rss_entry['description'] ?? '';
+        $content = $rss_entry['content'] ?? $description;
+        $url = $rss_entry['url'] ?? '';
+        $published_date = $rss_entry['published_date'] ?? '';
+        
+        // Parse options
+        $ai_model = $options['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
+        $word_count = $options['word_count'] ?? '800-1000';
+        $writing_style = $options['writing_style'] ?? 'professional';
+        $enable_web_search = $options['enable_web_search'] ?? true;
+        $use_full_content = $options['use_full_content'] ?? false;
+        $language = $options['language'] ?? 'English';
+        
+        // Get full content if requested
+        $source_content = $content;
+        if ($use_full_content && !empty($url)) {
+            try {
+                $scraped_content = self::fetch_article_content_wp_builtin($url);
+                if (strlen($scraped_content) > strlen($content)) {
+                    $source_content = $scraped_content;
+                    error_log("ATM RSS: Using scraped content (" . strlen($scraped_content) . " chars) instead of RSS content (" . strlen($content) . " chars)");
+                }
+            } catch (Exception $e) {
+                error_log("ATM RSS: Could not scrape content, using RSS content: " . $e->getMessage());
+            }
+        }
+        
+        // Build writing style instructions
+        $style_instructions = self::get_writing_style_instructions($writing_style);
+        
+        // Parse word count range
+        $word_range_text = "Aim for {$word_count} words";
+        if (strpos($word_count, '-') !== false) {
+            list($min_words, $max_words) = explode('-', $word_count);
+            $word_range_text = "Write between {$min_words} and {$max_words} words";
+        }
+        
+        // Web search instruction
+        $web_search_instruction = $enable_web_search ? 
+            "**Use your web search ability extensively to verify the information and add any missing context.**" :
+            "Use only the provided source material without web search.";
+        
+        $system_prompt = "You are a professional content writer creating an article from RSS feed content. {$web_search_instruction}
+
+    **WRITING REQUIREMENTS:**
+    - **Language**: Write the entire article in {$language}
+    - **Style**: {$style_instructions}
+    - **Length**: {$word_range_text}
+    - **Quality**: Create engaging, well-structured, and original content
+    - **Originality**: Do not copy verbatim from the source. Rewrite and expand the content.
+
+    **FORMATTING RULES:**
+    - The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`)
+    - Use H2 (`##`) for all main section headings
+    - The `content` field must NOT start with a title. Begin directly with the introductory paragraph
+    - Do NOT include final headings like \"Conclusion\", \"Summary\", etc. End naturally with a concluding paragraph
+
+    **Link Formatting Rules:**
+    - When including external links, NEVER use the website URL as the anchor text.
+    - Always link to the specific article URL, NOT the homepage.
+    - Use ONLY 1-3 descriptive words as anchor text.
+    - Example: [Reuters](https://reuters.com/actual-article-url) reported that...
+    - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+    - Do NOT use generic phrases like \"click here\", \"read more\", or \"this article\" as anchor text.
+    - Anchor text should be relevant keywords from the article topic.
+    - Keep anchor text extremely concise (maximum 2 words).
+    - Make links feel natural within the sentence flow.
+
+    **RSS SOURCE INFORMATION:**
+    - Original Title: {$title}
+    - Published: {$published_date}
+    - Source URL: {$url}
+
+    **SOURCE CONTENT:**
+    {$source_content}
+
+    **CRITICAL: Return JSON response:**
+    {
+        \"title\": \"Compelling article headline in {$language}\",
+        \"subheadline\": \"Brief subtitle that expands on the headline\",
+        \"content\": \"Complete article in markdown format\"
+    }";
+
+        $raw_response = self::enhance_content_with_openrouter(
+            ['content' => $source_content],
+            $system_prompt,
+            $ai_model,
+            true, // JSON mode
+            $enable_web_search
+        );
+        
+        // Parse JSON response
+        $json_string = trim($raw_response);
+        if (!str_starts_with($json_string, '{')) {
+            if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                $json_string = $matches[0];
+            } else {
+                throw new Exception('The AI returned a non-JSON response. Please try again.');
+            }
+        }
+
+        $result = json_decode($json_string, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+            error_log('ATM RSS - Invalid JSON from AI: ' . $json_string);
+            throw new Exception('The AI returned an invalid response structure. Please try again.');
+        }
+
+        $headline = $result['title'] ?? '';
+        $subtitle = $result['subheadline'] ?? $result['subtitle'] ?? '';
+        $article_content = trim($result['content']);
+
+        if (empty($headline) || empty($article_content)) {
+            throw new Exception('Generated title or content is empty.');
+        }
+
+        // Convert Markdown to HTML for WordPress
+        if (class_exists('Parsedown')) {
+            $Parsedown = new Parsedown();
+            $article_content = $Parsedown->text($article_content);
+        } else {
+            $article_content = self::basic_markdown_to_html($article_content);
+        }
+
+        return [
+            'title' => $headline,
+            'content' => $article_content,
+            'subtitle' => $subtitle
+        ];
+    }
+
+    /**
+     * Get writing style instructions
+     */
+    private static function get_writing_style_instructions($style) {
+        $styles = [
+            'professional' => 'Adopt a professional, authoritative tone. Be clear, concise, and informative.',
+            'conversational' => 'Write in a conversational, friendly tone as if speaking to a colleague. Use "you" and informal language.',
+            'academic' => 'Use an academic writing style with formal language, citations of concepts, and analytical approach.',
+            'news_reporter' => 'Write like a professional news reporter. Be objective, factual, and lead with the most important information.',
+            'blog_style' => 'Write in an engaging blog style. Be personal, relatable, and include opinions and insights.',
+            'technical' => 'Use technical language appropriate for experts. Include detailed explanations and precise terminology.'
+        ];
+        
+        return $styles[$style] ?? $styles['professional'];
+    }
+
+    /**
      * Search Google News using SerpApi
      */
     public static function search_google_news_serpapi($query, $country = 'gb', $language = 'en', $limit = 25) {

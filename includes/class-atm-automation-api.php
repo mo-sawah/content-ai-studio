@@ -30,6 +30,323 @@ if (!defined('ABSPATH')) {
 class ATM_Automation_API {
 
     /**
+     * Execute RSS automation with OpenRouter
+     */
+    private static function execute_rss_automation($campaign, $settings) {
+        try {
+            $rss_urls = $settings['rss_urls'] ?? '';
+            if (empty(trim($rss_urls))) {
+                throw new Exception('No RSS feed URLs configured for this campaign');
+            }
+            
+            error_log("ATM RSS Automation: Processing RSS feeds for campaign: " . $campaign->name);
+            
+            // Parse RSS feeds using automation-specific parser
+            $entries = self::parse_rss_feeds_for_automation($rss_urls);
+            if (empty($entries)) {
+                throw new Exception('No RSS entries found from configured feeds');
+            }
+            
+            // Filter out used entries if skip_duplicates is enabled
+            if ($settings['skip_duplicates'] !== false) {
+                $unused_entries = array_filter($entries, function($entry) use ($campaign) {
+                    return !self::is_article_used_by_campaign($entry['url'], $campaign->id);
+                });
+                
+                if (empty($unused_entries)) {
+                    throw new Exception('All RSS entries have already been used');
+                }
+                
+                $entries = $unused_entries;
+            }
+            
+            // Select the most recent unused entry
+            $selected_entry = reset($entries);
+            
+            error_log("ATM RSS: Selected entry: " . $selected_entry['title']);
+            
+            // Generate article with all options
+            $generation_options = [
+                'ai_model' => $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o'),
+                'word_count' => $settings['word_count'] ?? '800-1000',
+                'writing_style' => $settings['writing_style'] ?? 'professional',
+                'enable_web_search' => $settings['enable_web_search'] ?? true,
+                'use_full_content' => $settings['use_full_content'] ?? false,
+                'language' => $settings['article_language'] ?? 'English'
+            ];
+            
+            $content_result = self::generate_article_from_rss_entry_automation($selected_entry, $generation_options);
+            
+            // Format result
+            $formatted_result = [
+                'success' => true,
+                'article_title' => $content_result['title'],
+                'article_content' => $content_result['content'],
+                'subtitle' => $content_result['subtitle'] ?? ''
+            ];
+            
+            // Create post
+            $post_params = [
+                'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
+                'post_author' => $campaign->author_id,
+                'post_category' => self::get_campaign_category_ids($campaign),
+                'campaign_id' => $campaign->id,
+                'generate_image' => $settings['generate_image'] ?? false
+            ];
+            
+            $post_result = ATM_News_Generation_Service::create_post_from_news($formatted_result, $post_params);
+            
+            if ($post_result['success']) {
+                // Generate image if requested
+                if ($settings['generate_image'] ?? false) {
+                    try {
+                        ATM_Content_Generation_Service::generate_featured_image($post_result['post_id'], $selected_entry['title']);
+                        error_log("ATM RSS: Featured image generated successfully");
+                    } catch (Exception $e) {
+                        error_log("ATM RSS: Image generation error: " . $e->getMessage());
+                    }
+                }
+                
+                // Mark entry as used
+                self::mark_news_article_as_used_for_campaign(
+                    $selected_entry['url'], 
+                    $selected_entry['title'], 
+                    $campaign->id, 
+                    $post_result['post_id']
+                );
+                
+                error_log("ATM RSS Automation: Successfully created post ID {$post_result['post_id']}");
+                return $post_result;
+            } else {
+                throw new Exception($post_result['message']);
+            }
+            
+        } catch (Exception $e) {
+            error_log('ATM RSS Automation Error: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Parse RSS feeds specifically for automation
+     */
+    private static function parse_rss_feeds_for_automation($feed_urls_string) {
+        $all_entries = [];
+        $feed_urls_array = array_filter(array_map('trim', explode("\n", $feed_urls_string)));
+        
+        foreach ($feed_urls_array as $feed_url) {
+            if (empty($feed_url) || !filter_var($feed_url, FILTER_VALIDATE_URL)) {
+                continue;
+            }
+            
+            try {
+                error_log("ATM RSS: Parsing feed: " . $feed_url);
+                
+                $rss = fetch_feed($feed_url);
+                if (is_wp_error($rss)) {
+                    error_log("ATM RSS: Error fetching feed {$feed_url}: " . $rss->get_error_message());
+                    continue;
+                }
+                
+                $max_items = $rss->get_item_quantity(10);
+                $rss_items = $rss->get_items(0, $max_items);
+                
+                foreach ($rss_items as $item) {
+                    $all_entries[] = [
+                        'title' => $item->get_title(),
+                        'description' => $item->get_description(),
+                        'content' => $item->get_content(),
+                        'url' => $item->get_permalink(),
+                        'published_date' => $item->get_date('Y-m-d H:i:s'),
+                        'feed_url' => $feed_url
+                    ];
+                }
+                
+            } catch (Exception $e) {
+                error_log("ATM RSS: Exception parsing feed {$feed_url}: " . $e->getMessage());
+                continue;
+            }
+        }
+        
+        // Sort by published date (newest first)
+        usort($all_entries, function($a, $b) {
+            return strtotime($b['published_date']) - strtotime($a['published_date']);
+        });
+        
+        error_log("ATM RSS: Found " . count($all_entries) . " total entries from " . count($feed_urls_array) . " feeds");
+        return $all_entries;
+    }
+
+    /**
+     * Generate article from RSS entry for automation
+     */
+    private static function generate_article_from_rss_entry_automation($rss_entry, $options = []) {
+        $title = $rss_entry['title'] ?? '';
+        $description = $rss_entry['description'] ?? '';
+        $content = $rss_entry['content'] ?? $description;
+        $url = $rss_entry['url'] ?? '';
+        $published_date = $rss_entry['published_date'] ?? '';
+        
+        // Parse options
+        $ai_model = $options['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o');
+        $word_count = $options['word_count'] ?? '800-1000';
+        $writing_style = $options['writing_style'] ?? 'professional';
+        $enable_web_search = $options['enable_web_search'] ?? true;
+        $use_full_content = $options['use_full_content'] ?? false;
+        $language = $options['language'] ?? 'English';
+        
+        // Get full content if requested
+        $source_content = $content;
+        if ($use_full_content && !empty($url)) {
+            try {
+                if (class_exists('ATM_API') && method_exists('ATM_API', 'fetch_article_content_wp_builtin')) {
+                    $scraped_content = ATM_API::fetch_article_content_wp_builtin($url);
+                    if (strlen($scraped_content) > strlen($content)) {
+                        $source_content = $scraped_content;
+                        error_log("ATM RSS: Using scraped content (" . strlen($scraped_content) . " chars)");
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("ATM RSS: Could not scrape content: " . $e->getMessage());
+            }
+        }
+        
+        // Build writing style instructions
+        $style_instructions = self::get_rss_writing_style_instructions($writing_style);
+        
+        // Parse word count range
+        $word_range_text = "Aim for {$word_count} words";
+        if (strpos($word_count, '-') !== false) {
+            list($min_words, $max_words) = explode('-', $word_count);
+            $word_range_text = "Write between {$min_words} and {$max_words} words";
+        }
+        
+        // Web search instruction
+        $web_search_instruction = $enable_web_search ? 
+            "**Use your web search ability extensively to verify the information and add any missing context.**" :
+            "Use only the provided source material without web search.";
+        
+        $system_prompt = "You are a professional content writer creating an article from RSS feed content. {$web_search_instruction}
+
+    **WRITING REQUIREMENTS:**
+    - **Language**: Write the entire article in {$language}
+    - **Style**: {$style_instructions}
+    - **Length**: {$word_range_text}
+    - **Quality**: Create engaging, well-structured, and original content
+    - **Originality**: Do not copy verbatim from the source. Rewrite and expand the content.
+
+    **FORMATTING RULES:**
+    - The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`)
+    - Use H2 (`##`) for all main section headings
+    - The `content` field must NOT start with a title. Begin directly with the introductory paragraph
+    - Do NOT include final headings like \"Conclusion\", \"Summary\", etc. End naturally with a concluding paragraph
+
+    **RSS SOURCE INFORMATION:**
+    - Original Title: {$title}
+    - Published: {$published_date}
+    - Source URL: {$url}
+
+    **SOURCE CONTENT:**
+    {$source_content}
+
+    **CRITICAL: Return JSON response:**
+    {
+        \"title\": \"Compelling article headline in {$language}\",
+        \"subheadline\": \"Brief subtitle that expands on the headline\",
+        \"content\": \"Complete article in markdown format\"
+    }";
+
+        if (!class_exists('ATM_API') || !method_exists('ATM_API', 'enhance_content_with_openrouter')) {
+            throw new Exception('ATM_API OpenRouter functionality not available');
+        }
+
+        $raw_response = ATM_API::enhance_content_with_openrouter(
+            ['content' => $source_content],
+            $system_prompt,
+            $ai_model,
+            true, // JSON mode
+            $enable_web_search
+        );
+        
+        // Parse JSON response
+        $json_string = trim($raw_response);
+        if (!str_starts_with($json_string, '{')) {
+            if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                $json_string = $matches[0];
+            } else {
+                throw new Exception('The AI returned a non-JSON response. Please try again.');
+            }
+        }
+
+        $result = json_decode($json_string, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+            error_log('ATM RSS - Invalid JSON from AI: ' . $json_string);
+            throw new Exception('The AI returned an invalid response structure. Please try again.');
+        }
+
+        $headline = $result['title'] ?? '';
+        $subtitle = $result['subheadline'] ?? $result['subtitle'] ?? '';
+        $article_content = trim($result['content']);
+
+        if (empty($headline) || empty($article_content)) {
+            throw new Exception('Generated title or content is empty.');
+        }
+
+        // Convert Markdown to HTML for WordPress
+        if (class_exists('Parsedown')) {
+            $Parsedown = new Parsedown();
+            $article_content = $Parsedown->text($article_content);
+        } else {
+            $article_content = self::basic_markdown_to_html_automation($article_content);
+        }
+
+        return [
+            'title' => $headline,
+            'content' => $article_content,
+            'subtitle' => $subtitle
+        ];
+    }
+
+    /**
+     * Get writing style instructions for RSS automation
+     */
+    private static function get_rss_writing_style_instructions($style) {
+        $styles = [
+            'professional' => 'Adopt a professional, authoritative tone. Be clear, concise, and informative.',
+            'conversational' => 'Write in a conversational, friendly tone as if speaking to a colleague. Use "you" and informal language.',
+            'academic' => 'Use an academic writing style with formal language, citations of concepts, and analytical approach.',
+            'news_reporter' => 'Write like a professional news reporter. Be objective, factual, and lead with the most important information.',
+            'blog_style' => 'Write in an engaging blog style. Be personal, relatable, and include opinions and insights.',
+            'technical' => 'Use technical language appropriate for experts. Include detailed explanations and precise terminology.'
+        ];
+        
+        return $styles[$style] ?? $styles['professional'];
+    }
+
+    /**
+     * Basic Markdown to HTML conversion for automation
+     */
+    private static function basic_markdown_to_html_automation($markdown) {
+        $html = $markdown;
+        
+        // Convert headers
+        $html = preg_replace('/^## (.+)$/m', '<h2>$1</h2>', $html);
+        $html = preg_replace('/^### (.+)$/m', '<h3>$1</h3>', $html);
+        
+        // Convert bold and italic
+        $html = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $html);
+        $html = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $html);
+        
+        // Convert links
+        $html = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2">$1</a>', $html);
+        
+        // Convert line breaks to paragraphs
+        $html = wpautop($html);
+        
+        return $html;
+    }
+
+    /**
      * Execute SerpApi Google News automation
      */
     private static function execute_serpapi_automation($campaign, $settings) {
