@@ -467,12 +467,6 @@ function AutoNewsGenerator({
 
   // Save campaign function
   const handleSaveCampaign = async () => {
-    // Add debugging right here
-    console.log("=== DEBUGGING RSS SAVE ===");
-    console.log("Active tab:", activeTab);
-    console.log("Campaign data:", campaignData);
-    console.log("RSS URLs from settings:", campaignData.settings?.rss_urls);
-    console.log("Settings object:", campaignData.settings);
     // Validation
     if (!campaignData.name.trim()) {
       setStatusMessage("Campaign name is required.");
@@ -491,24 +485,36 @@ function AutoNewsGenerator({
       return;
     }
 
+    // 🔥 CRITICAL DEBUG LOGGING
+    console.log("=== SAVING CAMPAIGN ===");
+    console.log("Active tab:", activeTab);
+    console.log("Campaign data:", campaignData);
+    console.log("RSS URLs:", campaignData.settings?.rss_urls);
+    console.log("Stringified:", JSON.stringify(campaignData));
+
     setIsLoading(true);
     setStatusMessage("");
 
     try {
+      const payload = {
+        action: "atm_save_automation_campaign",
+        nonce: atm_automation_data.nonce,
+        campaign_data: JSON.stringify(campaignData),
+        campaign_id: editingCampaign?.id || "",
+      };
+
+      console.log("🚀 Payload being sent:", payload);
+
       const response = await fetch(atm_automation_data.ajax_url, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({
-          action: "atm_save_automation_campaign", // Make sure this matches your AJAX action
-          nonce: atm_automation_data.nonce,
-          campaign_data: JSON.stringify(campaignData),
-          campaign_id: editingCampaign?.id || "",
-        }),
+        body: new URLSearchParams(payload),
       });
 
       const result = await response.json();
+      console.log("📥 Server response:", result);
 
       if (result.success) {
         setStatusMessage(
@@ -521,6 +527,7 @@ function AutoNewsGenerator({
         throw new Error(result.data || "Failed to save campaign");
       }
     } catch (error) {
+      console.error("💥 Save error:", error);
       setStatusMessage("Error: " + error.message);
     } finally {
       setIsLoading(false);

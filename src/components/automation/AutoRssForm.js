@@ -3,16 +3,27 @@ import {
   ToggleControl,
   TextControl,
   TextareaControl,
+  Button,
 } from "@wordpress/components";
 import CustomDropdown from "../common/CustomDropdown";
 
 const AutoRssForm = ({ campaignData, setCampaignData, isLoading }) => {
-  // Add debugging
-  console.log(
-    "AutoRssForm - Current RSS URLs:",
-    campaignData.settings?.rss_urls
-  );
-  console.log("AutoRssForm - Full settings:", campaignData.settings);
+  const [debugInfo, setDebugInfo] = useState("");
+
+  const handleDebug = () => {
+    const info = {
+      name: campaignData.name,
+      keyword: campaignData.keyword,
+      settings: campaignData.settings,
+      rss_urls: campaignData.settings?.rss_urls,
+      rss_urls_length: (campaignData.settings?.rss_urls || "").length,
+      full_json: JSON.stringify(campaignData),
+    };
+
+    console.log("=== RSS FORM DEBUG ===", info);
+    setDebugInfo(JSON.stringify(info, null, 2));
+    alert("Debug info logged to console and displayed below");
+  };
 
   return (
     <div className="atm-form-section">
@@ -21,11 +32,20 @@ const AutoRssForm = ({ campaignData, setCampaignData, isLoading }) => {
         Generate articles from RSS feed sources automatically using AI.
       </p>
 
+      {/* Debug button - temporary */}
+      <Button
+        isSecondary
+        onClick={handleDebug}
+        style={{ marginBottom: "20px", backgroundColor: "#f0f0f0" }}
+      >
+        🔍 Debug RSS State
+      </Button>
+
       <div className="atm-grid-2">
         <TextControl
           label="Campaign Name"
           placeholder="e.g., RSS Tech Articles"
-          value={campaignData.name}
+          value={campaignData.name || ""}
           onChange={(value) =>
             setCampaignData({ ...campaignData, name: value })
           }
@@ -35,7 +55,7 @@ const AutoRssForm = ({ campaignData, setCampaignData, isLoading }) => {
         <TextControl
           label="Keywords/Topic (Optional)"
           placeholder="e.g., artificial intelligence, climate change (leave empty for all feed content)"
-          value={campaignData.keyword}
+          value={campaignData.keyword || ""}
           onChange={(value) =>
             setCampaignData({ ...campaignData, keyword: value })
           }
@@ -56,15 +76,16 @@ const AutoRssForm = ({ campaignData, setCampaignData, isLoading }) => {
             { label: "RSS summary only", value: false },
             { label: "Full article content", value: true },
           ]}
-          onChange={(option) =>
+          onChange={(option) => {
+            console.log("Content extraction changed to:", option.value);
             setCampaignData({
               ...campaignData,
               settings: {
                 ...campaignData.settings,
                 use_full_content: option.value,
               },
-            })
-          }
+            });
+          }}
           disabled={isLoading}
           help="Full content provides more context but may be slower"
         />
@@ -144,9 +165,7 @@ const AutoRssForm = ({ campaignData, setCampaignData, isLoading }) => {
           }
           disabled={isLoading}
         />
-      </div>
 
-      <div className="atm-grid-2">
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <ToggleControl
             label="Enable web search"
@@ -187,18 +206,19 @@ https://rss.cnn.com/rss/edition.rss
 https://feeds.bbci.co.uk/news/rss.xml"
         value={campaignData.settings?.rss_urls || ""}
         onChange={(value) => {
-          console.log("RSS TextareaControl onChange fired with:", value);
-          console.log("Before update - settings:", campaignData.settings);
+          console.log("🔥 RSS URLs onChange triggered:", value);
+          console.log("🔥 Current settings before:", campaignData.settings);
 
-          setCampaignData({
+          const newCampaignData = {
             ...campaignData,
             settings: {
               ...campaignData.settings,
               rss_urls: value,
             },
-          });
+          };
 
-          console.log("After setCampaignData called");
+          console.log("🔥 New campaign data:", newCampaignData);
+          setCampaignData(newCampaignData);
         }}
         rows="8"
         disabled={isLoading}
@@ -210,13 +230,33 @@ https://feeds.bbci.co.uk/news/rss.xml"
         style={{
           marginTop: "10px",
           padding: "10px",
-          backgroundColor: "#f0f0f0",
+          backgroundColor: "#e8f4f8",
+          border: "1px solid #b3d9e6",
           fontSize: "12px",
+          fontFamily: "monospace",
         }}
       >
-        <strong>Debug - Current RSS URLs:</strong>{" "}
-        {campaignData.settings?.rss_urls || "EMPTY"}
+        <strong>🔍 Debug Info:</strong>
+        <br />
+        RSS URLs: "{campaignData.settings?.rss_urls || "EMPTY"}"<br />
+        Length: {(campaignData.settings?.rss_urls || "").length} characters
+        <br />
+        Settings keys: {Object.keys(campaignData.settings || {}).join(", ")}
       </div>
+
+      {debugInfo && (
+        <textarea
+          value={debugInfo}
+          readOnly
+          rows="10"
+          style={{
+            width: "100%",
+            marginTop: "10px",
+            fontFamily: "monospace",
+            fontSize: "11px",
+          }}
+        />
+      )}
     </div>
   );
 };

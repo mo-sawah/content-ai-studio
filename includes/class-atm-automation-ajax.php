@@ -17,6 +17,72 @@ class ATM_Automation_Ajax {
         $this->init_hooks();
     }
     
+    function atm_handle_save_automation_campaign() {
+        check_ajax_referer('atm_nonce', 'nonce');
+        
+        try {
+            $campaign_data = json_decode(stripslashes($_POST['campaign_data']), true);
+            $campaign_id = intval($_POST['campaign_id'] ?? 0);
+            
+            // Debug logging
+            error_log("ATM Campaign Save - Raw campaign_data: " . $_POST['campaign_data']);
+            error_log("ATM Campaign Save - Decoded: " . print_r($campaign_data, true));
+            error_log("ATM Campaign Save - RSS URLs: " . ($campaign_data['settings']['rss_urls'] ?? 'NOT SET'));
+            
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new Exception('Invalid JSON data: ' . json_last_error_msg());
+            }
+            
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'content_ai_campaigns';
+            
+            // Prepare data for database
+            $data = [
+                'name' => sanitize_text_field($campaign_data['name']),
+                'keyword' => sanitize_text_field($campaign_data['keyword'] ?? ''),
+                'type' => sanitize_text_field($campaign_data['type']),
+                'sub_type' => sanitize_text_field($campaign_data['sub_type']),
+                'settings' => wp_json_encode($campaign_data['settings']), // Use wp_json_encode
+                'schedule_value' => intval($campaign_data['schedule_value']),
+                'schedule_unit' => sanitize_text_field($campaign_data['schedule_unit']),
+                'content_mode' => sanitize_text_field($campaign_data['content_mode']),
+                'author_id' => intval($campaign_data['author_id']),
+                'is_active' => $campaign_data['is_active'] ? 1 : 0,
+                'updated_at' => current_time('mysql')
+            ];
+            
+            error_log("ATM Campaign Save - Data to save: " . print_r($data, true));
+            
+            if ($campaign_id > 0) {
+                // Update existing campaign
+                $result = $wpdb->update($table_name, $data, ['id' => $campaign_id]);
+                $final_id = $campaign_id;
+            } else {
+                // Create new campaign
+                $data['created_at'] = current_time('mysql');
+                $result = $wpdb->insert($table_name, $data);
+                $final_id = $wpdb->insert_id;
+            }
+            
+            if ($result === false) {
+                throw new Exception('Database error: ' . $wpdb->last_error);
+            }
+            
+            // Verify the save worked
+            $saved_campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $final_id));
+            error_log("ATM Campaign Save - Verification: " . print_r($saved_campaign, true));
+            
+            wp_send_json_success([
+                'message' => 'Campaign saved successfully',
+                'campaign_id' => $final_id
+            ]);
+            
+        } catch (Exception $e) {
+            error_log('ATM Campaign Save Error: ' . $e->getMessage());
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
     /**
      * Initialize AJAX hooks
      */
@@ -28,6 +94,7 @@ class ATM_Automation_Ajax {
         add_action('wp_ajax_atm_get_automation_campaign', array($this, 'get_automation_campaign'));
         add_action('wp_ajax_atm_toggle_automation_campaign', array($this, 'toggle_automation_campaign'));
         add_action('wp_ajax_atm_run_automation_campaign_now', array($this, 'run_automation_campaign_now'));
+        add_action('wp_ajax_atm_save_automation_campaign', 'atm_handle_save_automation_campaign');
         
         // Campaign Execution Logs
         add_action('wp_ajax_atm_get_automation_logs', array($this, 'get_automation_logs'));
