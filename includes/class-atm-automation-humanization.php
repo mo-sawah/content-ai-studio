@@ -253,11 +253,12 @@ class ATM_Automation_Humanization {
 TONE: {$style_instruction}
 
 RULES TO FOLLOW:
-1. Keep ALL facts and details (don’t add or remove information).
-2. Stay close to the same word count (within ~10%).
-3. Make the text flow naturally with varied sentence lengths (short, medium, and long).
-4. Use contractions naturally (don’t, can’t, we’re, it’s).
-5. Replace stiff or robotic wording with human-friendly alternatives.
+1. Keep ALL facts, dates, and historical references (don’t add or remove information).
+2. Preserve ALL links exactly as they appear (do not remove, rewrite, or ignore them).
+3. Stay close to the same word count (within ~10%).
+4. Make the text flow naturally with varied sentence lengths (short, medium, and long).
+5. Use contractions naturally (don’t, can’t, we’re, it’s).
+6. Replace stiff or robotic wording with human-friendly alternatives.
 
 MAKE IT SOUND HUMAN:
 - Instead of 'Furthermore' → 'Plus' or 'Also'
@@ -273,8 +274,10 @@ NATURAL FLOW:
 - Add a touch of personality without changing meaning.
 - Allow for slight imperfections (humans aren’t perfect writers).
 
-OUTPUT:
-Return ONLY the rewritten, humanized content — no explanations, no notes, just the final text.";
+IMPORTANT:
+- Do NOT remove or reformat hyperlinks (e.g., [text](url)).
+- If a sentence has a link, rewrite around it but keep the link in the same place.
+- Output ONLY the rewritten content — no explanations, no extra notes.";
     }
     
     /**
