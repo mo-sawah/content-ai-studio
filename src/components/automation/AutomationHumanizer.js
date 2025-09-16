@@ -62,6 +62,7 @@ const AutomationHumanizer = ({ campaignData, setCampaignData, isLoading }) => {
   };
 
   // Test humanization provider
+  // Update the testProvider function in AutomationHumanizer.js
   const testProvider = async () => {
     setIsTestingProvider(true);
     setTestResult(null);
@@ -69,6 +70,12 @@ const AutomationHumanizer = ({ campaignData, setCampaignData, isLoading }) => {
     try {
       const testContent =
         "This is a test message to validate the humanization provider and check if it's working correctly for automation campaigns.";
+
+      console.log("Testing humanization with:", {
+        provider: humanizationSettings.provider || "stealthgpt",
+        tone: humanizationSettings.tone || "conversational",
+        mode: humanizationSettings.mode || "Medium",
+      });
 
       const response = await fetch(atm_automation_data.ajax_url, {
         method: "POST",
@@ -88,7 +95,14 @@ const AutomationHumanizer = ({ campaignData, setCampaignData, isLoading }) => {
         }),
       });
 
+      console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const result = await response.json();
+      console.log("Response data:", result);
 
       if (result.success) {
         setTestResult({
@@ -96,6 +110,7 @@ const AutomationHumanizer = ({ campaignData, setCampaignData, isLoading }) => {
           humanizedContent: result.data.humanized_content,
           creditsUsed: result.data.credits_used,
           detectionScore: result.data.detection_score,
+          providerUsed: result.data.provider_used,
         });
       } else {
         setTestResult({
@@ -104,6 +119,7 @@ const AutomationHumanizer = ({ campaignData, setCampaignData, isLoading }) => {
         });
       }
     } catch (error) {
+      console.error("Test humanization error:", error);
       setTestResult({
         success: false,
         error: error.message,

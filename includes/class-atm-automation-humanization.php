@@ -1,11 +1,6 @@
 <?php
 /**
  * ATM Automation Humanization Handler
- * 
- * Handles humanization integration for automation campaigns
- * 
- * @package Content_AI_Studio
- * @since 1.7.0
  */
 
 if (!defined('ABSPATH')) {
@@ -32,59 +27,73 @@ class ATM_Automation_Humanization {
     public function ajax_test_humanization() {
         check_ajax_referer('atm_nonce', 'nonce');
         
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permission denied.');
-        }
-        
         try {
-            $content = sanitize_textarea_field($_POST['content']);
-            $provider = sanitize_text_field($_POST['provider']);
-            $tone = sanitize_text_field($_POST['tone']);
-            $mode = sanitize_text_field($_POST['mode']);
-            $model = sanitize_text_field($_POST['model']);
+            // Debug: Log the request
+            error_log('ATM Test Humanization: Starting test...');
+            error_log('ATM Test Humanization: POST data: ' . print_r($_POST, true));
+            
+            $content = wp_kses_post(stripslashes($_POST['content']));
+            $provider = sanitize_text_field($_POST['provider'] ?? 'stealthgpt');
+            $tone = sanitize_text_field($_POST['tone'] ?? 'conversational');
+            $mode = sanitize_text_field($_POST['mode'] ?? 'Medium');
+            $model = sanitize_text_field($_POST['model'] ?? 'anthropic/claude-3.5-sonnet');
             
             if (empty($content)) {
                 throw new Exception('Content is required for testing.');
             }
             
-            // Use the humanizer class
+            // Check if humanization class exists
             if (!class_exists('ATM_Humanize')) {
-                throw new Exception('Humanization service not available.');
+                error_log('ATM Test Humanization: ATM_Humanize class not found');
+                throw new Exception('Humanization service not available. Please ensure the humanization module is loaded.');
             }
             
+            error_log("ATM Test Humanization: Using provider: {$provider}");
+            
+            // Initialize humanizer
             $humanizer = new ATM_Humanize();
             
             $options = [
                 'tone' => $tone,
                 'mode' => $mode,
                 'business_mode' => false, // Use cheaper mode for testing
-                'model' => $model
+                'model' => $model,
+                'preserve_formatting' => false // Disable for testing
             ];
             
+            error_log('ATM Test Humanization: Options: ' . print_r($options, true));
+            
+            // Test humanization
             $result = $humanizer->humanize_content($content, $provider, $options);
             
-            // Optional: Check AI detection
+            error_log('ATM Test Humanization: Result: ' . print_r($result, true));
+            
+            // Optional: Check AI detection (but don't fail if it errors)
             $detection_score = null;
             try {
                 $detection_score = $humanizer->check_ai_detection($result['humanized_content']);
             } catch (Exception $e) {
-                // Detection check failed, continue anyway
+                error_log('ATM Test Humanization: Detection check failed: ' . $e->getMessage());
+                // Continue without detection score
             }
             
             wp_send_json_success([
                 'humanized_content' => $result['humanized_content'],
                 'credits_used' => $result['credits_used'],
                 'detection_score' => $detection_score,
-                'processing_time' => $result['processing_time'] ?? null
+                'processing_time' => $result['processing_time'] ?? null,
+                'provider_used' => $provider
             ]);
             
         } catch (Exception $e) {
+            error_log('ATM Test Humanization Error: ' . $e->getMessage());
             wp_send_json_error($e->getMessage());
         }
     }
     
     /**
      * Process automation content through humanization
+     * DISABLE WEB SEARCH for humanization
      */
     public function process_automation_humanization($content_result, $campaign, $settings) {
         // Check if humanization is enabled for this campaign
@@ -105,13 +114,14 @@ class ATM_Automation_Humanization {
                 return $content_result;
             }
             
-            // Prepare humanization options
+            // Prepare humanization options - DISABLE WEB SEARCH
             $humanization_options = [
                 'tone' => $humanization_settings['tone'] ?? 'conversational',
                 'mode' => $humanization_settings['mode'] ?? 'Medium',
                 'business_mode' => $humanization_settings['business_mode'] ?? true,
                 'preserve_formatting' => $humanization_settings['preserve_formatting'] ?? true,
-                'model' => $humanization_settings['openrouter_model'] ?? 'anthropic/claude-3.5-sonnet'
+                'model' => $humanization_settings['openrouter_model'] ?? 'anthropic/claude-3.5-sonnet',
+                'disable_web_search' => true // DISABLE WEB SEARCH FOR HUMANIZATION
             ];
             
             $provider = $humanization_settings['provider'] ?? 'stealthgpt';
@@ -137,22 +147,27 @@ class ATM_Automation_Humanization {
             
             // Optional: Check AI detection and retry if needed
             if ($humanization_settings['retry_on_detection'] ?? false) {
-                $detection_score = $humanizer->check_ai_detection($humanized_content);
-                
-                if ($detection_score > 70) { // High AI detection
-                    error_log("ATM Automation: High AI detection ({$detection_score}%), retrying with aggressive mode");
+                try {
+                    $detection_score = $humanizer->check_ai_detection($humanized_content);
                     
-                    $retry_options = $humanization_options;
-                    $retry_options['mode'] = 'High';
-                    
-                    $retry_result = $humanizer->humanize_content(
-                        $content_to_humanize, 
-                        $provider, 
-                        $retry_options
-                    );
-                    
-                    $humanized_content = $retry_result['humanized_content'];
-                    $credits_used += $retry_result['credits_used'];
+                    if ($detection_score > 70) { // High AI detection
+                        error_log("ATM Automation: High AI detection ({$detection_score}%), retrying with aggressive mode");
+                        
+                        $retry_options = $humanization_options;
+                        $retry_options['mode'] = 'High';
+                        
+                        $retry_result = $humanizer->humanize_content(
+                            $content_to_humanize, 
+                            $provider, 
+                            $retry_options
+                        );
+                        
+                        $humanized_content = $retry_result['humanized_content'];
+                        $credits_used += $retry_result['credits_used'];
+                    }
+                } catch (Exception $e) {
+                    error_log("ATM Automation: AI detection check failed: " . $e->getMessage());
+                    // Continue without detection check
                 }
             }
             
@@ -182,30 +197,6 @@ class ATM_Automation_Humanization {
             
             return $content_result; // Return original content on failure
         }
-    }
-    
-    /**
-     * Log humanization usage for automation
-     */
-    private function log_automation_humanization($campaign_id, $provider, $credits_used, $success = true) {
-        $log_entry = [
-            'timestamp' => current_time('mysql'),
-            'campaign_id' => $campaign_id,
-            'provider' => $provider,
-            'credits_used' => $credits_used,
-            'success' => $success,
-            'context' => 'automation'
-        ];
-        
-        $existing_logs = get_option('atm_automation_humanization_logs', []);
-        $existing_logs[] = $log_entry;
-        
-        // Keep only last 100 entries
-        if (count($existing_logs) > 100) {
-            $existing_logs = array_slice($existing_logs, -100);
-        }
-        
-        update_option('atm_automation_humanization_logs', $existing_logs);
     }
 }
 

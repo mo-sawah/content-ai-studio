@@ -39,8 +39,10 @@ class ATM_Automation {
             'includes/class-atm-automation-api.php',
             'includes/class-atm-automation-ajax.php',
             'includes/class-atm-automation-scheduler.php',
-            'includes/admin/class-atm-automation-admin.php'
-        ];
+            'includes/admin/class-atm-automation-admin.php',
+            'includes/class-atm-humanize.php',
+            'includes/class-atm-automation-humanization.php',
+             ];
         
         foreach ($required_files as $file) {
             $file_path = ATM_PLUGIN_PATH . $file;
