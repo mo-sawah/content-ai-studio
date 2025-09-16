@@ -1127,22 +1127,30 @@ private function render_advanced_tab() {
                 'flux-1-schnell-raw' => 'FLUX 1 Schnell Raw (Fast + Unfiltered)',
             ],
             'getimg_models' => [
-                // --- Photorealistic Models ---
-                'realistic-vision-v6-0-b1' => 'Photo: Realistic Vision v6.0',
-                'realism-engine-sdxl-v1-0' => 'Photo: Realism Engine SDXL',
-                'epicrealism-v5' => 'Photo: Epic Realism v5',
-
-                // --- Artistic & Illustrative Models ---
-                'dreamshaper-xl-v2-turbo' => 'Art: Dreamshaper XL v2',
-                'icbinp-seco' => 'Art: ICBINP (I Can\'t Believe It\'s Not Photography)',
-                'openjourney-v4' => 'Art: OpenJourney v4 (MidJourney Style)',
-
-                // --- Anime & Animation Models ---
-                'anything-v5-preat' => 'Anime: Anything v5',
-                'counterfeit-v3-0' => 'Anime: Counterfeit v3.0',
-
-                // --- General Purpose / All-Rounder ---
-                'stable-diffusion-xl-base-1-0' => 'General: Stable Diffusion XL 1.0',
+                // Essential Models (fastest/cheapest)
+                'essential-v2' => 'Essential V2 ($0.015)',
+                'essential' => 'Essential v1 (Legacy) ($0.0075)',
+                'flux-schnell' => 'FLUX.1 [schnell] (Free)',
+                
+                // Stable Diffusion XL Models  
+                'stable-diffusion-xl' => 'RealVisXL V4.0',
+                'stable-diffusion-xl' => 'JuggernautXL X',
+                'stable-diffusion-xl' => 'Reproduction v3.31',
+                'stable-diffusion-xl' => 'RealCartoonXL v6',
+                'stable-diffusion-xl' => 'SDV17-NijSyteXL',
+                'stable-diffusion-xl' => 'CounterfeitXL v2.5',
+                'stable-diffusion-xl' => 'Animagine v3.1',
+                
+                // Latent Consistency (fast)
+                'latent-consistency' => 'Dark Sushi Mix v2.25 LCM',
+                'latent-consistency' => 'Realistic Vision v5.1 LCM',
+                'latent-consistency' => 'DreamShaper v8 LCM',
+                
+                // Standard Stable Diffusion
+                'stable-diffusion' => 'AbsoluteReality v1.8.1',
+                'stable-diffusion' => 'DreamShaper v8',
+                'stable-diffusion' => 'Realistic Vision v5.1',
+                'stable-diffusion' => 'ICBINP SECO',
             ],
             'article_models'   => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',

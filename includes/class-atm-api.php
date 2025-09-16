@@ -3796,10 +3796,10 @@ Generate ONLY the script dialogue, no stage directions.";
             throw new Exception('getimg.ai API key is not configured.');
         }
 
-        // Use a valid default model from your settings array
-        $model = !empty($model_override) ? $model_override : get_option('atm_getimg_model', 'realistic-vision-v6-0-b1');
+        // Use a working model from your dashboard - the FAMILY column shows the actual API names
+        $model = !empty($model_override) ? $model_override : 'stable-diffusion-xl';
         
-        // Fixed dimensions - always use 1024x1024 (1:1 square format)
+        // Fixed dimensions - always use 1024x1024 (1:1 square format)  
         $width = 1024;
         $height = 1024;
 
