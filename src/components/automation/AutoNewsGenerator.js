@@ -638,11 +638,6 @@ function AutoNewsGenerator({
       return;
     }
 
-    if (!campaignData.keyword.trim()) {
-      setStatusMessage("Keywords/topic is required.");
-      return;
-    }
-
     setIsLoading(true);
     setStatusMessage("");
 
