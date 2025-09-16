@@ -372,12 +372,16 @@ https://feeds.feedburner.com/TechCrunch
 https://rss.cnn.com/rss/edition.rss
 https://feeds.bbci.co.uk/news/rss.xml"
         value={campaignData.settings?.rss_urls || ""}
-        onChange={(value) =>
+        onChange={(value) => {
+          console.log("RSS URLs changing to:", value); // Add this debug line
           setCampaignData({
             ...campaignData,
-            settings: { ...campaignData.settings, rss_urls: value },
-          })
-        }
+            settings: {
+              ...campaignData.settings,
+              rss_urls: value,
+            },
+          });
+        }}
         rows="8"
         disabled={isLoading}
         help="One RSS feed URL per line. The system will check these feeds and generate articles from new entries."
@@ -624,6 +628,12 @@ function AutoNewsGenerator({
 
   // Save campaign function
   const handleSaveCampaign = async () => {
+    // Add debugging right here
+    console.log("=== DEBUGGING RSS SAVE ===");
+    console.log("Active tab:", activeTab);
+    console.log("Campaign data:", campaignData);
+    console.log("RSS URLs from settings:", campaignData.settings?.rss_urls);
+    console.log("Settings object:", campaignData.settings);
     // Validation
     if (!campaignData.name.trim()) {
       setStatusMessage("Campaign name is required.");
