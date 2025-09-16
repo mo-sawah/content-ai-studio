@@ -8,6 +8,7 @@ import {
 } from "@wordpress/components";
 import { chevronDown } from "@wordpress/icons";
 import CustomDropdown from "../common/CustomDropdown";
+import AutomationHumanizer from "./AutomationHumanizer";
 
 /**
  * Enhanced Schedule Summary Component with Cost Calculator
@@ -458,6 +459,11 @@ function AutomationSettingsForm({
 
       <div className="atm-form-section">
         <h3>Campaign Options</h3>
+        <AutomationHumanizer
+          campaignData={campaignData}
+          setCampaignData={setCampaignData}
+          isLoading={isLoading}
+        />
         <div className="atm-inline-toggles">
           <ToggleControl
             label="Generate Featured Images"

@@ -1933,12 +1933,15 @@ Use web search to ensure all information is current and accurate, then return th
             
             error_log("ATM Automation: Generating content for campaign: " . $campaign->name);
             
-            // Use the unified service to generate content
+            // Use the unified service to generate content (ONLY ONCE)
             $content_result = ATM_Content_Generation_Service::generate_article_content($params);
             
             if (!$content_result['success']) {
                 throw new Exception($content_result['message']);
             }
+            
+            // 🔥 ADD HUMANIZATION FILTER HERE (right after successful generation)
+            $content_result = apply_filters('atm_automation_content_generated', $content_result, $campaign, $settings);
             
             // Prepare post parameters
             $post_params = [
@@ -1949,10 +1952,25 @@ Use web search to ensure all information is current and accurate, then return th
                 'generate_image' => $settings['generate_image'] ?? false
             ];
             
+            // Check if humanization forced draft mode
+            if (isset($content_result['force_draft'])) {
+                $post_params['post_status'] = 'draft';
+                error_log("ATM Automation: Humanization failed, saving as draft: " . ($content_result['humanization_error'] ?? ''));
+            }
+            
             // Create the post
             $post_result = ATM_Content_Generation_Service::create_post_from_content($content_result, $post_params);
             
             if ($post_result['success']) {
+                // Log humanization metadata if applied
+                if (isset($content_result['humanization_applied'])) {
+                    update_post_meta($post_result['post_id'], '_atm_humanization_applied', true);
+                    update_post_meta($post_result['post_id'], '_atm_humanization_provider', $content_result['humanization_provider']);
+                    update_post_meta($post_result['post_id'], '_atm_humanization_credits', $content_result['humanization_credits_used']);
+                    
+                    error_log("ATM Automation: Humanization applied to post {$post_result['post_id']} using {$content_result['humanization_provider']} ({$content_result['humanization_credits_used']} credits)");
+                }
+                
                 error_log("ATM Automation: Successfully created post ID {$post_result['post_id']} for campaign '{$campaign->name}'");
                 return $post_result;
             } else {
