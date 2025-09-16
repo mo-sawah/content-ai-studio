@@ -3839,8 +3839,21 @@ Generate ONLY the script dialogue, no stage directions.";
         
         if ($response_code !== 200) {
             $error_data = json_decode($raw_body, true);
-            $error_message = $error_data['error'] ?? $raw_body;
-            throw new Exception('getimg.ai API Error: ' . $error_message);
+            $final_error_message = $raw_body; // Default to the full response body as a fallback.
+
+            // Check if the decoded JSON has an 'error' key.
+            if (is_array($error_data) && isset($error_data['error'])) {
+                // Check if the 'error' value is an array with a 'message' key inside it.
+                if (is_array($error_data['error']) && isset($error_data['error']['message'])) {
+                    $final_error_message = $error_data['error']['message'];
+                }
+                // Check if the 'error' value is just a simple string.
+                elseif (is_string($error_data['error'])) {
+                    $final_error_message = $error_data['error'];
+                }
+            }
+            
+            throw new Exception('getimg.ai API Error: ' . $final_error_message);
         }
 
         $json = json_decode($raw_body, true);
