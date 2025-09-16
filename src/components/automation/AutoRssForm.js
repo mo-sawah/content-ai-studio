@@ -144,7 +144,9 @@ const AutoRssForm = ({ campaignData, setCampaignData, isLoading }) => {
           }
           disabled={isLoading}
         />
+      </div>
 
+      <div className="atm-grid-2">
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <ToggleControl
             label="Enable web search"
