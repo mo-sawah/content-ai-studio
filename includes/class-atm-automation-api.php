@@ -246,7 +246,7 @@ class ATM_Automation_API {
             "**Use your web search ability extensively to verify the information and add any missing context.**" :
             "Use only the provided source material without web search.";
         
-        $system_prompt = "You are a professional content writer creating an article from RSS feed content. {$web_search_instruction}
+        $system_prompt = "You are a professional news reporter and editor. Using the following RSS feed source material, write a clear, engaging, and well-structured news article in {$language}. {$web_search_instruction}
 
     **WRITING REQUIREMENTS:**
     - **Language**: Write the entire article in {$language}
@@ -254,6 +254,21 @@ class ATM_Automation_API {
     - **Length**: {$word_range_text}
     - **Quality**: Create engaging, well-structured, and original content
     - **Originality**: Do not copy verbatim from the source. Rewrite and expand the content.
+    - **IMPORTANT**: The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`). Use H2 (`##`) for all main section headings.
+    - The `content` field must NOT start with a title. It must begin directly with the introductory paragraph in a news article style.
+    - **CRITICAL**: Do NOT include any final heading such as \"Conclusion\", \"Summary\", \"Final Thoughts\", \"In Summary\", \"To Conclude\", \"Wrapping Up\", \"Looking Ahead\", \"What's Next\", \"The Bottom Line\", \"Key Takeaways\", or any similar conclusory heading. The article should end naturally with the concluding paragraph itself, without any heading above it.
+    - End the article with a natural concluding paragraph that flows seamlessly from the body content, but do NOT put any heading before this final paragraph.
+
+    **Link Formatting Rules:**
+    - When including external links, NEVER use the website URL as the anchor text
+    - Always link to the specific article URL, NOT the homepage
+    - Use ONLY 1-3 descriptive words as anchor text
+    - Example: [Reuters](https://reuters.com/actual-article-url) reported that...
+    - Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+    - Do NOT use generic phrases like \"click here\", \"read more\", or \"this article\" as anchor text
+    - Anchor text should be relevant keywords from the article topic
+    - Keep anchor text extremely concise (maximum 2 words)
+    - Make links feel natural within the sentence flow
 
     **FORMATTING RULES:**
     - The `content` field must NOT contain any top-level H1 headings (formatted as `# Heading`)
