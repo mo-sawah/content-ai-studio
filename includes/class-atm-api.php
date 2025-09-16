@@ -3806,7 +3806,7 @@ Generate ONLY the script dialogue, no stage directions.";
             throw new Exception('Invalid image size format. Expected format like "1024x1024".');
         }
 
-        // Explicitly cast to integers to fix the API error
+        // Explicitly cast to integers and ensure they're valid
         $width = intval(trim($size_parts[0]));
         $height = intval(trim($size_parts[1]));
 
@@ -3822,16 +3822,20 @@ Generate ONLY the script dialogue, no stage directions.";
 
         $endpoint = 'https://api.getimg.ai/v1/stable-diffusion/text-to-image';
         
+        // Build the body array with explicit integer types
         $body = [
             'model' => $model,
             'prompt' => self::enhance_image_prompt($prompt),
             'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
-            'width' => $width,
-            'height' => $height,
-            'steps' => 30, // Sensible default
-            'guidance' => 7.5, // Sensible default
+            'width' => $width,    // These are now guaranteed to be integers
+            'height' => $height,  // These are now guaranteed to be integers
+            'steps' => 30,
+            'guidance' => 7.5,
             'output_format' => 'jpeg'
         ];
+
+        // Debug log to verify types before sending
+        error_log('getimg.ai API body: width=' . $width . ' (' . gettype($width) . '), height=' . $height . ' (' . gettype($height) . ')');
 
         $response = wp_remote_post($endpoint, [
             'headers' => [
@@ -3840,7 +3844,7 @@ Generate ONLY the script dialogue, no stage directions.";
                 'Accept'        => 'application/json'
             ],
             'timeout' => 180,
-            'body'    => wp_json_encode($body),
+            'body'    => json_encode($body, JSON_NUMERIC_CHECK), // Force numeric values to stay numeric
         ]);
 
         if (is_wp_error($response)) {
