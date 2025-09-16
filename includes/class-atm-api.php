@@ -3797,45 +3797,27 @@ Generate ONLY the script dialogue, no stage directions.";
         }
 
         $model = !empty($model_override) ? $model_override : get_option('atm_getimg_model', 'realistic-vision-v5-1');
-        $size = !empty($size_override) ? $size_override : get_option('atm_image_size', '1024x1024');
-
-        // Parse width and height from the size string
-        $size_parts = explode('x', $size);
-
-        if (count($size_parts) !== 2) {
-            throw new Exception('Invalid image size format. Expected format like "1024x1024".');
-        }
-
-        // Explicitly cast to integers and ensure they're valid
-        $width = intval(trim($size_parts[0]));
-        $height = intval(trim($size_parts[1]));
-
-        // Verify that casting was successful and dimensions are valid
-        if ($width <= 0 || $height <= 0) {
-            throw new Exception('Image width and height must be valid positive numbers.');
-        }
-
-        // Ensure dimensions are multiples of 64
-        if ($width % 64 !== 0 || $height % 64 !== 0) {
-            throw new Exception('getimg.ai requires image dimensions to be a multiple of 64.');
-        }
+        
+        // Fixed dimensions - always use 1024x1024 (1:1 square format)
+        $width = 1024;
+        $height = 1024;
 
         $endpoint = 'https://api.getimg.ai/v1/stable-diffusion/text-to-image';
         
-        // Build the body array with explicit integer types
+        // Build the body array with fixed integer dimensions
         $body = [
             'model' => $model,
             'prompt' => self::enhance_image_prompt($prompt),
             'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
-            'width' => $width,    // These are now guaranteed to be integers
-            'height' => $height,  // These are now guaranteed to be integers
+            'width' => $width,
+            'height' => $height,
             'steps' => 30,
             'guidance' => 7.5,
             'output_format' => 'jpeg'
         ];
 
-        // Debug log to verify types before sending
-        error_log('getimg.ai API body: width=' . $width . ' (' . gettype($width) . '), height=' . $height . ' (' . gettype($height) . ')');
+        // Debug log to verify the request
+        error_log('getimg.ai API request: width=' . $width . ', height=' . $height . ', model=' . $model);
 
         $response = wp_remote_post($endpoint, [
             'headers' => [
@@ -3844,7 +3826,7 @@ Generate ONLY the script dialogue, no stage directions.";
                 'Accept'        => 'application/json'
             ],
             'timeout' => 180,
-            'body'    => json_encode($body, JSON_NUMERIC_CHECK), // Force numeric values to stay numeric
+            'body'    => json_encode($body, JSON_NUMERIC_CHECK),
         ]);
 
         if (is_wp_error($response)) {
