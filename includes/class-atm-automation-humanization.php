@@ -14,10 +14,11 @@ class ATM_Automation_Humanization {
     }
     
     private function init_hooks() {
-        // AJAX handler for testing humanization
+        // Fix: Add the missing action handler that JavaScript is calling
         add_action('wp_ajax_test_automation_humanization', array($this, 'ajax_test_humanization'));
         
-        // Hook into automation content generation
+        // Keep existing handlers
+        add_action('wp_ajax_atm_test_automation_humanization', array($this, 'ajax_test_humanization')); 
         add_filter('atm_automation_content_generated', array($this, 'process_automation_humanization'), 10, 3);
     }
     

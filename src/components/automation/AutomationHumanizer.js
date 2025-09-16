@@ -83,11 +83,8 @@ const AutomationHumanizer = ({ campaignData, setCampaignData, isLoading }) => {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
-          action: "test_automation_humanization",
-          nonce:
-            atm_studio_data?.nonce ||
-            atm_automation_data?.automation_nonce ||
-            window.atmNonce,
+          action: "atm_test_automation_humanization",
+          nonce: atm_automation_data.nonce, // Use the correct nonce
           content: testContent,
           provider: humanizationSettings.provider || "stealthgpt",
           tone: humanizationSettings.tone || "conversational",
