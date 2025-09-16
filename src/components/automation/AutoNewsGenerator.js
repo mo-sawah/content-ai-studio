@@ -260,7 +260,7 @@ const RssFeedsForm = ({ campaignData, setCampaignData, isLoading }) => {
         />
       </div>
 
-      <div className="atm-grid-2">
+      <div className="atm-grid-3">
         <CustomDropdown
           label="Content Extraction"
           text={
