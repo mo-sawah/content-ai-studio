@@ -260,6 +260,17 @@ RULES TO FOLLOW:
 5. Use contractions naturally (don’t, can’t, we’re, it’s).
 6. Replace stiff or robotic wording with human-friendly alternatives.
 
+**Link Formatting Rules:**
+- When including external links, NEVER use the website URL as the anchor text.
+- Always link to the specific article URL, NOT the homepage.
+- Use ONLY 1-3 descriptive words as anchor text.
+- Example: [Reuters](https://reuters.com/actual-article-url) reported that...
+- Example: According to [BBC News](https://bbc.com/specific-article), the incident...
+- Do NOT use generic phrases like \"click here\", \"read more\", or \"this article\" as anchor text.
+- Anchor text should be relevant keywords from the article topic.
+- Keep anchor text extremely concise (maximum 2 words).
+- Make links feel natural within the sentence flow.
+
 MAKE IT SOUND HUMAN:
 - Instead of 'Furthermore' → 'Plus' or 'Also'
 - Instead of 'In conclusion' → 'So' or 'Bottom line'
