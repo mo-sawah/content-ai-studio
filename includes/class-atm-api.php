@@ -3796,51 +3796,75 @@ Generate ONLY the script dialogue, no stage directions.";
             throw new Exception('getimg.ai API key is not configured.');
         }
 
-        // Default model and endpoint
-        $model = !empty($model_override) ? $model_override : 'FLUX.1 [schnell]';
-        $endpoint = 'https://api.getimg.ai/v1/stable-diffusion/text-to-image';
+        // Default to Essential V2 if none selected
+        $model = !empty($model_override) ? $model_override : 'essential-v2';
 
-        // Width & height defaults
+        // Parse "family:variant" (e.g. stable-diffusion-xl:realvisxl-v40)
+        $parts = explode(':', $model);
+        $family = $parts[0];        // essential-v2, flux-schnell, stable-diffusion-xl, etc.
+        $variant = $parts[1] ?? null;
+
+        // Default sizes
         $width = 1024;
         $height = 1024;
         if (!empty($size_override) && is_array($size_override)) {
-            if (!empty($size_override['width'])) {
-                $width = (int) $size_override['width'];
-            }
-            if (!empty($size_override['height'])) {
-                $height = (int) $size_override['height'];
-            }
+            $width  = !empty($size_override['width']) ? (int) $size_override['width'] : $width;
+            $height = !empty($size_override['height']) ? (int) $size_override['height'] : $height;
         }
 
-        // Decide endpoint based on model type
-        $mod = strtolower($model);
-        $is_flux = false;
-        if (strpos($mod, 'flux') !== false) {
-            $is_flux = true;
-            $endpoint = 'https://api.getimg.ai/v1/flux-schnell/text-to-image'; // adjust if using flux-dev etc.
-        } elseif (strpos($mod, 'xl') !== false) {
-            $endpoint = 'https://api.getimg.ai/v1/stable-diffusion-xl/text-to-image';
-        }
+        // Pick endpoint by family
+        switch ($family) {
+            case 'flux-schnell':
+                $endpoint = 'https://api.getimg.ai/v1/flux-schnell/text-to-image';
+                $body = [
+                    'prompt'          => self::enhance_image_prompt($prompt),
+                    'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
+                    'size'            => $width . 'x' . $height,
+                    'output_format'   => 'jpeg'
+                ];
+                break;
 
-        // Build body differently for FLUX vs SD
-        if ($is_flux) {
-            $body = [
-                'prompt'          => self::enhance_image_prompt($prompt),
-                'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
-                'size'            => $width . 'x' . $height,
-                'output_format'   => 'jpeg'
-            ];
-        } else {
-            $body = [
-                'model'           => $model,
-                'prompt'          => self::enhance_image_prompt($prompt),
-                'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
-                'width'           => $width,
-                'height'          => $height,
-                'steps'           => 30,
-                'guidance'        => 7.5,
-                'output_format'   => 'jpeg'
-            ];
+            case 'essential-v2':
+            case 'essential':
+                $endpoint = 'https://api.getimg.ai/v1/essential-v2/text-to-image';
+                $body = [
+                    'model'           => $variant ?: $family,
+                    'prompt'          => self::enhance_image_prompt($prompt),
+                    'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
+                    'size'            => $width . 'x' . $height,
+                    'output_format'   => 'jpeg'
+                ];
+                break;
+
+            case 'stable-diffusion-xl':
+                $endpoint = 'https://api.getimg.ai/v1/stable-diffusion-xl/text-to-image';
+                $body = [
+                    'model'           => $variant ?: $family,
+                    'prompt'          => self::enhance_image_prompt($prompt),
+                    'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
+                    'width'           => $width,
+                    'height'          => $height,
+                    'steps'           => 30,
+                    'guidance'        => 7.5,
+                    'output_format'   => 'jpeg'
+                ];
+                break;
+
+            case 'latent-consistency':
+            case 'stable-diffusion':
+            default:
+                $endpoint = 'https://api.getimg.ai/v1/stable-diffusion/text-to-image';
+                $body = [
+                    'model'           => $variant ?: $family,
+                    'prompt'          => self::enhance_image_prompt($prompt),
+                    'negative_prompt' => 'Disfigured, cartoon, blurry, nude',
+                    'width'           => $width,
+                    'height'          => $height,
+                    'steps'           => 30,
+                    'guidance'        => 7.5,
+                    'output_format'   => 'jpeg'
+                ];
+                break;
         }
 
         error_log("getimg.ai API request: endpoint={$endpoint}, model={$model}");
@@ -3888,6 +3912,7 @@ Generate ONLY the script dialogue, no stage directions.";
 
         return $image_data;
     }
+
 
 
 

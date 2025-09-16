@@ -1127,30 +1127,32 @@ private function render_advanced_tab() {
                 'flux-1-schnell-raw' => 'FLUX 1 Schnell Raw (Fast + Unfiltered)',
             ],
             'getimg_models' => [
-                // Essential Models (fastest/cheapest)
-                'essential-v2' => 'Essential V2 ($0.015)',
-                'essential' => 'Essential v1 (Legacy) ($0.0075)',
-                'flux-schnell' => 'FLUX.1 [schnell] (Free)',
-                
-                // Stable Diffusion XL Models  
-                'stable-diffusion-xl' => 'RealVisXL V4.0',
-                'stable-diffusion-xl' => 'JuggernautXL X',
-                'stable-diffusion-xl' => 'Reproduction v3.31',
-                'stable-diffusion-xl' => 'RealCartoonXL v6',
-                'stable-diffusion-xl' => 'SDV17-NijSyteXL',
-                'stable-diffusion-xl' => 'CounterfeitXL v2.5',
-                'stable-diffusion-xl' => 'Animagine v3.1',
-                
-                // Latent Consistency (fast)
-                'latent-consistency' => 'Dark Sushi Mix v2.25 LCM',
-                'latent-consistency' => 'Realistic Vision v5.1 LCM',
-                'latent-consistency' => 'DreamShaper v8 LCM',
-                
-                // Standard Stable Diffusion
-                'stable-diffusion' => 'AbsoluteReality v1.8.1',
-                'stable-diffusion' => 'DreamShaper v8',
-                'stable-diffusion' => 'Realistic Vision v5.1',
-                'stable-diffusion' => 'ICBINP SECO',
+                // Essential Models
+                'essential-v2'        => 'Essential V2 ($0.015)',
+                'essential'           => 'Essential v1 (Legacy) ($0.0075)',
+
+                // FLUX
+                'flux-schnell'        => 'FLUX.1 [schnell] (Free)',
+
+                // Stable Diffusion XL (SDXL family)
+                'stable-diffusion-xl:realvisxl-v40'      => 'RealVisXL V4.0',
+                'stable-diffusion-xl:juggernautxl-x'     => 'JuggernautXL X',
+                'stable-diffusion-xl:reproduction-v331'  => 'Reproduction v3.31',
+                'stable-diffusion-xl:realcartoonxl-v6'   => 'RealCartoonXL v6',
+                'stable-diffusion-xl:sdv17-nijsytexl'    => 'SDV17-NijSyteXL',
+                'stable-diffusion-xl:counterfeitxl-v25'  => 'CounterfeitXL v2.5',
+                'stable-diffusion-xl:animagine-v31'      => 'Animagine v3.1',
+
+                // Latent Consistency Models
+                'latent-consistency:darksushi-v225'      => 'Dark Sushi Mix v2.25 LCM',
+                'latent-consistency:realvis-v51'         => 'Realistic Vision v5.1 LCM',
+                'latent-consistency:dreamshaper-v8'      => 'DreamShaper v8 LCM',
+
+                // Stable Diffusion (SD 1.5 family)
+                'stable-diffusion:absolutereality-v181'  => 'AbsoluteReality v1.8.1',
+                'stable-diffusion:dreamshaper-v8'        => 'DreamShaper v8',
+                'stable-diffusion:realvis-v51'           => 'Realistic Vision v5.1',
+                'stable-diffusion:icbinp-seco'           => 'ICBINP SECO',
             ],
             'article_models'   => [
                 'openai/gpt-4o' => 'OpenAI: GPT-4o (Best All-Around)',
