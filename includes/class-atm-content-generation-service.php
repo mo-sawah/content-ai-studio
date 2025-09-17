@@ -19,10 +19,11 @@ class ATM_Content_Generation_Service {
      * @param array $params Content generation parameters
      * @return array Result with success/error status and generated content
      */
-    public static function generate_article_content($params) {
+public static function generate_article_content($params) {
         try {
             // For automation, post_id is not required initially
             $is_automation = isset($params['is_automation']) && $params['is_automation'] === true;
+            $is_title_based = isset($params['is_title_based']) && $params['is_title_based'] === true;
             
             // Validate required parameters
             $required_params = $is_automation ? ['keyword'] : ['keyword', 'post_id'];
@@ -44,6 +45,12 @@ class ATM_Content_Generation_Service {
             
             if (empty($article_title) && empty($keyword)) {
                 throw new Exception("Please provide a keyword or an article title.");
+            }
+            
+            // NEW: Handle title-based generation differently
+            if ($is_title_based && !empty($article_title)) {
+                error_log("ATM Title-Based: Generating content for specific title: {$article_title}");
+                return self::generate_title_based_content($params);
             }
             
             // Ensure the angles table exists
@@ -140,7 +147,7 @@ class ATM_Content_Generation_Service {
             $subtitle = $result['subheadline'] ?? $result['subtitle'] ?? '';
             $final_content = trim($result['content']);
 
-            // 🔥 ADD THIS BLOCK: Convert Markdown to HTML
+            // Convert Markdown to HTML
             $final_content = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2">$1</a>', $final_content);
             $final_content = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $final_content);
             $final_content = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $final_content);
@@ -174,6 +181,197 @@ class ATM_Content_Generation_Service {
                 'message' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * NEW METHOD: Generate content based on a specific pre-generated title
+     */
+    private static function generate_title_based_content($params) {
+        $keyword = sanitize_text_field($params['keyword']);
+        $article_title = sanitize_text_field($params['article_title']);
+        $post_id = intval($params['post_id'] ?? 0);
+        $model_override = isset($params['model']) ? sanitize_text_field($params['model']) : '';
+        $style_key = isset($params['writing_style']) ? sanitize_key($params['writing_style']) : 'default_seo';
+        $custom_prompt = isset($params['custom_prompt']) ? wp_kses_post(stripslashes($params['custom_prompt'])) : '';
+        $word_count = isset($params['word_count']) ? intval($params['word_count']) : 0;
+        $creativity_level = isset($params['creativity_level']) ? sanitize_text_field($params['creativity_level']) : 'high';
+        $enable_web_search = isset($params['enable_web_search']) ? $params['enable_web_search'] : true;
+        $include_subheadlines = isset($params['include_subheadlines']) ? $params['include_subheadlines'] : true;
+        
+        error_log("ATM Title-Based Content: Generating for title: {$article_title}");
+        
+        // Perform web search for the specific title/topic if enabled
+        $web_research_context = '';
+        if ($enable_web_search) {
+            try {
+                if (class_exists('ATM_API') && method_exists('ATM_API', 'perform_web_search')) {
+                    $search_results = ATM_API::perform_web_search($article_title, 5);
+                    if (!empty($search_results)) {
+                        $research_info = [];
+                        foreach (array_slice($search_results, 0, 3) as $result) {
+                            if (isset($result['title']) && isset($result['snippet'])) {
+                                $research_info[] = $result['title'] . ': ' . $result['snippet'];
+                            }
+                        }
+                        $web_research_context = "\n\nRecent information about this topic:\n" . implode("\n", $research_info);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("ATM Title-Based: Web search failed: " . $e->getMessage());
+            }
+        }
+        
+        // Get writing style template
+        $writing_styles = method_exists('ATM_API', 'get_writing_styles') ? ATM_API::get_writing_styles() : [];
+        if (empty($writing_styles)) {
+            $writing_styles = ['default_seo' => ['prompt' => 'Write a professional, SEO-optimized article.']];
+        }
+        
+        $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
+        if (!empty($custom_prompt)) {
+            $base_prompt = $custom_prompt;
+        }
+        
+        // Build the final prompt for title-based generation
+        $word_count_instruction = $word_count > 0 ? " Target length: approximately {$word_count} words." : "";
+        $subheadline_instruction = $include_subheadlines ? " Include clear subheadings (H2, H3) to structure the content." : "";
+        
+        $final_prompt = "Write a comprehensive article with the exact title: '{$article_title}'
+
+Main keyword focus: {$keyword}
+{$word_count_instruction}
+{$subheadline_instruction}
+
+Writing requirements:
+{$base_prompt}
+
+{$web_research_context}
+
+IMPORTANT FORMATTING RULES:
+- Use the exact title provided above as the article title
+- The content should NOT start with the title - begin with the introductory paragraph
+- Use H2 (##) for main section headings, never H1 (#)
+- Do NOT include conclusion headings like 'Conclusion', 'Summary', 'Final Thoughts'
+- End naturally with a concluding paragraph without any heading above it
+- Make the article informative, engaging, and valuable to readers interested in {$keyword}
+
+Return the response as JSON:
+{
+    \"title\": \"{$article_title}\",
+    \"content\": \"Complete article content in markdown format\",
+    \"word_count\": estimated_word_count
+}";
+
+        // Apply post-specific shortcode replacements if post exists
+        if ($post_id > 0) {
+            $post = get_post($post_id);
+            if ($post && class_exists('ATM_API') && method_exists('ATM_API', 'replace_prompt_shortcodes')) {
+                $final_prompt = ATM_API::replace_prompt_shortcodes($final_prompt, $post);
+            }
+        }
+
+        // Generate content using AI
+        if (!class_exists('ATM_API') || !method_exists('ATM_API', 'enhance_content_with_openrouter')) {
+            throw new Exception('ATM_API class or enhance_content_with_openrouter method not available');
+        }
+        
+        $raw_response = ATM_API::enhance_content_with_openrouter(
+            ['content' => $article_title],
+            $final_prompt,
+            $model_override ?: get_option('atm_article_model'),
+            true, // JSON mode
+            $enable_web_search,
+            $creativity_level
+        );
+        
+        // Parse JSON response
+        $json_string = trim($raw_response);
+        if (!str_starts_with($json_string, '{')) {
+            if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
+                $json_string = $matches[0];
+            } else {
+                throw new Exception('The AI returned a non-JSON response for title-based generation.');
+            }
+        }
+
+        $result = json_decode($json_string, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result['content'])) {
+            error_log('ATM Title-Based - Invalid JSON from AI: ' . $json_string);
+            throw new Exception('The AI returned an invalid response structure for title-based generation.');
+        }
+
+        $generated_title = $result['title'] ?? $article_title;
+        $article_content = trim($result['content']);
+
+        if (empty($article_content)) {
+            throw new Exception('Generated content is empty for title-based generation.');
+        }
+
+        // Convert Markdown to HTML
+        $article_content = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2">$1</a>', $article_content);
+        $article_content = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $article_content);
+        $article_content = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $article_content);
+        $article_content = preg_replace('/^## (.+)$/m', '<h2>$1</h2>', $article_content);
+        $article_content = preg_replace('/^### (.+)$/m', '<h3>$1</h3>', $article_content);
+
+        // Save subtitle if post exists (title-based usually doesn't need subtitles)
+        if ($post_id > 0) {
+            update_post_meta($post_id, '_atm_title_based_automation', true);
+            update_post_meta($post_id, '_atm_source_title', $article_title);
+        }
+
+        error_log("ATM Title-Based Content: Successfully generated " . str_word_count(strip_tags($article_content)) . " words for: {$article_title}");
+
+        return [
+            'success' => true,
+            'article_title' => $generated_title,
+            'article_content' => $article_content,
+            'subtitle' => '', // Title-based doesn't typically need subtitles since title is pre-defined
+            'word_count' => $result['word_count'] ?? str_word_count(strip_tags($article_content)),
+            'generation_method' => 'title_based',
+            'source_title' => $article_title
+        ];
+    }
+
+    /**
+     * ADD this helper method to your ATM_Content_Generation_Service class
+     * Get writing style template for title-based content
+     */
+    private static function get_writing_style_template($style) {
+        $templates = [
+            'default_seo' => 'Write in a clear, SEO-optimized style. Use natural keyword integration, provide valuable information, and structure content for readability. Include actionable insights and practical advice.',
+            'professional' => 'Use a professional, business-oriented tone. Write formally but accessibly, focusing on expertise and credibility. Include industry insights and professional perspectives.',
+            'conversational' => 'Write in a friendly, conversational tone as if talking to a friend. Use "you" to address readers directly, include personal touches, and make complex topics easy to understand.',
+            'technical' => 'Use precise technical language appropriate for expert audiences. Include detailed explanations, technical specifications, and in-depth analysis.',
+            'news' => 'Write in a journalistic style with clear, factual reporting. Start with the most important information, use short paragraphs, and maintain objectivity.',
+            'educational' => 'Focus on teaching and learning outcomes. Use clear explanations, examples, and step-by-step guidance. Structure content for progressive understanding.'
+        ];
+        
+        return $templates[$style] ?? $templates['default_seo'];
+    }
+
+    /**
+     * ADD this helper method to your ATM_Content_Generation_Service class
+     * Basic markdown to HTML conversion (fallback)
+     */
+    private static function basic_markdown_to_html($markdown) {
+        $html = $markdown;
+        
+        // Convert headers
+        $html = preg_replace('/^## (.+)$/m', '<h2>$1</h2>', $html);
+        $html = preg_replace('/^### (.+)$/m', '<h3>$1</h3>', $html);
+        
+        // Convert bold and italic
+        $html = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $html);
+        $html = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $html);
+        
+        // Convert links
+        $html = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2">$1</a>', $html);
+        
+        // Convert line breaks to paragraphs
+        $html = wpautop($html);
+        
+        return $html;
     }
     
     /**

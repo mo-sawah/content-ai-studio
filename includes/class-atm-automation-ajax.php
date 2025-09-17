@@ -94,6 +94,7 @@ class ATM_Automation_Ajax {
         add_action('wp_ajax_atm_get_automation_campaign', array($this, 'get_automation_campaign'));
         add_action('wp_ajax_atm_toggle_automation_campaign', array($this, 'toggle_automation_campaign'));
         add_action('wp_ajax_atm_run_automation_campaign_now', array($this, 'run_automation_campaign_now'));
+        add_action('wp_ajax_atm_generate_article_titles', array('ATM_Title_Generation', 'generate_article_titles'));
         
         // Campaign Execution Logs
         add_action('wp_ajax_atm_get_automation_logs', array($this, 'get_automation_logs'));
@@ -642,5 +643,314 @@ class ATM_Automation_Ajax {
             default:
                 return gmdate('Y-m-d H:i:s', $current_time + HOUR_IN_SECONDS);
         }
+    }
+}
+
+class ATM_Title_Generation {
+    
+    /**
+     * Generate article titles based on keyword and web research
+     */
+    public static function generate_article_titles() {
+        // Verify permissions and nonce
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permission denied.');
+        }
+        check_ajax_referer('atm_automation_nonce', 'nonce');
+        
+        try {
+            $keyword = sanitize_text_field($_POST['keyword'] ?? '');
+            $batch_size = intval($_POST['batch_size'] ?? 100);
+            $ai_model = sanitize_text_field($_POST['ai_model'] ?? '');
+            $writing_style = sanitize_text_field($_POST['writing_style'] ?? 'default_seo');
+            $existing_titles = json_decode(stripslashes($_POST['existing_titles'] ?? '[]'), true);
+            
+            if (empty($keyword)) {
+                throw new Exception('Keyword is required.');
+            }
+            
+            // Validate batch size
+            $batch_size = max(10, min(1000, $batch_size));
+            
+            // Get current web research about the topic
+            $web_research = self::conduct_web_research($keyword);
+            
+            // Generate titles using AI with web research context
+            $generated_titles = self::generate_titles_with_ai(
+                $keyword,
+                $batch_size,
+                $ai_model,
+                $writing_style,
+                $web_research,
+                $existing_titles
+            );
+            
+            // Filter out duplicates and similar titles
+            $unique_titles = self::filter_unique_titles($generated_titles, $existing_titles);
+            
+            wp_send_json_success([
+                'titles' => $unique_titles,
+                'research_summary' => $web_research['summary'] ?? '',
+                'generated_count' => count($unique_titles)
+            ]);
+            
+        } catch (Exception $e) {
+            error_log('ATM Title Generation Error: ' . $e->getMessage());
+            wp_send_json_error($e->getMessage());
+        }
+    }
+    
+    /**
+     * Conduct web research on the topic
+     */
+    private static function conduct_web_research($keyword) {
+        try {
+            // Use the existing web search functionality
+            $search_results = ATM_API::perform_web_search($keyword, 10);
+            
+            if (empty($search_results)) {
+                return [
+                    'summary' => 'No recent information found for this topic.',
+                    'trends' => [],
+                    'recent_developments' => []
+                ];
+            }
+            
+            // Extract key information from search results
+            $recent_info = [];
+            $trends = [];
+            
+            foreach ($search_results as $result) {
+                if (isset($result['title']) && isset($result['snippet'])) {
+                    $recent_info[] = $result['title'] . ': ' . $result['snippet'];
+                }
+            }
+            
+            // Analyze trends and recent developments
+            $research_summary = self::analyze_search_results($recent_info, $keyword);
+            
+            return [
+                'summary' => $research_summary,
+                'raw_results' => array_slice($recent_info, 0, 5), // First 5 results
+                'search_count' => count($search_results)
+            ];
+            
+        } catch (Exception $e) {
+            error_log('Web research error: ' . $e->getMessage());
+            return [
+                'summary' => 'Unable to gather recent information due to search limitations.',
+                'trends' => [],
+                'recent_developments' => []
+            ];
+        }
+    }
+    
+    /**
+     * Analyze search results to identify trends and key points
+     */
+    private static function analyze_search_results($results, $keyword) {
+        if (empty($results)) {
+            return "No recent information available for analysis.";
+        }
+        
+        $combined_text = implode(' ', array_slice($results, 0, 3));
+        $summary = "Recent developments around '{$keyword}' include: " . substr($combined_text, 0, 500) . "...";
+        
+        return $summary;
+    }
+    
+    /**
+     * Generate titles using AI with research context
+     */
+    private static function generate_titles_with_ai($keyword, $batch_size, $ai_model, $writing_style, $research, $existing_titles) {
+        // Build the prompt for title generation
+        $existing_titles_text = '';
+        if (!empty($existing_titles)) {
+            $existing_titles_text = "\n\nExisting titles to avoid duplicating:\n" . implode("\n", array_slice($existing_titles, -20));
+        }
+        
+        $research_context = '';
+        if (!empty($research['summary'])) {
+            $research_context = "\n\nRecent research context:\n" . $research['summary'];
+        }
+        
+        $style_instruction = self::get_style_instruction($writing_style);
+        
+        $prompt = "Generate {$batch_size} unique, engaging article titles about '{$keyword}'. 
+        
+Requirements:
+- Each title should be unique and approach the topic from a different angle
+- Titles should be SEO-friendly and compelling for readers
+- Consider current trends and recent developments
+- {$style_instruction}
+- Avoid duplicating or being too similar to existing titles
+- Include a mix of how-to guides, listicles, case studies, and informational articles
+- Make titles actionable and specific when possible
+
+{$research_context}
+{$existing_titles_text}
+
+Return exactly {$batch_size} titles, one per line, without numbering or bullet points:";
+
+        try {
+            // Use the API class to generate content
+            $response = ATM_API::generate_content_with_openrouter($prompt, $ai_model);
+            
+            if (empty($response)) {
+                throw new Exception('No response from AI service.');
+            }
+            
+            // Parse the response into individual titles
+            $titles = self::parse_titles_from_response($response);
+            
+            // Clean and validate titles
+            $cleaned_titles = self::clean_and_validate_titles($titles, $keyword);
+            
+            return $cleaned_titles;
+            
+        } catch (Exception $e) {
+            error_log('AI title generation error: ' . $e->getMessage());
+            throw new Exception('Failed to generate titles: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get style-specific instructions
+     */
+    private static function get_style_instruction($writing_style) {
+        $style_map = [
+            'default_seo' => 'Focus on SEO-optimized titles with clear value propositions',
+            'professional' => 'Use professional, business-oriented language and formal tone',
+            'conversational' => 'Use friendly, conversational language that feels approachable',
+            'technical' => 'Include technical terms and focus on detailed, expert-level content',
+            'news' => 'Write titles like news headlines with urgency and timeliness',
+            'educational' => 'Focus on learning outcomes and educational value'
+        ];
+        
+        return $style_map[$writing_style] ?? $style_map['default_seo'];
+    }
+    
+    /**
+     * Parse titles from AI response
+     */
+    private static function parse_titles_from_response($response) {
+        // Split by newlines and clean up
+        $lines = explode("\n", $response);
+        $titles = [];
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            // Skip empty lines
+            if (empty($line)) {
+                continue;
+            }
+            
+            // Remove numbering, bullets, or dashes
+            $line = preg_replace('/^[\d\.\-\*\>\s]+/', '', $line);
+            $line = trim($line);
+            
+            // Remove quotes if present
+            $line = trim($line, '"\'');
+            
+            if (!empty($line) && strlen($line) > 10) {
+                $titles[] = $line;
+            }
+        }
+        
+        return $titles;
+    }
+    
+    /**
+     * Clean and validate titles
+     */
+    private static function clean_and_validate_titles($titles, $keyword) {
+        $cleaned = [];
+        
+        foreach ($titles as $title) {
+            // Basic cleaning
+            $title = trim($title);
+            $title = preg_replace('/\s+/', ' ', $title); // Normalize whitespace
+            
+            // Validate length (reasonable title length)
+            if (strlen($title) < 20 || strlen($title) > 150) {
+                continue;
+            }
+            
+            // Ensure it's somewhat related to the keyword
+            if (!self::is_title_relevant($title, $keyword)) {
+                continue;
+            }
+            
+            $cleaned[] = $title;
+        }
+        
+        return $cleaned;
+    }
+    
+    /**
+     * Check if title is relevant to keyword
+     */
+    private static function is_title_relevant($title, $keyword) {
+        $title_lower = strtolower($title);
+        $keyword_lower = strtolower($keyword);
+        
+        // Split keyword into words
+        $keyword_words = explode(' ', $keyword_lower);
+        
+        // Check if at least one keyword word appears in title
+        foreach ($keyword_words as $word) {
+            $word = trim($word);
+            if (strlen($word) > 2 && strpos($title_lower, $word) !== false) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Filter out duplicate and similar titles
+     */
+    private static function filter_unique_titles($new_titles, $existing_titles) {
+        $all_existing = array_map('strtolower', $existing_titles);
+        $unique_titles = [];
+        
+        foreach ($new_titles as $title) {
+            $title_lower = strtolower($title);
+            
+            // Check for exact duplicates
+            if (in_array($title_lower, $all_existing)) {
+                continue;
+            }
+            
+            // Check for similarity with existing titles
+            $is_similar = false;
+            foreach ($all_existing as $existing) {
+                if (self::titles_are_similar($title_lower, $existing)) {
+                    $is_similar = true;
+                    break;
+                }
+            }
+            
+            if (!$is_similar) {
+                $unique_titles[] = $title;
+                $all_existing[] = $title_lower; // Add to existing to check against remaining titles
+            }
+        }
+        
+        return $unique_titles;
+    }
+    
+    /**
+     * Check if two titles are too similar
+     */
+    private static function titles_are_similar($title1, $title2) {
+        // Simple similarity check using similar_text
+        $similarity = 0;
+        similar_text($title1, $title2, $similarity);
+        
+        // Consider titles similar if they're more than 80% similar
+        return $similarity > 80;
     }
 }

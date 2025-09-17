@@ -1781,97 +1781,97 @@ Use web search to ensure all information is current and accurate, then return th
      * Execute automation campaign
      */
     public static function execute_campaign($campaign_id) {
-    $start_time = microtime(true);
-    $start_memory = memory_get_usage();
-    
-    try {
-        // Mark campaign as running
-        ATM_Automation_Database::update_campaign_status($campaign_id, 'running');
+        $start_time = microtime(true);
+        $start_memory = memory_get_usage();
         
-        $campaign = ATM_Automation_Database::get_campaign($campaign_id);
-        if (!$campaign) {
-            throw new Exception("Campaign not found: $campaign_id");
-        }
-
-        if (!$campaign->is_active) {
-            ATM_Automation_Database::update_campaign_status($campaign_id, 'paused');
-            return ['success' => false, 'message' => 'Campaign is not active'];
-        }
-
-        $settings = json_decode($campaign->settings, true) ?: [];
-        
-        // Execute based on type
-        $result = null;
-        switch ($campaign->type) {
-            case 'articles':
-                $result = self::execute_article_campaign($campaign, $settings);
-                break;
-            case 'news':
-                $result = self::execute_news_campaign($campaign, $settings);
-                break;
-            case 'videos':
-                $result = self::execute_video_automation($campaign, $settings);
-                break;
-            case 'podcasts':
-                $result = self::execute_podcast_automation($campaign, $settings);
-                break;
-            default:
-                throw new Exception('Unknown campaign type: ' . $campaign->type);
-        }
-
-        // Calculate execution metrics
-        $execution_time = microtime(true) - $start_time;
-        $memory_usage = memory_get_usage() - $start_memory;
-        
-        if ($result['success']) {
-            // Update next run time
-            ATM_Automation_Database::update_next_run(
-                $campaign_id, 
-                $campaign->schedule_value, 
-                $campaign->schedule_unit
-            );
+        try {
+            // Mark campaign as running
+            ATM_Automation_Database::update_campaign_status($campaign_id, 'running');
             
-            // Mark as idle and log success
-            ATM_Automation_Database::update_campaign_status($campaign_id, 'idle');
-            ATM_Automation_Database::log_execution(
-                $campaign_id, 
-                'completed', 
-                'Successfully generated content', 
-                $result['post_id'] ?? null,
-                $execution_time,
-                format_bytes($memory_usage)
-            );
-        } else {
+            $campaign = ATM_Automation_Database::get_campaign($campaign_id);
+            if (!$campaign) {
+                throw new Exception("Campaign not found: $campaign_id");
+            }
+
+            if (!$campaign->is_active) {
+                ATM_Automation_Database::update_campaign_status($campaign_id, 'paused');
+                return ['success' => false, 'message' => 'Campaign is not active'];
+            }
+
+            $settings = json_decode($campaign->settings, true) ?: [];
+            
+            // Execute based on type
+            $result = null;
+            switch ($campaign->type) {
+                case 'articles':
+                    $result = self::execute_article_campaign($campaign, $settings);
+                    break;
+                case 'news':
+                    $result = self::execute_news_campaign($campaign, $settings);
+                    break;
+                case 'videos':
+                    $result = self::execute_video_automation($campaign, $settings);
+                    break;
+                case 'podcasts':
+                    $result = self::execute_podcast_automation($campaign, $settings);
+                    break;
+                default:
+                    throw new Exception('Unknown campaign type: ' . $campaign->type);
+            }
+
+            // Calculate execution metrics
+            $execution_time = microtime(true) - $start_time;
+            $memory_usage = memory_get_usage() - $start_memory;
+            
+            if ($result['success']) {
+                // Update next run time
+                ATM_Automation_Database::update_next_run(
+                    $campaign_id, 
+                    $campaign->schedule_value, 
+                    $campaign->schedule_unit
+                );
+                
+                // Mark as idle and log success
+                ATM_Automation_Database::update_campaign_status($campaign_id, 'idle');
+                ATM_Automation_Database::log_execution(
+                    $campaign_id, 
+                    'completed', 
+                    'Successfully generated content', 
+                    $result['post_id'] ?? null,
+                    $execution_time,
+                    format_bytes($memory_usage)
+                );
+            } else {
+                // Mark as failed and log error
+                ATM_Automation_Database::update_campaign_status($campaign_id, 'failed');
+                ATM_Automation_Database::log_execution(
+                    $campaign_id, 
+                    'failed', 
+                    $result['message'] ?? 'Unknown error',
+                    null,
+                    $execution_time,
+                    format_bytes($memory_usage)
+                );
+            }
+            
+            return $result;
+
+        } catch (Exception $e) {
             // Mark as failed and log error
             ATM_Automation_Database::update_campaign_status($campaign_id, 'failed');
             ATM_Automation_Database::log_execution(
                 $campaign_id, 
                 'failed', 
-                $result['message'] ?? 'Unknown error',
+                $e->getMessage(),
                 null,
-                $execution_time,
-                format_bytes($memory_usage)
+                microtime(true) - $start_time,
+                format_bytes(memory_get_usage() - $start_memory)
             );
+            
+            error_log('ATM Automation Campaign Execution Error: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
         }
-        
-        return $result;
-
-    } catch (Exception $e) {
-        // Mark as failed and log error
-        ATM_Automation_Database::update_campaign_status($campaign_id, 'failed');
-        ATM_Automation_Database::log_execution(
-            $campaign_id, 
-            'failed', 
-            $e->getMessage(),
-            null,
-            microtime(true) - $start_time,
-            format_bytes(memory_get_usage() - $start_memory)
-        );
-        
-        error_log('ATM Automation Campaign Execution Error: ' . $e->getMessage());
-        return ['success' => false, 'message' => $e->getMessage()];
     }
-}
 
     /**
      * Execute article campaign (with sub-types)
@@ -1881,7 +1881,12 @@ Use web search to ensure all information is current and accurate, then return th
         
         switch ($sub_type) {
             case 'standard':
-                return self::execute_article_automation($campaign, $settings);
+                // Check if this is title-based generation
+                if (isset($settings['generated_titles']) && !empty($settings['generated_titles'])) {
+                    return self::execute_title_based_automation($campaign, $settings);
+                } else {
+                    return self::execute_article_automation($campaign, $settings);
+                }
             case 'trending':
                 return self::execute_trending_automation($campaign, $settings);
             case 'listicle':
@@ -1891,6 +1896,224 @@ Use web search to ensure all information is current and accurate, then return th
             default:
                 return self::execute_article_automation($campaign, $settings);
         }
+    }
+
+    private static function execute_title_based_automation($campaign, $settings) {
+        try {
+            $generated_titles = $settings['generated_titles'] ?? [];
+            $used_titles = $settings['used_titles'] ?? [];
+            $auto_regenerate = $settings['auto_regenerate_titles'] ?? true;
+            
+            error_log("ATM Title-Based: Campaign {$campaign->name} - " . count($generated_titles) . " total titles, " . count($used_titles) . " used");
+            
+            // Get next available title
+            $next_title = self::get_next_available_title($generated_titles, $used_titles);
+            
+            if (!$next_title) {
+                if ($auto_regenerate) {
+                    // Auto-generate new titles
+                    error_log("ATM Title-Based: No titles available, auto-regenerating...");
+                    $new_titles = self::auto_regenerate_titles($campaign, $settings);
+                    if (!empty($new_titles)) {
+                        // Update campaign with new titles
+                        self::update_campaign_titles($campaign->id, $new_titles);
+                        $next_title = $new_titles[0];
+                        error_log("ATM Title-Based: Generated " . count($new_titles) . " new titles, using: " . $next_title);
+                    } else {
+                        throw new Exception('Failed to auto-regenerate titles and no titles available.');
+                    }
+                } else {
+                    throw new Exception('No titles available and auto-regeneration is disabled.');
+                }
+            }
+            
+            error_log("ATM Title-Based: Using title: " . $next_title);
+            
+            // Generate article using your existing service with the specific title
+            $params = [
+                'keyword' => $campaign->keyword,
+                'article_title' => $next_title, // Use the specific title instead of generating one
+                'post_id' => 0,
+                'model' => $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o'),
+                'writing_style' => $settings['writing_style'] ?? 'default_seo',
+                'custom_prompt' => $settings['custom_prompt'] ?? '',
+                'word_count' => $settings['word_count'] ?? 0,
+                'creativity_level' => $settings['creativity_level'] ?? 'high',
+                'is_automation' => true,
+                'is_title_based' => true // Flag to indicate title-based generation
+            ];
+            
+            // Use your existing unified service
+            $content_result = ATM_Content_Generation_Service::generate_article_content($params);
+            
+            if (!$content_result['success']) {
+                throw new Exception($content_result['message']);
+            }
+            
+            // Apply humanization if enabled (using your existing filter)
+            $content_result = apply_filters('atm_automation_content_generated', $content_result, $campaign, $settings);
+            
+            // Create post using your existing service
+            $post_params = [
+                'post_status' => $campaign->content_mode === 'publish' ? 'publish' : 'draft',
+                'post_author' => $campaign->author_id,
+                'post_category' => self::get_campaign_category_ids($campaign),
+                'campaign_id' => $campaign->id,
+                'generate_image' => $settings['generate_image'] ?? false
+            ];
+            
+            // Check if humanization forced draft mode
+            if (isset($content_result['force_draft'])) {
+                $post_params['post_status'] = 'draft';
+                error_log("ATM Title-Based: Humanization failed, saving as draft");
+            }
+            
+            $post_result = ATM_Content_Generation_Service::create_post_from_content($content_result, $post_params);
+            
+            if ($post_result['success']) {
+                // Mark title as used
+                self::mark_title_as_used($campaign->id, $next_title);
+                
+                // Log humanization metadata if applied
+                if (isset($content_result['humanization_applied'])) {
+                    update_post_meta($post_result['post_id'], '_atm_humanization_applied', true);
+                    update_post_meta($post_result['post_id'], '_atm_humanization_provider', $content_result['humanization_provider']);
+                    update_post_meta($post_result['post_id'], '_atm_title_based_automation', true);
+                    update_post_meta($post_result['post_id'], '_atm_source_title', $next_title);
+                }
+                
+                $remaining_titles = count($generated_titles) - count($used_titles) - 1;
+                error_log("ATM Title-Based: Successfully created post ID {$post_result['post_id']}, {$remaining_titles} titles remaining");
+                
+                return [
+                    'success' => true,
+                    'post_id' => $post_result['post_id'],
+                    'post_url' => get_permalink($post_result['post_id']),
+                    'title_used' => $next_title,
+                    'remaining_titles' => $remaining_titles,
+                    'message' => "Article created using title: {$next_title}"
+                ];
+            } else {
+                throw new Exception($post_result['message']);
+            }
+            
+        } catch (Exception $e) {
+            error_log('ATM Title-Based Automation Error: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * ADD these helper methods to your ATM_Automation_API class
+     */
+    private static function get_next_available_title($generated_titles, $used_titles) {
+        if (empty($generated_titles)) {
+            return null;
+        }
+        
+        // Find first title that hasn't been used
+        foreach ($generated_titles as $title) {
+            if (!in_array($title, $used_titles)) {
+                return $title;
+            }
+        }
+        
+        return null;
+    }
+
+    private static function auto_regenerate_titles($campaign, $settings) {
+        try {
+            $keyword = $campaign->keyword;
+            $batch_size = $settings['titles_batch_size'] ?? 100;
+            $ai_model = $settings['ai_model'] ?? '';
+            $writing_style = $settings['writing_style'] ?? 'default_seo';
+            $existing_titles = array_merge(
+                $settings['generated_titles'] ?? [],
+                $settings['used_titles'] ?? []
+            );
+            
+            // Use the title generation functionality
+            if (!class_exists('ATM_Title_Generation')) {
+                throw new Exception('Title generation service not available');
+            }
+            
+            // Conduct web research
+            $web_research = ATM_Title_Generation::conduct_web_research($keyword);
+            
+            // Generate new titles
+            $new_titles = ATM_Title_Generation::generate_titles_with_ai(
+                $keyword,
+                $batch_size,
+                $ai_model,
+                $writing_style,
+                $web_research,
+                $existing_titles
+            );
+            
+            // Filter for uniqueness
+            return ATM_Title_Generation::filter_unique_titles($new_titles, $existing_titles);
+            
+        } catch (Exception $e) {
+            error_log('Auto-regenerate titles error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private static function update_campaign_titles($campaign_id, $new_titles) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        // Get current campaign
+        $campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
+        if (!$campaign) {
+            return false;
+        }
+        
+        $settings = json_decode($campaign->settings, true);
+        $current_titles = $settings['generated_titles'] ?? [];
+        
+        // Merge new titles with existing ones
+        $all_titles = array_merge($current_titles, $new_titles);
+        $settings['generated_titles'] = array_unique($all_titles);
+        
+        // Update database
+        $result = $wpdb->update(
+            $table_name,
+            ['settings' => wp_json_encode($settings)],
+            ['id' => $campaign_id]
+        );
+        
+        return $result !== false;
+    }
+
+    private static function mark_title_as_used($campaign_id, $title) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        $campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
+        if (!$campaign) {
+            return false;
+        }
+        
+        $settings = json_decode($campaign->settings, true);
+        $used_titles = $settings['used_titles'] ?? [];
+        
+        // Add title to used list if not already there
+        if (!in_array($title, $used_titles)) {
+            $used_titles[] = $title;
+            $settings['used_titles'] = $used_titles;
+            
+            // Update database
+            $wpdb->update(
+                $table_name,
+                ['settings' => wp_json_encode($settings)],
+                ['id' => $campaign_id]
+            );
+            
+            error_log("ATM Title-Based: Marked title as used: " . $title);
+        }
+        
+        return true;
     }
 
     /**
@@ -2807,6 +3030,396 @@ Use web search to ensure all information is current and accurate, then return th
         
         foreach ($due_campaigns as $campaign) {
             self::execute_campaign($campaign->id);
+        }
+    }
+}
+
+class ATM_Title_Based_Automation {
+    
+    /**
+     * Execute a title-based automation campaign
+     */
+    public static function execute_title_based_campaign($campaign_id, $campaign_data) {
+        try {
+            $settings = $campaign_data['settings'];
+            $generated_titles = $settings['generated_titles'] ?? [];
+            $used_titles = $settings['used_titles'] ?? [];
+            $auto_regenerate = $settings['auto_regenerate_titles'] ?? true;
+            
+            // Get next available title
+            $next_title = self::get_next_available_title($generated_titles, $used_titles);
+            
+            if (!$next_title) {
+                if ($auto_regenerate) {
+                    // Auto-generate new titles
+                    $new_titles = self::auto_regenerate_titles($campaign_data);
+                    if (!empty($new_titles)) {
+                        // Update campaign with new titles
+                        self::update_campaign_titles($campaign_id, $new_titles);
+                        $next_title = $new_titles[0];
+                    } else {
+                        throw new Exception('Failed to auto-regenerate titles and no titles available.');
+                    }
+                } else {
+                    throw new Exception('No titles available and auto-regeneration is disabled.');
+                }
+            }
+            
+            // Generate article based on the selected title
+            $post_id = self::generate_article_from_title(
+                $next_title,
+                $campaign_data['keyword'],
+                $settings,
+                $campaign_data
+            );
+            
+            if ($post_id) {
+                // Mark title as used
+                self::mark_title_as_used($campaign_id, $next_title);
+                
+                return [
+                    'success' => true,
+                    'post_id' => $post_id,
+                    'post_url' => get_permalink($post_id),
+                    'title_used' => $next_title,
+                    'remaining_titles' => count($generated_titles) - count($used_titles) - 1
+                ];
+            } else {
+                throw new Exception('Failed to generate article from title.');
+            }
+            
+        } catch (Exception $e) {
+            error_log('Title-based automation error: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Get the next available title from the list
+     */
+    private static function get_next_available_title($generated_titles, $used_titles) {
+        if (empty($generated_titles)) {
+            return null;
+        }
+        
+        // Find first title that hasn't been used
+        foreach ($generated_titles as $title) {
+            if (!in_array($title, $used_titles)) {
+                return $title;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Auto-regenerate titles when depleted
+     */
+    private static function auto_regenerate_titles($campaign_data) {
+        try {
+            $keyword = $campaign_data['keyword'];
+            $settings = $campaign_data['settings'];
+            $batch_size = $settings['titles_batch_size'] ?? 100;
+            $ai_model = $settings['ai_model'] ?? '';
+            $writing_style = $settings['writing_style'] ?? 'default_seo';
+            $existing_titles = array_merge(
+                $settings['generated_titles'] ?? [],
+                $settings['used_titles'] ?? []
+            );
+            
+            // Use the title generation class
+            $web_research = ATM_Title_Generation::conduct_web_research($keyword);
+            $new_titles = ATM_Title_Generation::generate_titles_with_ai(
+                $keyword,
+                $batch_size,
+                $ai_model,
+                $writing_style,
+                $web_research,
+                $existing_titles
+            );
+            
+            return ATM_Title_Generation::filter_unique_titles($new_titles, $existing_titles);
+            
+        } catch (Exception $e) {
+            error_log('Auto-regenerate titles error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Update campaign with new titles
+     */
+    private static function update_campaign_titles($campaign_id, $new_titles) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        // Get current campaign
+        $campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
+        if (!$campaign) {
+            return false;
+        }
+        
+        $settings = json_decode($campaign->settings, true);
+        $current_titles = $settings['generated_titles'] ?? [];
+        
+        // Merge new titles with existing ones
+        $all_titles = array_merge($current_titles, $new_titles);
+        $settings['generated_titles'] = array_unique($all_titles);
+        
+        // Update database
+        $result = $wpdb->update(
+            $table_name,
+            ['settings' => wp_json_encode($settings)],
+            ['id' => $campaign_id]
+        );
+        
+        return $result !== false;
+    }
+    
+    /**
+     * Generate article from a specific title
+     */
+    private static function generate_article_from_title($title, $keyword, $settings, $campaign_data) {
+        try {
+            // Build enhanced prompt with the specific title
+            $web_search_enabled = $settings['enable_web_search'] ?? true;
+            $web_research_context = '';
+            
+            if ($web_search_enabled) {
+                // Perform web search for this specific title/topic
+                $search_results = ATM_API::perform_web_search($title, 5);
+                if (!empty($search_results)) {
+                    $research_info = [];
+                    foreach (array_slice($search_results, 0, 3) as $result) {
+                        if (isset($result['title']) && isset($result['snippet'])) {
+                            $research_info[] = $result['title'] . ': ' . $result['snippet'];
+                        }
+                    }
+                    $web_research_context = "\n\nRecent information about this topic:\n" . implode("\n", $research_info);
+                }
+            }
+            
+            // Get writing style template
+            $writing_style = $settings['writing_style'] ?? 'default_seo';
+            $custom_prompt = $settings['custom_prompt'] ?? '';
+            
+            if (!empty($custom_prompt)) {
+                $prompt_template = $custom_prompt;
+            } else {
+                $prompt_template = self::get_writing_style_template($writing_style);
+            }
+            
+            // Build the final prompt
+            $word_count = $settings['word_count'] ?? 0;
+            $word_count_instruction = $word_count > 0 ? " Target length: approximately {$word_count} words." : "";
+            
+            $include_subheadlines = $settings['include_subheadlines'] ?? true;
+            $subheadline_instruction = $include_subheadlines ? " Include clear subheadings (H2, H3) to structure the content." : "";
+            
+            $final_prompt = "Write a comprehensive article with the exact title: '{$title}'
+            
+Main keyword focus: {$keyword}
+{$word_count_instruction}
+{$subheadline_instruction}
+
+Writing requirements:
+{$prompt_template}
+
+{$web_research_context}
+
+Important: Use the exact title provided above. Make the article informative, engaging, and valuable to readers interested in {$keyword}.";
+
+            // Generate content using AI
+            $ai_model = $settings['ai_model'] ?? '';
+            $content = ATM_API::generate_content_with_openrouter($final_prompt, $ai_model);
+            
+            if (empty($content)) {
+                throw new Exception('Failed to generate article content.');
+            }
+            
+            // Process content through humanization if enabled
+            if (isset($settings['humanization']['enabled']) && $settings['humanization']['enabled']) {
+                $content = self::humanize_content($content, $settings['humanization']);
+            }
+            
+            // Create the post
+            $post_data = [
+                'post_title' => $title,
+                'post_content' => $content,
+                'post_status' => $campaign_data['content_mode'] ?? 'draft',
+                'post_author' => $campaign_data['author_id'] ?? 1,
+                'post_type' => 'post',
+                'meta_input' => [
+                    '_atm_generated_by' => 'title_based_automation',
+                    '_atm_campaign_id' => $campaign_data['id'] ?? 0,
+                    '_atm_source_title' => $title,
+                    '_atm_keyword' => $keyword
+                ]
+            ];
+            
+            // Set categories if specified
+            if (!empty($settings['category_ids'])) {
+                $post_data['post_category'] = array_map('intval', $settings['category_ids']);
+            }
+            
+            $post_id = wp_insert_post($post_data);
+            
+            if (is_wp_error($post_id)) {
+                throw new Exception('Failed to create post: ' . $post_id->get_error_message());
+            }
+            
+            // Generate featured image if enabled
+            if ($settings['generate_image'] ?? false) {
+                self::generate_featured_image($post_id, $title, $keyword);
+            }
+            
+            return $post_id;
+            
+        } catch (Exception $e) {
+            error_log('Generate article from title error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Mark a title as used
+     */
+    private static function mark_title_as_used($campaign_id, $title) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        $campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
+        if (!$campaign) {
+            return false;
+        }
+        
+        $settings = json_decode($campaign->settings, true);
+        $used_titles = $settings['used_titles'] ?? [];
+        
+        // Add title to used list if not already there
+        if (!in_array($title, $used_titles)) {
+            $used_titles[] = $title;
+            $settings['used_titles'] = $used_titles;
+            
+            // Update database
+            $wpdb->update(
+                $table_name,
+                ['settings' => wp_json_encode($settings)],
+                ['id' => $campaign_id]
+            );
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Get writing style template
+     */
+    private static function get_writing_style_template($style) {
+        $templates = [
+            'default_seo' => 'Write in a clear, SEO-optimized style. Use natural keyword integration, provide valuable information, and structure content for readability. Include actionable insights and practical advice.',
+            'professional' => 'Use a professional, business-oriented tone. Write formally but accessibly, focusing on expertise and credibility. Include industry insights and professional perspectives.',
+            'conversational' => 'Write in a friendly, conversational tone as if talking to a friend. Use "you" to address readers directly, include personal touches, and make complex topics easy to understand.',
+            'technical' => 'Use precise technical language appropriate for expert audiences. Include detailed explanations, technical specifications, and in-depth analysis.',
+            'news' => 'Write in a journalistic style with clear, factual reporting. Start with the most important information, use short paragraphs, and maintain objectivity.',
+            'educational' => 'Focus on teaching and learning outcomes. Use clear explanations, examples, and step-by-step guidance. Structure content for progressive understanding.'
+        ];
+        
+        return $templates[$style] ?? $templates['default_seo'];
+    }
+    
+    /**
+     * Humanize content if enabled
+     */
+    private static function humanize_content($content, $humanization_settings) {
+        if (!class_exists('ATM_Automation_Humanization')) {
+            return $content;
+        }
+        
+        try {
+            return ATM_Automation_Humanization::humanize_content($content, $humanization_settings);
+        } catch (Exception $e) {
+            error_log('Humanization error: ' . $e->getMessage());
+            return $content; // Return original content if humanization fails
+        }
+    }
+    
+    /**
+     * Generate featured image for the post
+     */
+    private static function generate_featured_image($post_id, $title, $keyword) {
+        try {
+            // Create image prompt based on title and keyword
+            $image_prompt = "Professional illustration representing: {$title}. Style: modern, clean, relevant to {$keyword}";
+            
+            // Generate image using existing API
+            $image_url = ATM_API::generate_image_with_openai($image_prompt);
+            
+            if ($image_url) {
+                // Use existing method to set image
+                $ajax_handler = new ATM_Ajax();
+                $attachment_id = $ajax_handler->set_image_from_url($image_url, $post_id);
+                
+                if (!is_wp_error($attachment_id)) {
+                    set_post_thumbnail($post_id, $attachment_id);
+                }
+            }
+        } catch (Exception $e) {
+            error_log('Featured image generation error: ' . $e->getMessage());
+            // Don't throw error for image generation failure
+        }
+    }
+    
+    /**
+     * Get campaign statistics for title-based campaigns
+     */
+    public static function get_title_campaign_stats($campaign_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        $campaign = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $campaign_id));
+        if (!$campaign) {
+            return null;
+        }
+        
+        $settings = json_decode($campaign->settings, true);
+        $generated_titles = $settings['generated_titles'] ?? [];
+        $used_titles = $settings['used_titles'] ?? [];
+        
+        return [
+            'total_titles' => count($generated_titles),
+            'used_titles' => count($used_titles),
+            'remaining_titles' => count($generated_titles) - count($used_titles),
+            'auto_regenerate' => $settings['auto_regenerate_titles'] ?? true,
+            'last_title_used' => end($used_titles) ?: null
+        ];
+    }
+    
+    /**
+     * Clean up old used titles (optional maintenance)
+     */
+    public static function cleanup_old_used_titles($days_to_keep = 90) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'atm_automation_campaigns';
+        
+        $campaigns = $wpdb->get_results("SELECT id, settings FROM $table_name WHERE type = 'articles' AND sub_type = 'creative'");
+        
+        foreach ($campaigns as $campaign) {
+            $settings = json_decode($campaign->settings, true);
+            
+            if (isset($settings['used_titles']) && count($settings['used_titles']) > 1000) {
+                // Keep only the last 500 used titles to prevent unlimited growth
+                $settings['used_titles'] = array_slice($settings['used_titles'], -500);
+                
+                $wpdb->update(
+                    $table_name,
+                    ['settings' => wp_json_encode($settings)],
+                    ['id' => $campaign->id]
+                );
+            }
         }
     }
 }

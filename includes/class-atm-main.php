@@ -580,6 +580,7 @@ class ATM_Main {
             ATM_Automation::get_instance();
         }
 
+        // Schedule existing cleanup events
         if (!wp_next_scheduled('atm_cleanup_used_articles')) {
             wp_schedule_event(time(), 'daily', 'atm_cleanup_used_articles');
         }
@@ -588,6 +589,22 @@ class ATM_Main {
             wp_schedule_event(time(), 'daily', 'atm_cleanup_angles');
         }
 
+        // Schedule cleanup for script jobs
+        if (!wp_next_scheduled('atm_cleanup_script_jobs')) {
+            wp_schedule_event(time(), 'daily', 'atm_cleanup_script_jobs');
+        }
+
+        // Schedule cleanup for podcast jobs
+        if (!wp_next_scheduled('atm_cleanup_podcast_jobs')) {
+            wp_schedule_event(time(), 'daily', 'atm_cleanup_podcast_jobs');
+        }
+
+        // ADD THE NEW TITLE CAMPAIGNS CLEANUP HERE:
+        if (!wp_next_scheduled('atm_cleanup_title_campaigns')) {
+            wp_schedule_event(time(), 'weekly', 'atm_cleanup_title_campaigns');
+        }
+
+        // All the existing add_action calls...
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('admin_head', array($this, 'register_tinymce_button'));
         add_action('rest_api_init', array($this, 'register_rest_routes'));
@@ -605,11 +622,10 @@ class ATM_Main {
         add_action('wp_ajax_check_script_progress', array($ajax, 'check_script_progress'));
         add_action('atm_cleanup_used_articles', array('ATM_Main', 'cleanup_old_used_articles'));
         add_action('atm_cleanup_angles', array('ATM_Main', 'cleanup_old_angles'));
-
-
-        // Add cleanup for script jobs
         add_action('atm_cleanup_script_jobs', array('ATM_Main', 'cleanup_old_script_jobs'));
-
+        
+        // ADD THE NEW ACTION HOOK HERE:
+        add_action('atm_cleanup_title_campaigns', array('ATM_Title_Based_Automation', 'cleanup_old_used_titles'));
 
         // License check - only add meta boxes if licensed and meta box class exists
         if (class_exists('ATM_Licensing') && ATM_Licensing::is_license_active() && $meta_box) {
@@ -628,15 +644,9 @@ class ATM_Main {
             add_filter('the_content', array($frontend, 'embed_takeaways_in_content'));
             add_filter('the_content', array($frontend, 'embed_podcast_in_content'));
         }
-
-        // Schedule cleanup to run daily
-        if (!wp_next_scheduled('atm_cleanup_podcast_jobs')) {
-            wp_schedule_event(time(), 'daily', 'atm_cleanup_podcast_jobs');
-        }
         
         add_action('wp_enqueue_scripts', array($this, 'enqueue_listicle_styles'), 100);
         add_filter('script_loader_tag', array($this, 'add_module_type_to_script'), 10, 3);
-
     }
 
     public static function cleanup_old_script_jobs() {

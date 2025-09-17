@@ -1,6 +1,7 @@
 import { useState, useEffect } from "@wordpress/element";
 import { Button, TextControl, Spinner } from "@wordpress/components";
 import AutoCreativeForm from "./AutoCreativeForm";
+import AutoTitleBasedForm from "./AutoTitleBasedForm"; // New component
 import AutoTrendingForm from "./AutoTrendingForm";
 import AutoListicleForm from "./AutoListicleForm";
 import AutoMultipageArticlesForm from "./AutoMultipageArticlesForm";
@@ -13,6 +14,7 @@ function AutoArticleGenerator({
   authors,
 }) {
   const [activeTab, setActiveTab] = useState("creative");
+  const [activeSubTab, setActiveSubTab] = useState("smart"); // New state for sub-tabs
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState({
     text: "",
@@ -23,6 +25,7 @@ function AutoArticleGenerator({
     name: "",
     type: "articles",
     sub_type: "creative",
+    generation_mode: "smart", // New field to distinguish between smart and title-based
     keyword: "",
     article_title: "",
     schedule_value: 1,
@@ -39,6 +42,11 @@ function AutoArticleGenerator({
       skip_weekends: false,
       quality_check: false,
       category_ids: [],
+      // New title-based settings
+      generated_titles: [],
+      auto_regenerate_titles: true,
+      titles_batch_size: 100,
+      used_titles: [],
     },
   });
 
@@ -54,19 +62,37 @@ function AutoArticleGenerator({
         settings: mergedSettings,
       });
       setActiveTab(editingCampaign.sub_type || "creative");
+      setActiveSubTab(editingCampaign.generation_mode || "smart");
     }
   }, [editingCampaign]);
 
   useEffect(() => {
-    setCampaignData((prev) => ({ ...prev, sub_type: activeTab }));
-  }, [activeTab]);
+    setCampaignData((prev) => ({
+      ...prev,
+      sub_type: activeTab,
+      generation_mode: activeTab === "creative" ? activeSubTab : "smart",
+    }));
+  }, [activeTab, activeSubTab]);
 
   const handleSaveCampaign = async () => {
     if (!campaignData.name.trim()) {
       setStatusMessage({ text: "Campaign name is required.", type: "error" });
       return;
     }
-    if (!campaignData.keyword.trim() && activeTab !== "trending") {
+
+    // Validation for title-based mode
+    if (activeTab === "creative" && activeSubTab === "title-based") {
+      if (
+        !campaignData.settings.generated_titles ||
+        campaignData.settings.generated_titles.length === 0
+      ) {
+        setStatusMessage({
+          text: "Please generate titles first for title-based automation.",
+          type: "error",
+        });
+        return;
+      }
+    } else if (!campaignData.keyword.trim() && activeTab !== "trending") {
       setStatusMessage({
         text: "Keyword is required for this article type.",
         type: "error",
@@ -118,6 +144,7 @@ function AutoArticleGenerator({
           <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.828-2.828z" />
         </svg>
       ),
+      hasSubTabs: true,
     },
     {
       id: "trending",
@@ -165,15 +192,46 @@ function AutoArticleGenerator({
     },
   ];
 
+  const creativeSubTabs = [
+    {
+      id: "smart",
+      title: "Smart Generation",
+      description: "AI-powered content with dynamic angles",
+      icon: (
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      ),
+    },
+    {
+      id: "title-based",
+      title: "Title-Based Generation",
+      description: "Pre-generated titles for consistent content",
+      icon: (
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+            clipRule="evenodd"
+          />
+        </svg>
+      ),
+    },
+  ];
+
   const renderActiveForm = () => {
     const props = {
       isAutomation: true,
       campaignData: campaignData,
       setCampaignData: setCampaignData,
+      isLoading: isLoading,
     };
 
     switch (activeTab) {
       case "creative":
+        if (activeSubTab === "title-based") {
+          return <AutoTitleBasedForm {...props} />;
+        }
         return <AutoCreativeForm {...props} />;
       case "trending":
         return <AutoTrendingForm {...props} />;
@@ -224,6 +282,33 @@ function AutoArticleGenerator({
           </div>
         </div>
 
+        {/* Sub-tabs for Creative Articles */}
+        {activeTab === "creative" && (
+          <div className="atm-sub-tab-selector">
+            <div className="atm-sub-tab-header">
+              <h4>Generation Method</h4>
+              <p>Choose how your content should be generated</p>
+            </div>
+            <div className="atm-sub-tab-cards">
+              {creativeSubTabs.map((subTab) => (
+                <div
+                  key={subTab.id}
+                  className={`atm-sub-tab-card ${
+                    activeSubTab === subTab.id ? "active" : ""
+                  }`}
+                  onClick={() => setActiveSubTab(subTab.id)}
+                >
+                  <div className="atm-sub-tab-icon">{subTab.icon}</div>
+                  <div className="atm-sub-tab-content">
+                    <h5>{subTab.title}</h5>
+                    <p>{subTab.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {renderActiveForm()}
 
         <AutomationSettingsForm
@@ -241,7 +326,13 @@ function AutoArticleGenerator({
             disabled={
               isLoading ||
               !campaignData.name.trim() ||
-              (activeTab !== "trending" && !campaignData.keyword.trim())
+              (activeTab === "creative" &&
+                activeSubTab === "title-based" &&
+                (!campaignData.settings.generated_titles ||
+                  campaignData.settings.generated_titles.length === 0)) ||
+              (activeTab !== "trending" &&
+                activeSubTab !== "title-based" &&
+                !campaignData.keyword.trim())
             }
           >
             {isLoading ? (
