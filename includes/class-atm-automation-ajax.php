@@ -574,6 +574,30 @@ class ATM_Automation_Ajax {
         if (isset($settings['audio_provider'])) {
             $sanitized['audio_provider'] = sanitize_text_field($settings['audio_provider']);
         }
+
+        // Title-based settings
+        if (isset($settings['generated_titles'])) {
+            $sanitized['generated_titles'] = array_map('sanitize_text_field', (array)$settings['generated_titles']);
+        }
+        if (isset($settings['used_titles'])) {
+            $sanitized['used_titles'] = array_map('sanitize_text_field', (array)$settings['used_titles']);
+        }
+        if (isset($settings['auto_regenerate_titles'])) {
+            $sanitized['auto_regenerate_titles'] = (bool)$settings['auto_regenerate_titles'];
+        }
+        if (isset($settings['titles_batch_size'])) {
+            $sanitized['titles_batch_size'] = intval($settings['titles_batch_size']);
+        }
+        // Title generation specific settings
+        if (isset($settings['title_ai_model'])) {
+            $sanitized['title_ai_model'] = sanitize_text_field($settings['title_ai_model']);
+        }
+        if (isset($settings['title_writing_style'])) {
+            $sanitized['title_writing_style'] = sanitize_text_field($settings['title_writing_style']);
+        }
+        if (isset($settings['title_web_search'])) {
+            $sanitized['title_web_search'] = (bool)$settings['title_web_search'];
+        }
         
         // 🔥 ADD HUMANIZATION SETTINGS HERE
         if (isset($settings['humanization'])) {
