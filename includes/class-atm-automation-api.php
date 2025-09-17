@@ -1881,12 +1881,18 @@ Use web search to ensure all information is current and accurate, then return th
         
         switch ($sub_type) {
             case 'standard':
-                // Check if this is title-based generation
-                if (isset($settings['generated_titles']) && !empty($settings['generated_titles'])) {
+            case 'creative': // Add this case since your frontend uses 'creative'
+                // Check generation_mode to determine if it's title-based
+                $generation_mode = $settings['generation_mode'] ?? 'smart';
+                
+                if ($generation_mode === 'title-based' || (!empty($settings['generated_titles']) && is_array($settings['generated_titles']))) {
+                    error_log("ATM Debug: Using title-based automation for campaign {$campaign->id}");
                     return self::execute_title_based_automation($campaign, $settings);
                 } else {
+                    error_log("ATM Debug: Using standard automation for campaign {$campaign->id}");
                     return self::execute_article_automation($campaign, $settings);
                 }
+                
             case 'trending':
                 return self::execute_trending_automation($campaign, $settings);
             case 'listicle':
@@ -1903,6 +1909,10 @@ Use web search to ensure all information is current and accurate, then return th
             $generated_titles = $settings['generated_titles'] ?? [];
             $used_titles = $settings['used_titles'] ?? [];
             $auto_regenerate = $settings['auto_regenerate_titles'] ?? true;
+
+            if (empty($generated_titles)) {
+                throw new Exception('No titles available for title-based automation. Please generate titles first.');
+            }
             
             error_log("ATM Title-Based: Campaign {$campaign->name} - " . count($generated_titles) . " total titles, " . count($used_titles) . " used");
             

@@ -42,6 +42,7 @@ class ATM_Automation_Ajax {
                 'keyword' => sanitize_text_field($campaign_data['keyword'] ?? ''),
                 'type' => sanitize_text_field($campaign_data['type']),
                 'sub_type' => sanitize_text_field($campaign_data['sub_type']),
+                'generation_mode' => sanitize_text_field($campaign_data['generation_mode'] ?? 'smart'), // Add this
                 'settings' => wp_json_encode($campaign_data['settings']), // Use wp_json_encode
                 'schedule_value' => intval($campaign_data['schedule_value']),
                 'schedule_unit' => sanitize_text_field($campaign_data['schedule_unit']),
