@@ -576,6 +576,39 @@ public static function generate_article_content($params) {
                 throw new Exception("Post not found.");
             }
 
+            // Get image generation settings
+            $provider = get_option('atm_image_provider', 'openai');
+            $size = get_option('atm_image_size', '1792x1024');
+            $quality = get_option('atm_image_quality', 'hd');
+            
+            // Handle stock image provider first
+            if ($provider === 'stock') {
+                if (class_exists('ATM_Stock_Image_Service')) {
+                    // Extract keyword from title or use title directly
+                    $keyword = self::extract_keyword_from_title($title);
+                    $result = ATM_Stock_Image_Service::get_stock_featured_image($post_id, $title, $keyword);
+                    
+                    if ($result['success']) {
+                        error_log("ATM Stock Image: Successfully set featured image from {$result['provider']}");
+                        return [
+                            'success' => true,
+                            'attachment_id' => $result['attachment_id'],
+                            'provider' => $result['provider'],
+                            'generated_prompt' => "Stock photo search: {$result['search_query']}"
+                        ];
+                    } else {
+                        // Fallback to AI generation if stock images fail
+                        error_log("ATM Stock Image: Failed ({$result['message']}), falling back to OpenAI");
+                        $provider = 'openai'; // Fallback provider
+                    }
+                } else {
+                    error_log("ATM Stock Image: Service not available, falling back to OpenAI");
+                    $provider = 'openai';
+                }
+            }
+
+            // Continue with AI image generation for non-stock providers or fallback
+            
             // If no prompt provided, get default
             if (empty(trim($prompt_override))) {
                 if (method_exists('ATM_API', 'get_default_image_prompt')) {
@@ -593,11 +626,6 @@ public static function generate_article_content($params) {
             } else {
                 $final_prompt = str_replace('[article_title]', $title, $prompt);
             }
-
-            // Get image generation settings
-            $provider = get_option('atm_image_provider', 'openai');
-            $size = get_option('atm_image_size', '1792x1024');
-            $quality = get_option('atm_image_quality', 'hd');
             
             $image_data = null;
             $is_url = false;
@@ -610,24 +638,35 @@ public static function generate_article_content($params) {
                         $is_url = false;
                     }
                     break;
+                    
                 case 'openrouter':
                     if (method_exists('ATM_API', 'generate_image_with_openrouter')) {
                         $image_data = ATM_API::generate_image_with_openrouter($final_prompt, $size);
-                        $is_url = false; // Changed to false since we get binary data
+                        $is_url = false;
                     }
                     break;
+                    
                 case 'nanobanana':
                     if (method_exists('ATM_API', 'generate_image_with_gemini_nanobanana_vertex')) {
                         $image_data = ATM_API::generate_image_with_gemini_nanobanana_vertex($final_prompt, $size);
                         $is_url = false;
                     }
                     break;
+                    
                 case 'blockflow':
                     if (method_exists('ATM_API', 'generate_image_with_blockflow')) {
                         $image_data = ATM_API::generate_image_with_blockflow($final_prompt, '', $size);
                         $is_url = false;
                     }
                     break;
+                    
+                case 'getimg':
+                    if (method_exists('ATM_API', 'generate_image_with_getimg')) {
+                        $image_data = ATM_API::generate_image_with_getimg($final_prompt, $size);
+                        $is_url = false;
+                    }
+                    break;
+                    
                 case 'openai':
                 default:
                     if (method_exists('ATM_API', 'generate_image_with_openai')) {
@@ -654,9 +693,14 @@ public static function generate_article_content($params) {
 
             set_post_thumbnail($post_id, $attachment_id);
             
+            // Save AI generation metadata
+            update_post_meta($post_id, '_atm_image_source', 'ai_generated');
+            update_post_meta($post_id, '_atm_ai_provider', $provider);
+            
             return [
                 'success' => true,
                 'attachment_id' => $attachment_id,
+                'provider' => $provider,
                 'generated_prompt' => $final_prompt
             ];
 
@@ -667,6 +711,31 @@ public static function generate_article_content($params) {
                 'message' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Extract main keyword from article title for stock image search
+     */
+    private static function extract_keyword_from_title($title) {
+        // Remove common words and extract main concept
+        $stop_words = [
+            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
+            'of', 'with', 'by', 'how', 'what', 'why', 'when', 'where', 'best', 
+            'top', 'guide', 'tips', 'ways', 'complete', 'ultimate', 'beginner',
+            'advanced', 'simple', 'easy', 'quick', 'fast', 'new', 'old', 'latest'
+        ];
+        
+        $words = preg_split('/\W+/', strtolower($title));
+        $keywords = [];
+        
+        foreach ($words as $word) {
+            if (strlen($word) > 3 && !in_array($word, $stop_words) && !is_numeric($word)) {
+                $keywords[] = $word;
+            }
+        }
+        
+        // Return the first 1-2 most meaningful words
+        return !empty($keywords) ? implode(' ', array_slice($keywords, 0, 2)) : $title;
     }
     
     /**

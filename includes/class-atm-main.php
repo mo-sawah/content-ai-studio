@@ -539,7 +539,8 @@ class ATM_Main {
             'includes/class-atm-licensing.php',
             'includes/lib/Parsedown.php',
             'includes/class-atm-listicle.php',
-            'includes/class-atm-humanize.php'
+            'includes/class-atm-humanize.php',
+            'includes/class-atm-stock-image-service.php'
         ];
 
         foreach ($required_files as $file) {
@@ -578,6 +579,11 @@ class ATM_Main {
 
         if (class_exists('ATM_Automation')) {
             ATM_Automation::get_instance();
+        }
+
+        // Schedule stock image cleanup
+        if (!wp_next_scheduled('atm_cleanup_stock_images')) {
+            wp_schedule_event(time(), 'weekly', 'atm_cleanup_stock_images');
         }
 
         // Schedule existing cleanup events
@@ -623,6 +629,7 @@ class ATM_Main {
         add_action('atm_cleanup_used_articles', array('ATM_Main', 'cleanup_old_used_articles'));
         add_action('atm_cleanup_angles', array('ATM_Main', 'cleanup_old_angles'));
         add_action('atm_cleanup_script_jobs', array('ATM_Main', 'cleanup_old_script_jobs'));
+        add_action('atm_cleanup_stock_images', array('ATM_Stock_Image_Service', 'cleanup_old_image_records'));
         
         // ADD THE NEW ACTION HOOK HERE:
         add_action('atm_cleanup_title_campaigns', array('ATM_Title_Based_Automation', 'cleanup_old_used_titles'));

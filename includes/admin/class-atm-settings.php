@@ -614,13 +614,15 @@ private function render_general_tab() {
                         <th scope="row">Default Image Provider</th>
                         <td>
                             <select name="atm_image_provider">
+                                <option value="stock" <?php selected($options['image_provider'], 'stock'); ?>>Stock Photos (Recommended)</option>
                                 <option value="openai" <?php selected($options['image_provider'], 'openai'); ?>>OpenAI (DALL-E 3)</option>
-                                <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
+                                <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Imagen 4 (Most Realistic)</option>
                                 <option value="nanobanana" <?php selected($options['image_provider'], 'nanobanana'); ?>>Gemini 2.5 Flash Image</option>
                                 <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>Black Forest Labs (FLUX)</option>
-                                <option value="getimg" <?php selected($options['image_provider'], 'getimg'); ?>>getimg.ai (Stable Diffusion)</option>
+                                <option value="getimg" <?php selected($options['image_provider'], 'getimg'); ?>>getimg.ai (Cheapest)</option>
                                 <option value="openrouter" <?php selected($options['image_provider'], 'openrouter'); ?>>OpenRouter (Gemini 2.5 Flash)</option>
                             </select>
+                            <p class="description">Stock photos are cost-effective and legally safe. AI generation is more creative but expensive.</p>
                         </td>
                     </tr>
                     <tr><th scope="row">Default FLUX Image Model</th><td><select name="atm_flux_model"><?php foreach ($options['flux_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['flux_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default FLUX model for realistic image generation.</p></td></tr>
@@ -674,6 +676,9 @@ private function render_api_tab() {
                 <tr><th scope="row">Mercury Reader API Key (Optional)</th><td><input type="password" name="atm_mercury_api_key" value="<?php echo esc_attr(get_option('atm_mercury_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://mercury.postlight.com/web-parser/" target="_blank">Mercury Reader</a> for better content extraction.</p></td></tr>
                 <tr><th scope="row">MediaStack API Key</th><td><input type="password" name="atm_mediastack_api_key" value="<?php echo esc_attr($options['mediastack_api_key']); ?>" class="regular-text" /><p class="description">Get your free API key from <a href="https://mediastack.com" target="_blank">MediaStack</a>. Free plan includes 1,000 requests/month.</p></td></tr>
                 <tr><th scope="row">TwitterAPI.io Key</th><td><input type="password" name="atm_twitterapi_key" value="<?php echo esc_attr($options['twitterapi_key']); ?>" class="regular-text" /><p class="description">Required for Twitter/X news search. Get a free key from <a href="https://twitterapi.io/" target="_blank">TwitterAPI.io</a>.</p></td></tr>
+                <tr><th scope="row">Pexels API Key</th><td><input type="password" name="atm_pexels_api_key" value="<?php echo esc_attr(get_option('atm_pexels_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://www.pexels.com/api/" target="_blank">Pexels</a>. Free tier: 200 requests/hour.</p></td></tr>
+                <tr><th scope="row">Unsplash API Key</th><td><input type="password" name="atm_unsplash_api_key" value="<?php echo esc_attr(get_option('atm_unsplash_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://unsplash.com/developers" target="_blank">Unsplash Developers</a>. Free tier: 50 requests/hour.</p></td></tr>
+                <tr><th scope="row">Pixabay API Key</th><td><input type="password" name="atm_pixabay_api_key" value="<?php echo esc_attr(get_option('atm_pixabay_api_key', '')); ?>" class="regular-text" /><p class="description">Free API key from <a href="https://pixabay.com/api/docs/" target="_blank">Pixabay API</a>. Free tier: 5,000 requests/hour.</p></td></tr>
                 <tr>
                     <th scope="row">SerpApi Key</th>
                     <td>
@@ -859,7 +864,18 @@ private function render_advanced_tab() {
             update_option('atm_mediastack_api_key', sanitize_text_field($_POST['atm_mediastack_api_key']));
         }
         if (isset($_POST['atm_getimg_api_key'])) {
-        update_option('atm_getimg_api_key', sanitize_text_field($_POST['atm_getimg_api_key']));
+            update_option('atm_getimg_api_key', sanitize_text_field($_POST['atm_getimg_api_key']));
+        }
+        
+        // Stock Photo API Keys
+        if (isset($_POST['atm_pexels_api_key'])) {
+            update_option('atm_pexels_api_key', sanitize_text_field($_POST['atm_pexels_api_key']));
+        }
+        if (isset($_POST['atm_unsplash_api_key'])) {
+            update_option('atm_unsplash_api_key', sanitize_text_field($_POST['atm_unsplash_api_key']));
+        }
+        if (isset($_POST['atm_pixabay_api_key'])) {
+            update_option('atm_pixabay_api_key', sanitize_text_field($_POST['atm_pixabay_api_key']));
         }
 
         // Nano Banana backend selector
@@ -1044,6 +1060,11 @@ private function render_advanced_tab() {
             'nanobanana_model' => get_option('atm_nanobanana_model', 'gemini-2.5-flash-image'),
             'serpapi_key' => get_option('atm_serpapi_key', ''),
             'google_trending_cse_id' => get_option('atm_google_trending_cse_id', ''),
+            
+            // Stock Photo API Keys
+            'pexels_api_key' => get_option('atm_pexels_api_key', ''),
+            'unsplash_api_key' => get_option('atm_unsplash_api_key', ''),
+            'pixabay_api_key' => get_option('atm_pixabay_api_key', ''),
            
             // getimg API
             'getimg_key'       => get_option('atm_getimg_api_key', ''),

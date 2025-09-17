@@ -8,8 +8,6 @@ if (!defined('ABSPATH')) {
 
 class ATM_Frontend {
 
-    private static $sprite_printed = false;
-
     public function enqueue_frontend_scripts() {
         if (is_single()) {
             // Existing assets if needed elsewhere
