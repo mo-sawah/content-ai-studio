@@ -299,6 +299,9 @@ public static function generate_article_content($params) {
     - **Length:** {$word_count_instruction}
     - **Structure:** {$subheadline_instruction}
 
+    **CRITICAL:** The content must begin immediately with an engaging introductory paragraph - never start with any heading, title, or header of any kind.
+    **CRITICAL:** Never use generic conclusion headings like \"Conclusion\", \"Summary\", \"Final Thoughts\", \"In Summary\", \"To Conclude\", \"Wrapping Up\", \"The Bottom Line\", or \"Key Takeaways\" - end naturally with a flowing concluding paragraph.
+
     **HUMAN-FIRST WRITING PRINCIPLES:**
     ✅ **Write for Humans First:** Create content that real people find genuinely useful, engaging, and worth sharing
     ✅ **Natural Language:** Use conversational tone, varied sentence lengths, and natural transitions
