@@ -340,28 +340,28 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     /**
-    * Generate image using OpenRouter (uses chat completions with modalities)
-    */
+     * Generate image using OpenRouter (uses chat completions with modalities)
+     */
     public static function generate_image_with_openrouter($prompt, $size = '1024x1024') {
         $api_key = get_option('atm_openrouter_api_key');
         
         if (empty($api_key)) {
             throw new Exception('OpenRouter API key not configured.');
         }
-        
-        // OpenRouter uses chat completions format for image generation
+
+        // Build request payload
         $payload = [
             'model' => 'google/gemini-2.5-flash-image-preview',
             'messages' => [
                 [
                     'role' => 'user',
-                    'content' => 'Generate an image: ' . self::enhance_image_prompt($prompt)
+                    'content' => self::enhance_image_prompt($prompt)
                 ]
             ],
             'modalities' => ['image', 'text'],
             'max_tokens' => 1000
         ];
-        
+
         $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', [
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
@@ -372,63 +372,50 @@ class ATM_API {
             'body' => json_encode($payload),
             'timeout' => 120,
         ]);
-        
+
         if (is_wp_error($response)) {
             throw new Exception('OpenRouter image generation request failed: ' . $response->get_error_message());
         }
-        
+
         $response_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
-        
+
         if ($response_code !== 200) {
             $error_data = json_decode($response_body, true);
             $error_message = isset($error_data['error']['message']) ? $error_data['error']['message'] : "HTTP {$response_code}";
             throw new Exception('OpenRouter image generation error: ' . $error_message);
         }
-        
+
         $data = json_decode($response_body, true);
-        
-        // Debug log to see the actual response structure
+
+        // Debug log to inspect response
         error_log('OpenRouter image response: ' . print_r($data, true));
-        
-        // Check different possible response structures
+
         $image_data = null;
-        
-        // Try different response paths
-        if (isset($data['choices'][0]['message']['images']) && is_array($data['choices'][0]['message']['images'])) {
-            $image_data = $data['choices'][0]['message']['images'][0];
-        } elseif (isset($data['choices'][0]['message']['content'])) {
-            // Sometimes the image might be in content
-            $content = $data['choices'][0]['message']['content'];
-            if (is_string($content) && strpos($content, 'data:image/') !== false) {
-                $image_data = $content;
+
+        // Look for image inside content array
+        if (isset($data['choices'][0]['message']['content']) && is_array($data['choices'][0]['message']['content'])) {
+            foreach ($data['choices'][0]['message']['content'] as $content_item) {
+                if (isset($content_item['type']) && $content_item['type'] === 'output_image' && !empty($content_item['image_data'])) {
+                    $image_data = $content_item['image_data'];
+                    break;
+                }
             }
         }
-        
+
         if (!$image_data) {
-            throw new Exception('OpenRouter image generation response missing image data. Response structure: ' . json_encode($data));
+            throw new Exception('OpenRouter image generation response missing image data. Response: ' . json_encode($data));
         }
-        
-        // Ensure $image_data is a string before using strpos
-        if (!is_string($image_data)) {
-            error_log('OpenRouter returned non-string image data: ' . print_r($image_data, true));
-            throw new Exception('OpenRouter returned unexpected image data format');
+
+        // Convert base64 to binary
+        $binary_data = base64_decode($image_data);
+        if ($binary_data === false) {
+            throw new Exception('Failed to decode base64 image data from OpenRouter');
         }
-        
-        // Convert base64 data URL to binary data
-        if (strpos($image_data, 'data:image/') === 0) {
-            $base64_data = substr($image_data, strpos($image_data, ',') + 1);
-            $binary_data = base64_decode($base64_data);
-            
-            if ($binary_data === false) {
-                throw new Exception('Failed to decode base64 image data from OpenRouter');
-            }
-            
-            return $binary_data;
-        } else {
-            throw new Exception('OpenRouter returned unexpected image format: ' . substr($image_data, 0, 100));
-        }
+
+        return $binary_data;
     }
+
 
     /**
      * Generate article from RSS feed entry using OpenRouter
