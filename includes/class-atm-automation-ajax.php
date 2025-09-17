@@ -663,6 +663,7 @@ class ATM_Title_Generation {
             $batch_size = intval($_POST['batch_size'] ?? 100);
             $ai_model = sanitize_text_field($_POST['ai_model'] ?? '');
             $writing_style = sanitize_text_field($_POST['writing_style'] ?? 'default_seo');
+            $enable_web_search = isset($_POST['enable_web_search']) ? filter_var($_POST['enable_web_search'], FILTER_VALIDATE_BOOLEAN) : true;
             $existing_titles = json_decode(stripslashes($_POST['existing_titles'] ?? '[]'), true);
             
             if (empty($keyword)) {
@@ -672,8 +673,11 @@ class ATM_Title_Generation {
             // Validate batch size
             $batch_size = max(10, min(1000, $batch_size));
             
-            // Get current web research about the topic
-            $web_research = self::conduct_web_research($keyword);
+            // Get current web research about the topic (if enabled)
+            $web_research = [];
+            if ($enable_web_search) {
+                $web_research = self::conduct_web_research($keyword);
+            }
             
             // Generate titles using AI with web research context
             $generated_titles = self::generate_titles_with_ai(
@@ -682,16 +686,45 @@ class ATM_Title_Generation {
                 $ai_model,
                 $writing_style,
                 $web_research,
-                $existing_titles
+                $existing_titles,
+                $enable_web_search
             );
             
             // Filter out duplicates and similar titles
             $unique_titles = self::filter_unique_titles($generated_titles, $existing_titles);
             
+            // FORCE EXACT COUNT: If we don't have enough, generate more
+            $attempts = 0;
+            while (count($unique_titles) < $batch_size && $attempts < 3) {
+                $attempts++;
+                error_log("ATM Title Generation: Attempt {$attempts} - Need " . ($batch_size - count($unique_titles)) . " more titles");
+                
+                $additional_titles = self::generate_titles_with_ai(
+                    $keyword,
+                    $batch_size - count($unique_titles) + 10, // Generate extra to account for filtering
+                    $ai_model,
+                    $writing_style,
+                    $web_research,
+                    array_merge($existing_titles, $unique_titles), // Include already generated titles
+                    $enable_web_search
+                );
+                
+                $additional_unique = self::filter_unique_titles($additional_titles, array_merge($existing_titles, $unique_titles));
+                $unique_titles = array_merge($unique_titles, $additional_unique);
+                
+                if (count($unique_titles) >= $batch_size) {
+                    break;
+                }
+            }
+            
+            // Trim to exact batch size
+            $unique_titles = array_slice($unique_titles, 0, $batch_size);
+            
             wp_send_json_success([
                 'titles' => $unique_titles,
                 'research_summary' => $web_research['summary'] ?? '',
-                'generated_count' => count($unique_titles)
+                'generated_count' => count($unique_titles),
+                'attempts_needed' => $attempts + 1
             ]);
             
         } catch (Exception $e) {
@@ -764,16 +797,16 @@ Return your response as JSON:
     /**
      * Generate titles using AI with web research context
      */
-    public static function generate_titles_with_ai($keyword, $batch_size, $ai_model, $writing_style, $research, $existing_titles) {
+    public static function generate_titles_with_ai($keyword, $batch_size, $ai_model, $writing_style, $research, $existing_titles, $enable_web_search = true) {
         // Build the prompt for title generation
         $existing_titles_text = '';
         if (!empty($existing_titles)) {
-            $existing_titles_text = "\n\nExisting titles to avoid duplicating:\n" . implode("\n", array_slice($existing_titles, -20));
+            $existing_titles_text = "\n\nEXISTING TITLES TO AVOID (do not create similar titles):\n" . implode("\n", array_slice($existing_titles, -20));
         }
         
         $research_context = '';
-        if (!empty($research['summary'])) {
-            $research_context = "\n\nRecent research context:\n" . $research['summary'];
+        if ($enable_web_search && !empty($research['summary'])) {
+            $research_context = "\n\nRESEARCH CONTEXT:\n" . $research['summary'];
             
             if (!empty($research['recent_developments'])) {
                 $research_context .= "\n\nRecent developments:\n- " . implode("\n- ", array_slice($research['recent_developments'], 0, 5));
@@ -786,21 +819,24 @@ Return your response as JSON:
         
         $style_instruction = self::get_style_instruction($writing_style);
         
-        $prompt = "Generate {$batch_size} unique, engaging article titles about '{$keyword}'. 
-        
-Requirements:
-- Each title should be unique and approach the topic from a different angle
+        $prompt = "You are a professional content strategist. Generate EXACTLY {$batch_size} unique, engaging article titles about '{$keyword}'.
+
+CRITICAL REQUIREMENTS:
+- Generate EXACTLY {$batch_size} titles, no more, no less
+- Each title must be completely unique and approach the topic from a different angle
+- DO NOT include any introductory text like 'Here are X titles about...' or 'Here's a list of...'
+- DO NOT number the titles (no 1., 2., etc.)
+- DO NOT use bullet points or dashes
+- Each title should be on its own line
 - Titles should be SEO-friendly and compelling for readers
-- Consider current trends and recent developments
 - {$style_instruction}
-- Avoid duplicating or being too similar to existing titles
-- Include a mix of how-to guides, listicles, case studies, and informational articles
+- Include a mix of: how-to guides, listicles, case studies, reviews, comparisons, and informational articles
 - Make titles actionable and specific when possible
 
 {$research_context}
 {$existing_titles_text}
 
-Return exactly {$batch_size} titles, one per line, without numbering or bullet points:";
+IMPORTANT: Return ONLY the {$batch_size} titles, each on a separate line, with no additional text or formatting.";
 
         try {
             // Use the API class to generate content
@@ -809,7 +845,7 @@ Return exactly {$batch_size} titles, one per line, without numbering or bullet p
                 $prompt,
                 $ai_model ?: 'anthropic/claude-3-haiku',
                 false, // Not JSON mode for simple list
-                true   // Enable web search
+                $enable_web_search // Use web search setting
             );
             
             if (empty($response)) {
@@ -847,7 +883,7 @@ Return exactly {$batch_size} titles, one per line, without numbering or bullet p
     }
     
     /**
-     * Parse titles from AI response
+     * IMPROVED: Parse titles from AI response with better filtering
      */
     private static function parse_titles_from_response($response) {
         // Split by newlines and clean up
@@ -862,12 +898,27 @@ Return exactly {$batch_size} titles, one per line, without numbering or bullet p
                 continue;
             }
             
+            // FILTER OUT generic introductory lines
+            if (preg_match('/^(here are|here\'s|below are|the following are|i\'ve generated|i\'ve created)/i', $line)) {
+                continue;
+            }
+            
+            // FILTER OUT lines that mention the number of titles
+            if (preg_match('/\b\d+\s+(titles?|articles?|headlines?)\s+(about|for|on)\b/i', $line)) {
+                continue;
+            }
+            
             // Remove numbering, bullets, or dashes
             $line = preg_replace('/^[\d\.\-\*\>\s]+/', '', $line);
             $line = trim($line);
             
             // Remove quotes if present
             $line = trim($line, '"\'');
+            
+            // Skip if it's still a generic instruction or header
+            if (preg_match('/^(titles?|articles?|headlines?)(\s|:)/i', $line)) {
+                continue;
+            }
             
             if (!empty($line) && strlen($line) > 10) {
                 $titles[] = $line;
@@ -878,7 +929,7 @@ Return exactly {$batch_size} titles, one per line, without numbering or bullet p
     }
     
     /**
-     * Clean and validate titles
+     * IMPROVED: Clean and validate titles with better filtering
      */
     private static function clean_and_validate_titles($titles, $keyword) {
         $cleaned = [];
@@ -888,8 +939,18 @@ Return exactly {$batch_size} titles, one per line, without numbering or bullet p
             $title = trim($title);
             $title = preg_replace('/\s+/', ' ', $title); // Normalize whitespace
             
+            // FILTER OUT obvious generic titles
+            if (preg_match('/^(here are|here\'s|the following|below are)/i', $title)) {
+                continue;
+            }
+            
+            // FILTER OUT titles that mention generating or listing
+            if (preg_match('/\b(generated?|creating?|list of|collection of)\b/i', $title)) {
+                continue;
+            }
+            
             // Validate length (reasonable title length)
-            if (strlen($title) < 20 || strlen($title) > 150) {
+            if (strlen($title) < 15 || strlen($title) > 200) {
                 continue;
             }
             
@@ -898,10 +959,35 @@ Return exactly {$batch_size} titles, one per line, without numbering or bullet p
                 continue;
             }
             
+            // FILTER OUT titles that are too generic
+            if (self::is_title_too_generic($title)) {
+                continue;
+            }
+            
             $cleaned[] = $title;
         }
         
         return $cleaned;
+    }
+    
+    /**
+     * NEW: Check if title is too generic
+     */
+    private static function is_title_too_generic($title) {
+        $generic_patterns = [
+            '/^(the|a|an)\s+(complete|ultimate|best|top)\s+(guide|list)\s+to\s+everything$/i',
+            '/^everything\s+you\s+need\s+to\s+know$/i',
+            '/^(the\s+)?(complete|ultimate)\s+(guide|resource|collection)$/i',
+            '/^(tips?|advice|information)\s+(about|on|for)\s+\w+$/i'
+        ];
+        
+        foreach ($generic_patterns as $pattern) {
+            if (preg_match($pattern, $title)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     /**

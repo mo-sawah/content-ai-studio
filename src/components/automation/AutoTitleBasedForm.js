@@ -25,6 +25,12 @@ function AutoTitleBasedForm({
   const [creativityLabel, setCreativityLabel] = useState("Creative (Dynamic)");
   const [batchSizeLabel, setBatchSizeLabel] = useState("100 Titles");
 
+  // NEW: Additional state for title generation options
+  const [titleModelLabel, setTitleModelLabel] = useState("Use Default Model");
+  const [titleStyleLabel, setTitleStyleLabel] = useState(
+    "Standard / SEO-Optimized"
+  );
+
   // Loading states
   const [isGeneratingTitles, setIsGeneratingTitles] = useState(false);
   const [generateMessage, setGenerateMessage] = useState("");
@@ -108,6 +114,19 @@ function AutoTitleBasedForm({
         option.value === (campaignData.settings?.titles_batch_size || 100)
     );
     if (currentBatchSize) setBatchSizeLabel(currentBatchSize.label);
+
+    // NEW: Initialize title generation labels
+    const currentTitleModel = modelOptions.find(
+      (option) => option.value === (campaignData.settings?.title_ai_model || "")
+    );
+    if (currentTitleModel) setTitleModelLabel(currentTitleModel.label);
+
+    const currentTitleStyle = styleOptions.find(
+      (option) =>
+        option.value ===
+        (campaignData.settings?.title_writing_style || "default_seo")
+    );
+    if (currentTitleStyle) setTitleStyleLabel(currentTitleStyle.label);
   }, [campaignData.settings]);
 
   // Update campaign data helpers
@@ -147,8 +166,10 @@ function AutoTitleBasedForm({
           nonce: atm_automation_data.nonce,
           keyword: campaignData.keyword,
           batch_size: campaignData.settings?.titles_batch_size || 100,
-          ai_model: campaignData.settings?.ai_model || "",
-          writing_style: campaignData.settings?.writing_style || "default_seo",
+          ai_model: campaignData.settings?.title_ai_model || "",
+          writing_style:
+            campaignData.settings?.title_writing_style || "default_seo",
+          enable_web_search: campaignData.settings?.title_web_search !== false,
           existing_titles: JSON.stringify(
             campaignData.settings?.generated_titles || []
           ),
@@ -248,6 +269,45 @@ function AutoTitleBasedForm({
             </div>
           </div>
 
+          {/* Title Generation Options */}
+          <div className="atm-title-generation-options">
+            <h5>Title Generation Options</h5>
+            <div className="atm-grid-3">
+              <CustomDropdown
+                label="AI Model for Titles"
+                text={titleModelLabel}
+                options={modelOptions}
+                onChange={(option) => {
+                  updateSetting("title_ai_model", option.value);
+                  setTitleModelLabel(option.label);
+                }}
+                disabled={isLoading || isGeneratingTitles}
+              />
+              <CustomDropdown
+                label="Title Writing Style"
+                text={titleStyleLabel}
+                options={styleOptions}
+                onChange={(option) => {
+                  updateSetting("title_writing_style", option.value);
+                  setTitleStyleLabel(option.label);
+                }}
+                disabled={isLoading || isGeneratingTitles}
+              />
+              <div className="atm-toggle-field">
+                <ToggleControl
+                  label="Web Search for Titles"
+                  checked={campaignData.settings?.title_web_search !== false}
+                  onChange={(value) => updateSetting("title_web_search", value)}
+                  disabled={isLoading || isGeneratingTitles}
+                />
+              </div>
+            </div>
+            <p className="atm-option-description">
+              These settings control how titles are generated. Web search helps
+              create more current and relevant titles.
+            </p>
+          </div>
+
           {generateMessage && (
             <Notice
               status={generateMessage.includes("Error") ? "error" : "success"}
@@ -331,79 +391,86 @@ function AutoTitleBasedForm({
         </div>
 
         {/* AI Settings Grid */}
-        <div className="atm-grid-3">
-          <CustomDropdown
-            label="AI Model"
-            text={articleModelLabel}
-            options={modelOptions}
-            onChange={(option) => {
-              updateSetting("ai_model", option.value);
-              setArticleModelLabel(option.label);
-            }}
-            helpText="Choose the AI model for content generation"
-            disabled={isLoading}
-          />
-
-          <CustomDropdown
-            label="Writing Style"
-            text={writingStyleLabel}
-            options={styleOptions}
-            onChange={(option) => {
-              updateSetting("writing_style", option.value);
-              setWritingStyleLabel(option.label);
-            }}
-            helpText="Select the tone and style for your content"
-            disabled={isLoading}
-          />
-
-          <CustomDropdown
-            label="Word Count"
-            text={wordCountLabel}
-            options={wordCountOptions}
-            onChange={(option) => {
-              updateSetting("word_count", parseInt(option.value) || 0);
-              setWordCountLabel(option.label);
-            }}
-            helpText="Target article length"
-            disabled={isLoading}
-          />
-        </div>
-
-        {/* Creativity Level */}
-        <CustomDropdown
-          label="Creativity Level"
-          text={creativityLabel}
-          options={creativityOptions}
-          onChange={(option) => {
-            updateSetting("creativity_level", option.value);
-            setCreativityLabel(option.label);
-          }}
-          helpText="Control how creative vs factual the content should be"
-          disabled={isLoading}
-        />
-
-        {/* Advanced Options */}
-        <div className="atm-form-section">
+        <div className="atm-content-generation-options">
           <h4>Content Generation Options</h4>
-          <div className="atm-inline-toggles">
-            <ToggleControl
-              label="Enable Web Search for Content"
-              checked={campaignData.settings?.enable_web_search !== false}
-              onChange={(value) => updateSetting("enable_web_search", value)}
+          <div className="atm-grid-3">
+            <CustomDropdown
+              label="AI Model for Content"
+              text={articleModelLabel}
+              options={modelOptions}
+              onChange={(option) => {
+                updateSetting("ai_model", option.value);
+                setArticleModelLabel(option.label);
+              }}
+              helpText="Choose the AI model for content generation"
               disabled={isLoading}
-              help="Use web search to gather current information when generating article content"
             />
-            <ToggleControl
-              label="Include Subheadlines"
-              checked={campaignData.settings?.include_subheadlines !== false}
-              onChange={(value) => updateSetting("include_subheadlines", value)}
+
+            <CustomDropdown
+              label="Content Writing Style"
+              text={writingStyleLabel}
+              options={styleOptions}
+              onChange={(option) => {
+                updateSetting("writing_style", option.value);
+                setWritingStyleLabel(option.label);
+              }}
+              helpText="Select the tone and style for your content"
               disabled={isLoading}
-              help="Add H2 and H3 subheadings to structure the content"
             />
+
+            <CustomDropdown
+              label="Word Count"
+              text={wordCountLabel}
+              options={wordCountOptions}
+              onChange={(option) => {
+                updateSetting("word_count", parseInt(option.value) || 0);
+                setWordCountLabel(option.label);
+              }}
+              helpText="Target article length"
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* Creativity Level */}
+          <CustomDropdown
+            label="Creativity Level"
+            text={creativityLabel}
+            options={creativityOptions}
+            onChange={(option) => {
+              updateSetting("creativity_level", option.value);
+              setCreativityLabel(option.label);
+            }}
+            helpText="Control how creative vs factual the content should be"
+            disabled={isLoading}
+          />
+
+          {/* Content Toggle Options */}
+          <div className="atm-content-toggles">
+            <div className="atm-toggles-row">
+              <ToggleControl
+                label="Web Search for Content"
+                checked={campaignData.settings?.enable_web_search !== false}
+                onChange={(value) => updateSetting("enable_web_search", value)}
+                disabled={isLoading}
+              />
+              <ToggleControl
+                label="Include Subheadlines"
+                checked={campaignData.settings?.include_subheadlines !== false}
+                onChange={(value) =>
+                  updateSetting("include_subheadlines", value)
+                }
+                disabled={isLoading}
+              />
+            </div>
+            <p className="atm-option-description">
+              Web search gathers current information during content generation.
+              Subheadlines improve article structure and readability.
+            </p>
           </div>
         </div>
 
-        <div className="atm-form-section">
+        {/* Title Management Options */}
+        <div className="atm-title-management-section">
           <h4>Title Management Options</h4>
           <div className="atm-inline-toggles">
             <ToggleControl
@@ -416,6 +483,10 @@ function AutoTitleBasedForm({
               help="Automatically generate new titles when all current titles are used"
             />
           </div>
+          <p className="atm-option-description">
+            When enabled, the system will automatically generate new titles when
+            the current batch is exhausted.
+          </p>
         </div>
 
         {/* Custom Prompt */}
