@@ -1942,15 +1942,17 @@ Use web search to ensure all information is current and accurate, then return th
             // Generate article using your existing service with the specific title
             $params = [
                 'keyword' => $campaign->keyword,
-                'article_title' => $next_title, // Use the specific title instead of generating one
+                'article_title' => $next_title,
                 'post_id' => 0,
                 'model' => $settings['ai_model'] ?? get_option('atm_article_model', 'openai/gpt-4o'),
                 'writing_style' => $settings['writing_style'] ?? 'default_seo',
                 'custom_prompt' => $settings['custom_prompt'] ?? '',
                 'word_count' => $settings['word_count'] ?? 0,
                 'creativity_level' => $settings['creativity_level'] ?? 'high',
+                'enable_web_search' => $settings['enable_web_search'] ?? true, // FIX: Ensure this is passed
+                'include_subheadlines' => $settings['include_subheadlines'] ?? true,
                 'is_automation' => true,
-                'is_title_based' => true // Flag to indicate title-based generation
+                'is_title_based' => true
             ];
             
             // Use your existing unified service

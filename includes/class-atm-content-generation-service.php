@@ -250,10 +250,17 @@ public static function generate_article_content($params) {
         $custom_prompt = isset($params['custom_prompt']) ? wp_kses_post(stripslashes($params['custom_prompt'])) : '';
         $word_count = isset($params['word_count']) ? intval($params['word_count']) : 0;
         $creativity_level = isset($params['creativity_level']) ? sanitize_text_field($params['creativity_level']) : 'high';
-        $enable_web_search = isset($params['enable_web_search']) ? $params['enable_web_search'] : true;
+        
+        // FIX: Properly handle web search setting with explicit boolean conversion
+        $enable_web_search = true; // Default to true
+        if (isset($params['enable_web_search'])) {
+            $enable_web_search = filter_var($params['enable_web_search'], FILTER_VALIDATE_BOOLEAN);
+        }
+        
         $include_subheadlines = isset($params['include_subheadlines']) ? $params['include_subheadlines'] : true;
         
         error_log("ATM Title-Based Content: Generating for title: {$article_title}");
+        error_log("ATM Title-Based Content: Web search setting = " . ($enable_web_search ? 'ENABLED' : 'DISABLED'));
         
         // Enhanced web research for current information
         $web_research_context = '';
@@ -269,11 +276,14 @@ public static function generate_article_content($params) {
                             }
                         }
                         $web_research_context = "\n\n**CURRENT RESEARCH CONTEXT:**\n" . implode("\n", $research_info);
+                        error_log("ATM Title-Based: Added web research context (" . count($research_info) . " results)");
                     }
                 }
             } catch (Exception $e) {
                 error_log("ATM Title-Based: Web search failed: " . $e->getMessage());
             }
+        } else {
+            error_log("ATM Title-Based: Web search disabled by user setting");
         }
         
         // Get enhanced writing style template
@@ -361,14 +371,18 @@ public static function generate_article_content($params) {
             throw new Exception('ATM_API class or enhance_content_with_openrouter method not available');
         }
         
+        error_log("ATM Title-Based: Making OpenRouter API call with web search = " . ($enable_web_search ? 'TRUE' : 'FALSE'));
+        
         $raw_response = ATM_API::enhance_content_with_openrouter(
             ['content' => $article_title],
             $enhanced_prompt,
             $model_override ?: get_option('atm_article_model'),
             true, // JSON mode
-            $enable_web_search,
+            $enable_web_search, // This is the critical parameter
             $creativity_level
         );
+        
+        error_log("ATM Title-Based: OpenRouter API call completed");
         
         // Parse and validate response
         $json_string = trim($raw_response);
@@ -396,15 +410,16 @@ public static function generate_article_content($params) {
         // Convert Markdown to HTML (no links added here)
         $article_content = self::convert_markdown_to_html_no_links($article_content);
 
-        // Save metadata
+        // Save metadata including web search usage
         if ($post_id > 0) {
             update_post_meta($post_id, '_atm_title_based_automation', true);
             update_post_meta($post_id, '_atm_source_title', $article_title);
             update_post_meta($post_id, '_atm_seo_optimized', true);
             update_post_meta($post_id, '_atm_human_focused', true);
+            update_post_meta($post_id, '_atm_web_search_used', $enable_web_search ? 'yes' : 'no');
         }
 
-        error_log("ATM Title-Based Content: Successfully generated " . str_word_count(strip_tags($article_content)) . " words for: {$article_title}");
+        error_log("ATM Title-Based Content: Successfully generated " . str_word_count(strip_tags($article_content)) . " words for: {$article_title} (Web search: " . ($enable_web_search ? 'used' : 'not used') . ")");
 
         return [
             'success' => true,
@@ -415,7 +430,8 @@ public static function generate_article_content($params) {
             'generation_method' => 'title_based_enhanced',
             'source_title' => $article_title,
             'seo_optimized' => true,
-            'human_focused' => true
+            'human_focused' => true,
+            'web_search_used' => $enable_web_search
         ];
     }
 
