@@ -1848,6 +1848,26 @@
   color: #1e293b;
 }
 
+/* Grid layouts */
+.atm-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 12px 0;
+}
+
+/* Title toggles row */
+.atm-title-toggles-row {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  margin: 12px 0 8px 0;
+}
+
+.atm-title-toggles-row .components-toggle-control {
+  margin: 0;
+}
+
 /* Content Generation Options */
 .atm-content-generation-options {
   margin: 24px 0;
@@ -1856,22 +1876,6 @@
 .atm-content-generation-options h4 {
   margin: 0 0 16px 0;
   font-size: 16px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-/* Title Management Section */
-.atm-title-management-section {
-  margin: 24px 0;
-  background: #fafafa;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 16px;
-}
-
-.atm-title-management-section h4 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
   font-weight: 600;
   color: #1e293b;
 }
@@ -1919,6 +1923,16 @@
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
+  }
+
+  .atm-title-toggles-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .atm-grid-2 {
+    grid-template-columns: 1fr;
   }
 
   .atm-toggle-field {

@@ -169,7 +169,10 @@ function AutoTitleBasedForm({
           ai_model: campaignData.settings?.title_ai_model || "",
           writing_style:
             campaignData.settings?.title_writing_style || "default_seo",
-          enable_web_search: campaignData.settings?.title_web_search !== false,
+          enable_web_search:
+            campaignData.settings?.title_web_search !== false
+              ? "true"
+              : "false",
           existing_titles: JSON.stringify(
             campaignData.settings?.generated_titles || []
           ),
@@ -272,7 +275,7 @@ function AutoTitleBasedForm({
           {/* Title Generation Options */}
           <div className="atm-title-generation-options">
             <h5>Title Generation Options</h5>
-            <div className="atm-grid-3">
+            <div className="atm-grid-2">
               <CustomDropdown
                 label="AI Model for Titles"
                 text={titleModelLabel}
@@ -293,18 +296,28 @@ function AutoTitleBasedForm({
                 }}
                 disabled={isLoading || isGeneratingTitles}
               />
-              <div className="atm-toggle-field">
-                <ToggleControl
-                  label="Web Search for Titles"
-                  checked={campaignData.settings?.title_web_search !== false}
-                  onChange={(value) => updateSetting("title_web_search", value)}
-                  disabled={isLoading || isGeneratingTitles}
-                />
-              </div>
+            </div>
+            <div className="atm-title-toggles-row">
+              <ToggleControl
+                label="Web Search for Titles"
+                checked={campaignData.settings?.title_web_search !== false}
+                onChange={(value) => updateSetting("title_web_search", value)}
+                disabled={isLoading || isGeneratingTitles}
+              />
+              <ToggleControl
+                label="Auto-regenerate when depleted"
+                checked={
+                  campaignData.settings?.auto_regenerate_titles !== false
+                }
+                onChange={(value) =>
+                  updateSetting("auto_regenerate_titles", value)
+                }
+                disabled={isLoading}
+              />
             </div>
             <p className="atm-option-description">
-              These settings control how titles are generated. Web search helps
-              create more current and relevant titles.
+              These settings control title generation. Web search creates more
+              current titles. Auto-regenerate ensures continuous operation.
             </p>
           </div>
 
@@ -467,26 +480,6 @@ function AutoTitleBasedForm({
               Subheadlines improve article structure and readability.
             </p>
           </div>
-        </div>
-
-        {/* Title Management Options */}
-        <div className="atm-title-management-section">
-          <h4>Title Management Options</h4>
-          <div className="atm-inline-toggles">
-            <ToggleControl
-              label="Auto-regenerate titles when depleted"
-              checked={campaignData.settings?.auto_regenerate_titles !== false}
-              onChange={(value) =>
-                updateSetting("auto_regenerate_titles", value)
-              }
-              disabled={isLoading}
-              help="Automatically generate new titles when all current titles are used"
-            />
-          </div>
-          <p className="atm-option-description">
-            When enabled, the system will automatically generate new titles when
-            the current batch is exhausted.
-          </p>
         </div>
 
         {/* Custom Prompt */}
