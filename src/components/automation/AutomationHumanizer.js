@@ -16,17 +16,53 @@ const AutomationHumanizer = ({ campaignData, setCampaignData, isLoading }) => {
 
   // OpenRouter models for humanization
   const openRouterModels = [
+    // Top Tier - Best Overall Performance
     {
       label: "Claude 3.5 Sonnet (Best Overall)",
+      value: "anthropic/claude-3.5-sonnet-20241022",
+    },
+    {
+      label: "Claude 3.5 Sonnet (Latest)",
       value: "anthropic/claude-3.5-sonnet",
     },
-    { label: "GPT-4o (OpenAI Latest)", value: "openai/gpt-4o" },
+
+    // OpenAI Models - Great for Natural Language
+    {
+      label: "GPT-4o (Latest)",
+      value: "openai/gpt-4o",
+    },
+    {
+      label: "GPT-4o (2024-08-06)",
+      value: "openai/gpt-4o-2024-08-06",
+    },
+    {
+      label: "GPT-4 Turbo",
+      value: "openai/gpt-4-turbo",
+    },
+
+    // Excellent Alternative Models
     {
       label: "Claude 3 Opus (Most Intelligent)",
       value: "anthropic/claude-3-opus",
     },
-    { label: "GPT-4 Turbo", value: "openai/gpt-4-turbo" },
-    { label: "Gemini Pro 1.5", value: "google/gemini-pro-1.5" },
+    {
+      label: "Gemini Pro 1.5 (Google)",
+      value: "google/gemini-pro-1.5",
+    },
+    {
+      label: "Gemini Flash 1.5 (Fast & Capable)",
+      value: "google/gemini-flash-1.5",
+    },
+
+    // Cost-Effective Options
+    {
+      label: "Mistral Large (Competitive)",
+      value: "mistralai/mistral-large",
+    },
+    {
+      label: "Cohere Command R+ (Analytical)",
+      value: "cohere/command-r-plus",
+    },
   ];
 
   // Humanization tones

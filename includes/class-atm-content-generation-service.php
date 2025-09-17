@@ -326,6 +326,13 @@ class ATM_Content_Generation_Service {
                         $is_url = false;
                     }
                     break;
+                case 'openrouter':
+                    if (method_exists('ATM_API', 'generate_image_with_openrouter')) {
+                        $image_data = ATM_API::generate_image_with_openrouter($final_prompt, $size);
+                        $is_url = true;
+                    }
+                    break;
+                    break;
                 case 'nanobanana':
                     if (method_exists('ATM_API', 'generate_image_with_gemini_nanobanana_vertex')) {
                         $image_data = ATM_API::generate_image_with_gemini_nanobanana_vertex($final_prompt, $size);

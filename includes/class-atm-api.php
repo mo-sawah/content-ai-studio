@@ -340,6 +340,61 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     /**
+     * Generate image using OpenRouter (Gemini 2.5 Flash only)
+     */
+    public static function generate_image_with_openrouter($prompt, $size = '1024x1024') {
+        $api_key = get_option('atm_openrouter_api_key');
+        
+        if (empty($api_key)) {
+            throw new Exception('OpenRouter API key not configured.');
+        }
+        
+        // Parse size dimensions
+        $dimensions = explode('x', $size);
+        $width = isset($dimensions[0]) ? intval($dimensions[0]) : 1024;
+        $height = isset($dimensions[1]) ? intval($dimensions[1]) : 1024;
+        
+        $payload = [
+            'model' => 'google/gemini-2.5-flash-image-preview',
+            'prompt' => self::enhance_image_prompt($prompt),
+            'width' => $width,
+            'height' => $height,
+        ];
+        
+        $response = wp_remote_post('https://openrouter.ai/api/v1/images/generations', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json',
+                'HTTP-Referer' => home_url(),
+                'X-Title' => 'Content AI Studio - Image Generation',
+            ],
+            'body' => json_encode($payload),
+            'timeout' => 120,
+        ]);
+        
+        if (is_wp_error($response)) {
+            throw new Exception('OpenRouter image generation request failed: ' . $response->get_error_message());
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
+        
+        if ($response_code !== 200) {
+            $error_data = json_decode($response_body, true);
+            $error_message = isset($error_data['error']['message']) ? $error_data['error']['message'] : "HTTP {$response_code}";
+            throw new Exception('OpenRouter image generation error: ' . $error_message);
+        }
+        
+        $data = json_decode($response_body, true);
+        
+        if (!isset($data['data'][0]['url'])) {
+            throw new Exception('OpenRouter image generation response missing image URL');
+        }
+        
+        return $data['data'][0]['url'];
+    }
+
+    /**
      * Generate article from RSS feed entry using OpenRouter
      */
     public static function generate_article_from_rss_entry($rss_entry, $options = []) {

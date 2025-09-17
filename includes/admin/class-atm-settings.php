@@ -610,7 +610,7 @@ private function render_general_tab() {
             <div class="atm-settings-card">
                 <h2>🖼️ Image Generation Defaults</h2>
                 <table class="form-table">
-                    <<tr>
+                    <tr>
                         <th scope="row">Default Image Provider</th>
                         <td>
                             <select name="atm_image_provider">
@@ -619,6 +619,7 @@ private function render_general_tab() {
                                 <option value="nanobanana" <?php selected($options['image_provider'], 'nanobanana'); ?>>Gemini 2.5 Flash Image</option>
                                 <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>Black Forest Labs (FLUX)</option>
                                 <option value="getimg" <?php selected($options['image_provider'], 'getimg'); ?>>getimg.ai (Stable Diffusion)</option> </select>
+                                <option value="openrouter" <?php selected($options['image_provider'], 'openrouter'); ?>>OpenRouter (Gemini 2.5 Flash)</option>
                             </select>
                         </td>
                     </tr>
