@@ -329,9 +329,8 @@ class ATM_Content_Generation_Service {
                 case 'openrouter':
                     if (method_exists('ATM_API', 'generate_image_with_openrouter')) {
                         $image_data = ATM_API::generate_image_with_openrouter($final_prompt, $size);
-                        $is_url = true;
+                        $is_url = false; // Changed to false since we get binary data
                     }
-                    break;
                     break;
                 case 'nanobanana':
                     if (method_exists('ATM_API', 'generate_image_with_gemini_nanobanana_vertex')) {
