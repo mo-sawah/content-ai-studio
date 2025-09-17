@@ -140,6 +140,14 @@ class ATM_Content_Generation_Service {
             $subtitle = $result['subheadline'] ?? $result['subtitle'] ?? '';
             $final_content = trim($result['content']);
 
+            // 🔥 ADD THIS BLOCK: Convert Markdown to HTML
+            $final_content = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2">$1</a>', $final_content);
+            $final_content = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $final_content);
+            $final_content = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $final_content);
+            // Convert headers if any slip through
+            $final_content = preg_replace('/^## (.+)$/m', '<h2>$1</h2>', $final_content);
+            $final_content = preg_replace('/^### (.+)$/m', '<h3>$1</h3>', $final_content);
+
             // Update the stored angle with the actual generated title
             if ($angle_data && !empty($generated_title)) {
                 ATM_Content_Generator_Utility::update_stored_angle($tracking_keyword, $angle_data['angle_description'], $generated_title);
@@ -319,8 +327,8 @@ class ATM_Content_Generation_Service {
                     }
                     break;
                 case 'nanobanana':
-                    if (method_exists('ATM_API', 'generate_image_with_gemini_nanobanana')) {
-                        $image_data = ATM_API::generate_image_with_gemini_nanobanana($final_prompt, $size);
+                    if (method_exists('ATM_API', 'generate_image_with_gemini_nanobanana_vertex')) {
+                        $image_data = ATM_API::generate_image_with_gemini_nanobanana_vertex($final_prompt, $size);
                         $is_url = false;
                     }
                     break;
@@ -379,43 +387,51 @@ class ATM_Content_Generation_Service {
         
         return "**{$context} CONTENT GENERATION INSTRUCTIONS:**
 
-**Final Output Format:**
-Your entire output MUST be a single, valid JSON object with three keys:
-1. \"title\": " . (empty($final_title) ? 'A compelling, specific title that perfectly matches the required angle and keyword. Use the title guidance provided above.' : '"' . $final_title . '"') . "
-2. \"subheadline\": A creative and engaging one-sentence subtitle that complements the main title.
-3. \"content\": The full article text, formatted using clean HTML.
+    **Final Output Format:**
+    Your entire output MUST be a single, valid JSON object with three keys:
+    1. \"title\": " . (empty($final_title) ? 'A compelling, specific title that perfectly matches the required angle and keyword. Use the title guidance provided above.' : '"' . $final_title . '"') . "
+    2. \"subheadline\": A creative and engaging one-sentence subtitle that complements the main title.
+    3. \"content\": The full article text, formatted using clean HTML with proper HTML tags.
 
-**CRITICAL CONTENT RULES:**
-- The `content` field must NOT contain any top-level H1 headings (formatted as `<h1>`). Use `<h2>` for all main section headings.
-- The `content` field must NOT start with a title or any heading. It must begin directly with the first paragraph of the introduction.
-- Do NOT include a final heading titled \"Conclusion\", \"Summary\", \"Final Thoughts\", \"In Summary\", \"To Conclude\", \"Wrapping Up\", \"Looking Ahead\", \"What's Next\", \"The Bottom Line\", \"Key Takeaways\", or any similar conclusory heading.
-- Do NOT start with generic section headers like \"Introduction\", \"Overview\", \"Background\".
-- End with a natural concluding paragraph that has no heading above it.
-- Write in a natural, flowing manner without artificial structure markers.
+    **CRITICAL CONTENT RULES:**
+    - The `content` field must NOT contain any top-level H1 headings (formatted as `<h1>`). Use `<h2>` for all main section headings.
+    - The `content` field must NOT start with a title or any heading. It must begin directly with the first paragraph of the introduction.
+    - Do NOT include a final heading titled \"Conclusion\", \"Summary\", \"Final Thoughts\", \"In Summary\", \"To Conclude\", \"Wrapping Up\", \"Looking Ahead\", \"What's Next\", \"The Bottom Line\", \"Key Takeaways\", or any similar conclusory heading.
+    - Do NOT start with generic section headers like \"Introduction\", \"Overview\", \"Background\".
+    - End with a natural concluding paragraph that has no heading above it.
+    - Write in a natural, flowing manner without artificial structure markers.
 
-**TITLE REQUIREMENTS (if generating):**
-- Must be compelling and clickable (8-18 words)
-- Should perfectly reflect the specific angle provided
-- Include the keyword naturally
-- Use power words and emotional triggers appropriate to the topic
-- Avoid generic phrases and make it specific to the angle
+    **HTML FORMATTING REQUIREMENTS:**
+    - Use proper HTML tags: <p> for paragraphs, <h2> for headings, <strong> for bold, <em> for italics
+    - Format all links as proper HTML: <a href=\"URL\">anchor text</a>
+    - NEVER use Markdown syntax like [text](url) - always use HTML <a> tags
+    - Use <ul> and <li> for lists if needed
+    - Ensure all HTML is valid and properly closed
 
-**LINK FORMATTING RULES:**
-- When including external links, NEVER use the website URL as the anchor text
-- Use ONLY 1-3 descriptive words as anchor text
-- Keep anchor text extremely concise (maximum 2 words)
-- Make links feel natural within the sentence flow
-- Ensure all information is current and accurate using web search data
+    **LINK FORMATTING RULES:**
+    - Format links as: <a href=\"https://example.com/article\">descriptive text</a>
+    - Use ONLY 1-3 descriptive words as anchor text
+    - Keep anchor text extremely concise (maximum 2 words)
+    - Make links feel natural within the sentence flow
+    - Example: According to <a href=\"https://bbc.com/article\">BBC News</a>, the incident...
+    - Example: <a href=\"https://reuters.com/report\">Reuters</a> reported that...
 
-**CONTENT REQUIREMENTS:**
-- Must target the exact angle specified above
-- Begin with an engaging hook paragraph that relates to the angle
-- Use natural transitions between sections
-- Include current, factual information from web search
-- Focus on providing genuine value to the target audience
-- Maintain the specific perspective throughout the entire article
+    **TITLE REQUIREMENTS (if generating):**
+    - Must be compelling and clickable (8-18 words)
+    - Should perfectly reflect the specific angle provided
+    - Include the keyword naturally
+    - Use power words and emotional triggers appropriate to the topic
+    - Avoid generic phrases and make it specific to the angle
 
-Please return your response as a properly formatted JSON object.";
+    **CONTENT REQUIREMENTS:**
+    - Must target the exact angle specified above
+    - Begin with an engaging hook paragraph that relates to the angle
+    - Use natural transitions between sections
+    - Include current, factual information from web search
+    - Focus on providing genuine value to the target audience
+    - Maintain the specific perspective throughout the entire article
+
+    Please return your response as a properly formatted JSON object with HTML-formatted content.";
     }
     
     /**
