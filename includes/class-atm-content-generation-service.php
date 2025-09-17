@@ -190,6 +190,55 @@ public static function generate_article_content($params) {
     }
 
     /**
+     * Get enhanced writing style templates for human-like content
+     */
+    private static function get_enhanced_writing_styles() {
+        return [
+            'default_seo' => [
+                'prompt' => 'Write in a natural, engaging style that balances SEO optimization with genuine human value. Use clear explanations, practical examples, and maintain an authoritative yet approachable tone. Focus on solving real problems and answering genuine questions.'
+            ],
+            'professional' => [
+                'prompt' => 'Adopt a professional, expert tone while remaining accessible. Write with authority and credibility, including industry insights and professional perspectives. Use precise language but avoid unnecessary jargon.'
+            ],
+            'conversational' => [
+                'prompt' => 'Write in a warm, conversational tone as if advising a friend. Use "you" to connect directly with readers, include relatable examples, and make complex topics easily digestible. Be encouraging and supportive.'
+            ],
+            'technical' => [
+                'prompt' => 'Use precise technical language appropriate for knowledgeable audiences. Include detailed explanations, specifications, and in-depth analysis while maintaining clarity and logical flow.'
+            ],
+            'news' => [
+                'prompt' => 'Write in a clear, factual journalistic style. Present information objectively, start with the most important points, use short paragraphs, and maintain credibility through accurate reporting.'
+            ],
+            'educational' => [
+                'prompt' => 'Focus on teaching and learning outcomes. Use clear explanations, step-by-step guidance, and practical examples. Structure content progressively from basic to advanced concepts.'
+            ]
+        ];
+    }
+
+    /**
+     * Convert markdown to HTML without adding any external links
+     */
+    private static function convert_markdown_to_html_no_links($markdown) {
+        $html = $markdown;
+        
+        // Convert headers
+        $html = preg_replace('/^## (.+)$/m', '<h2>$1</h2>', $html);
+        $html = preg_replace('/^### (.+)$/m', '<h3>$1</h3>', $html);
+        
+        // Convert bold and italic
+        $html = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $html);
+        $html = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $html);
+        
+        // Remove any markdown links and just keep the text
+        $html = preg_replace('/\[([^\]]+)\]\([^)]+\)/', '$1', $html);
+        
+        // Convert line breaks to paragraphs
+        $html = wpautop($html);
+        
+        return $html;
+    }
+
+    /**
      * NEW METHOD: Generate content based on a specific pre-generated title
      */
     private static function generate_title_based_content($params) {
@@ -206,20 +255,20 @@ public static function generate_article_content($params) {
         
         error_log("ATM Title-Based Content: Generating for title: {$article_title}");
         
-        // Perform web search for the specific title/topic if enabled
+        // Enhanced web research for current information
         $web_research_context = '';
         if ($enable_web_search) {
             try {
                 if (class_exists('ATM_API') && method_exists('ATM_API', 'perform_web_search')) {
-                    $search_results = ATM_API::perform_web_search($article_title, 5);
+                    $search_results = ATM_API::perform_web_search($article_title, 8);
                     if (!empty($search_results)) {
                         $research_info = [];
-                        foreach (array_slice($search_results, 0, 3) as $result) {
+                        foreach (array_slice($search_results, 0, 5) as $result) {
                             if (isset($result['title']) && isset($result['snippet'])) {
-                                $research_info[] = $result['title'] . ': ' . $result['snippet'];
+                                $research_info[] = "• " . $result['title'] . ": " . $result['snippet'];
                             }
                         }
-                        $web_research_context = "\n\nRecent information about this topic:\n" . implode("\n", $research_info);
+                        $web_research_context = "\n\n**CURRENT RESEARCH CONTEXT:**\n" . implode("\n", $research_info);
                     }
                 }
             } catch (Exception $e) {
@@ -227,10 +276,10 @@ public static function generate_article_content($params) {
             }
         }
         
-        // Get writing style template
+        // Get enhanced writing style template
         $writing_styles = method_exists('ATM_API', 'get_writing_styles') ? ATM_API::get_writing_styles() : [];
         if (empty($writing_styles)) {
-            $writing_styles = ['default_seo' => ['prompt' => 'Write a professional, SEO-optimized article.']];
+            $writing_styles = self::get_enhanced_writing_styles();
         }
         
         $base_prompt = isset($writing_styles[$style_key]) ? $writing_styles[$style_key]['prompt'] : $writing_styles['default_seo']['prompt'];
@@ -238,41 +287,69 @@ public static function generate_article_content($params) {
             $base_prompt = $custom_prompt;
         }
         
-        // Build the final prompt for title-based generation
-        $word_count_instruction = $word_count > 0 ? " Target length: approximately {$word_count} words." : "";
-        $subheadline_instruction = $include_subheadlines ? " Include clear subheadings (H2, H3) to structure the content." : "";
+        // Enhanced human-like content generation prompt
+        $word_count_instruction = $word_count > 0 ? "Target length: {$word_count} words" : "800-1200 words";
+        $subheadline_instruction = $include_subheadlines ? "Structure with clear H2 and H3 subheadings" : "Write in flowing paragraphs";
         
-        $final_prompt = "Write a comprehensive article with the exact title: '{$article_title}'
+        $enhanced_prompt = "You are an expert content writer creating valuable, human-centered articles that genuinely help readers while being optimized for Google search.
 
-Main keyword focus: {$keyword}
-{$word_count_instruction}
-{$subheadline_instruction}
+    **ARTICLE SPECIFICATIONS:**
+    - **Exact Title:** \"{$article_title}\"
+    - **Primary Focus:** {$keyword}
+    - **Length:** {$word_count_instruction}
+    - **Structure:** {$subheadline_instruction}
 
-Writing requirements:
-{$base_prompt}
+    **HUMAN-FIRST WRITING PRINCIPLES:**
+    ✅ **Write for Humans First:** Create content that real people find genuinely useful, engaging, and worth sharing
+    ✅ **Natural Language:** Use conversational tone, varied sentence lengths, and natural transitions
+    ✅ **Practical Value:** Include actionable insights, real examples, and concrete takeaways
+    ✅ **Authentic Voice:** Write with personality and expertise, not robotic AI patterns
+    ✅ **Reader-Centric:** Address real questions and concerns your audience has about this topic
+    ✅ **Fresh Perspectives:** Offer unique insights, personal experiences, or uncommon angles
 
-{$web_research_context}
+    **GOOGLE SEARCH OPTIMIZATION (SEO):**
+    🎯 **Keyword Integration:** Naturally weave \"{$keyword}\" throughout without keyword stuffing
+    🎯 **Search Intent:** Directly answer what people are searching for when they look up this title
+    🎯 **Topic Depth:** Cover the subject comprehensively to establish topical authority
+    🎯 **User Experience:** Write scannable content with clear structure and valuable information
+    🎯 **E-A-T Focus:** Demonstrate expertise, authoritativeness, and trustworthiness in your writing
 
-IMPORTANT FORMATTING RULES:
-- Use the exact title provided above as the article title
-- The content should NOT start with the title - begin with the introductory paragraph
-- Use H2 (##) for main section headings, never H1 (#)
-- Do NOT include conclusion headings like 'Conclusion', 'Summary', 'Final Thoughts'
-- End naturally with a concluding paragraph without any heading above it
-- Make the article informative, engaging, and valuable to readers interested in {$keyword}
+    **CONTENT REQUIREMENTS:**
+    {$base_prompt}
 
-Return the response as JSON:
-{
-    \"title\": \"{$article_title}\",
-    \"content\": \"Complete article content in markdown format\",
-    \"word_count\": estimated_word_count
-}";
+    {$web_research_context}
+
+    **CRITICAL FORMATTING RULES:**
+    - Content must NOT start with the title or any H1 heading
+    - Begin directly with an engaging introductory paragraph
+    - Use H2 (##) for main sections, H3 (###) for subsections
+    - NO conclusion headings like \"Conclusion\", \"Summary\", \"Final Thoughts\" - end naturally
+    - NO external links or URLs in the content
+    - Write in clean, engaging prose that flows naturally
+
+    **AVOID AI-GENERATED PATTERNS:**
+    ❌ Generic introductions (\"In today's digital world...\", \"Have you ever wondered...\")
+    ❌ Repetitive phrase patterns and robotic transitions
+    ❌ Overly formal or academic tone unless specifically required
+    ❌ Filler content or fluff that doesn't add value
+    ❌ Lists without context or explanation
+    ❌ Clichéd conclusions or obvious statements
+
+    **OUTPUT FORMAT:**
+    Return valid JSON with these exact keys:
+    {
+        \"title\": \"{$article_title}\",
+        \"content\": \"Complete article in markdown format, optimized for both humans and search engines\",
+        \"word_count\": estimated_word_count
+    }
+
+    Create content that a human expert would write - valuable, engaging, and genuinely helpful to readers searching for this information.";
 
         // Apply post-specific shortcode replacements if post exists
         if ($post_id > 0) {
             $post = get_post($post_id);
             if ($post && class_exists('ATM_API') && method_exists('ATM_API', 'replace_prompt_shortcodes')) {
-                $final_prompt = ATM_API::replace_prompt_shortcodes($final_prompt, $post);
+                $enhanced_prompt = ATM_API::replace_prompt_shortcodes($enhanced_prompt, $post);
             }
         }
 
@@ -283,14 +360,14 @@ Return the response as JSON:
         
         $raw_response = ATM_API::enhance_content_with_openrouter(
             ['content' => $article_title],
-            $final_prompt,
+            $enhanced_prompt,
             $model_override ?: get_option('atm_article_model'),
             true, // JSON mode
             $enable_web_search,
             $creativity_level
         );
         
-        // Parse JSON response
+        // Parse and validate response
         $json_string = trim($raw_response);
         if (!str_starts_with($json_string, '{')) {
             if (preg_match('/\{.*\}/s', $raw_response, $matches)) {
@@ -313,17 +390,15 @@ Return the response as JSON:
             throw new Exception('Generated content is empty for title-based generation.');
         }
 
-        // Convert Markdown to HTML
-        $article_content = preg_replace('/\[([^\]]+)\]\(([^)]+)\)/', '<a href="$2">$1</a>', $article_content);
-        $article_content = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $article_content);
-        $article_content = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $article_content);
-        $article_content = preg_replace('/^## (.+)$/m', '<h2>$1</h2>', $article_content);
-        $article_content = preg_replace('/^### (.+)$/m', '<h3>$1</h3>', $article_content);
+        // Convert Markdown to HTML (no links added here)
+        $article_content = self::convert_markdown_to_html_no_links($article_content);
 
-        // Save subtitle if post exists (title-based usually doesn't need subtitles)
+        // Save metadata
         if ($post_id > 0) {
             update_post_meta($post_id, '_atm_title_based_automation', true);
             update_post_meta($post_id, '_atm_source_title', $article_title);
+            update_post_meta($post_id, '_atm_seo_optimized', true);
+            update_post_meta($post_id, '_atm_human_focused', true);
         }
 
         error_log("ATM Title-Based Content: Successfully generated " . str_word_count(strip_tags($article_content)) . " words for: {$article_title}");
@@ -332,10 +407,12 @@ Return the response as JSON:
             'success' => true,
             'article_title' => $generated_title,
             'article_content' => $article_content,
-            'subtitle' => '', // Title-based doesn't typically need subtitles since title is pre-defined
+            'subtitle' => '', // Title-based doesn't need subtitles
             'word_count' => $result['word_count'] ?? str_word_count(strip_tags($article_content)),
-            'generation_method' => 'title_based',
-            'source_title' => $article_title
+            'generation_method' => 'title_based_enhanced',
+            'source_title' => $article_title,
+            'seo_optimized' => true,
+            'human_focused' => true
         ];
     }
 

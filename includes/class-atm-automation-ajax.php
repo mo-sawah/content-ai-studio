@@ -826,48 +826,88 @@ Return your response as JSON:
         // Build the prompt for title generation
         $existing_titles_text = '';
         if (!empty($existing_titles)) {
-            $existing_titles_text = "\n\nEXISTING TITLES TO AVOID (do not create similar titles):\n" . implode("\n", array_slice($existing_titles, -20));
+            $existing_titles_text = "\n\n**EXISTING TITLES TO AVOID (create completely different angles):**\n" . implode("\n", array_slice($existing_titles, -20));
         }
         
         $research_context = '';
         if ($enable_web_search && !empty($research['summary'])) {
-            $research_context = "\n\nRESEARCH CONTEXT:\n" . $research['summary'];
+            $research_context = "\n\n**CURRENT RESEARCH INSIGHTS:**\n" . $research['summary'];
             
             if (!empty($research['recent_developments'])) {
-                $research_context .= "\n\nRecent developments:\n- " . implode("\n- ", array_slice($research['recent_developments'], 0, 5));
+                $research_context .= "\n\n**Recent Developments:**\n- " . implode("\n- ", array_slice($research['recent_developments'], 0, 5));
             }
             
             if (!empty($research['trending_aspects'])) {
-                $research_context .= "\n\nTrending aspects:\n- " . implode("\n- ", array_slice($research['trending_aspects'], 0, 5));
+                $research_context .= "\n\n**Trending Aspects:**\n- " . implode("\n- ", array_slice($research['trending_aspects'], 0, 5));
             }
         }
         
-        $style_instruction = self::get_style_instruction($writing_style);
+        $style_instruction = self::get_enhanced_style_instruction($writing_style);
         
-        $prompt = "You are a professional content strategist. Generate EXACTLY {$batch_size} unique, engaging article titles about '{$keyword}'.
+        $enhanced_prompt = "You are an expert SEO content strategist and human psychology specialist. Create {$batch_size} compelling article titles about '{$keyword}' that real people will want to click AND that Google will rank highly.
 
-CRITICAL REQUIREMENTS:
-- Generate EXACTLY {$batch_size} titles, no more, no less
-- Each title must be completely unique and approach the topic from a different angle
-- DO NOT include any introductory text like 'Here are X titles about...' or 'Here's a list of...'
-- DO NOT number the titles (no 1., 2., etc.)
-- DO NOT use bullet points or dashes
-- Each title should be on its own line
-- Titles should be SEO-friendly and compelling for readers
-- {$style_instruction}
-- Include a mix of: how-to guides, listicles, case studies, reviews, comparisons, and informational articles
-- Make titles actionable and specific when possible
+    **PRIMARY FOCUS KEYWORD:** '{$keyword}'
 
-{$research_context}
-{$existing_titles_text}
+    **GOOGLE SEO OPTIMIZATION REQUIREMENTS:**
+    🎯 **Search Intent Matching:** Each title must clearly address what people search for when looking up '{$keyword}'
+    🎯 **Keyword Integration:** Naturally include '{$keyword}' or close variations in each title
+    🎯 **Search Volume Targeting:** Focus on titles that target actual search queries people use
+    🎯 **Competition Analysis:** Create unique angles that can compete in search results
+    🎯 **Click-Through Optimization:** Write titles that stand out in Google search results
 
-IMPORTANT: Return ONLY the {$batch_size} titles, each on a separate line, with no additional text or formatting.";
+    **HUMAN PSYCHOLOGY PRINCIPLES:**
+    🧠 **Curiosity Triggers:** Use psychological hooks that make people want to learn more
+    🧠 **Value Promises:** Clearly communicate the benefit readers will get
+    🧠 **Emotional Resonance:** Tap into emotions like curiosity, fear of missing out, desire for improvement
+    🧠 **Problem-Solution Focus:** Address real problems your audience faces
+    🧠 **Specificity:** Use specific numbers, timeframes, and concrete benefits
+    🧠 **Authority Signals:** Include words that suggest expertise and trustworthiness
+
+    **TITLE STYLE GUIDELINES:**
+    {$style_instruction}
+
+    **PROVEN TITLE FORMULAS TO USE:**
+    ✅ **How-To Guides:** \"How to [achieve result] with {$keyword} [timeframe/method]\"
+    ✅ **Ultimate Guides:** \"The Complete Guide to {$keyword} [for specific audience]\"
+    ✅ **Numbered Lists:** \"[Number] [adjective] {$keyword} [strategies/tips/methods] That Actually Work\"
+    ✅ **Problem-Solution:** \"Why {$keyword} [common problem] and How to Fix It\"
+    ✅ **Comparison:** \"{$keyword} vs [alternative]: Which is Better for [specific use]?\"
+    ✅ **Year-Specific:** \"{$keyword} in [current year]: [What's New/Best Practices/Trends]\"
+    ✅ **Beginner-Focused:** \"[adjective] {$keyword} for Beginners: [specific benefit/timeframe]\"
+    ✅ **Case Studies:** \"How [someone/company] Used {$keyword} to [achieve specific result]\"
+    ✅ **Mistake-Focused:** \"[Number] {$keyword} Mistakes [audience] Make (And How to Avoid Them)\"
+    ✅ **Best Of Lists:** \"Best {$keyword} [tools/strategies/methods] for [specific outcome]\"
+
+    {$research_context}
+    {$existing_titles_text}
+
+    **CRITICAL REQUIREMENTS:**
+    - Generate EXACTLY {$batch_size} titles
+    - Each title must be 40-65 characters for optimal Google display
+    - Each title must be completely unique and approach '{$keyword}' from a different angle
+    - Focus on search queries real people actually type into Google
+    - Balance SEO optimization with human appeal
+    - Include action words and specific benefits
+    - Avoid clickbait that doesn't deliver value
+    - Make each title feel like it was written by a human expert, not AI
+
+    **AVOID THESE AI-GENERATED PATTERNS:**
+    ❌ Generic phrases like \"In today's digital world\" or \"Have you ever wondered\"
+    ❌ Overly dramatic language or excessive superlatives
+    ❌ Vague promises without specific value
+    ❌ Titles that sound like they were written by a robot
+    ❌ Duplicate concepts with slightly different wording
+
+    **OUTPUT FORMAT:**
+    Return ONLY the {$batch_size} titles, each on a separate line, with no additional text, numbering, or formatting. Each title should be optimized for both Google search ranking and human click-through rates.
+
+    Create titles that real people will find valuable and that Google will reward with high rankings.";
 
         try {
             // Use the API class to generate content
             $response = ATM_API::enhance_content_with_openrouter(
                 ['content' => $keyword],
-                $prompt,
+                $enhanced_prompt,
                 $ai_model ?: 'anthropic/claude-3-haiku',
                 false, // Not JSON mode for simple list
                 $enable_web_search // Use web search setting
@@ -880,8 +920,8 @@ IMPORTANT: Return ONLY the {$batch_size} titles, each on a separate line, with n
             // Parse the response into individual titles
             $titles = self::parse_titles_from_response($response);
             
-            // Clean and validate titles
-            $cleaned_titles = self::clean_and_validate_titles($titles, $keyword);
+            // Clean and validate titles with enhanced criteria
+            $cleaned_titles = self::clean_and_validate_titles_enhanced($titles, $keyword);
             
             return $cleaned_titles;
             
@@ -889,6 +929,27 @@ IMPORTANT: Return ONLY the {$batch_size} titles, each on a separate line, with n
             error_log('AI title generation error: ' . $e->getMessage());
             throw new Exception('Failed to generate titles: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Get enhanced style-specific instructions for title generation
+     */
+    private static function get_enhanced_style_instruction($writing_style) {
+        $style_map = [
+            'default_seo' => 'Create SEO-optimized titles that balance search ranking factors with human appeal. Focus on clear value propositions and include relevant keywords naturally. Use proven title formulas that perform well in search results.',
+            
+            'professional' => 'Use authoritative, business-oriented language that conveys expertise and credibility. Include industry-specific terms and focus on professional outcomes. Titles should sound like they come from industry leaders.',
+            
+            'conversational' => 'Write friendly, approachable titles that feel like recommendations from a knowledgeable friend. Use "you" language and relatable situations. Make titles feel personal and engaging.',
+            
+            'technical' => 'Include specific technical terms and focus on detailed, expert-level outcomes. Use precise language that appeals to technically-minded audiences. Emphasize depth and technical accuracy.',
+            
+            'news' => 'Write headlines like breaking news or industry updates. Use timely language, current events, and journalistic style. Focus on what\'s happening now and why it matters.',
+            
+            'educational' => 'Focus on learning outcomes and educational value. Use instructional language and emphasize knowledge transfer. Make titles sound like valuable learning resources.'
+        ];
+        
+        return $style_map[$writing_style] ?? $style_map['default_seo'];
     }
     
     /**
@@ -954,45 +1015,145 @@ IMPORTANT: Return ONLY the {$batch_size} titles, each on a separate line, with n
     }
     
     /**
-     * IMPROVED: Clean and validate titles with better filtering
+     * Enhanced title cleaning and validation with SEO focus
      */
-    private static function clean_and_validate_titles($titles, $keyword) {
+    private static function clean_and_validate_titles_enhanced($titles, $keyword) {
         $cleaned = [];
         
         foreach ($titles as $title) {
             // Basic cleaning
             $title = trim($title);
             $title = preg_replace('/\s+/', ' ', $title); // Normalize whitespace
+            $title = trim($title, '"\''); // Remove quotes
+            
+            // Remove numbering or bullets if present
+            $title = preg_replace('/^[\d\.\-\*\>\s]+/', '', $title);
+            $title = trim($title);
             
             // FILTER OUT obvious generic titles
             if (preg_match('/^(here are|here\'s|the following|below are)/i', $title)) {
                 continue;
             }
             
-            // FILTER OUT titles that mention generating or listing
-            if (preg_match('/\b(generated?|creating?|list of|collection of)\b/i', $title)) {
+            // FILTER OUT meta-content about generating titles
+            if (preg_match('/\b(generated?|creating?|list of|collection of|titles?)\b/i', $title)) {
                 continue;
             }
             
-            // Validate length (reasonable title length)
-            if (strlen($title) < 15 || strlen($title) > 200) {
+            // Validate optimal length for Google (40-65 characters)
+            if (strlen($title) < 30 || strlen($title) > 70) {
                 continue;
             }
             
-            // Ensure it's somewhat related to the keyword
-            if (!self::is_title_relevant($title, $keyword)) {
+            // Ensure keyword relevance
+            if (!self::is_title_seo_relevant($title, $keyword)) {
                 continue;
             }
             
-            // FILTER OUT titles that are too generic
-            if (self::is_title_too_generic($title)) {
+            // Check for human-like quality
+            if (self::is_title_too_ai_generic($title)) {
                 continue;
             }
             
-            $cleaned[] = $title;
+            // Validate SEO potential
+            if (self::has_seo_potential($title, $keyword)) {
+                $cleaned[] = $title;
+            }
         }
         
         return $cleaned;
+    }
+
+    /**
+     * Check if title has strong SEO potential
+     */
+    private static function has_seo_potential($title, $keyword) {
+        $title_lower = strtolower($title);
+        $keyword_lower = strtolower($keyword);
+        
+        // Must contain keyword or close variation
+        if (strpos($title_lower, $keyword_lower) === false) {
+            // Check for partial keyword matches
+            $keyword_words = explode(' ', $keyword_lower);
+            $matches = 0;
+            foreach ($keyword_words as $word) {
+                if (strlen($word) > 2 && strpos($title_lower, $word) !== false) {
+                    $matches++;
+                }
+            }
+            if ($matches < ceil(count($keyword_words) * 0.6)) {
+                return false;
+            }
+        }
+        
+        // Should have search intent indicators
+        $search_intent_words = [
+            'how to', 'what is', 'why', 'when', 'where', 'best', 'top', 'guide', 
+            'tips', 'strategies', 'methods', 'ways', 'steps', 'complete', 'ultimate',
+            'beginner', 'advanced', 'free', 'easy', 'simple', 'quick', 'fast'
+        ];
+        
+        foreach ($search_intent_words as $intent_word) {
+            if (strpos($title_lower, $intent_word) !== false) {
+                return true;
+            }
+        }
+        
+        // Numbers often indicate valuable content
+        if (preg_match('/\b\d+\b/', $title)) {
+            return true;
+        }
+        
+        return true; // Default to true if no red flags
+    }
+
+    /**
+     * Check if title sounds too AI-generated or generic
+     */
+    private static function is_title_too_ai_generic($title) {
+        $ai_patterns = [
+            '/^(the ultimate|the complete|the definitive)\s+guide\s+to\s+everything$/i',
+            '/^everything\s+you\s+need\s+to\s+know\s+about/i',
+            '/^(mastering|unlocking|discovering)\s+the\s+(power|secrets?|art)\s+of/i',
+            '/revolutionizing?\s+your/i',
+            '/^(dive\s+deep|deep\s+dive)\s+into/i',
+            '/in\s+today\'?s\s+(digital\s+)?(world|landscape|era)/i'
+        ];
+        
+        foreach ($ai_patterns as $pattern) {
+            if (preg_match($pattern, $title)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Enhanced relevance check for SEO
+     */
+    private static function is_title_seo_relevant($title, $keyword) {
+        $title_lower = strtolower($title);
+        $keyword_lower = strtolower($keyword);
+        
+        // Direct keyword match
+        if (strpos($title_lower, $keyword_lower) !== false) {
+            return true;
+        }
+        
+        // Check semantic relevance
+        $keyword_words = explode(' ', $keyword_lower);
+        $relevant_words = 0;
+        
+        foreach ($keyword_words as $word) {
+            $word = trim($word);
+            if (strlen($word) > 2 && strpos($title_lower, $word) !== false) {
+                $relevant_words++;
+            }
+        }
+        
+        // At least 60% of keyword words should be present
+        return $relevant_words >= ceil(count($keyword_words) * 0.6);
     }
     
     /**
