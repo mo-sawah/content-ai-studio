@@ -289,7 +289,7 @@ class ATM_Automation_Humanization {
         
         return "You are an expert writer tasked with rewriting AI-generated content to sound naturally human-written while maintaining all original information.
 
-WRITING STYLE: Make it {$style}
+WRITING STYLE: Make it {$style_instruction}
 
 ESSENTIAL RULES:
 1. Keep ALL facts, data, and links exactly as provided

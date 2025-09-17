@@ -340,8 +340,8 @@ class ATM_RSS_Parser {
 class ATM_API {
 
     /**
-     * Generate image using OpenRouter (uses chat completions with modalities)
-     */
+    * Generate image using OpenRouter (uses chat completions with modalities)
+    */
     public static function generate_image_with_openrouter($prompt, $size = '1024x1024') {
         $api_key = get_option('atm_openrouter_api_key');
         
@@ -358,7 +358,7 @@ class ATM_API {
                     'content' => 'Generate an image: ' . self::enhance_image_prompt($prompt)
                 ]
             ],
-            'modalities' => ['image', 'text'], // This is the key difference!
+            'modalities' => ['image', 'text'],
             'max_tokens' => 1000
         ];
         
@@ -388,17 +388,36 @@ class ATM_API {
         
         $data = json_decode($response_body, true);
         
-        // OpenRouter returns images in the message content, not as direct URLs
-        if (!isset($data['choices'][0]['message']['images'][0])) {
-            throw new Exception('OpenRouter image generation response missing image data');
+        // Debug log to see the actual response structure
+        error_log('OpenRouter image response: ' . print_r($data, true));
+        
+        // Check different possible response structures
+        $image_data = null;
+        
+        // Try different response paths
+        if (isset($data['choices'][0]['message']['images']) && is_array($data['choices'][0]['message']['images'])) {
+            $image_data = $data['choices'][0]['message']['images'][0];
+        } elseif (isset($data['choices'][0]['message']['content'])) {
+            // Sometimes the image might be in content
+            $content = $data['choices'][0]['message']['content'];
+            if (is_string($content) && strpos($content, 'data:image/') !== false) {
+                $image_data = $content;
+            }
         }
         
-        // Extract base64 data URL (format: data:image/png;base64,...)
-        $base64_data_url = $data['choices'][0]['message']['images'][0];
+        if (!$image_data) {
+            throw new Exception('OpenRouter image generation response missing image data. Response structure: ' . json_encode($data));
+        }
+        
+        // Ensure $image_data is a string before using strpos
+        if (!is_string($image_data)) {
+            error_log('OpenRouter returned non-string image data: ' . print_r($image_data, true));
+            throw new Exception('OpenRouter returned unexpected image data format');
+        }
         
         // Convert base64 data URL to binary data
-        if (strpos($base64_data_url, 'data:image/') === 0) {
-            $base64_data = substr($base64_data_url, strpos($base64_data_url, ',') + 1);
+        if (strpos($image_data, 'data:image/') === 0) {
+            $base64_data = substr($image_data, strpos($image_data, ',') + 1);
             $binary_data = base64_decode($base64_data);
             
             if ($binary_data === false) {
@@ -407,7 +426,7 @@ class ATM_API {
             
             return $binary_data;
         } else {
-            throw new Exception('OpenRouter returned unexpected image format');
+            throw new Exception('OpenRouter returned unexpected image format: ' . substr($image_data, 0, 100));
         }
     }
 
