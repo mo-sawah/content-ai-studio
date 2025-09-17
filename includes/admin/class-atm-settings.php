@@ -618,7 +618,7 @@ private function render_general_tab() {
                                 <option value="google" <?php selected($options['image_provider'], 'google'); ?>>Google (Imagen 4)</option>
                                 <option value="nanobanana" <?php selected($options['image_provider'], 'nanobanana'); ?>>Gemini 2.5 Flash Image</option>
                                 <option value="blockflow" <?php selected($options['image_provider'], 'blockflow'); ?>>Black Forest Labs (FLUX)</option>
-                                <option value="getimg" <?php selected($options['image_provider'], 'getimg'); ?>>getimg.ai (Stable Diffusion)</option> </select>
+                                <option value="getimg" <?php selected($options['image_provider'], 'getimg'); ?>>getimg.ai (Stable Diffusion)</option>
                                 <option value="openrouter" <?php selected($options['image_provider'], 'openrouter'); ?>>OpenRouter (Gemini 2.5 Flash)</option>
                             </select>
                         </td>
