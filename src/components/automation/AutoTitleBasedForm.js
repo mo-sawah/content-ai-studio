@@ -384,6 +384,26 @@ function AutoTitleBasedForm({
 
         {/* Advanced Options */}
         <div className="atm-form-section">
+          <h4>Content Generation Options</h4>
+          <div className="atm-inline-toggles">
+            <ToggleControl
+              label="Enable Web Search for Content"
+              checked={campaignData.settings?.enable_web_search !== false}
+              onChange={(value) => updateSetting("enable_web_search", value)}
+              disabled={isLoading}
+              help="Use web search to gather current information when generating article content"
+            />
+            <ToggleControl
+              label="Include Subheadlines"
+              checked={campaignData.settings?.include_subheadlines !== false}
+              onChange={(value) => updateSetting("include_subheadlines", value)}
+              disabled={isLoading}
+              help="Add H2 and H3 subheadings to structure the content"
+            />
+          </div>
+        </div>
+
+        <div className="atm-form-section">
           <h4>Title Management Options</h4>
           <div className="atm-inline-toggles">
             <ToggleControl
@@ -394,18 +414,6 @@ function AutoTitleBasedForm({
               }
               disabled={isLoading}
               help="Automatically generate new titles when all current titles are used"
-            />
-            <ToggleControl
-              label="Enable Web Search"
-              checked={campaignData.settings?.enable_web_search !== false}
-              onChange={(value) => updateSetting("enable_web_search", value)}
-              disabled={isLoading}
-            />
-            <ToggleControl
-              label="Include Subheadlines"
-              checked={campaignData.settings?.include_subheadlines !== false}
-              onChange={(value) => updateSetting("include_subheadlines", value)}
-              disabled={isLoading}
             />
           </div>
         </div>

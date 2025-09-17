@@ -701,68 +701,70 @@ class ATM_Title_Generation {
     }
     
     /**
-     * Conduct web research on the topic
+     * FIXED: Conduct web research using OpenRouter's web search feature
      */
-    private static function conduct_web_research($keyword) {
+    public static function conduct_web_research($keyword) {
         try {
-            // Use the existing web search functionality
-            $search_results = ATM_API::perform_web_search($keyword, 10);
-            
-            if (empty($search_results)) {
-                return [
-                    'summary' => 'No recent information found for this topic.',
-                    'trends' => [],
-                    'recent_developments' => []
-                ];
+            // Use OpenRouter's web search to gather current information about the topic
+            $research_prompt = "Research the topic '{$keyword}' using web search. Provide a comprehensive summary of:
+
+1. Recent developments and news about {$keyword}
+2. Current trends and popular discussions
+3. Key facts and statistics
+4. Recent events or changes
+5. What people are currently interested in regarding {$keyword}
+
+Focus on information from the last 6 months. Provide factual, current information that would help generate relevant article titles.
+
+Return your response as JSON:
+{
+    \"summary\": \"Comprehensive summary of current information about the topic\",
+    \"recent_developments\": [\"list of recent developments\"],
+    \"trending_aspects\": [\"list of what's currently trending about this topic\"],
+    \"key_facts\": [\"important current facts and statistics\"]
+}";
+
+            if (!class_exists('ATM_API') || !method_exists('ATM_API', 'enhance_content_with_openrouter')) {
+                throw new Exception('ATM_API not available for web research');
             }
+
+            $raw_response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $keyword],
+                $research_prompt,
+                'anthropic/claude-3-haiku', // Use fast, cost-effective model for research
+                true, // JSON mode
+                true  // Enable web search - this is the key!
+            );
             
-            // Extract key information from search results
-            $recent_info = [];
-            $trends = [];
-            
-            foreach ($search_results as $result) {
-                if (isset($result['title']) && isset($result['snippet'])) {
-                    $recent_info[] = $result['title'] . ': ' . $result['snippet'];
-                }
+            $result = json_decode($raw_response, true);
+            if (!$result || !isset($result['summary'])) {
+                error_log('ATM Web Research: Invalid response from AI: ' . $raw_response);
+                throw new Exception('Invalid research response from AI');
             }
-            
-            // Analyze trends and recent developments
-            $research_summary = self::analyze_search_results($recent_info, $keyword);
             
             return [
-                'summary' => $research_summary,
-                'raw_results' => array_slice($recent_info, 0, 5), // First 5 results
-                'search_count' => count($search_results)
+                'summary' => $result['summary'],
+                'recent_developments' => $result['recent_developments'] ?? [],
+                'trending_aspects' => $result['trending_aspects'] ?? [],
+                'key_facts' => $result['key_facts'] ?? [],
+                'search_method' => 'openrouter_web_search'
             ];
             
         } catch (Exception $e) {
             error_log('Web research error: ' . $e->getMessage());
             return [
-                'summary' => 'Unable to gather recent information due to search limitations.',
-                'trends' => [],
-                'recent_developments' => []
+                'summary' => "Unable to gather recent information about '{$keyword}' due to search limitations.",
+                'recent_developments' => [],
+                'trending_aspects' => [],
+                'key_facts' => []
             ];
         }
     }
     
     /**
-     * Analyze search results to identify trends and key points
+     * Generate titles using AI with web research context
      */
-    private static function analyze_search_results($results, $keyword) {
-        if (empty($results)) {
-            return "No recent information available for analysis.";
-        }
-        
-        $combined_text = implode(' ', array_slice($results, 0, 3));
-        $summary = "Recent developments around '{$keyword}' include: " . substr($combined_text, 0, 500) . "...";
-        
-        return $summary;
-    }
-    
-    /**
-     * Generate titles using AI with research context
-     */
-    private static function generate_titles_with_ai($keyword, $batch_size, $ai_model, $writing_style, $research, $existing_titles) {
+    public static function generate_titles_with_ai($keyword, $batch_size, $ai_model, $writing_style, $research, $existing_titles) {
         // Build the prompt for title generation
         $existing_titles_text = '';
         if (!empty($existing_titles)) {
@@ -772,6 +774,14 @@ class ATM_Title_Generation {
         $research_context = '';
         if (!empty($research['summary'])) {
             $research_context = "\n\nRecent research context:\n" . $research['summary'];
+            
+            if (!empty($research['recent_developments'])) {
+                $research_context .= "\n\nRecent developments:\n- " . implode("\n- ", array_slice($research['recent_developments'], 0, 5));
+            }
+            
+            if (!empty($research['trending_aspects'])) {
+                $research_context .= "\n\nTrending aspects:\n- " . implode("\n- ", array_slice($research['trending_aspects'], 0, 5));
+            }
         }
         
         $style_instruction = self::get_style_instruction($writing_style);
@@ -794,7 +804,13 @@ Return exactly {$batch_size} titles, one per line, without numbering or bullet p
 
         try {
             // Use the API class to generate content
-            $response = ATM_API::generate_content_with_openrouter($prompt, $ai_model);
+            $response = ATM_API::enhance_content_with_openrouter(
+                ['content' => $keyword],
+                $prompt,
+                $ai_model ?: 'anthropic/claude-3-haiku',
+                false, // Not JSON mode for simple list
+                true   // Enable web search
+            );
             
             if (empty($response)) {
                 throw new Exception('No response from AI service.');
@@ -912,7 +928,7 @@ Return exactly {$batch_size} titles, one per line, without numbering or bullet p
     /**
      * Filter out duplicate and similar titles
      */
-    private static function filter_unique_titles($new_titles, $existing_titles) {
+    public static function filter_unique_titles($new_titles, $existing_titles) {
         $all_existing = array_map('strtolower', $existing_titles);
         $unique_titles = [];
         
