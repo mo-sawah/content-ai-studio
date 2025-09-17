@@ -32,6 +32,12 @@ public static function generate_article_content($params) {
                     throw new Exception("Missing required parameter: $param");
                 }
             }
+
+            // ADD THIS: Handle title-based generation differently
+            if ($is_title_based && !empty($params['article_title'])) {
+                error_log("ATM Title-Based: Generating content for specific title: " . $params['article_title']);
+                return self::generate_title_based_content($params);
+            }
             
             // Extract parameters with defaults
             $keyword = sanitize_text_field($params['keyword']);
