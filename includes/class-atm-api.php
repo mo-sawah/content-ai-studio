@@ -355,7 +355,7 @@ class ATM_API {
             'messages' => [
                 [
                     'role' => 'user',
-                    'content' => self::enhance_image_prompt($prompt)
+                    'content' => $prompt // don’t prepend “Generate an image”
                 ]
             ],
             'modalities' => ['image', 'text'],
@@ -388,16 +388,21 @@ class ATM_API {
 
         $data = json_decode($response_body, true);
 
-        // Debug log to inspect response
+        // Debug log to inspect full response
         error_log('OpenRouter image response: ' . print_r($data, true));
 
         $image_data = null;
 
-        // Look for image inside content array
-        if (isset($data['choices'][0]['message']['content']) && is_array($data['choices'][0]['message']['content'])) {
+        // Case 1: Gemini style response
+        if (isset($data['choices'][0]['message']['images'][0]['image_url']['url'])) {
+            $image_data = $data['choices'][0]['message']['images'][0]['image_url']['url'];
+        }
+
+        // Case 2: multimodal-style (output_image inside content array)
+        if (!$image_data && isset($data['choices'][0]['message']['content']) && is_array($data['choices'][0]['message']['content'])) {
             foreach ($data['choices'][0]['message']['content'] as $content_item) {
                 if (isset($content_item['type']) && $content_item['type'] === 'output_image' && !empty($content_item['image_data'])) {
-                    $image_data = $content_item['image_data'];
+                    $image_data = 'data:image/png;base64,' . $content_item['image_data'];
                     break;
                 }
             }
@@ -407,13 +412,19 @@ class ATM_API {
             throw new Exception('OpenRouter image generation response missing image data. Response: ' . json_encode($data));
         }
 
-        // Convert base64 to binary
-        $binary_data = base64_decode($image_data);
-        if ($binary_data === false) {
-            throw new Exception('Failed to decode base64 image data from OpenRouter');
-        }
+        // Convert base64 data URL to binary
+        if (strpos($image_data, 'data:image/') === 0) {
+            $base64_data = substr($image_data, strpos($image_data, ',') + 1);
+            $binary_data = base64_decode($base64_data);
 
-        return $binary_data;
+            if ($binary_data === false) {
+                throw new Exception('Failed to decode base64 image data from OpenRouter');
+            }
+
+            return $binary_data;
+        } else {
+            throw new Exception('Unexpected image format: ' . substr($image_data, 0, 100));
+        }
     }
 
 
