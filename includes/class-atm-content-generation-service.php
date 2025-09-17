@@ -597,6 +597,14 @@ public static function generate_article_content($params) {
                             'generated_prompt' => "Stock photo search: {$result['search_query']}"
                         ];
                     } else {
+                        // Check fallback behavior setting
+                        $fallback_behavior = get_option('atm_stock_image_fallback', 'try_all');
+                        
+                        if ($fallback_behavior === 'no_ai_fallback') {
+                            // Don't fall back to AI, just fail
+                            throw new Exception("Stock images failed: {$result['message']}. AI fallback is disabled.");
+                        }
+                        
                         // Fallback to AI generation if stock images fail
                         error_log("ATM Stock Image: Failed ({$result['message']}), falling back to OpenAI");
                         $provider = 'openai'; // Fallback provider

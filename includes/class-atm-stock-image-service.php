@@ -18,8 +18,8 @@ class ATM_Stock_Image_Service {
             // Generate optimized search queries
             $search_queries = self::generate_search_queries($title, $keyword);
             
-            // Try each API provider in order of preference
-            $providers = ['pexels', 'unsplash', 'pixabay'];
+            // Get preferred provider order
+            $providers = self::get_provider_priority_order();
             
             foreach ($providers as $provider) {
                 foreach ($search_queries as $query) {
@@ -38,6 +38,29 @@ class ATM_Stock_Image_Service {
             error_log('ATM Stock Image Error: ' . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Get provider priority order based on user settings
+     */
+    private static function get_provider_priority_order() {
+        $preferred = get_option('atm_stock_image_provider', 'pexels');
+        $fallback_behavior = get_option('atm_stock_image_fallback', 'try_all');
+        $all_providers = ['pexels', 'unsplash', 'pixabay'];
+        
+        if ($fallback_behavior === 'primary_only') {
+            return [$preferred]; // Only try the preferred provider
+        }
+        
+        // For 'try_all' or 'no_ai_fallback', return all providers with preferred first
+        $ordered = [$preferred];
+        foreach ($all_providers as $provider) {
+            if ($provider !== $preferred) {
+                $ordered[] = $provider;
+            }
+        }
+        
+        return $ordered;
     }
     
     /**

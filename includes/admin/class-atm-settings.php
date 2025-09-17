@@ -629,6 +629,28 @@ private function render_general_tab() {
                     <tr><th scope="row">Default Image Quality</th><td><select name="atm_image_quality"><option value="standard" <?php selected($options['image_quality'], 'standard'); ?>>Standard</option><option value="hd" <?php selected($options['image_quality'], 'hd'); ?>>HD</option></select><p class="description">"HD" is only for OpenAI/DALL-E 3.</p></td></tr>
                     <tr><th scope="row">Default Image Size</th><td><select name="atm_image_size"><option value="1792x1024" <?php selected($options['image_size'], '1792x1024'); ?>>16:9 Landscape</option><option value="1024x1024" <?php selected($options['image_size'], '1024x1024'); ?>>1:1 Square</option><option value="1024x1792" <?php selected($options['image_size'], '1024x1792'); ?>>9:16 Portrait</option></select></td></tr>
                     <tr><th scope="row">Default getimg.ai Model</th><td><select name="atm_getimg_model"><?php foreach ($options['getimg_models'] as $model_id => $model_name): ?><option value="<?php echo esc_attr($model_id); ?>" <?php selected($options['getimg_model'], $model_id); ?>><?php echo esc_html($model_name); ?></option><?php endforeach; ?></select><p class="description">Select the default model for getimg.ai image generation.</p></td></tr>
+                    <tr>
+                        <th scope="row">Default Stock Image Provider</th>
+                        <td>
+                            <select name="atm_stock_image_provider">
+                                <option value="pexels" <?php selected(get_option('atm_stock_image_provider', 'pexels'), 'pexels'); ?>>Pexels (200/hour free)</option>
+                                <option value="unsplash" <?php selected(get_option('atm_stock_image_provider', 'pexels'), 'unsplash'); ?>>Unsplash (50/hour free)</option>
+                                <option value="pixabay" <?php selected(get_option('atm_stock_image_provider', 'pexels'), 'pixabay'); ?>>Pixabay (5,000/hour free)</option>
+                            </select>
+                            <p class="description">Primary stock image provider. System will try other providers if the primary fails.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Stock Image Fallback</th>
+                        <td>
+                            <select name="atm_stock_image_fallback">
+                                <option value="try_all" <?php selected(get_option('atm_stock_image_fallback', 'try_all'), 'try_all'); ?>>Try all providers, then AI if none work</option>
+                                <option value="primary_only" <?php selected(get_option('atm_stock_image_fallback', 'try_all'), 'primary_only'); ?>>Primary provider only, then AI</option>
+                                <option value="no_ai_fallback" <?php selected(get_option('atm_stock_image_fallback', 'try_all'), 'no_ai_fallback'); ?>>Stock only, no AI fallback</option>
+                            </select>
+                            <p class="description">How to handle when stock images aren't found.</p>
+                        </td>
+                    </tr>
                 </table>
             </div>
         </div>
@@ -877,6 +899,12 @@ private function render_advanced_tab() {
         if (isset($_POST['atm_pixabay_api_key'])) {
             update_option('atm_pixabay_api_key', sanitize_text_field($_POST['atm_pixabay_api_key']));
         }
+        if (isset($_POST['atm_stock_image_provider'])) {
+            update_option('atm_stock_image_provider', sanitize_text_field($_POST['atm_stock_image_provider']));
+        }
+        if (isset($_POST['atm_stock_image_fallback'])) {
+            update_option('atm_stock_image_fallback', sanitize_text_field($_POST['atm_stock_image_fallback']));
+        }
 
         // Nano Banana backend selector
         if (isset($_POST['atm_nanobanana_backend'])) {
@@ -1060,11 +1088,13 @@ private function render_advanced_tab() {
             'nanobanana_model' => get_option('atm_nanobanana_model', 'gemini-2.5-flash-image'),
             'serpapi_key' => get_option('atm_serpapi_key', ''),
             'google_trending_cse_id' => get_option('atm_google_trending_cse_id', ''),
+            'stock_image_provider' => get_option('atm_stock_image_provider', 'pexels'),
             
             // Stock Photo API Keys
             'pexels_api_key' => get_option('atm_pexels_api_key', ''),
             'unsplash_api_key' => get_option('atm_unsplash_api_key', ''),
             'pixabay_api_key' => get_option('atm_pixabay_api_key', ''),
+            'stock_image_fallback' => get_option('atm_stock_image_fallback', 'try_all'),
            
             // getimg API
             'getimg_key'       => get_option('atm_getimg_api_key', ''),
