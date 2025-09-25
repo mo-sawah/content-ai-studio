@@ -5187,83 +5187,83 @@ Follow these rules strictly:
     }
 
     private static function parse_podcast_script($script) {
-    $lines = explode("\n", trim($script));
-    $segments = [];
-    $current_segment = null;
+        $lines = explode("\n", trim($script));
+        $segments = [];
+        $current_segment = null;
 
-    // Add debug logging to see what we're working with
-    error_log("ATM: Parsing script with " . count($lines) . " lines. First 5 lines:");
-    for ($i = 0; $i < min(5, count($lines)); $i++) {
-        error_log("ATM: Line $i: " . trim($lines[$i]));
-    }
+        // Add debug logging to see what we're working with
+        error_log("ATM: Parsing script with " . count($lines) . " lines. First 5 lines:");
+        for ($i = 0; $i < min(5, count($lines)); $i++) {
+            error_log("ATM: Line $i: " . trim($lines[$i]));
+        }
 
-    foreach ($lines as $line_num => $line) {
-        $line = trim($line);
-        if (empty($line)) continue;
+        foreach ($lines as $line_num => $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
 
-        // Enhanced speaker detection - more flexible patterns
-        $speaker_patterns = [
-        '/^\*\*(ALEX|JORDAN|HOST_A|HOST_B)\s*[A-Z\s]*\*\*:\s*(.+)/i',  // **ALEX:** or **JORDAN:**
-        '/^(ALEX|HOST_A):\s*(.+)/i',           // ALEX: or HOST_A:
-        '/^(JORDAN|HOST_B):\s*(.+)/i',         // JORDAN: or HOST_B:
-        '/^(Host\s*A|Host\s*1):\s*(.+)/i',     // Host A: or Host 1:
-        '/^(Host\s*B|Host\s*2):\s*(.+)/i',     // Host B: or Host 2:
-        '/^([A-Z][A-Z\s]{2,15}):\s*(.+)/',     // Any CAPS NAME: (3-16 chars)
-    ];
+            // Enhanced speaker detection - more flexible patterns
+            $speaker_patterns = [
+                '/^\*\*(ALEX|JORDAN|HOST_A|HOST_B)\*\*:\s*(.+)/i',     // **ALEX:** (fixed pattern)
+                '/^(ALEX|HOST_A):\s*(.+)/i',                          // ALEX: or HOST_A:
+                '/^(JORDAN|HOST_B):\s*(.+)/i',                        // JORDAN: or HOST_B:
+                '/^(Host\s*A|Host\s*1):\s*(.+)/i',                    // Host A: or Host 1:
+                '/^(Host\s*B|Host\s*2):\s*(.+)/i',                    // Host B: or Host 2:
+                '/^([A-Z][A-Z\s]{2,15}):\s*(.+)/',                    // Any CAPS NAME: (3-16 chars)
+            ];
 
-        $matched = false;
-        foreach ($speaker_patterns as $pattern) {
-            if (preg_match($pattern, $line, $matches)) {
-                $speaker_raw = trim($matches[1]);
-                $text = trim($matches[2]);
-                
-                // Normalize speaker names
-                $speaker = self::normalize_speaker_name($speaker_raw);
-                
-                // If there's a current segment being built, save it first
-                if ($current_segment) {
-                    $segments[] = $current_segment;
+            $matched = false;
+            foreach ($speaker_patterns as $pattern) {
+                if (preg_match($pattern, $line, $matches)) {
+                    $speaker_raw = trim($matches[1]);
+                    $text = trim($matches[2]);
+                    
+                    // Normalize speaker names
+                    $speaker = self::normalize_speaker_name($speaker_raw);
+                    
+                    // If there's a current segment being built, save it first
+                    if ($current_segment) {
+                        $segments[] = $current_segment;
+                    }
+
+                    // Determine if this is a new speaker (for pause insertion)
+                    $is_new_speaker = empty($segments) || (end($segments) && end($segments)['speaker'] !== $speaker);
+
+                    // Start a new segment
+                    $current_segment = [
+                        'speaker' => $speaker,
+                        'text' => $text,
+                        'add_pause' => $is_new_speaker,
+                    ];
+                    
+                    $matched = true;
+                    error_log("ATM: Found speaker '$speaker_raw' -> '$speaker' with text: " . substr($text, 0, 50) . "...");
+                    break;
                 }
+            }
 
-                // Determine if this is a new speaker (for pause insertion)
-                $is_new_speaker = empty($segments) || (end($segments) && end($segments)['speaker'] !== $speaker);
-
-                // Start a new segment
-                $current_segment = [
-                    'speaker' => $speaker,
-                    'text' => $text,
-                    'add_pause' => $is_new_speaker,
-                ];
-                
-                $matched = true;
-                error_log("ATM: Found speaker '$speaker_raw' -> '$speaker' with text: " . substr($text, 0, 50) . "...");
-                break;
+            // If no speaker pattern matched, this might be a continuation line
+            if (!$matched && $current_segment) {
+                // Skip lines that look like stage directions or section headers
+                if (!self::is_stage_direction($line)) {
+                    $current_segment['text'] .= ' ' . $line;
+                }
             }
         }
 
-        // If no speaker pattern matched, this might be a continuation line
-        if (!$matched && $current_segment) {
-            // Skip lines that look like stage directions or section headers
-            if (!self::is_stage_direction($line)) {
-                $current_segment['text'] .= ' ' . $line;
-            }
+        // Add the very last segment after the loop finishes
+        if ($current_segment) {
+            $segments[] = $current_segment;
         }
-    }
 
-    // Add the very last segment after the loop finishes
-    if ($current_segment) {
-        $segments[] = $current_segment;
-    }
+        error_log("ATM: Parsed " . count($segments) . " segments from script");
+        
+        // Log first few segments for debugging
+        foreach (array_slice($segments, 0, 3) as $i => $segment) {
+            error_log("ATM: Segment $i - Speaker: {$segment['speaker']}, Text: " . substr($segment['text'], 0, 100) . "...");
+        }
 
-    error_log("ATM: Parsed " . count($segments) . " segments from script");
-    
-    // Log first few segments for debugging
-    foreach (array_slice($segments, 0, 3) as $i => $segment) {
-        error_log("ATM: Segment $i - Speaker: {$segment['speaker']}, Text: " . substr($segment['text'], 0, 100) . "...");
+        return $segments;
     }
-
-    return $segments;
-}
 
 /**
  * Normalize speaker names to consistent format
